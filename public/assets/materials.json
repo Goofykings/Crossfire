@@ -1,0 +1,919 @@
+{
+ "version": 1,
+ "materials": {
+  "stone_rubble": {
+   "tile": 2.8,
+   "tint": [
+    1.0,
+    0.98,
+    0.95
+   ],
+   "albedo": "assets/textures/shared/stone_rubble_albedo.jpg",
+   "normal": "assets/textures/shared/stone_rubble_normal.jpg",
+   "orm": "assets/textures/shared/stone_rubble_orm.jpg",
+   "normal_strength": 1.1
+  },
+  "stone_stacked": {
+   "tile": 2.6,
+   "tint": [
+    1.0,
+    0.97,
+    0.93
+   ],
+   "albedo": "assets/textures/shared/stone_stacked_albedo.jpg",
+   "normal": "assets/textures/shared/stone_stacked_normal.jpg",
+   "orm": "assets/textures/shared/stone_stacked_orm.jpg",
+   "normal_strength": 1.1
+  },
+  "stone_blocks": {
+   "tile": 2.4,
+   "tint": [
+    1.0,
+    0.98,
+    0.95
+   ],
+   "albedo": "assets/textures/shared/stone_blocks_albedo.jpg",
+   "normal": "assets/textures/shared/stone_blocks_normal.jpg",
+   "orm": "assets/textures/shared/stone_blocks_orm.jpg"
+  },
+  "stone_trim": {
+   "tile": 1.8,
+   "tint": [
+    0.98,
+    0.95,
+    0.9
+   ],
+   "albedo": "assets/textures/shared/stone_trim_albedo.jpg",
+   "normal": "assets/textures/shared/stone_trim_normal.jpg",
+   "orm": "assets/textures/shared/stone_trim_orm.jpg",
+   "normal_strength": 0.6
+  },
+  "plaster": {
+   "tile": 3.2,
+   "tint": [
+    0.96,
+    0.94,
+    0.9
+   ],
+   "albedo": "assets/textures/shared/plaster_albedo.jpg",
+   "normal": "assets/textures/shared/plaster_normal.jpg",
+   "orm": "assets/textures/shared/plaster_orm.jpg"
+  },
+  "plaster_red": {
+   "tile": 3.2,
+   "tint": [
+    1.0,
+    0.95,
+    0.92
+   ],
+   "albedo": "assets/textures/shared/plaster_red_albedo.jpg",
+   "normal": "assets/textures/shared/plaster_red_normal.jpg",
+   "orm": "assets/textures/shared/plaster_red_orm.jpg"
+  },
+  "plaster_worn": {
+   "tile": 3.4,
+   "tint": [
+    1.0,
+    0.97,
+    0.92
+   ],
+   "albedo": "assets/textures/shared/plaster_worn_albedo.jpg",
+   "normal": "assets/textures/shared/plaster_worn_normal.jpg",
+   "orm": "assets/textures/shared/plaster_worn_orm.jpg"
+  },
+  "brick": {
+   "tile": 2.4,
+   "tint": [
+    1.0,
+    0.96,
+    0.94
+   ],
+   "albedo": "assets/textures/shared/brick_albedo.jpg",
+   "normal": "assets/textures/shared/brick_normal.jpg",
+   "orm": "assets/textures/shared/brick_orm.jpg"
+  },
+  "interior_plaster": {
+   "tile": 2.5,
+   "tint": [
+    0.86,
+    0.8,
+    0.7
+   ],
+   "albedo": "assets/textures/shared/plaster_albedo.jpg",
+   "normal": "assets/textures/shared/plaster_normal.jpg",
+   "orm": "assets/textures/shared/plaster_orm.jpg",
+   "roughness": 1.0
+  },
+  "interior_floor": {
+   "tile": 1.8,
+   "tint": [
+    0.85,
+    0.8,
+    0.75
+   ],
+   "albedo": "assets/textures/shared/wood_dark_albedo.jpg",
+   "normal": "assets/textures/shared/wood_dark_normal.jpg",
+   "orm": "assets/textures/shared/wood_dark_orm.jpg"
+  },
+  "cobble": {
+   "tile": 2.6,
+   "tint": [
+    0.95,
+    0.93,
+    0.9
+   ],
+   "albedo": "assets/textures/shared/cobble_albedo.jpg",
+   "normal": "assets/textures/shared/cobble_normal.jpg",
+   "orm": "assets/textures/shared/cobble_orm.jpg",
+   "normal_strength": 1.2
+  },
+  "slabs": {
+   "tile": 2.8,
+   "tint": [
+    0.98,
+    0.95,
+    0.9
+   ],
+   "albedo": "assets/textures/shared/slabs_albedo.jpg",
+   "normal": "assets/textures/shared/slabs_normal.jpg",
+   "orm": "assets/textures/shared/slabs_orm.jpg"
+  },
+  "slabs_blue": {
+   "tile": 2.8,
+   "tint": [
+    0.82,
+    0.88,
+    1.0
+   ],
+   "albedo": "assets/textures/shared/slabs_albedo.jpg",
+   "normal": "assets/textures/shared/slabs_normal.jpg",
+   "orm": "assets/textures/shared/slabs_orm.jpg"
+  },
+  "slabs_red": {
+   "tile": 2.8,
+   "tint": [
+    1.0,
+    0.84,
+    0.8
+   ],
+   "albedo": "assets/textures/shared/slabs_albedo.jpg",
+   "normal": "assets/textures/shared/slabs_normal.jpg",
+   "orm": "assets/textures/shared/slabs_orm.jpg"
+  },
+  "roof_tiles": {
+   "tile": 2.2,
+   "tint": [
+    1.0,
+    0.95,
+    0.9
+   ],
+   "albedo": "assets/textures/shared/roof_tiles_albedo.jpg",
+   "normal": "assets/textures/shared/roof_tiles_normal.jpg",
+   "orm": "assets/textures/shared/roof_tiles_orm.jpg",
+   "normal_strength": 1.2
+  },
+  "roof_tiles_b": {
+   "tile": 2.4,
+   "tint": [
+    1.0,
+    0.97,
+    0.92
+   ],
+   "albedo": "assets/textures/shared/roof_tiles_b_albedo.jpg",
+   "normal": "assets/textures/shared/roof_tiles_b_normal.jpg",
+   "orm": "assets/textures/shared/roof_tiles_b_orm.jpg",
+   "normal_strength": 1.2
+  },
+  "wood_dark": {
+   "tile": 1.6,
+   "tint": [
+    0.8,
+    0.74,
+    0.68
+   ],
+   "albedo": "assets/textures/shared/wood_dark_albedo.jpg",
+   "normal": "assets/textures/shared/wood_dark_normal.jpg",
+   "orm": "assets/textures/shared/wood_dark_orm.jpg"
+  },
+  "wood_beam": {
+   "tile": 1.2,
+   "tint": [
+    0.55,
+    0.45,
+    0.38
+   ],
+   "albedo": "assets/textures/shared/wood_dark_albedo.jpg",
+   "normal": "assets/textures/shared/wood_dark_normal.jpg",
+   "orm": "assets/textures/shared/wood_dark_orm.jpg"
+  },
+  "wood_weathered": {
+   "tile": 1.4,
+   "tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "albedo": "assets/textures/shared/wood_weathered_albedo.jpg",
+   "normal": "assets/textures/shared/wood_weathered_normal.jpg",
+   "orm": "assets/textures/shared/wood_weathered_orm.jpg"
+  },
+  "wood_crate": {
+   "tile": 1.0,
+   "tint": [
+    1.0,
+    0.9,
+    0.75
+   ],
+   "albedo": "assets/textures/shared/wood_weathered_albedo.jpg",
+   "normal": "assets/textures/shared/wood_weathered_normal.jpg",
+   "orm": "assets/textures/shared/wood_weathered_orm.jpg"
+  },
+  "wood_door": {
+   "tile": 1.3,
+   "tint": [
+    0.85,
+    0.75,
+    0.66
+   ],
+   "albedo": "assets/textures/shared/wood_door_albedo.jpg",
+   "normal": "assets/textures/shared/wood_door_normal.jpg",
+   "orm": "assets/textures/shared/wood_door_orm.jpg"
+  },
+  "frame_white": {
+   "tile": 0.8,
+   "tint": [
+    0.93,
+    0.91,
+    0.87
+   ],
+   "albedo": "assets/textures/european-town/wood_painted_grey.jpg",
+   "normal": "assets/textures/shared/wood_painted_normal.jpg",
+   "orm": "assets/textures/shared/wood_painted_orm.jpg"
+  },
+  "frame_dark": {
+   "tile": 0.8,
+   "tint": [
+    0.42,
+    0.34,
+    0.28
+   ],
+   "albedo": "assets/textures/shared/wood_dark_albedo.jpg",
+   "normal": "assets/textures/shared/wood_dark_normal.jpg",
+   "orm": "assets/textures/shared/wood_dark_orm.jpg"
+  },
+  "iron": {
+   "tile": 0.8,
+   "tint": [
+    0.16,
+    0.16,
+    0.17
+   ],
+   "albedo": "assets/textures/shared/metal_albedo.jpg",
+   "normal": "assets/textures/shared/metal_normal.jpg",
+   "orm": "assets/textures/shared/metal_orm.jpg",
+   "roughness": 0.75,
+   "metallic": 0.9
+  },
+  "iron_rusty": {
+   "tile": 1.0,
+   "tint": [
+    0.42,
+    0.33,
+    0.27
+   ],
+   "albedo": "assets/textures/shared/metal_albedo.jpg",
+   "normal": "assets/textures/shared/metal_normal.jpg",
+   "orm": "assets/textures/shared/metal_orm.jpg",
+   "roughness": 0.9,
+   "metallic": 0.6
+  },
+  "copper": {
+   "tile": 1.0,
+   "tint": [
+    0.45,
+    0.32,
+    0.22
+   ],
+   "albedo": "assets/textures/shared/metal_albedo.jpg",
+   "normal": "assets/textures/shared/metal_normal.jpg",
+   "orm": "assets/textures/shared/metal_orm.jpg",
+   "roughness": 0.6,
+   "metallic": 0.9
+  },
+  "glass": {
+   "tile": 1.0,
+   "tint": [
+    0.05,
+    0.065,
+    0.075
+   ],
+   "roughness": 0.05,
+   "metallic": 0.15
+  },
+  "glass_shop": {
+   "tile": 1.0,
+   "tint": [
+    0.12,
+    0.14,
+    0.15
+   ],
+   "roughness": 0.04,
+   "metallic": 0.1
+  },
+  "lantern_glass": {
+   "tile": 1.0,
+   "tint": [
+    1.0,
+    0.82,
+    0.55
+   ],
+   "roughness": 0.2,
+   "metallic": 0.0,
+   "emissive": [
+    1.4,
+    0.95,
+    0.5
+   ]
+  },
+  "water": {
+   "tile": 1.0,
+   "tint": [
+    0.03,
+    0.05,
+    0.05
+   ],
+   "roughness": 0.02,
+   "metallic": 0.0
+  },
+  "canvas_red": {
+   "tile": 1.6,
+   "tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "albedo": "assets/textures/european-town/canvas_stripes_red.jpg",
+   "normal": "assets/textures/shared/plaster_normal.jpg",
+   "orm": "assets/textures/shared/plaster_orm.jpg",
+   "roughness": 0.95
+  },
+  "canvas_green": {
+   "tile": 1.6,
+   "tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "albedo": "assets/textures/european-town/canvas_stripes_green.jpg",
+   "normal": "assets/textures/shared/plaster_normal.jpg",
+   "orm": "assets/textures/shared/plaster_orm.jpg",
+   "roughness": 0.95
+  },
+  "canvas_cream": {
+   "tile": 1.0,
+   "tint": [
+    0.92,
+    0.86,
+    0.72
+   ],
+   "albedo": "assets/textures/shared/plaster_albedo.jpg",
+   "normal": "assets/textures/shared/plaster_normal.jpg",
+   "orm": "assets/textures/shared/plaster_orm.jpg",
+   "roughness": 0.95
+  },
+  "terracotta": {
+   "tile": 0.7,
+   "tint": [
+    0.66,
+    0.34,
+    0.2
+   ],
+   "albedo": "assets/textures/shared/plaster_albedo.jpg",
+   "normal": "assets/textures/shared/plaster_normal.jpg",
+   "orm": "assets/textures/shared/plaster_orm.jpg",
+   "roughness": 0.85
+  },
+  "soil": {
+   "tile": 0.6,
+   "tint": [
+    0.2,
+    0.14,
+    0.1
+   ],
+   "albedo": "assets/textures/shared/cobble_albedo.jpg",
+   "normal": "assets/textures/shared/cobble_normal.jpg",
+   "orm": "assets/textures/shared/cobble_orm.jpg",
+   "roughness": 1.0,
+   "normal_strength": 0.4
+  },
+  "foliage": {
+   "tile": 1.0,
+   "tint": [
+    0.9,
+    1.0,
+    0.85
+   ],
+   "albedo": "assets/textures/european-town/foliage.png",
+   "roughness": 0.8,
+   "alpha_cutoff": 0.45,
+   "double_sided": true
+  },
+  "flowers": {
+   "tile": 1.0,
+   "tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "albedo": "assets/textures/european-town/flowers.png",
+   "roughness": 0.7,
+   "alpha_cutoff": 0.45,
+   "double_sided": true
+  },
+  "produce": {
+   "tile": 1.0,
+   "tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "albedo": "assets/textures/european-town/produce.jpg",
+   "roughness": 0.6
+  },
+  "sign_blue": {
+   "tile": 1.0,
+   "tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "albedo": "assets/textures/european-town/sign_blue.png",
+   "roughness": 0.5,
+   "emissive": [
+    0.25,
+    0.45,
+    1.0
+   ],
+   "emissive_tex": true
+  },
+  "sign_red": {
+   "tile": 1.0,
+   "tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "albedo": "assets/textures/european-town/sign_red.png",
+   "roughness": 0.5,
+   "emissive": [
+    1.0,
+    0.3,
+    0.25
+   ],
+   "emissive_tex": true
+  },
+  "shop_sign": {
+   "tile": 1.0,
+   "tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "albedo": "assets/textures/european-town/shop_signs.jpg",
+   "roughness": 0.7
+  },
+  "team_blue_glow": {
+   "tile": 1.0,
+   "tint": [
+    0.1,
+    0.25,
+    0.9
+   ],
+   "roughness": 0.4,
+   "emissive": [
+    0.2,
+    0.5,
+    2.2
+   ],
+   "decal": true
+  },
+  "team_red_glow": {
+   "tile": 1.0,
+   "tint": [
+    0.9,
+    0.15,
+    0.1
+   ],
+   "roughness": 0.4,
+   "emissive": [
+    2.2,
+    0.35,
+    0.25
+   ],
+   "decal": true
+  },
+  "weapon_body": {
+   "tile": 1.0,
+   "tint": [
+    0.3,
+    0.31,
+    0.34
+   ],
+   "roughness": 0.34,
+   "metallic": 0.65
+  },
+  "weapon_dark": {
+   "tile": 1.0,
+   "tint": [
+    0.035,
+    0.038,
+    0.045
+   ],
+   "roughness": 0.42,
+   "metallic": 0.5
+  },
+  "weapon_panel": {
+   "tile": 1.0,
+   "tint": [
+    0.36,
+    0.35,
+    0.33
+   ],
+   "roughness": 0.5,
+   "metallic": 0.05
+  },
+  "weapon_grip": {
+   "tile": 1.0,
+   "tint": [
+    0.06,
+    0.055,
+    0.05
+   ],
+   "roughness": 0.85,
+   "metallic": 0.0
+  },
+  "weapon_accent": {
+   "tile": 1.0,
+   "tint": [
+    0.95,
+    0.38,
+    0.06
+   ],
+   "roughness": 0.4,
+   "metallic": 0.15
+  },
+  "weapon_glow": {
+   "tile": 1.0,
+   "tint": [
+    0.2,
+    0.9,
+    1.0
+   ],
+   "roughness": 0.3,
+   "emissive": [
+    0.12,
+    0.75,
+    1.1
+   ]
+  },
+  "weapon_lens": {
+   "tile": 1.0,
+   "tint": [
+    0.1,
+    0.45,
+    0.5
+   ],
+   "roughness": 0.05,
+   "metallic": 0.2,
+   "emissive": [
+    0.0,
+    0.05,
+    0.06
+   ],
+   "alpha": 0.22
+  },
+  "weapon_reticle": {
+   "tile": 1.0,
+   "tint": [
+    1.0,
+    0.2,
+    0.1
+   ],
+   "roughness": 0.5,
+   "emissive": [
+    3.0,
+    0.45,
+    0.15
+   ]
+  },
+  "target_face": {
+   "tile": 1.0,
+   "tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "albedo": "assets/textures/european-town/target_face.png",
+   "roughness": 0.7
+  },
+  "target_frame": {
+   "tile": 1.0,
+   "tint": [
+    0.25,
+    0.27,
+    0.3
+   ],
+   "roughness": 0.5,
+   "metallic": 0.7
+  },
+  "slabs_inlay": {
+   "tile": 2.8,
+   "tint": [
+    0.98,
+    0.95,
+    0.9
+   ],
+   "albedo": "assets/textures/shared/slabs_albedo.jpg",
+   "normal": "assets/textures/shared/slabs_normal.jpg",
+   "orm": "assets/textures/shared/slabs_orm.jpg",
+   "decal": true
+  },
+  "stone_inlay": {
+   "tile": 1.8,
+   "tint": [
+    0.98,
+    0.95,
+    0.9
+   ],
+   "albedo": "assets/textures/shared/stone_trim_albedo.jpg",
+   "normal": "assets/textures/shared/stone_trim_normal.jpg",
+   "orm": "assets/textures/shared/stone_trim_orm.jpg",
+   "decal": true,
+   "normal_strength": 0.6
+  },
+  "shutter_stone_warm": {
+   "tile": 1.0,
+   "tint": [
+    0.148,
+    0.043,
+    0.009
+   ],
+   "albedo": "assets/textures/european-town/wood_painted_grey.jpg",
+   "normal": "assets/textures/shared/wood_painted_normal.jpg",
+   "orm": "assets/textures/shared/wood_painted_orm.jpg"
+  },
+  "door_stone_warm": {
+   "tile": 1.3,
+   "tint": [
+    0.5940000000000001,
+    0.17400000000000002,
+    0.036000000000000004
+   ],
+   "albedo": "assets/textures/shared/wood_door_albedo.jpg",
+   "normal": "assets/textures/shared/wood_door_normal.jpg",
+   "orm": "assets/textures/shared/wood_door_orm.jpg"
+  },
+  "shutter_stone_grey": {
+   "tile": 1.0,
+   "tint": [
+    0.036,
+    0.087,
+    0.071
+   ],
+   "albedo": "assets/textures/european-town/wood_painted_grey.jpg",
+   "normal": "assets/textures/shared/wood_painted_normal.jpg",
+   "orm": "assets/textures/shared/wood_painted_orm.jpg"
+  },
+  "door_stone_grey": {
+   "tile": 1.3,
+   "tint": [
+    0.42599999999999993,
+    0.138,
+    0.036000000000000004
+   ],
+   "albedo": "assets/textures/shared/wood_door_albedo.jpg",
+   "normal": "assets/textures/shared/wood_door_normal.jpg",
+   "orm": "assets/textures/shared/wood_door_orm.jpg"
+  },
+  "shutter_stone_blocks": {
+   "tile": 1.0,
+   "tint": [
+    0.268,
+    0.061,
+    0.009
+   ],
+   "albedo": "assets/textures/european-town/wood_painted_grey.jpg",
+   "normal": "assets/textures/shared/wood_painted_normal.jpg",
+   "orm": "assets/textures/shared/wood_painted_orm.jpg"
+  },
+  "door_stone_blocks": {
+   "tile": 1.3,
+   "tint": [
+    0.28200000000000003,
+    0.10799999999999998,
+    0.03
+   ],
+   "albedo": "assets/textures/shared/wood_door_albedo.jpg",
+   "normal": "assets/textures/shared/wood_door_normal.jpg",
+   "orm": "assets/textures/shared/wood_door_orm.jpg"
+  },
+  "shutter_plaster_white": {
+   "tile": 1.0,
+   "tint": [
+    0.029,
+    0.106,
+    0.133
+   ],
+   "albedo": "assets/textures/european-town/wood_painted_grey.jpg",
+   "normal": "assets/textures/shared/wood_painted_normal.jpg",
+   "orm": "assets/textures/shared/wood_painted_orm.jpg"
+  },
+  "door_plaster_white": {
+   "tile": 1.3,
+   "tint": [
+    0.522,
+    0.17400000000000002,
+    0.048
+   ],
+   "albedo": "assets/textures/shared/wood_door_albedo.jpg",
+   "normal": "assets/textures/shared/wood_door_normal.jpg",
+   "orm": "assets/textures/shared/wood_door_orm.jpg"
+  },
+  "shutter_plaster_beige": {
+   "tile": 1.0,
+   "tint": [
+    0.106,
+    0.036,
+    0.009
+   ],
+   "albedo": "assets/textures/european-town/wood_painted_grey.jpg",
+   "normal": "assets/textures/shared/wood_painted_normal.jpg",
+   "orm": "assets/textures/shared/wood_painted_orm.jpg"
+  },
+  "door_plaster_beige": {
+   "tile": 1.3,
+   "tint": [
+    0.42599999999999993,
+    0.12,
+    0.03
+   ],
+   "albedo": "assets/textures/shared/wood_door_albedo.jpg",
+   "normal": "assets/textures/shared/wood_door_normal.jpg",
+   "orm": "assets/textures/shared/wood_door_orm.jpg"
+  },
+  "shutter_plaster_ochre": {
+   "tile": 1.0,
+   "tint": [
+    0.047,
+    0.119,
+    0.071
+   ],
+   "albedo": "assets/textures/european-town/wood_painted_grey.jpg",
+   "normal": "assets/textures/shared/wood_painted_normal.jpg",
+   "orm": "assets/textures/shared/wood_painted_orm.jpg"
+  },
+  "door_plaster_ochre": {
+   "tile": 1.3,
+   "tint": [
+    0.366,
+    0.10799999999999998,
+    0.024
+   ],
+   "albedo": "assets/textures/shared/wood_door_albedo.jpg",
+   "normal": "assets/textures/shared/wood_door_normal.jpg",
+   "orm": "assets/textures/shared/wood_door_orm.jpg"
+  },
+  "shutter_plaster_rose": {
+   "tile": 1.0,
+   "tint": [
+    0.082,
+    0.133,
+    0.173
+   ],
+   "albedo": "assets/textures/european-town/wood_painted_grey.jpg",
+   "normal": "assets/textures/shared/wood_painted_normal.jpg",
+   "orm": "assets/textures/shared/wood_painted_orm.jpg"
+  },
+  "door_plaster_rose": {
+   "tile": 1.3,
+   "tint": [
+    0.42599999999999993,
+    0.138,
+    0.036000000000000004
+   ],
+   "albedo": "assets/textures/shared/wood_door_albedo.jpg",
+   "normal": "assets/textures/shared/wood_door_normal.jpg",
+   "orm": "assets/textures/shared/wood_door_orm.jpg"
+  },
+  "shutter_plaster_red": {
+   "tile": 1.0,
+   "tint": [
+    0.029,
+    0.071,
+    0.061
+   ],
+   "albedo": "assets/textures/european-town/wood_painted_grey.jpg",
+   "normal": "assets/textures/shared/wood_painted_normal.jpg",
+   "orm": "assets/textures/shared/wood_painted_orm.jpg"
+  },
+  "door_plaster_red": {
+   "tile": 1.3,
+   "tint": [
+    0.312,
+    0.09,
+    0.024
+   ],
+   "albedo": "assets/textures/shared/wood_door_albedo.jpg",
+   "normal": "assets/textures/shared/wood_door_normal.jpg",
+   "orm": "assets/textures/shared/wood_door_orm.jpg"
+  },
+  "shutter_plaster_worn": {
+   "tile": 1.0,
+   "tint": [
+    0.173,
+    0.052,
+    0.011
+   ],
+   "albedo": "assets/textures/european-town/wood_painted_grey.jpg",
+   "normal": "assets/textures/shared/wood_painted_normal.jpg",
+   "orm": "assets/textures/shared/wood_painted_orm.jpg"
+  },
+  "door_plaster_worn": {
+   "tile": 1.3,
+   "tint": [
+    0.492,
+    0.156,
+    0.036000000000000004
+   ],
+   "albedo": "assets/textures/shared/wood_door_albedo.jpg",
+   "normal": "assets/textures/shared/wood_door_normal.jpg",
+   "orm": "assets/textures/shared/wood_door_orm.jpg"
+  },
+  "shutter_brick_old": {
+   "tile": 1.0,
+   "tint": [
+    0.043,
+    0.071,
+    0.036
+   ],
+   "albedo": "assets/textures/european-town/wood_painted_grey.jpg",
+   "normal": "assets/textures/shared/wood_painted_normal.jpg",
+   "orm": "assets/textures/shared/wood_painted_orm.jpg"
+  },
+  "door_brick_old": {
+   "tile": 1.3,
+   "tint": [
+    0.336,
+    0.10799999999999998,
+    0.03
+   ],
+   "albedo": "assets/textures/shared/wood_door_albedo.jpg",
+   "normal": "assets/textures/shared/wood_door_normal.jpg",
+   "orm": "assets/textures/shared/wood_door_orm.jpg"
+  },
+  "plaster_white": {
+   "tile": 3.2,
+   "tint": [
+    0.96,
+    0.94,
+    0.9
+   ],
+   "albedo": "assets/textures/shared/plaster_albedo.jpg",
+   "normal": "assets/textures/shared/plaster_normal.jpg",
+   "orm": "assets/textures/shared/plaster_orm.jpg"
+  },
+  "plaster_beige": {
+   "tile": 3.2,
+   "tint": [
+    0.93,
+    0.84,
+    0.7
+   ],
+   "albedo": "assets/textures/shared/plaster_albedo.jpg",
+   "normal": "assets/textures/shared/plaster_normal.jpg",
+   "orm": "assets/textures/shared/plaster_orm.jpg"
+  },
+  "plaster_ochre": {
+   "tile": 3.2,
+   "tint": [
+    0.95,
+    0.72,
+    0.42
+   ],
+   "albedo": "assets/textures/shared/plaster_albedo.jpg",
+   "normal": "assets/textures/shared/plaster_normal.jpg",
+   "orm": "assets/textures/shared/plaster_orm.jpg"
+  },
+  "plaster_rose": {
+   "tile": 3.2,
+   "tint": [
+    0.93,
+    0.7,
+    0.6
+   ],
+   "albedo": "assets/textures/shared/plaster_albedo.jpg",
+   "normal": "assets/textures/shared/plaster_normal.jpg",
+   "orm": "assets/textures/shared/plaster_orm.jpg"
+  }
+ }
+}

@@ -1,0 +1,654 @@
+{
+ "generator": "blender/scripts/generate_all.py",
+ "blender": "5.2.3 LTS",
+ "generated": "2026-10-25 08:49:42",
+ "assets": [
+  {
+   "path": "assets/materials.json",
+   "kind": "materials",
+   "bytes": 20342,
+   "description": "Material table (names, texture sets, tiling, tint, PBR factors)",
+   "script": "blender/scripts/lib/materials.py"
+  },
+  {
+   "path": "assets/models/european-town/buildings/block_01.glb",
+   "kind": "map-buildings",
+   "bytes": 724000,
+   "description": "7 buildings: B03 (plaster3), B04 (stone2), B12 (balcony), B05 (backdrop), B13 (plaster3), B06 (plaster3), B07 (stone2)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 12650
+  },
+  {
+   "path": "assets/models/european-town/buildings/block_02.glb",
+   "kind": "map-buildings",
+   "bytes": 787880,
+   "description": "7 buildings: B38 (shop), B30 (plaster3), B19 (plaster3), B15 (plaster3), B11 (stone2), B01 (plaster3), B02 (plaster3)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 14285
+  },
+  {
+   "path": "assets/models/european-town/buildings/block_03.glb",
+   "kind": "map-buildings",
+   "bytes": 195396,
+   "description": "1 buildings: B21 (room)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 4686
+  },
+  {
+   "path": "assets/models/european-town/buildings/block_04.glb",
+   "kind": "map-buildings",
+   "bytes": 941584,
+   "description": "7 buildings: B08 (stone2), B09 (shop), B10 (backdrop), B14 (shop), B25 (plaster3), B29 (plaster3), B41 (balcony)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 16915
+  },
+  {
+   "path": "assets/models/european-town/buildings/block_05.glb",
+   "kind": "map-buildings",
+   "bytes": 1319792,
+   "description": "8 buildings: B16 (plaster3), B17 (plaster3), B20 (stone2), B26 (shop), B31 (plaster3), B34 (shop), B44 (narrow_passage), B45 (shop)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 26806
+  },
+  {
+   "path": "assets/models/european-town/buildings/block_06.glb",
+   "kind": "map-buildings",
+   "bytes": 334628,
+   "description": "1 buildings: B35 (shop)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 6669
+  },
+  {
+   "path": "assets/models/european-town/buildings/block_07.glb",
+   "kind": "map-buildings",
+   "bytes": 379940,
+   "description": "1 buildings: B32 (corner)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 8438
+  },
+  {
+   "path": "assets/models/european-town/buildings/block_08.glb",
+   "kind": "map-buildings",
+   "bytes": 1744904,
+   "description": "8 buildings: B18 (plaster3), B22 (balcony), B23 (archway), B24 (corner), B27 (stone2), B28 (balcony), B33 (stone2), B39 (corner)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 39252
+  },
+  {
+   "path": "assets/models/european-town/buildings/block_09.glb",
+   "kind": "map-buildings",
+   "bytes": 1645216,
+   "description": "8 buildings: B42 (corner), B47 (corner), B53 (plaster3), B54 (stone2), B56 (balcony), B57 (archway), B62 (plaster3), B63 (plaster3)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 40098
+  },
+  {
+   "path": "assets/models/european-town/buildings/block_10.glb",
+   "kind": "map-buildings",
+   "bytes": 438540,
+   "description": "1 buildings: B48 (corner)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 10954
+  },
+  {
+   "path": "assets/models/european-town/buildings/block_11.glb",
+   "kind": "map-buildings",
+   "bytes": 206264,
+   "description": "1 buildings: B49 (shop)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 4120
+  },
+  {
+   "path": "assets/models/european-town/buildings/block_12.glb",
+   "kind": "map-buildings",
+   "bytes": 1417860,
+   "description": "8 buildings: B36 (shop), B37 (narrow_passage), B46 (shop), B50 (plaster3), B55 (stone2), B59 (stone2), B64 (balcony), B65 (balcony)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 26257
+  },
+  {
+   "path": "assets/models/european-town/buildings/block_13.glb",
+   "kind": "map-buildings",
+   "bytes": 640996,
+   "description": "7 buildings: B40 (plaster3), B43 (stone2), B51 (stone2), B60 (plaster3), B66 (stone2), B70 (plaster3), B78 (plaster3)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 11132
+  },
+  {
+   "path": "assets/models/european-town/buildings/block_14.glb",
+   "kind": "map-buildings",
+   "bytes": 852304,
+   "description": "7 buildings: B72 (plaster3), B71 (balcony), B80 (stone2), B79 (backdrop), B67 (shop), B61 (stone2), B52 (stone2)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 15682
+  },
+  {
+   "path": "assets/models/european-town/buildings/block_15.glb",
+   "kind": "map-buildings",
+   "bytes": 223144,
+   "description": "1 buildings: B58 (room)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 5748
+  },
+  {
+   "path": "assets/models/european-town/buildings/block_16.glb",
+   "kind": "map-buildings",
+   "bytes": 737072,
+   "description": "7 buildings: B77 (stone2), B76 (plaster3), B75 (plaster3), B69 (plaster3), B74 (backdrop), B68 (plaster3), B73 (stone2)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 12818
+  },
+  {
+   "path": "assets/models/european-town/collision.json",
+   "kind": "collision",
+   "bytes": 16313,
+   "description": "211 oriented collision boxes (runtime physics)",
+   "script": "blender/scripts/lib/collision_gen.py"
+  },
+  {
+   "path": "assets/models/european-town/collision_debug.glb",
+   "kind": "collision-debug",
+   "bytes": 233440,
+   "description": "Collision boxes as meshes for in-game debug view (F2)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 2532
+  },
+  {
+   "path": "assets/models/european-town/map-assets.json",
+   "kind": "map-index",
+   "bytes": 605,
+   "description": "List of model files the runtime loads for this map",
+   "script": "blender/scripts/generate_all.py"
+  },
+  {
+   "path": "assets/models/european-town/terrain.glb",
+   "kind": "map-terrain",
+   "bytes": 338268,
+   "description": "Streets, plaza, courts, terraces, stairs, garden walls, gates and flying arches",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 6990
+  },
+  {
+   "path": "assets/models/shared/buildings/archway_v1.glb",
+   "kind": "building-library",
+   "bytes": 243308,
+   "description": "Building with an archway - variant 1 (8 x 7 m, 3 floors)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 6936
+  },
+  {
+   "path": "assets/models/shared/buildings/archway_v2.glb",
+   "kind": "building-library",
+   "bytes": 238320,
+   "description": "Building with an archway - variant 2 (7 x 8 m, 3 floors)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 6558
+  },
+  {
+   "path": "assets/models/shared/buildings/balcony_v1.glb",
+   "kind": "building-library",
+   "bytes": 386904,
+   "description": "Building with a small balcony - variant 1 (8 x 7 m, 3 floors)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 11296
+  },
+  {
+   "path": "assets/models/shared/buildings/balcony_v2.glb",
+   "kind": "building-library",
+   "bytes": 617632,
+   "description": "Building with a small balcony - variant 2 (7 x 8 m, 4 floors)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 15104
+  },
+  {
+   "path": "assets/models/shared/buildings/corner_v1.glb",
+   "kind": "building-library",
+   "bytes": 427448,
+   "description": "Corner building with an angled facade - variant 1 (8 x 8 m, 3 floors)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 9910
+  },
+  {
+   "path": "assets/models/shared/buildings/corner_v2.glb",
+   "kind": "building-library",
+   "bytes": 446816,
+   "description": "Corner building with an angled facade - variant 2 (9 x 7 m, 3 floors)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 9508
+  },
+  {
+   "path": "assets/models/shared/buildings/narrow_passage_v1.glb",
+   "kind": "building-library",
+   "bytes": 266184,
+   "description": "Narrow building with a passageway - variant 1 (4 x 10 m, 4 floors)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 10956
+  },
+  {
+   "path": "assets/models/shared/buildings/narrow_passage_v2.glb",
+   "kind": "building-library",
+   "bytes": 271280,
+   "description": "Narrow building with a passageway - variant 2 (4 x 9 m, 4 floors)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 9954
+  },
+  {
+   "path": "assets/models/shared/buildings/plaster3_v1.glb",
+   "kind": "building-library",
+   "bytes": 331200,
+   "description": "Three-story plaster townhouse - variant 1 (8 x 8 m, 3 floors)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 10764
+  },
+  {
+   "path": "assets/models/shared/buildings/plaster3_v2.glb",
+   "kind": "building-library",
+   "bytes": 411516,
+   "description": "Three-story plaster townhouse - variant 2 (6 x 9 m, 3 floors)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 9204
+  },
+  {
+   "path": "assets/models/shared/buildings/room_v1.glb",
+   "kind": "building-library",
+   "bytes": 234360,
+   "description": "Building with an accessible ground-floor room - variant 1 (10 x 8 m, 2 floors)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 6212
+  },
+  {
+   "path": "assets/models/shared/buildings/room_v2.glb",
+   "kind": "building-library",
+   "bytes": 202032,
+   "description": "Building with an accessible ground-floor room - variant 2 (9 x 7 m, 2 floors)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 4610
+  },
+  {
+   "path": "assets/models/shared/buildings/shop_v1.glb",
+   "kind": "building-library",
+   "bytes": 326128,
+   "description": "Small European shop building - variant 1 (7 x 7 m, 2 floors)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 8215
+  },
+  {
+   "path": "assets/models/shared/buildings/shop_v2.glb",
+   "kind": "building-library",
+   "bytes": 439368,
+   "description": "Small European shop building - variant 2 (8 x 6 m, 3 floors)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 10764
+  },
+  {
+   "path": "assets/models/shared/buildings/stone2_v1.glb",
+   "kind": "building-library",
+   "bytes": 184060,
+   "description": "Two-story stone townhouse - variant 1 (8 x 7 m, 2 floors)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 4864
+  },
+  {
+   "path": "assets/models/shared/buildings/stone2_v2.glb",
+   "kind": "building-library",
+   "bytes": 299228,
+   "description": "Two-story stone townhouse - variant 2 (7 x 9 m, 2 floors)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 5586
+  },
+  {
+   "path": "assets/models/shared/kit/archway_4m.glb",
+   "kind": "kit",
+   "bytes": 8344,
+   "description": "Modular piece: archway_4m",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 82
+  },
+  {
+   "path": "assets/models/shared/kit/balcony_3m.glb",
+   "kind": "kit",
+   "bytes": 64272,
+   "description": "Modular piece: balcony_3m",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 706
+  },
+  {
+   "path": "assets/models/shared/kit/curb_2m.glb",
+   "kind": "kit",
+   "bytes": 2664,
+   "description": "Modular piece: curb_2m",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 18
+  },
+  {
+   "path": "assets/models/shared/kit/curb_corner.glb",
+   "kind": "kit",
+   "bytes": 2932,
+   "description": "Modular piece: curb_corner",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 24
+  },
+  {
+   "path": "assets/models/shared/kit/door_wood_double.glb",
+   "kind": "kit",
+   "bytes": 20576,
+   "description": "Modular piece: door_wood_double",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 178
+  },
+  {
+   "path": "assets/models/shared/kit/door_wood_single.glb",
+   "kind": "kit",
+   "bytes": 14356,
+   "description": "Modular piece: door_wood_single",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 106
+  },
+  {
+   "path": "assets/models/shared/kit/road_cobble_4x4.glb",
+   "kind": "kit",
+   "bytes": 1372,
+   "description": "Modular piece: road_cobble_4x4",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 2
+  },
+  {
+   "path": "assets/models/shared/kit/road_cobble_drain_4x4.glb",
+   "kind": "kit",
+   "bytes": 3012,
+   "description": "Modular piece: road_cobble_drain_4x4",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 10
+  },
+  {
+   "path": "assets/models/shared/kit/roof_vent.glb",
+   "kind": "kit",
+   "bytes": 6028,
+   "description": "Modular piece: roof_vent",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 68
+  },
+  {
+   "path": "assets/models/shared/kit/shutters_open_1x1.5.glb",
+   "kind": "kit",
+   "bytes": 23388,
+   "description": "Modular piece: shutters_open_1x1.5",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 244
+  },
+  {
+   "path": "assets/models/shared/kit/sidewalk_2x2.glb",
+   "kind": "kit",
+   "bytes": 2100,
+   "description": "Modular piece: sidewalk_2x2",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 10
+  },
+  {
+   "path": "assets/models/shared/kit/stairs_stone_4.glb",
+   "kind": "kit",
+   "bytes": 4256,
+   "description": "Modular piece: stairs_stone_4",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 40
+  },
+  {
+   "path": "assets/models/shared/kit/stone_wall_2m.glb",
+   "kind": "kit",
+   "bytes": 4144,
+   "description": "Modular piece: stone_wall_2m",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 22
+  },
+  {
+   "path": "assets/models/shared/kit/stone_wall_pillar.glb",
+   "kind": "kit",
+   "bytes": 6116,
+   "description": "Modular piece: stone_wall_pillar",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 58
+  },
+  {
+   "path": "assets/models/shared/kit/window_box.glb",
+   "kind": "kit",
+   "bytes": 8432,
+   "description": "Modular piece: window_box",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 46
+  },
+  {
+   "path": "assets/models/shared/kit/window_std_1x1.5.glb",
+   "kind": "kit",
+   "bytes": 5800,
+   "description": "Modular piece: window_std_1x1.5",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 46
+  },
+  {
+   "path": "assets/models/shared/props/barrel.glb",
+   "kind": "prop",
+   "bytes": 19524,
+   "description": "barrel (0.62 x 0.9 x 0.62 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 430
+  },
+  {
+   "path": "assets/models/shared/props/barrel_group.glb",
+   "kind": "prop",
+   "bytes": 51828,
+   "description": "barrel_group (1.3 x 0.9 x 1.25 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 1290
+  },
+  {
+   "path": "assets/models/shared/props/bench.glb",
+   "kind": "prop",
+   "bytes": 15296,
+   "description": "bench (1.6 x 0.85 x 0.5 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 156
+  },
+  {
+   "path": "assets/models/shared/props/cart.glb",
+   "kind": "prop",
+   "bytes": 72776,
+   "description": "cart (1.4 x 1.1 x 2.4 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 1178
+  },
+  {
+   "path": "assets/models/shared/props/crate.glb",
+   "kind": "prop",
+   "bytes": 13932,
+   "description": "crate (0.8 x 0.8 x 0.8 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 180
+  },
+  {
+   "path": "assets/models/shared/props/crate_small.glb",
+   "kind": "prop",
+   "bytes": 13944,
+   "description": "crate_small (0.55 x 0.55 x 0.55 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 180
+  },
+  {
+   "path": "assets/models/shared/props/crate_stack.glb",
+   "kind": "prop",
+   "bytes": 37232,
+   "description": "crate_stack (1.4 x 1.35 x 0.9 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 540
+  },
+  {
+   "path": "assets/models/shared/props/drain_grate.glb",
+   "kind": "prop",
+   "bytes": 13244,
+   "description": "drain_grate (0.6 x 0.04 x 0.6 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 134
+  },
+  {
+   "path": "assets/models/shared/props/fence.glb",
+   "kind": "prop",
+   "bytes": 20240,
+   "description": "fence (2 x 1.1 x 0.1 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 215
+  },
+  {
+   "path": "assets/models/shared/props/fence_gate.glb",
+   "kind": "prop",
+   "bytes": 25400,
+   "description": "fence_gate (2 x 1.1 x 0.1 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 251
+  },
+  {
+   "path": "assets/models/shared/props/flower_pot.glb",
+   "kind": "prop",
+   "bytes": 10628,
+   "description": "flower_pot (0.5 x 0.75 x 0.5 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 114
+  },
+  {
+   "path": "assets/models/shared/props/flower_pot_large.glb",
+   "kind": "prop",
+   "bytes": 12312,
+   "description": "flower_pot_large (0.8 x 1.2 x 0.8 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 136
+  },
+  {
+   "path": "assets/models/shared/props/market_stall.glb",
+   "kind": "prop",
+   "bytes": 44020,
+   "description": "market_stall (2.6 x 2.6 x 1.6 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 723
+  },
+  {
+   "path": "assets/models/shared/props/props.json",
+   "kind": "prop-catalog",
+   "bytes": 3247,
+   "description": "Prop sizes and collision boxes used by the runtime",
+   "script": "blender/scripts/lib/catalog.py"
+  },
+  {
+   "path": "assets/models/shared/props/railing.glb",
+   "kind": "prop",
+   "bytes": 22000,
+   "description": "railing (2 x 1 x 0.08 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 240
+  },
+  {
+   "path": "assets/models/shared/props/sign_blue.glb",
+   "kind": "prop",
+   "bytes": 5296,
+   "description": "sign_blue (1.4 x 0.9 x 0.08 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 22
+  },
+  {
+   "path": "assets/models/shared/props/sign_red.glb",
+   "kind": "prop",
+   "bytes": 5292,
+   "description": "sign_red (1.4 x 0.9 x 0.08 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 22
+  },
+  {
+   "path": "assets/models/shared/props/stool.glb",
+   "kind": "prop",
+   "bytes": 7824,
+   "description": "stool (0.4 x 0.45 x 0.4 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 84
+  },
+  {
+   "path": "assets/models/shared/props/street_lantern.glb",
+   "kind": "prop",
+   "bytes": 24732,
+   "description": "street_lantern (0.5 x 3.6 x 0.5 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 282
+  },
+  {
+   "path": "assets/models/shared/props/table.glb",
+   "kind": "prop",
+   "bytes": 14292,
+   "description": "table (1.6 x 0.78 x 0.8 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 136
+  },
+  {
+   "path": "assets/models/shared/props/target.glb",
+   "kind": "prop",
+   "bytes": 15976,
+   "description": "target (0.9 x 1.9 x 0.5 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 156
+  },
+  {
+   "path": "assets/models/shared/props/wall_lantern.glb",
+   "kind": "prop",
+   "bytes": 14252,
+   "description": "wall_lantern (0.35 x 0.8 x 0.6 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 138
+  },
+  {
+   "path": "assets/models/shared/props/well.glb",
+   "kind": "prop",
+   "bytes": 47732,
+   "description": "well (2.2 x 2.6 x 2.2 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 744
+  },
+  {
+   "path": "assets/models/shared/weapons/blaster.glb",
+   "kind": "weapon",
+   "bytes": 75212,
+   "description": "VK-7 pulse carbine first-person model with 'muzzle' and 'sight' nodes",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 880
+  },
+  {
+   "path": "blender/source/building_library.blend",
+   "kind": "blend",
+   "bytes": 1246054,
+   "description": "Editable source: catalogue of the 8 building types x 2 variants",
+   "script": "blender/scripts/generate_all.py"
+  },
+  {
+   "path": "blender/source/european-town.blend",
+   "kind": "blend",
+   "bytes": 2521792,
+   "description": "Editable source: buildings, terrain, collision, markers, prop preview",
+   "script": "blender/scripts/generate_all.py"
+  },
+  {
+   "path": "blender/source/modular_kit.blend",
+   "kind": "blend",
+   "bytes": 182317,
+   "description": "Editable source: modular kit pieces",
+   "script": "blender/scripts/generate_all.py"
+  },
+  {
+   "path": "blender/source/props.blend",
+   "kind": "blend",
+   "bytes": 260283,
+   "description": "Editable source: all street props",
+   "script": "blender/scripts/generate_all.py"
+  },
+  {
+   "path": "blender/source/weapon.blend",
+   "kind": "blend",
+   "bytes": 119414,
+   "description": "Editable source: blaster",
+   "script": "blender/scripts/generate_all.py"
+  }
+ ]
+}

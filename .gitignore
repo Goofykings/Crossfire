@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.cache/
+*.blend1
+*.log
+.DS_Store
+# raw saved web pages the references were collected from (curated copies live in references/)
+references_images/
+# local test artefacts
+test-results/

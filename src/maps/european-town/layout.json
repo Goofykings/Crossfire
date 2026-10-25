@@ -1,0 +1,5193 @@
+{
+ "id": "european-town",
+ "name": "European Town",
+ "version": 1,
+ "units": "metres; +x east, +z south, +y up (glTF / Babylon right-handed). Rects are [x0, z0, x1, z1].",
+ "playArea": [
+  -33,
+  -33,
+  33,
+  33
+ ],
+ "outerLimit": 40,
+ "ground": {
+  "baseHeight": 0.0,
+  "zones": [
+   {
+    "id": "spawn_blue",
+    "kind": "spawn",
+    "rect": [
+     -33,
+     -7,
+     -25,
+     7
+    ],
+    "height": 0.0,
+    "material": "slabs",
+    "team": "blue"
+   },
+   {
+    "id": "spawn_bluer",
+    "kind": "spawn",
+    "rect": [
+     25,
+     -7,
+     33,
+     7
+    ],
+    "height": 0.0,
+    "material": "slabs",
+    "team": "red"
+   },
+   {
+    "id": "blue_exit_n",
+    "kind": "street",
+    "rect": [
+     -33,
+     -11,
+     -29,
+     -7
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "blue_exit_nr",
+    "kind": "street",
+    "rect": [
+     29,
+     7,
+     33,
+     11
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "nw_a",
+    "kind": "street",
+    "rect": [
+     -33,
+     -15,
+     -25,
+     -11
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "nw_ar",
+    "kind": "street",
+    "rect": [
+     25,
+     11,
+     33,
+     15
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "nw_b",
+    "kind": "street",
+    "rect": [
+     -29,
+     -27,
+     -25,
+     -11
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "nw_br",
+    "kind": "street",
+    "rect": [
+     25,
+     11,
+     29,
+     27
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "nw_c",
+    "kind": "street",
+    "rect": [
+     -33,
+     -31,
+     -14,
+     -27
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "nw_cr",
+    "kind": "street",
+    "rect": [
+     14,
+     27,
+     33,
+     31
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "nw_d",
+    "kind": "street",
+    "rect": [
+     -18,
+     -27,
+     -14,
+     -15
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "nw_dr",
+    "kind": "street",
+    "rect": [
+     14,
+     15,
+     18,
+     27
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "nw_e",
+    "kind": "street",
+    "rect": [
+     -21,
+     -15,
+     -6,
+     -11
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "nw_er",
+    "kind": "street",
+    "rect": [
+     6,
+     11,
+     21,
+     15
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "cw_a",
+    "kind": "street",
+    "rect": [
+     -10,
+     -11,
+     -6,
+     -5
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "cw_ar",
+    "kind": "street",
+    "rect": [
+     6,
+     5,
+     10,
+     11
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "blue_yard",
+    "kind": "yard",
+    "rect": [
+     -21,
+     -5,
+     -15,
+     4
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "blue_yardr",
+    "kind": "yard",
+    "rect": [
+     15,
+     -4,
+     21,
+     5
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "blue_yard_n",
+    "kind": "street",
+    "rect": [
+     -21,
+     -11,
+     -18,
+     -5
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "blue_yard_nr",
+    "kind": "street",
+    "rect": [
+     18,
+     5,
+     21,
+     11
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "west_entry",
+    "kind": "street",
+    "rect": [
+     -15,
+     -5,
+     -5,
+     -1
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "west_entryr",
+    "kind": "street",
+    "rect": [
+     5,
+     1,
+     15,
+     5
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "n_lane_mid",
+    "kind": "terrace",
+    "rect": [
+     -14,
+     -27,
+     4,
+     -23
+    ],
+    "height": 0.72,
+    "material": "cobble"
+   },
+   {
+    "id": "n_lane_midr",
+    "kind": "terrace",
+    "rect": [
+     -4,
+     23,
+     14,
+     27
+    ],
+    "height": 0.72,
+    "material": "cobble"
+   },
+   {
+    "id": "n_jog2",
+    "kind": "street",
+    "rect": [
+     4,
+     -31,
+     8,
+     -23
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "n_jog2r",
+    "kind": "street",
+    "rect": [
+     -8,
+     23,
+     -4,
+     31
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "n_lane_e",
+    "kind": "street",
+    "rect": [
+     8,
+     -31,
+     20,
+     -27
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "n_lane_er",
+    "kind": "street",
+    "rect": [
+     -20,
+     27,
+     -8,
+     31
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "n_jog3",
+    "kind": "street",
+    "rect": [
+     16,
+     -27,
+     20,
+     -17
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "n_jog3r",
+    "kind": "street",
+    "rect": [
+     -20,
+     17,
+     -16,
+     27
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "ne_lane",
+    "kind": "street",
+    "rect": [
+     20,
+     -24,
+     29,
+     -20
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "ne_laner",
+    "kind": "street",
+    "rect": [
+     -29,
+     20,
+     -20,
+     24
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "cn_a",
+    "kind": "street",
+    "rect": [
+     -4,
+     -23,
+     0,
+     -17
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "cn_ar",
+    "kind": "street",
+    "rect": [
+     0,
+     17,
+     4,
+     23
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "cn_b",
+    "kind": "street",
+    "rect": [
+     -4,
+     -17,
+     8,
+     -13
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "cn_br",
+    "kind": "street",
+    "rect": [
+     -8,
+     13,
+     4,
+     17
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "cn_c",
+    "kind": "street",
+    "rect": [
+     1,
+     -13,
+     5,
+     -5
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "cn_cr",
+    "kind": "street",
+    "rect": [
+     -5,
+     5,
+     -1,
+     13
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "ne_link",
+    "kind": "street",
+    "rect": [
+     8,
+     -20,
+     12,
+     -13
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "ne_linkr",
+    "kind": "street",
+    "rect": [
+     -12,
+     13,
+     -8,
+     20
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "red_exit_n",
+    "kind": "street",
+    "rect": [
+     25,
+     -11,
+     29,
+     -7
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "red_exit_nr",
+    "kind": "street",
+    "rect": [
+     -29,
+     7,
+     -25,
+     11
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "e_edge",
+    "kind": "street",
+    "rect": [
+     29,
+     -24,
+     33,
+     -9
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "e_edger",
+    "kind": "street",
+    "rect": [
+     -33,
+     9,
+     -29,
+     24
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "ne_mid",
+    "kind": "street",
+    "rect": [
+     15,
+     -13,
+     29,
+     -9
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "ne_midr",
+    "kind": "street",
+    "rect": [
+     -29,
+     9,
+     -15,
+     13
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "red_yard_n",
+    "kind": "street",
+    "rect": [
+     15,
+     -9,
+     18,
+     -4
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "red_yard_nr",
+    "kind": "street",
+    "rect": [
+     -18,
+     4,
+     -15,
+     9
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "ne_court",
+    "kind": "court",
+    "rect": [
+     22,
+     -32,
+     30,
+     -26
+    ],
+    "height": 0.54,
+    "material": "slabs"
+   },
+   {
+    "id": "ne_courtr",
+    "kind": "court",
+    "rect": [
+     -30,
+     26,
+     -22,
+     32
+    ],
+    "height": 0.54,
+    "material": "slabs"
+   },
+   {
+    "id": "plaza",
+    "kind": "plaza",
+    "rect": [
+     -5,
+     -5,
+     5,
+     5
+    ],
+    "height": 0.0,
+    "material": "slabs"
+   }
+  ],
+  "covered": [
+   {
+    "id": "blue_arch",
+    "kind": "passage",
+    "rect": [
+     -25,
+     0,
+     -21,
+     3
+    ]
+   },
+   {
+    "id": "blue_archr",
+    "kind": "passage",
+    "rect": [
+     21,
+     -3,
+     25,
+     0
+    ]
+   },
+   {
+    "id": "cn_room",
+    "kind": "room",
+    "rect": [
+     -14,
+     -21,
+     -4,
+     -18
+    ]
+   },
+   {
+    "id": "cn_roomr",
+    "kind": "room",
+    "rect": [
+     4,
+     18,
+     14,
+     21
+    ]
+   },
+   {
+    "id": "ne_arch",
+    "kind": "passage",
+    "rect": [
+     12,
+     -20,
+     16,
+     -17
+    ]
+   },
+   {
+    "id": "ne_archr",
+    "kind": "passage",
+    "rect": [
+     -16,
+     17,
+     -12,
+     20
+    ]
+   },
+   {
+    "id": "ne_court_gate_s",
+    "kind": "passage",
+    "rect": [
+     24,
+     -26,
+     27,
+     -24
+    ]
+   },
+   {
+    "id": "ne_court_gate_sr",
+    "kind": "passage",
+    "rect": [
+     -27,
+     24,
+     -24,
+     26
+    ]
+   },
+   {
+    "id": "ne_court_gate_w",
+    "kind": "passage",
+    "rect": [
+     20,
+     -30,
+     22,
+     -28
+    ]
+   },
+   {
+    "id": "ne_court_gate_wr",
+    "kind": "passage",
+    "rect": [
+     -22,
+     28,
+     -20,
+     30
+    ]
+   }
+  ]
+ },
+ "terraces": [
+  {
+   "id": "n_lane_mid",
+   "rect": [
+    -14,
+    -27,
+    4,
+    -23
+   ],
+   "height": 0.72,
+   "stairs": [
+    {
+     "side": "e",
+     "from": -27,
+     "to": -23,
+     "steps": 4,
+     "rise": 0.18,
+     "run": 0.32
+    },
+    {
+     "side": "s",
+     "from": -4,
+     "to": 0,
+     "steps": 4,
+     "rise": 0.18,
+     "run": 0.32
+    },
+    {
+     "side": "w",
+     "from": -27,
+     "to": -23,
+     "steps": 4,
+     "rise": 0.18,
+     "run": 0.32
+    }
+   ]
+  },
+  {
+   "id": "n_lane_midr",
+   "rect": [
+    -4,
+    23,
+    14,
+    27
+   ],
+   "height": 0.72,
+   "stairs": [
+    {
+     "side": "n",
+     "from": 0,
+     "to": 4,
+     "steps": 4,
+     "rise": 0.18,
+     "run": 0.32
+    },
+    {
+     "side": "e",
+     "from": 23,
+     "to": 27,
+     "steps": 4,
+     "rise": 0.18,
+     "run": 0.32
+    },
+    {
+     "side": "w",
+     "from": 23,
+     "to": 27,
+     "steps": 4,
+     "rise": 0.18,
+     "run": 0.32
+    }
+   ]
+  },
+  {
+   "id": "ne_court",
+   "rect": [
+    22,
+    -32,
+    30,
+    -26
+   ],
+   "height": 0.54,
+   "stairs": [
+    {
+     "side": "s",
+     "from": 24,
+     "to": 27,
+     "steps": 3,
+     "rise": 0.18,
+     "run": 0.32
+    },
+    {
+     "side": "w",
+     "from": -30,
+     "to": -28,
+     "steps": 3,
+     "rise": 0.18,
+     "run": 0.32
+    }
+   ]
+  },
+  {
+   "id": "ne_courtr",
+   "rect": [
+    -30,
+    26,
+    -22,
+    32
+   ],
+   "height": 0.54,
+   "stairs": [
+    {
+     "side": "n",
+     "from": -27,
+     "to": -24,
+     "steps": 3,
+     "rise": 0.18,
+     "run": 0.32
+    },
+    {
+     "side": "e",
+     "from": 28,
+     "to": 30,
+     "steps": 3,
+     "rise": 0.18,
+     "run": 0.32
+    }
+   ]
+  }
+ ],
+ "buildings": [
+  {
+   "id": "B01",
+   "type": "plaster3",
+   "rect": [
+    -40,
+    -40,
+    -32,
+    -31
+   ],
+   "floors": 3,
+   "palette": "plaster_white",
+   "seed": 7784,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "s",
+   "doors": []
+  },
+  {
+   "id": "B02",
+   "type": "plaster3",
+   "rect": [
+    -32,
+    -40,
+    -24,
+    -31
+   ],
+   "floors": 3,
+   "palette": "plaster_worn",
+   "seed": 6270,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "s",
+     "at": 4.0,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B03",
+   "type": "plaster3",
+   "rect": [
+    -24,
+    -40,
+    -16,
+    -31
+   ],
+   "floors": 3,
+   "palette": "plaster_ochre",
+   "seed": 9666,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "s",
+     "at": 4.0,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B04",
+   "type": "stone2",
+   "rect": [
+    -16,
+    -40,
+    -8,
+    -31
+   ],
+   "floors": 3,
+   "palette": "stone_blocks",
+   "seed": 3328,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "s",
+   "doors": []
+  },
+  {
+   "id": "B05",
+   "type": "backdrop",
+   "rect": [
+    -8,
+    -40,
+    0,
+    -31
+   ],
+   "floors": 3,
+   "palette": "plaster_red",
+   "seed": 4609,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "w",
+   "doors": []
+  },
+  {
+   "id": "B06",
+   "type": "plaster3",
+   "rect": [
+    0,
+    -40,
+    6,
+    -31
+   ],
+   "floors": 3,
+   "palette": "plaster_beige",
+   "seed": 7568,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "s",
+   "doors": []
+  },
+  {
+   "id": "B07",
+   "type": "stone2",
+   "rect": [
+    6,
+    -40,
+    14,
+    -31
+   ],
+   "floors": 3,
+   "palette": "stone_blocks",
+   "seed": 3176,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "s",
+     "at": 4.0,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B08",
+   "type": "stone2",
+   "rect": [
+    14,
+    -40,
+    22,
+    -31
+   ],
+   "floors": 3,
+   "palette": "stone_blocks",
+   "seed": 5459,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "s",
+     "at": 3.0,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B09",
+   "type": "shop",
+   "rect": [
+    22,
+    -40,
+    30,
+    -32
+   ],
+   "floors": 3,
+   "palette": "plaster_worn",
+   "seed": 9854,
+   "roof": {
+    "type": "hip",
+    "ridge": "x"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "s",
+     "at": 4.0,
+     "width": 1.6
+    }
+   ],
+   "shopfront": {
+    "side": "s"
+   }
+  },
+  {
+   "id": "B10",
+   "type": "backdrop",
+   "rect": [
+    30,
+    -40,
+    40,
+    -32
+   ],
+   "floors": 3,
+   "palette": "plaster_worn",
+   "seed": 1462,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "w",
+   "doors": []
+  },
+  {
+   "id": "B11",
+   "type": "stone2",
+   "rect": [
+    -40,
+    -31,
+    -33,
+    -27
+   ],
+   "floors": 3,
+   "palette": "stone_warm",
+   "seed": 4610,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "e",
+   "doors": [
+    {
+     "side": "e",
+     "at": 2.0,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B12",
+   "type": "balcony",
+   "rect": [
+    -14,
+    -31,
+    -5,
+    -27
+   ],
+   "floors": 3,
+   "palette": "plaster_worn",
+   "seed": 7599,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "s",
+     "at": 4.5,
+     "width": 1.1
+    }
+   ],
+   "balcony": {
+    "side": "s",
+    "floor": 1
+   }
+  },
+  {
+   "id": "B13",
+   "type": "plaster3",
+   "rect": [
+    -5,
+    -31,
+    4,
+    -27
+   ],
+   "floors": 3,
+   "palette": "plaster_red",
+   "seed": 919,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "s",
+     "at": 4.5,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B14",
+   "type": "shop",
+   "rect": [
+    30,
+    -32,
+    40,
+    -24
+   ],
+   "floors": 3,
+   "palette": "plaster_white",
+   "seed": 3324,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "w",
+     "at": 3.0,
+     "width": 1.6
+    },
+    {
+     "side": "s",
+     "at": 1.5,
+     "width": 1.1
+    }
+   ],
+   "shopfront": {
+    "side": "w"
+   }
+  },
+  {
+   "id": "B15",
+   "type": "plaster3",
+   "rect": [
+    -40,
+    -27,
+    -29,
+    -20
+   ],
+   "floors": 3,
+   "palette": "stone_warm",
+   "seed": 6594,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "e",
+   "doors": [
+    {
+     "side": "e",
+     "at": 3.5,
+     "width": 1.1
+    },
+    {
+     "side": "n",
+     "at": 9.0,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B16",
+   "type": "plaster3",
+   "rect": [
+    -25,
+    -27,
+    -21,
+    -18
+   ],
+   "floors": 3,
+   "palette": "plaster_ochre",
+   "seed": 1313,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "w",
+     "at": 4.5,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B17",
+   "type": "plaster3",
+   "rect": [
+    -21,
+    -27,
+    -18,
+    -20
+   ],
+   "floors": 3,
+   "palette": "plaster_beige",
+   "seed": 5622,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "e",
+   "doors": [
+    {
+     "side": "e",
+     "at": 3.5,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B18",
+   "type": "plaster3",
+   "rect": [
+    8,
+    -27,
+    16,
+    -20
+   ],
+   "floors": 3,
+   "palette": "plaster_beige",
+   "seed": 2834,
+   "roof": {
+    "type": "hip",
+    "ridge": "x"
+   },
+   "front": "n",
+   "doors": [
+    {
+     "side": "n",
+     "at": 4.0,
+     "width": 1.1
+    },
+    {
+     "side": "e",
+     "at": 3.5,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B19",
+   "type": "plaster3",
+   "rect": [
+    -40,
+    -20,
+    -29,
+    -15
+   ],
+   "floors": 3,
+   "palette": "plaster_beige",
+   "seed": 6563,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "e",
+   "doors": [
+    {
+     "side": "e",
+     "at": 2.5,
+     "width": 1.1
+    },
+    {
+     "side": "s",
+     "at": 9.0,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B20",
+   "type": "stone2",
+   "rect": [
+    -21,
+    -20,
+    -18,
+    -15
+   ],
+   "floors": 2,
+   "palette": "stone_warm",
+   "seed": 6095,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "e",
+   "doors": [
+    {
+     "side": "e",
+     "at": 2.5,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B21",
+   "type": "room",
+   "rect": [
+    -14,
+    -23,
+    -4,
+    -15
+   ],
+   "floors": 2,
+   "palette": "brick_old",
+   "seed": 6093,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "n",
+   "doors": [
+    {
+     "side": "n",
+     "at": 5.0,
+     "width": 1.1
+    },
+    {
+     "side": "e",
+     "at": 4.0,
+     "width": 1.1
+    }
+   ],
+   "rooms": [
+    {
+     "rect": [
+      -14,
+      -21,
+      -4,
+      -18
+     ],
+     "clear": 3.0
+    }
+   ]
+  },
+  {
+   "id": "B22",
+   "type": "balcony",
+   "rect": [
+    0,
+    -23,
+    8,
+    -17
+   ],
+   "floors": 3,
+   "palette": "plaster_red",
+   "seed": 3072,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "n",
+     "at": 4.0,
+     "width": 1.1
+    }
+   ],
+   "balcony": {
+    "side": "s",
+    "floor": 1
+   }
+  },
+  {
+   "id": "B23",
+   "type": "archway",
+   "rect": [
+    12,
+    -20,
+    16,
+    -17
+   ],
+   "floors": 3,
+   "palette": "stone_warm",
+   "seed": 1954,
+   "roof": {
+    "type": "hip",
+    "ridge": "x"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "e",
+     "at": 1.5,
+     "width": 1.1
+    }
+   ],
+   "passages": [
+    {
+     "rect": [
+      12,
+      -20,
+      16,
+      -17
+     ],
+     "style": "arch",
+     "clear": 3.2
+    }
+   ]
+  },
+  {
+   "id": "B24",
+   "type": "corner",
+   "rect": [
+    20,
+    -20,
+    29,
+    -17
+   ],
+   "floors": 3,
+   "palette": "plaster_red",
+   "seed": 2754,
+   "roof": {
+    "type": "hip",
+    "ridge": "x"
+   },
+   "front": "n",
+   "doors": [
+    {
+     "side": "n",
+     "at": 4.5,
+     "width": 1.6
+    }
+   ],
+   "chamfer": {
+    "corner": "nw",
+    "size": 2.0
+   }
+  },
+  {
+   "id": "B25",
+   "type": "plaster3",
+   "rect": [
+    33,
+    -24,
+    40,
+    -16
+   ],
+   "floors": 3,
+   "palette": "plaster_rose",
+   "seed": 8202,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "w",
+     "at": 4.0,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B26",
+   "type": "shop",
+   "rect": [
+    -25,
+    -18,
+    -21,
+    -9
+   ],
+   "floors": 2,
+   "palette": "plaster_ochre",
+   "seed": 1530,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "w",
+     "at": 3.5,
+     "width": 1.6
+    }
+   ],
+   "shopfront": {
+    "side": "w"
+   }
+  },
+  {
+   "id": "B27",
+   "type": "stone2",
+   "rect": [
+    12,
+    -17,
+    19,
+    -13
+   ],
+   "floors": 2,
+   "palette": "stone_grey",
+   "seed": 9608,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "s",
+     "at": 5.0,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B28",
+   "type": "balcony",
+   "rect": [
+    19,
+    -17,
+    29,
+    -13
+   ],
+   "floors": 3,
+   "palette": "plaster_white",
+   "seed": 6804,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "s",
+     "at": 5.0,
+     "width": 1.1
+    }
+   ],
+   "balcony": {
+    "side": "s",
+    "floor": 1
+   }
+  },
+  {
+   "id": "B29",
+   "type": "plaster3",
+   "rect": [
+    33,
+    -16,
+    40,
+    -9
+   ],
+   "floors": 3,
+   "palette": "plaster_white",
+   "seed": 6215,
+   "roof": {
+    "type": "hip",
+    "ridge": "x"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "w",
+     "at": 3.5,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B30",
+   "type": "plaster3",
+   "rect": [
+    -40,
+    -15,
+    -33,
+    -7
+   ],
+   "floors": 3,
+   "palette": "plaster_ochre",
+   "seed": 260,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "e",
+   "doors": [
+    {
+     "side": "e",
+     "at": 4.0,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B31",
+   "type": "plaster3",
+   "rect": [
+    -29,
+    -11,
+    -25,
+    -7
+   ],
+   "floors": 3,
+   "palette": "plaster_beige",
+   "seed": 34,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "n",
+     "at": 2.0,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B32",
+   "type": "corner",
+   "rect": [
+    -6,
+    -13,
+    1,
+    -5
+   ],
+   "floors": 3,
+   "palette": "plaster_ochre",
+   "seed": 4134,
+   "roof": {
+    "type": "hip",
+    "ridge": "z"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "e",
+     "at": 4.0,
+     "width": 1.1
+    },
+    {
+     "side": "w",
+     "at": 4.0,
+     "width": 1.6
+    }
+   ],
+   "chamfer": {
+    "corner": "se",
+    "size": 2.0
+   }
+  },
+  {
+   "id": "B33",
+   "type": "stone2",
+   "rect": [
+    5,
+    -13,
+    15,
+    -5
+   ],
+   "floors": 2,
+   "palette": "stone_grey",
+   "seed": 1232,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "e",
+     "at": 4.0,
+     "width": 1.1
+    },
+    {
+     "side": "w",
+     "at": 4.0,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B34",
+   "type": "shop",
+   "rect": [
+    -25,
+    -9,
+    -21,
+    -1
+   ],
+   "floors": 2,
+   "palette": "plaster_rose",
+   "seed": 360,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "e",
+   "doors": [
+    {
+     "side": "e",
+     "at": 4.0,
+     "width": 1.6
+    }
+   ],
+   "shopfront": {
+    "side": "e"
+   }
+  },
+  {
+   "id": "B35",
+   "type": "shop",
+   "rect": [
+    -18,
+    -11,
+    -10,
+    -5
+   ],
+   "floors": 2,
+   "palette": "plaster_beige",
+   "seed": 3891,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "n",
+     "at": 4.0,
+     "width": 1.1
+    }
+   ],
+   "shopfront": {
+    "side": "s"
+   }
+  },
+  {
+   "id": "B36",
+   "type": "shop",
+   "rect": [
+    18,
+    -9,
+    21,
+    -4
+   ],
+   "floors": 3,
+   "palette": "plaster_beige",
+   "seed": 8943,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "w",
+     "at": 2.5,
+     "width": 1.6
+    }
+   ],
+   "shopfront": {
+    "side": "w"
+   }
+  },
+  {
+   "id": "B37",
+   "type": "narrow_passage",
+   "rect": [
+    21,
+    -9,
+    25,
+    0
+   ],
+   "floors": 4,
+   "palette": "stone_grey",
+   "seed": 3511,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "e",
+   "doors": [
+    {
+     "side": "e",
+     "at": 4.5,
+     "width": 1.1
+    }
+   ],
+   "passages": [
+    {
+     "rect": [
+      21,
+      -3,
+      25,
+      0
+     ],
+     "style": "lintel",
+     "clear": 3.2
+    }
+   ]
+  },
+  {
+   "id": "B38",
+   "type": "shop",
+   "rect": [
+    -40,
+    -7,
+    -33,
+    -1
+   ],
+   "floors": 3,
+   "palette": "plaster_beige",
+   "seed": 760,
+   "roof": {
+    "type": "hip",
+    "ridge": "x"
+   },
+   "front": "e",
+   "doors": [
+    {
+     "side": "e",
+     "at": 3.0,
+     "width": 1.6
+    }
+   ],
+   "shopfront": {
+    "side": "e"
+   }
+  },
+  {
+   "id": "B39",
+   "type": "corner",
+   "rect": [
+    5,
+    -5,
+    15,
+    1
+   ],
+   "floors": 3,
+   "palette": "plaster_white",
+   "seed": 3402,
+   "roof": {
+    "type": "hip",
+    "ridge": "x"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "s",
+     "at": 5.0,
+     "width": 1.6
+    },
+    {
+     "side": "e",
+     "at": 3.0,
+     "width": 1.1
+    }
+   ],
+   "chamfer": {
+    "corner": "sw",
+    "size": 2.0
+   }
+  },
+  {
+   "id": "B40",
+   "type": "plaster3",
+   "rect": [
+    33,
+    -7,
+    40,
+    -1
+   ],
+   "floors": 3,
+   "palette": "stone_warm",
+   "seed": 7530,
+   "roof": {
+    "type": "hip",
+    "ridge": "x"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "w",
+     "at": 3.0,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B41",
+   "type": "balcony",
+   "rect": [
+    -40,
+    -1,
+    -33,
+    7
+   ],
+   "floors": 3,
+   "palette": "stone_warm",
+   "seed": 4776,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "e",
+   "doors": [
+    {
+     "side": "e",
+     "at": 4.0,
+     "width": 1.1
+    }
+   ],
+   "balcony": {
+    "side": "e",
+    "floor": 1
+   }
+  },
+  {
+   "id": "B42",
+   "type": "corner",
+   "rect": [
+    -15,
+    -1,
+    -5,
+    7
+   ],
+   "floors": 3,
+   "palette": "plaster_beige",
+   "seed": 6159,
+   "roof": {
+    "type": "hip",
+    "ridge": "x"
+   },
+   "front": "n",
+   "doors": [
+    {
+     "side": "n",
+     "at": 5.0,
+     "width": 1.6
+    },
+    {
+     "side": "e",
+     "at": 4.0,
+     "width": 1.1
+    }
+   ],
+   "chamfer": {
+    "corner": "ne",
+    "size": 2.0
+   }
+  },
+  {
+   "id": "B43",
+   "type": "stone2",
+   "rect": [
+    33,
+    -1,
+    40,
+    8
+   ],
+   "floors": 3,
+   "palette": "stone_blocks",
+   "seed": 3380,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "w",
+     "at": 4.5,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B44",
+   "type": "narrow_passage",
+   "rect": [
+    -25,
+    -1,
+    -21,
+    9
+   ],
+   "floors": 4,
+   "palette": "stone_grey",
+   "seed": 3847,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "w",
+     "at": 5.0,
+     "width": 1.1
+    }
+   ],
+   "passages": [
+    {
+     "rect": [
+      -25,
+      0,
+      -21,
+      3
+     ],
+     "style": "lintel",
+     "clear": 3.2
+    }
+   ]
+  },
+  {
+   "id": "B45",
+   "type": "shop",
+   "rect": [
+    -21,
+    4,
+    -18,
+    9
+   ],
+   "floors": 3,
+   "palette": "plaster_ochre",
+   "seed": 3764,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "e",
+   "doors": [
+    {
+     "side": "e",
+     "at": 2.5,
+     "width": 1.6
+    }
+   ],
+   "shopfront": {
+    "side": "e"
+   }
+  },
+  {
+   "id": "B46",
+   "type": "shop",
+   "rect": [
+    21,
+    0,
+    25,
+    8
+   ],
+   "floors": 3,
+   "palette": "plaster_white",
+   "seed": 4741,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "w",
+     "at": 4.0,
+     "width": 1.6
+    }
+   ],
+   "shopfront": {
+    "side": "w"
+   }
+  },
+  {
+   "id": "B47",
+   "type": "corner",
+   "rect": [
+    -15,
+    7,
+    -5,
+    13
+   ],
+   "floors": 3,
+   "palette": "plaster_worn",
+   "seed": 219,
+   "roof": {
+    "type": "hip",
+    "ridge": "x"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "s",
+     "at": 6.5,
+     "width": 1.6
+    },
+    {
+     "side": "e",
+     "at": 3.0,
+     "width": 1.1
+    }
+   ],
+   "chamfer": {
+    "corner": "se",
+    "size": 2.0
+   }
+  },
+  {
+   "id": "B48",
+   "type": "corner",
+   "rect": [
+    -1,
+    5,
+    6,
+    13
+   ],
+   "floors": 3,
+   "palette": "plaster_ochre",
+   "seed": 9671,
+   "roof": {
+    "type": "hip",
+    "ridge": "z"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "e",
+     "at": 4.0,
+     "width": 1.1
+    },
+    {
+     "side": "w",
+     "at": 4.0,
+     "width": 1.6
+    }
+   ],
+   "chamfer": {
+    "corner": "nw",
+    "size": 2.0
+   }
+  },
+  {
+   "id": "B49",
+   "type": "shop",
+   "rect": [
+    10,
+    5,
+    18,
+    11
+   ],
+   "floors": 2,
+   "palette": "stone_warm",
+   "seed": 3965,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "n",
+     "at": 4.0,
+     "width": 1.1
+    }
+   ],
+   "shopfront": {
+    "side": "s"
+   }
+  },
+  {
+   "id": "B50",
+   "type": "plaster3",
+   "rect": [
+    25,
+    7,
+    29,
+    11
+   ],
+   "floors": 3,
+   "palette": "plaster_beige",
+   "seed": 4553,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "n",
+     "at": 2.0,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B51",
+   "type": "stone2",
+   "rect": [
+    33,
+    8,
+    40,
+    15
+   ],
+   "floors": 3,
+   "palette": "stone_blocks",
+   "seed": 734,
+   "roof": {
+    "type": "hip",
+    "ridge": "x"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "w",
+     "at": 3.5,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B52",
+   "type": "stone2",
+   "rect": [
+    -40,
+    9,
+    -33,
+    17
+   ],
+   "floors": 3,
+   "palette": "stone_grey",
+   "seed": 6119,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "e",
+   "doors": [
+    {
+     "side": "e",
+     "at": 4.0,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B53",
+   "type": "plaster3",
+   "rect": [
+    -29,
+    13,
+    -20,
+    17
+   ],
+   "floors": 3,
+   "palette": "stone_warm",
+   "seed": 2288,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "n",
+   "doors": [
+    {
+     "side": "n",
+     "at": 4.5,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B54",
+   "type": "stone2",
+   "rect": [
+    -20,
+    13,
+    -12,
+    17
+   ],
+   "floors": 2,
+   "palette": "stone_grey",
+   "seed": 5801,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "n",
+   "doors": [
+    {
+     "side": "n",
+     "at": 2.5,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B55",
+   "type": "stone2",
+   "rect": [
+    21,
+    8,
+    25,
+    19
+   ],
+   "floors": 2,
+   "palette": "stone_blocks",
+   "seed": 4825,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "e",
+   "doors": [
+    {
+     "side": "e",
+     "at": 7.0,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B56",
+   "type": "balcony",
+   "rect": [
+    -29,
+    17,
+    -20,
+    20
+   ],
+   "floors": 3,
+   "palette": "plaster_ochre",
+   "seed": 9604,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "s",
+     "at": 4.5,
+     "width": 1.1
+    }
+   ],
+   "balcony": {
+    "side": "s",
+    "floor": 1
+   }
+  },
+  {
+   "id": "B57",
+   "type": "archway",
+   "rect": [
+    -16,
+    17,
+    -12,
+    20
+   ],
+   "floors": 3,
+   "palette": "plaster_worn",
+   "seed": 1936,
+   "roof": {
+    "type": "hip",
+    "ridge": "x"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "e",
+     "at": 1.5,
+     "width": 1.1
+    }
+   ],
+   "passages": [
+    {
+     "rect": [
+      -16,
+      17,
+      -12,
+      20
+     ],
+     "style": "arch",
+     "clear": 3.2
+    }
+   ]
+  },
+  {
+   "id": "B58",
+   "type": "room",
+   "rect": [
+    4,
+    15,
+    14,
+    23
+   ],
+   "floors": 2,
+   "palette": "brick_old",
+   "seed": 6445,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "s",
+     "at": 5.0,
+     "width": 1.1
+    },
+    {
+     "side": "n",
+     "at": 6.0,
+     "width": 1.1
+    }
+   ],
+   "rooms": [
+    {
+     "rect": [
+      4,
+      18,
+      14,
+      21
+     ],
+     "clear": 3.0
+    }
+   ]
+  },
+  {
+   "id": "B59",
+   "type": "stone2",
+   "rect": [
+    18,
+    15,
+    21,
+    20
+   ],
+   "floors": 2,
+   "palette": "stone_warm",
+   "seed": 5358,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "w",
+     "at": 2.5,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B60",
+   "type": "plaster3",
+   "rect": [
+    29,
+    15,
+    40,
+    21
+   ],
+   "floors": 3,
+   "palette": "plaster_worn",
+   "seed": 8080,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "w",
+     "at": 3.0,
+     "width": 1.1
+    },
+    {
+     "side": "n",
+     "at": 2.0,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B61",
+   "type": "stone2",
+   "rect": [
+    -40,
+    17,
+    -33,
+    24
+   ],
+   "floors": 3,
+   "palette": "stone_grey",
+   "seed": 1283,
+   "roof": {
+    "type": "hip",
+    "ridge": "x"
+   },
+   "front": "e",
+   "doors": [
+    {
+     "side": "e",
+     "at": 3.5,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B62",
+   "type": "plaster3",
+   "rect": [
+    -16,
+    20,
+    -8,
+    27
+   ],
+   "floors": 3,
+   "palette": "plaster_white",
+   "seed": 9312,
+   "roof": {
+    "type": "hip",
+    "ridge": "x"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "s",
+     "at": 4.0,
+     "width": 1.1
+    },
+    {
+     "side": "w",
+     "at": 3.5,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B63",
+   "type": "plaster3",
+   "rect": [
+    -8,
+    17,
+    0,
+    23
+   ],
+   "floors": 3,
+   "palette": "plaster_ochre",
+   "seed": 5759,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "n",
+     "at": 4.0,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B64",
+   "type": "balcony",
+   "rect": [
+    18,
+    20,
+    21,
+    27
+   ],
+   "floors": 3,
+   "palette": "plaster_ochre",
+   "seed": 6590,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "w",
+     "at": 3.5,
+     "width": 1.1
+    }
+   ],
+   "balcony": {
+    "side": "w",
+    "floor": 1
+   }
+  },
+  {
+   "id": "B65",
+   "type": "balcony",
+   "rect": [
+    21,
+    19,
+    25,
+    27
+   ],
+   "floors": 3,
+   "palette": "plaster_red",
+   "seed": 2726,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "e",
+   "doors": [
+    {
+     "side": "e",
+     "at": 4.0,
+     "width": 1.1
+    }
+   ],
+   "balcony": {
+    "side": "e",
+    "floor": 1
+   }
+  },
+  {
+   "id": "B66",
+   "type": "stone2",
+   "rect": [
+    29,
+    21,
+    40,
+    27
+   ],
+   "floors": 3,
+   "palette": "stone_grey",
+   "seed": 3501,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "w",
+     "at": 3.0,
+     "width": 1.1
+    },
+    {
+     "side": "s",
+     "at": 2.0,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B67",
+   "type": "shop",
+   "rect": [
+    -40,
+    24,
+    -30,
+    32
+   ],
+   "floors": 3,
+   "palette": "stone_warm",
+   "seed": 6158,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "e",
+   "doors": [
+    {
+     "side": "e",
+     "at": 5.0,
+     "width": 1.6
+    },
+    {
+     "side": "n",
+     "at": 8.5,
+     "width": 1.1
+    }
+   ],
+   "shopfront": {
+    "side": "e"
+   }
+  },
+  {
+   "id": "B68",
+   "type": "plaster3",
+   "rect": [
+    -4,
+    27,
+    5,
+    31
+   ],
+   "floors": 3,
+   "palette": "plaster_rose",
+   "seed": 3677,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "n",
+   "doors": [
+    {
+     "side": "n",
+     "at": 4.5,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B69",
+   "type": "plaster3",
+   "rect": [
+    5,
+    27,
+    14,
+    31
+   ],
+   "floors": 3,
+   "palette": "plaster_worn",
+   "seed": 550,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "n",
+   "doors": [
+    {
+     "side": "n",
+     "at": 4.5,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B70",
+   "type": "plaster3",
+   "rect": [
+    33,
+    27,
+    40,
+    31
+   ],
+   "floors": 3,
+   "palette": "plaster_worn",
+   "seed": 12,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "w",
+     "at": 2.0,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B71",
+   "type": "balcony",
+   "rect": [
+    -22,
+    31,
+    -14,
+    40
+   ],
+   "floors": 3,
+   "palette": "stone_warm",
+   "seed": 3233,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "n",
+   "doors": [
+    {
+     "side": "n",
+     "at": 5.0,
+     "width": 1.1
+    }
+   ],
+   "balcony": {
+    "side": "n",
+    "floor": 1
+   }
+  },
+  {
+   "id": "B72",
+   "type": "plaster3",
+   "rect": [
+    -14,
+    31,
+    -6,
+    40
+   ],
+   "floors": 3,
+   "palette": "plaster_beige",
+   "seed": 2772,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "n",
+   "doors": [
+    {
+     "side": "n",
+     "at": 4.0,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B73",
+   "type": "stone2",
+   "rect": [
+    -6,
+    31,
+    1,
+    40
+   ],
+   "floors": 3,
+   "palette": "stone_blocks",
+   "seed": 8541,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "n",
+   "doors": []
+  },
+  {
+   "id": "B74",
+   "type": "backdrop",
+   "rect": [
+    1,
+    31,
+    9,
+    40
+   ],
+   "floors": 3,
+   "palette": "plaster_beige",
+   "seed": 217,
+   "roof": {
+    "type": "hip",
+    "ridge": "z"
+   },
+   "front": "w",
+   "doors": []
+  },
+  {
+   "id": "B75",
+   "type": "plaster3",
+   "rect": [
+    9,
+    31,
+    16,
+    40
+   ],
+   "floors": 3,
+   "palette": "plaster_beige",
+   "seed": 7657,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "n",
+   "doors": []
+  },
+  {
+   "id": "B76",
+   "type": "plaster3",
+   "rect": [
+    16,
+    31,
+    24,
+    40
+   ],
+   "floors": 3,
+   "palette": "plaster_beige",
+   "seed": 2652,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "n",
+   "doors": [
+    {
+     "side": "n",
+     "at": 4.0,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B77",
+   "type": "stone2",
+   "rect": [
+    24,
+    31,
+    32,
+    40
+   ],
+   "floors": 3,
+   "palette": "stone_warm",
+   "seed": 554,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "n",
+   "doors": [
+    {
+     "side": "n",
+     "at": 4.0,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B78",
+   "type": "plaster3",
+   "rect": [
+    32,
+    31,
+    40,
+    40
+   ],
+   "floors": 3,
+   "palette": "plaster_beige",
+   "seed": 7042,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "n",
+   "doors": []
+  },
+  {
+   "id": "B79",
+   "type": "backdrop",
+   "rect": [
+    -40,
+    32,
+    -30,
+    40
+   ],
+   "floors": 3,
+   "palette": "plaster_white",
+   "seed": 5197,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "w",
+   "doors": []
+  },
+  {
+   "id": "B80",
+   "type": "stone2",
+   "rect": [
+    -30,
+    32,
+    -22,
+    40
+   ],
+   "floors": 3,
+   "palette": "stone_blocks",
+   "seed": 3746,
+   "roof": {
+    "type": "hip",
+    "ridge": "x"
+   },
+   "front": "n",
+   "doors": [
+    {
+     "side": "n",
+     "at": 4.0,
+     "width": 1.1
+    }
+   ]
+  }
+ ],
+ "walls": [
+  {
+   "id": "W01",
+   "rect": [
+    20,
+    -31,
+    22,
+    -26
+   ],
+   "height": 3.6,
+   "style": "stone",
+   "gates": [
+    {
+     "rect": [
+      20,
+      -30,
+      22,
+      -28
+     ]
+    }
+   ]
+  },
+  {
+   "id": "W02",
+   "rect": [
+    20,
+    -26,
+    30,
+    -24
+   ],
+   "height": 3.6,
+   "style": "stone",
+   "gates": [
+    {
+     "rect": [
+      24,
+      -26,
+      27,
+      -24
+     ]
+    }
+   ]
+  },
+  {
+   "id": "W03",
+   "rect": [
+    -6,
+    -15,
+    -4,
+    -13
+   ],
+   "height": 4.4,
+   "style": "pillar",
+   "gates": []
+  },
+  {
+   "id": "W04",
+   "rect": [
+    29,
+    -9,
+    40,
+    -7
+   ],
+   "height": 3.6,
+   "style": "stone",
+   "gates": []
+  },
+  {
+   "id": "W05",
+   "rect": [
+    -40,
+    7,
+    -29,
+    9
+   ],
+   "height": 3.6,
+   "style": "stone",
+   "gates": []
+  },
+  {
+   "id": "W06",
+   "rect": [
+    4,
+    13,
+    6,
+    15
+   ],
+   "height": 4.4,
+   "style": "pillar",
+   "gates": []
+  },
+  {
+   "id": "W07",
+   "rect": [
+    -30,
+    24,
+    -20,
+    26
+   ],
+   "height": 3.6,
+   "style": "stone",
+   "gates": [
+    {
+     "rect": [
+      -27,
+      24,
+      -24,
+      26
+     ]
+    }
+   ]
+  },
+  {
+   "id": "W08",
+   "rect": [
+    -22,
+    26,
+    -20,
+    31
+   ],
+   "height": 3.6,
+   "style": "stone",
+   "gates": [
+    {
+     "rect": [
+      -22,
+      28,
+      -20,
+      30
+     ]
+    }
+   ]
+  }
+ ],
+ "safeZones": [
+  {
+   "id": "safe_blue",
+   "team": "blue",
+   "rect": [
+    -33,
+    -7,
+    -25,
+    7
+   ],
+   "height": 6.0,
+   "entrances": [
+    {
+     "side": "n",
+     "from": -33,
+     "to": -29,
+     "height": 3.4
+    },
+    {
+     "side": "e",
+     "from": 0,
+     "to": 3,
+     "height": 2.8
+    },
+    {
+     "side": "s",
+     "from": -29,
+     "to": -25,
+     "height": 3.4
+    }
+   ]
+  },
+  {
+   "id": "safe_red",
+   "team": "red",
+   "rect": [
+    25,
+    -7,
+    33,
+    7
+   ],
+   "height": 6.0,
+   "entrances": [
+    {
+     "side": "n",
+     "from": 25,
+     "to": 29,
+     "height": 3.4
+    },
+    {
+     "side": "s",
+     "from": 29,
+     "to": 33,
+     "height": 3.4
+    },
+    {
+     "side": "w",
+     "from": -3,
+     "to": 0,
+     "height": 2.8
+    }
+   ]
+  }
+ ],
+ "spawns": [
+  {
+   "team": "blue",
+   "pos": [
+    -30.6,
+    0.0,
+    -4.5
+   ],
+   "heading": 90
+  },
+  {
+   "team": "blue",
+   "pos": [
+    -27.4,
+    0.0,
+    -4.5
+   ],
+   "heading": 90
+  },
+  {
+   "team": "blue",
+   "pos": [
+    -30.6,
+    0.0,
+    -1.5
+   ],
+   "heading": 90
+  },
+  {
+   "team": "blue",
+   "pos": [
+    -27.4,
+    0.0,
+    -1.5
+   ],
+   "heading": 90
+  },
+  {
+   "team": "blue",
+   "pos": [
+    -30.6,
+    0.0,
+    1.5
+   ],
+   "heading": 90
+  },
+  {
+   "team": "blue",
+   "pos": [
+    -27.4,
+    0.0,
+    1.5
+   ],
+   "heading": 90
+  },
+  {
+   "team": "blue",
+   "pos": [
+    -30.6,
+    0.0,
+    4.5
+   ],
+   "heading": 90
+  },
+  {
+   "team": "blue",
+   "pos": [
+    -27.4,
+    0.0,
+    4.5
+   ],
+   "heading": 90
+  },
+  {
+   "team": "red",
+   "pos": [
+    30.6,
+    0.0,
+    4.5
+   ],
+   "heading": 270
+  },
+  {
+   "team": "red",
+   "pos": [
+    27.4,
+    0.0,
+    4.5
+   ],
+   "heading": 270
+  },
+  {
+   "team": "red",
+   "pos": [
+    30.6,
+    0.0,
+    1.5
+   ],
+   "heading": 270
+  },
+  {
+   "team": "red",
+   "pos": [
+    27.4,
+    0.0,
+    1.5
+   ],
+   "heading": 270
+  },
+  {
+   "team": "red",
+   "pos": [
+    30.6,
+    0.0,
+    -1.5
+   ],
+   "heading": 270
+  },
+  {
+   "team": "red",
+   "pos": [
+    27.4,
+    0.0,
+    -1.5
+   ],
+   "heading": 270
+  },
+  {
+   "team": "red",
+   "pos": [
+    30.6,
+    0.0,
+    -4.5
+   ],
+   "heading": 270
+  },
+  {
+   "team": "red",
+   "pos": [
+    27.4,
+    0.0,
+    -4.5
+   ],
+   "heading": 270
+  }
+ ],
+ "arches": [
+  {
+   "id": "arch_nw_b",
+   "rect": [
+    -29,
+    -21.4,
+    -25,
+    -20.6
+   ],
+   "spring": 3.4,
+   "axis": "x"
+  },
+  {
+   "id": "arch_nw_br",
+   "rect": [
+    25,
+    20.6,
+    29,
+    21.4
+   ],
+   "spring": 3.4,
+   "axis": "x"
+  },
+  {
+   "id": "arch_cn_a",
+   "rect": [
+    -4,
+    -20.4,
+    0,
+    -19.6
+   ],
+   "spring": 3.4,
+   "axis": "x"
+  },
+  {
+   "id": "arch_cn_ar",
+   "rect": [
+    0,
+    19.6,
+    4,
+    20.4
+   ],
+   "spring": 3.4,
+   "axis": "x"
+  },
+  {
+   "id": "arch_e_edge",
+   "rect": [
+    29,
+    -16.4,
+    33,
+    -15.6
+   ],
+   "spring": 3.4,
+   "axis": "x"
+  },
+  {
+   "id": "arch_e_edger",
+   "rect": [
+    -33,
+    15.6,
+    -29,
+    16.4
+   ],
+   "spring": 3.4,
+   "axis": "x"
+  },
+  {
+   "id": "arch_nw_e",
+   "rect": [
+    -12.4,
+    -15,
+    -11.6,
+    -11
+   ],
+   "spring": 3.4,
+   "axis": "z"
+  },
+  {
+   "id": "arch_nw_er",
+   "rect": [
+    11.6,
+    11,
+    12.4,
+    15
+   ],
+   "spring": 3.4,
+   "axis": "z"
+  }
+ ],
+ "props": [
+  {
+   "type": "market_stall",
+   "pos": [
+    -2.6,
+    0,
+    -4.15
+   ],
+   "heading": 180
+  },
+  {
+   "type": "market_stall",
+   "pos": [
+    2.6,
+    0,
+    4.15
+   ],
+   "heading": 0
+  },
+  {
+   "type": "bench",
+   "pos": [
+    -4.3,
+    0,
+    1.6
+   ],
+   "heading": 90
+  },
+  {
+   "type": "bench",
+   "pos": [
+    4.3,
+    0,
+    -1.6
+   ],
+   "heading": 270
+  },
+  {
+   "type": "cart",
+   "pos": [
+    -16.4,
+    0,
+    1.9
+   ],
+   "heading": 0
+  },
+  {
+   "type": "cart",
+   "pos": [
+    16.4,
+    0,
+    -1.9
+   ],
+   "heading": 180
+  },
+  {
+   "type": "crate_stack",
+   "pos": [
+    -20.2,
+    0,
+    -4.2
+   ],
+   "heading": 90
+  },
+  {
+   "type": "crate_stack",
+   "pos": [
+    20.2,
+    0,
+    4.2
+   ],
+   "heading": 270
+  },
+  {
+   "type": "market_stall",
+   "pos": [
+    25.0,
+    0.54,
+    -31.15
+   ],
+   "heading": 180
+  },
+  {
+   "type": "market_stall",
+   "pos": [
+    -25.0,
+    0.54,
+    31.15
+   ],
+   "heading": 0
+  },
+  {
+   "type": "bench",
+   "pos": [
+    22.45,
+    0.54,
+    -27.8
+   ],
+   "heading": 90
+  },
+  {
+   "type": "bench",
+   "pos": [
+    -22.45,
+    0.54,
+    27.8
+   ],
+   "heading": 270
+  },
+  {
+   "type": "fence",
+   "pos": [
+    29.0,
+    0.54,
+    -30.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "fence",
+   "pos": [
+    -29.0,
+    0.54,
+    30.0
+   ],
+   "heading": 180
+  },
+  {
+   "type": "fence_gate",
+   "pos": [
+    28.0,
+    0.54,
+    -31.0
+   ],
+   "heading": 270
+  },
+  {
+   "type": "fence_gate",
+   "pos": [
+    -28.0,
+    0.54,
+    31.0
+   ],
+   "heading": 90
+  },
+  {
+   "type": "flower_pot_large",
+   "pos": [
+    29.1,
+    0.54,
+    -31.2
+   ],
+   "heading": 0
+  },
+  {
+   "type": "flower_pot_large",
+   "pos": [
+    -29.1,
+    0.54,
+    31.2
+   ],
+   "heading": 180
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    29.4,
+    0.54,
+    -30.5
+   ],
+   "heading": 0
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    -29.4,
+    0.54,
+    30.5
+   ],
+   "heading": 180
+  },
+  {
+   "type": "street_lantern",
+   "pos": [
+    -4.3,
+    0,
+    -4.3
+   ],
+   "heading": 0
+  },
+  {
+   "type": "street_lantern",
+   "pos": [
+    4.3,
+    0,
+    4.3
+   ],
+   "heading": 180
+  },
+  {
+   "type": "street_lantern",
+   "pos": [
+    4.3,
+    0,
+    -4.3
+   ],
+   "heading": 0
+  },
+  {
+   "type": "street_lantern",
+   "pos": [
+    -4.3,
+    0,
+    4.3
+   ],
+   "heading": 180
+  },
+  {
+   "type": "street_lantern",
+   "pos": [
+    -20.4,
+    0,
+    3.4
+   ],
+   "heading": 0
+  },
+  {
+   "type": "street_lantern",
+   "pos": [
+    20.4,
+    0,
+    -3.4
+   ],
+   "heading": 180
+  },
+  {
+   "type": "street_lantern",
+   "pos": [
+    22.6,
+    0.54,
+    -26.6
+   ],
+   "heading": 0
+  },
+  {
+   "type": "street_lantern",
+   "pos": [
+    -22.6,
+    0.54,
+    26.6
+   ],
+   "heading": 180
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    9.03,
+    0.0,
+    -30.6
+   ],
+   "heading": 180
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    10.97,
+    0.0,
+    -30.6
+   ],
+   "heading": 180
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    -10.47,
+    0.72,
+    -26.6
+   ],
+   "heading": 180
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    -8.53,
+    0.72,
+    -26.6
+   ],
+   "heading": 180
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    30.53,
+    0.0,
+    -23.6
+   ],
+   "heading": 180
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    32.47,
+    0.0,
+    -23.6
+   ],
+   "heading": 180
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    -31.97,
+    0.0,
+    -27.4
+   ],
+   "heading": 0
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    -30.03,
+    0.0,
+    -27.4
+   ],
+   "heading": 0
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    11.03,
+    0.0,
+    -27.4
+   ],
+   "heading": 0
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    12.97,
+    0.0,
+    -27.4
+   ],
+   "heading": 0
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    -28.6,
+    0.0,
+    -18.47
+   ],
+   "heading": 90
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    -28.6,
+    0.0,
+    -16.53
+   ],
+   "heading": 90
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    -31.97,
+    0.0,
+    -14.6
+   ],
+   "heading": 180
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    -30.03,
+    0.0,
+    -14.6
+   ],
+   "heading": 180
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    -9.97,
+    0.72,
+    -23.4
+   ],
+   "heading": 0
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    -8.03,
+    0.72,
+    -23.4
+   ],
+   "heading": 0
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    -3.6,
+    0.0,
+    -19.97
+   ],
+   "heading": 90
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    -3.6,
+    0.0,
+    -18.03
+   ],
+   "heading": 90
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    -32.6,
+    0.0,
+    -11.97
+   ],
+   "heading": 90
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    -32.6,
+    0.0,
+    -10.03
+   ],
+   "heading": 90
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    15.4,
+    0.0,
+    -9.97
+   ],
+   "heading": 90
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    15.4,
+    0.0,
+    -8.03
+   ],
+   "heading": 90
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    4.6,
+    0.0,
+    -9.97
+   ],
+   "heading": 270
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    4.6,
+    0.0,
+    -8.03
+   ],
+   "heading": 270
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    -20.6,
+    0.0,
+    -6.22
+   ],
+   "heading": 90
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    -11.22,
+    0.0,
+    -1.4
+   ],
+   "heading": 0
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    -8.78,
+    0.0,
+    -1.4
+   ],
+   "heading": 0
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    -4.6,
+    0.0,
+    9.03
+   ],
+   "heading": 90
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    -4.6,
+    0.0,
+    10.97
+   ],
+   "heading": 90
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    6.4,
+    0.0,
+    8.03
+   ],
+   "heading": 90
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    6.4,
+    0.0,
+    9.97
+   ],
+   "heading": 90
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    -32.6,
+    0.0,
+    12.03
+   ],
+   "heading": 90
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    -32.6,
+    0.0,
+    13.97
+   ],
+   "heading": 90
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    25.4,
+    0.0,
+    14.03
+   ],
+   "heading": 90
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    25.4,
+    0.0,
+    15.97
+   ],
+   "heading": 90
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    30.03,
+    0.0,
+    14.6
+   ],
+   "heading": 0
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    31.97,
+    0.0,
+    14.6
+   ],
+   "heading": 0
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    17.6,
+    0.0,
+    22.53
+   ],
+   "heading": 270
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    17.6,
+    0.0,
+    24.47
+   ],
+   "heading": 270
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    -17.97,
+    0.0,
+    30.6
+   ],
+   "heading": 0
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    -16.03,
+    0.0,
+    30.6
+   ],
+   "heading": 0
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    27.03,
+    0.0,
+    30.6
+   ],
+   "heading": 0
+  },
+  {
+   "type": "flower_pot",
+   "pos": [
+    28.97,
+    0.0,
+    30.6
+   ],
+   "heading": 0
+  },
+  {
+   "type": "barrel_group",
+   "pos": [
+    -30.5,
+    0.0,
+    -30.335
+   ],
+   "heading": 180
+  },
+  {
+   "type": "barrel_group",
+   "pos": [
+    -22.5,
+    0.0,
+    -30.335
+   ],
+   "heading": 180
+  },
+  {
+   "type": "barrel_group",
+   "pos": [
+    7.5,
+    0.0,
+    -30.335
+   ],
+   "heading": 195
+  },
+  {
+   "type": "barrel",
+   "pos": [
+    4.35,
+    0.0,
+    -29.5
+   ],
+   "heading": 81
+  },
+  {
+   "type": "crate",
+   "pos": [
+    9.5,
+    0.0,
+    -27.44
+   ],
+   "heading": 15
+  },
+  {
+   "type": "barrel",
+   "pos": [
+    -12.5,
+    0.0,
+    -14.65
+   ],
+   "heading": 187
+  },
+  {
+   "type": "crate",
+   "pos": [
+    -0.44,
+    0.0,
+    -19.0
+   ],
+   "heading": 270
+  },
+  {
+   "type": "flower_pot_large",
+   "pos": [
+    32.56,
+    0.0,
+    -22.5
+   ],
+   "heading": 285
+  },
+  {
+   "type": "flower_pot_large",
+   "pos": [
+    -25.44,
+    0.0,
+    -16.5
+   ],
+   "heading": 285
+  },
+  {
+   "type": "barrel",
+   "pos": [
+    29.35,
+    0.0,
+    -15.5
+   ],
+   "heading": 90
+  },
+  {
+   "type": "crate_stack",
+   "pos": [
+    20.5,
+    0.0,
+    -12.51
+   ],
+   "heading": 187
+  },
+  {
+   "type": "barrel",
+   "pos": [
+    -16.5,
+    0.0,
+    -4.65
+   ],
+   "heading": 187
+  },
+  {
+   "type": "crate",
+   "pos": [
+    15.44,
+    0.0,
+    -3.5
+   ],
+   "heading": 90
+  },
+  {
+   "type": "flower_pot_large",
+   "pos": [
+    6.5,
+    0.0,
+    1.44
+   ],
+   "heading": 171
+  },
+  {
+   "type": "flower_pot_large",
+   "pos": [
+    -15.44,
+    0.0,
+    11.0
+   ],
+   "heading": 270
+  },
+  {
+   "type": "crate",
+   "pos": [
+    11.5,
+    0.0,
+    11.44
+   ],
+   "heading": 195
+  },
+  {
+   "type": "crate",
+   "pos": [
+    9.56,
+    0.0,
+    6.5
+   ],
+   "heading": 270
+  },
+  {
+   "type": "barrel",
+   "pos": [
+    26.5,
+    0.0,
+    11.35
+   ],
+   "heading": 195
+  },
+  {
+   "type": "barrel",
+   "pos": [
+    -32.65,
+    0.0,
+    10.5
+   ],
+   "heading": 90
+  },
+  {
+   "type": "barrel",
+   "pos": [
+    -27.5,
+    0.0,
+    12.65
+   ],
+   "heading": 0
+  },
+  {
+   "type": "flower_pot_large",
+   "pos": [
+    -29.44,
+    0.0,
+    14.5
+   ],
+   "heading": 285
+  },
+  {
+   "type": "crate",
+   "pos": [
+    -16.0,
+    0.0,
+    12.56
+   ],
+   "heading": 15
+  },
+  {
+   "type": "crate_small",
+   "pos": [
+    -15.15,
+    0.0,
+    12.685
+   ],
+   "heading": 0
+  },
+  {
+   "type": "barrel",
+   "pos": [
+    20.65,
+    0.0,
+    12.0
+   ],
+   "heading": 277
+  },
+  {
+   "type": "barrel",
+   "pos": [
+    -27.5,
+    0.0,
+    20.35
+   ],
+   "heading": 171
+  },
+  {
+   "type": "crate_stack",
+   "pos": [
+    8.0,
+    0.0,
+    14.51
+   ],
+   "heading": 0
+  },
+  {
+   "type": "barrel",
+   "pos": [
+    3.65,
+    0.0,
+    16.5
+   ],
+   "heading": 270
+  },
+  {
+   "type": "flower_pot_large",
+   "pos": [
+    -7.56,
+    0.0,
+    24.0
+   ],
+   "heading": 81
+  },
+  {
+   "type": "flower_pot_large",
+   "pos": [
+    0.44,
+    0.0,
+    18.5
+   ],
+   "heading": 97
+  },
+  {
+   "type": "crate",
+   "pos": [
+    -8.44,
+    0.0,
+    18.5
+   ],
+   "heading": 270
+  },
+  {
+   "type": "crate_small",
+   "pos": [
+    -8.315,
+    0.0,
+    19.35
+   ],
+   "heading": 270
+  },
+  {
+   "type": "barrel",
+   "pos": [
+    25.35,
+    0.0,
+    20.5
+   ],
+   "heading": 97
+  },
+  {
+   "type": "barrel_group",
+   "pos": [
+    -12.5,
+    0.0,
+    30.335
+   ],
+   "heading": 0
+  },
+  {
+   "type": "barrel",
+   "pos": [
+    17.5,
+    0.0,
+    30.65
+   ],
+   "heading": 0
+  },
+  {
+   "type": "barrel",
+   "pos": [
+    25.5,
+    0.0,
+    30.65
+   ],
+   "heading": 0
+  },
+  {
+   "type": "table",
+   "pos": [
+    -9.0,
+    0.02,
+    -20.55
+   ],
+   "heading": 0
+  },
+  {
+   "type": "stool",
+   "pos": [
+    -9.5,
+    0.02,
+    -19.85
+   ],
+   "heading": 0
+  },
+  {
+   "type": "stool",
+   "pos": [
+    -8.5,
+    0.02,
+    -19.85
+   ],
+   "heading": 0
+  },
+  {
+   "type": "crate_small",
+   "pos": [
+    -13.08,
+    0.02,
+    -18.38
+   ],
+   "heading": 0
+  },
+  {
+   "type": "barrel",
+   "pos": [
+    -4.92,
+    0.02,
+    -20.62
+   ],
+   "heading": 0
+  },
+  {
+   "type": "crate",
+   "pos": [
+    -4.97,
+    0.02,
+    -18.45
+   ],
+   "heading": 10
+  },
+  {
+   "type": "table",
+   "pos": [
+    9.0,
+    0.02,
+    18.45
+   ],
+   "heading": 0
+  },
+  {
+   "type": "stool",
+   "pos": [
+    8.5,
+    0.02,
+    19.15
+   ],
+   "heading": 0
+  },
+  {
+   "type": "stool",
+   "pos": [
+    9.5,
+    0.02,
+    19.15
+   ],
+   "heading": 0
+  },
+  {
+   "type": "crate_small",
+   "pos": [
+    4.92,
+    0.02,
+    20.62
+   ],
+   "heading": 0
+  },
+  {
+   "type": "barrel",
+   "pos": [
+    13.08,
+    0.02,
+    18.38
+   ],
+   "heading": 0
+  },
+  {
+   "type": "crate",
+   "pos": [
+    13.03,
+    0.02,
+    20.55
+   ],
+   "heading": 10
+  },
+  {
+   "type": "wall_lantern",
+   "pos": [
+    3.2,
+    3.72,
+    -26.98
+   ],
+   "heading": 180
+  },
+  {
+   "type": "wall_lantern",
+   "pos": [
+    -29.8,
+    3.0,
+    -27.02
+   ],
+   "heading": 0
+  },
+  {
+   "type": "wall_lantern",
+   "pos": [
+    15.2,
+    3.0,
+    -27.02
+   ],
+   "heading": 0
+  },
+  {
+   "type": "wall_lantern",
+   "pos": [
+    -13.2,
+    3.72,
+    -23.02
+   ],
+   "heading": 0
+  },
+  {
+   "type": "wall_lantern",
+   "pos": [
+    7.2,
+    3.0,
+    -16.98
+   ],
+   "heading": 180
+  },
+  {
+   "type": "wall_lantern",
+   "pos": [
+    1.02,
+    3.0,
+    -12.2
+   ],
+   "heading": 90
+  },
+  {
+   "type": "wall_lantern",
+   "pos": [
+    5.8,
+    3.0,
+    -13.02
+   ],
+   "heading": 0
+  },
+  {
+   "type": "wall_lantern",
+   "pos": [
+    -17.2,
+    3.0,
+    -11.02
+   ],
+   "heading": 0
+  },
+  {
+   "type": "wall_lantern",
+   "pos": [
+    -10.8,
+    3.0,
+    -11.02
+   ],
+   "heading": 0
+  },
+  {
+   "type": "wall_lantern",
+   "pos": [
+    -10.8,
+    3.0,
+    -4.98
+   ],
+   "heading": 180
+  },
+  {
+   "type": "wall_lantern",
+   "pos": [
+    -17.2,
+    3.0,
+    -4.98
+   ],
+   "heading": 180
+  },
+  {
+   "type": "wall_lantern",
+   "pos": [
+    14.2,
+    3.0,
+    1.02
+   ],
+   "heading": 180
+  },
+  {
+   "type": "wall_lantern",
+   "pos": [
+    -17.98,
+    3.0,
+    4.8
+   ],
+   "heading": 90
+  },
+  {
+   "type": "wall_lantern",
+   "pos": [
+    10.8,
+    3.0,
+    4.98
+   ],
+   "heading": 0
+  },
+  {
+   "type": "wall_lantern",
+   "pos": [
+    17.2,
+    3.0,
+    4.98
+   ],
+   "heading": 0
+  },
+  {
+   "type": "wall_lantern",
+   "pos": [
+    17.98,
+    3.0,
+    15.8
+   ],
+   "heading": 270
+  },
+  {
+   "type": "wall_lantern",
+   "pos": [
+    -7.2,
+    3.0,
+    16.98
+   ],
+   "heading": 0
+  },
+  {
+   "type": "wall_lantern",
+   "pos": [
+    -0.8,
+    3.0,
+    16.98
+   ],
+   "heading": 0
+  },
+  {
+   "type": "drain_grate",
+   "pos": [
+    -29.0,
+    0.004,
+    -13.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "drain_grate",
+   "pos": [
+    29.0,
+    0.004,
+    13.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "drain_grate",
+   "pos": [
+    -27.0,
+    0.004,
+    -23.0
+   ],
+   "heading": 90
+  },
+  {
+   "type": "drain_grate",
+   "pos": [
+    -27.0,
+    0.004,
+    -15.0
+   ],
+   "heading": 90
+  },
+  {
+   "type": "drain_grate",
+   "pos": [
+    -18.75,
+    0.004,
+    -29.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "drain_grate",
+   "pos": [
+    18.75,
+    0.004,
+    29.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "drain_grate",
+   "pos": [
+    -16.0,
+    0.004,
+    -21.0
+   ],
+   "heading": 90
+  },
+  {
+   "type": "drain_grate",
+   "pos": [
+    16.0,
+    0.004,
+    21.0
+   ],
+   "heading": 90
+  },
+  {
+   "type": "drain_grate",
+   "pos": [
+    -17.25,
+    0.004,
+    -13.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "drain_grate",
+   "pos": [
+    -9.75,
+    0.004,
+    -13.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "drain_grate",
+   "pos": [
+    17.25,
+    0.004,
+    13.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "drain_grate",
+   "pos": [
+    6.0,
+    0.004,
+    -27.0
+   ],
+   "heading": 90
+  },
+  {
+   "type": "drain_grate",
+   "pos": [
+    -6.0,
+    0.004,
+    27.0
+   ],
+   "heading": 90
+  },
+  {
+   "type": "drain_grate",
+   "pos": [
+    14.0,
+    0.004,
+    -29.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "drain_grate",
+   "pos": [
+    -14.0,
+    0.004,
+    29.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "drain_grate",
+   "pos": [
+    18.0,
+    0.004,
+    -22.0
+   ],
+   "heading": 90
+  },
+  {
+   "type": "drain_grate",
+   "pos": [
+    -18.0,
+    0.004,
+    22.0
+   ],
+   "heading": 90
+  },
+  {
+   "type": "drain_grate",
+   "pos": [
+    2.0,
+    0.004,
+    -15.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "drain_grate",
+   "pos": [
+    -2.0,
+    0.004,
+    15.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "drain_grate",
+   "pos": [
+    10.0,
+    0.004,
+    -16.5
+   ],
+   "heading": 90
+  },
+  {
+   "type": "drain_grate",
+   "pos": [
+    -10.0,
+    0.004,
+    16.5
+   ],
+   "heading": 90
+  },
+  {
+   "type": "drain_grate",
+   "pos": [
+    18.5,
+    0.004,
+    -11.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "drain_grate",
+   "pos": [
+    25.5,
+    0.004,
+    -11.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "drain_grate",
+   "pos": [
+    -25.5,
+    0.004,
+    11.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "drain_grate",
+   "pos": [
+    -18.5,
+    0.004,
+    11.0
+   ],
+   "heading": 0
+  }
+ ],
+ "lights": [
+  {
+   "type": "point",
+   "team": "blue",
+   "pos": [
+    -29.0,
+    3.4,
+    0.0
+   ],
+   "color": [
+    0.35,
+    0.55,
+    1.0
+   ],
+   "intensity": 18.0,
+   "range": 13.0
+  },
+  {
+   "type": "point",
+   "team": "red",
+   "pos": [
+    29.0,
+    3.4,
+    -0.0
+   ],
+   "color": [
+    1.0,
+    0.38,
+    0.32
+   ],
+   "intensity": 18.0,
+   "range": 13.0
+  }
+ ],
+ "targets": [
+  {
+   "id": "T01",
+   "pos": [
+    -31.2,
+    0,
+    -29.0
+   ],
+   "heading": 90
+  },
+  {
+   "id": "T02",
+   "pos": [
+    31.2,
+    0,
+    29.0
+   ],
+   "heading": 270
+  },
+  {
+   "id": "T03",
+   "pos": [
+    -27.0,
+    0,
+    -25.0
+   ],
+   "heading": 180
+  },
+  {
+   "id": "T04",
+   "pos": [
+    27.0,
+    0,
+    25.0
+   ],
+   "heading": 0
+  },
+  {
+   "id": "T05",
+   "pos": [
+    -16.0,
+    0,
+    -16.2
+   ],
+   "heading": 0
+  },
+  {
+   "id": "T06",
+   "pos": [
+    16.0,
+    0,
+    16.2
+   ],
+   "heading": 180
+  },
+  {
+   "id": "T07",
+   "pos": [
+    -8.0,
+    0,
+    -9.8
+   ],
+   "heading": 180
+  },
+  {
+   "id": "T08",
+   "pos": [
+    8.0,
+    0,
+    9.8
+   ],
+   "heading": 0
+  },
+  {
+   "id": "T09",
+   "pos": [
+    -9.0,
+    0.72,
+    -25.0
+   ],
+   "heading": 90
+  },
+  {
+   "id": "T10",
+   "pos": [
+    9.0,
+    0.72,
+    25.0
+   ],
+   "heading": 270
+  },
+  {
+   "id": "T11",
+   "pos": [
+    28.6,
+    0.54,
+    -28.6
+   ],
+   "heading": 270
+  },
+  {
+   "id": "T12",
+   "pos": [
+    -28.6,
+    0.54,
+    28.6
+   ],
+   "heading": 90
+  },
+  {
+   "id": "T13",
+   "pos": [
+    31.0,
+    0,
+    -22.6
+   ],
+   "heading": 180
+  },
+  {
+   "id": "T14",
+   "pos": [
+    -31.0,
+    0,
+    22.6
+   ],
+   "heading": 0
+  },
+  {
+   "id": "T15",
+   "pos": [
+    10.0,
+    0,
+    -19.0
+   ],
+   "heading": 180
+  },
+  {
+   "id": "T16",
+   "pos": [
+    -10.0,
+    0,
+    19.0
+   ],
+   "heading": 0
+  },
+  {
+   "id": "T17",
+   "pos": [
+    18.0,
+    0,
+    -25.6
+   ],
+   "heading": 180
+  },
+  {
+   "id": "T18",
+   "pos": [
+    -18.0,
+    0,
+    25.6
+   ],
+   "heading": 0
+  },
+  {
+   "id": "T19",
+   "pos": [
+    -18.0,
+    0,
+    -2.0
+   ],
+   "heading": 270
+  },
+  {
+   "id": "T20",
+   "pos": [
+    18.0,
+    0,
+    2.0
+   ],
+   "heading": 90
+  },
+  {
+   "id": "T21",
+   "pos": [
+    -31.6,
+    0,
+    5.4
+   ],
+   "heading": 90
+  },
+  {
+   "id": "T22",
+   "pos": [
+    31.6,
+    0,
+    -5.4
+   ],
+   "heading": 270
+  },
+  {
+   "id": "T23",
+   "pos": [
+    -3.6,
+    0,
+    -3.6
+   ],
+   "heading": 135
+  },
+  {
+   "id": "T24",
+   "pos": [
+    3.6,
+    0,
+    3.6
+   ],
+   "heading": 315
+  }
+ ],
+ "obstacles": [
+  {
+   "type": "well",
+   "pos": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "heading": 0
+  }
+ ]
+}
