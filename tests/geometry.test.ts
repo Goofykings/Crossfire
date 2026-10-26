@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 /**
@@ -253,5 +253,36 @@ describe('town geometry has no coplanar overlapping surfaces (z-fighting)', () =
   it('buildings next to a passage do not duplicate its side wall', () => {
     const walls = pairs.filter((p) => isShell(p.a) && isShell(p.b) && p.a.node !== p.b.node);
     expect(sum(walls)).toBeLessThan(0.6);
+  });
+}, 120_000);
+
+/** Biggest overlapping families (piece pairs) for a readable failure message. */
+function families(pairs: Pair[]): string {
+  const by = new Map<string, number>();
+  for (const p of pairs) {
+    const k = [p.a.node.replace(/__.*$/, ''), p.b.node.replace(/__.*$/, '')].sort().join(' | ') + ` (${p.a.mat}/${p.b.mat})`;
+    by.set(k, (by.get(k) ?? 0) + p.area);
+  }
+  return [...by.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([k, v]) => `${v.toFixed(3)} m2 ${k}`).join('\n');
+}
+
+const NEW_MAPS = ['industrial-complex', 'modern-city'].filter((id) => existsSync(`public/assets/models/${id}/map-assets.json`));
+
+describe.each(NEW_MAPS)('%s geometry has no coplanar overlapping surfaces (z-fighting)', (id) => {
+  const idx = JSON.parse(readFileSync(`public/assets/models/${id}/map-assets.json`, 'utf8')) as { models: string[] };
+  const pairs = findOverlaps(collect(idx.models.map((f) => `public/assets/models/${id}/${f}`)));
+
+  it('keeps the total overlap negligible', () => {
+    expect(sum(pairs), families(pairs)).toBeLessThan(1.0);
+  });
+
+  it('terrain pieces (ground, docks, curbs, stairs, fences, paint) do not overlap', () => {
+    const t = pairs.filter((p) => isTerrain(p.a) && isTerrain(p.b));
+    expect(sum(t), families(t)).toBeLessThan(0.05);
+  });
+
+  it('facade kit pieces do not share planes with the walls', () => {
+    const k = pairs.filter((p) => (isShell(p.a) && p.b.node.startsWith('KIT_')) || (isShell(p.b) && p.a.node.startsWith('KIT_')));
+    expect(sum(k), families(k)).toBeLessThan(0.1);
   });
 }, 120_000);

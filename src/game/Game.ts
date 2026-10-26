@@ -1,10 +1,10 @@
-import { Color3, Mesh, MeshBuilder, PBRMaterial, Quaternion, SceneInstrumentation, StandardMaterial, Vector3 } from '@babylonjs/core';
+import { ArcRotateCamera, Color3, Mesh, MeshBuilder, PBRMaterial, Quaternion, SceneInstrumentation, StandardMaterial, Vector3 } from '@babylonjs/core';
 import { AudioManager, type SoundName } from '../audio/AudioManager';
 import { FIXED_DT, MAX_FRAME_DT, MOVEMENT, PLAYER_MAX_HEALTH } from '../config/constants';
 import { SettingsStore, type Settings } from '../config/settings';
 import { Input } from '../core/Input';
 import { MapManager, type LoadedMap } from '../maps/MapManager';
-import { DEFAULT_MAP_ID, getMap } from '../maps/registry';
+import { DEFAULT_MAP_ID, getMap, MAPS } from '../maps/registry';
 import type { Team } from '../maps/types';
 import { PlayerCamera } from '../player/PlayerCamera';
 import { NO_INTENT, PlayerController, type MoveIntent } from '../player/PlayerController';
@@ -14,17 +14,37 @@ import { GRAPHICS_PRESETS, SHADOW_PRESETS } from '../rendering/quality';
 import { RenderContext } from '../rendering/RenderContext';
 import { UI } from '../ui/UI';
 import { Effects } from '../weapons/Effects';
-import { applySpread, Weapon, type WeaponEvent } from '../weapons/Weapon';
-import { WeaponView } from '../weapons/WeaponView';
-import { DamageSystem, type Attacker } from './Damage';
+import { applySpread, damageAt, Loadout, WEAPONS, type Weapon, type WeaponEvent } from '../weapons/Weapon';
+import { RIG_CONFIGS, WeaponView } from '../weapons/WeaponView';
+import { DamageSystem, type Attacker, type HitZone } from './Damage';
+import { TeammateRegistry, type RemotePlayer } from './Teammates';
+import { MultiplayerClient } from '../network/MultiplayerClient';
+import { RemotePlayers } from './RemotePlayers';
 
 type State = 'menu' | 'loading' | 'start' | 'playing' | 'paused';
 
+/** Sounds for the timed cues inside reloads and pump/bolt actions (weapons/Weapon.ts). */
+const CUE_SOUNDS: Record<string, SoundName> = {
+  mag_out: 'mag_out',
+  mag_in: 'mag_in',
+  bolt_release: 'bolt_release',
+  pump_back: 'pump_back',
+  pump_fwd: 'pump_fwd',
+  bolt_up: 'bolt_up',
+  bolt_back: 'bolt_back',
+  bolt_fwd: 'bolt_fwd',
+  bolt_down: 'bolt_down',
+};
+
 export interface GameOptions {
+  /** Explicit Stage 2 test path; the ordinary home continues to launch practice. */
+  multiplayer?: boolean;
   /** Skip menus and pointer lock (automated tests / screenshots). */
   autoplay: boolean;
   /** Initial camera: x, y, z, heading, pitch. */
   cam: number[] | null;
+  /** Map to preload and (with autoplay) play; defaults to the registry's default map. */
+  map?: string;
   hideHud: boolean;
   quality?: Settings['graphicsQuality'];
   shadows?: Settings['shadowQuality'];
@@ -44,22 +64,36 @@ export class Game {
   map: LoadedMap | null = null;
   player: PlayerController | null = null;
   private cameraRig: PlayerCamera | null = null;
-  readonly weapon = new Weapon();
+  /** Rifle, shotgun and sniper rifle (slots 1-3); infinite reserve ammunition, limited magazines. */
+  readonly loadout = new Loadout(WEAPONS);
   private weaponView: WeaponView | null = null;
   private effects: Effects | null = null;
-  private damage: DamageSystem | null = null;
+  private readonly damage = new DamageSystem();
   state: State = 'menu';
   private acc = 0;
   private health = PLAYER_MAX_HEALTH;
-  private zoneTeam: Team | null = null;
   private stepDistance = 0;
-  private stats = { shots: 0, hits: 0, downs: 0 };
+  private stats = { shots: 0, hits: 0, downs: 0, headshots: 0 };
+  /** The last shot's result (for tests): pellets fired and on target, damage dealt, headshot. */
+  private lastShot = { weapon: '', pellets: 0, hits: 0, damage: 0, head: false, target: '' };
+  private lastSpawn = -1;
+  private scope = 0;
+  /** Debug: render the view-model at a fixed action/progress (screenshots of animation phases). */
+  private viewOverride: { action: Weapon['action']; progress: number; ads: number } | null = null;
   private fps = { frames: 0, time: 0, value: 0 };
-  private loadPromise: Promise<LoadedMap> | null = null;
+  /** The map load in flight (only one runs at a time) and the map the player asked for last. */
+  private loading: { id: string; promise: Promise<LoadedMap> } | null = null;
+  private wantedMap: string = DEFAULT_MAP_ID;
   private menuOrbit = 0;
-  private blockedToastCooldown = 0;
   private readonly attacker: Attacker;
   private readonly tmpPos = { x: 0, y: 0, z: 0 };
+  /** Other players' last known positions (fed by a future network client; empty in single player). */
+  readonly teammates = new TeammateRegistry();
+  /** Team of the local player in team modes; the practice maps are free-for-all (null: nobody is a teammate). */
+  private localTeam: Team | null = null;
+  private network: MultiplayerClient | null = null;
+  private networkReady = false;
+  private readonly remotePlayers: RemotePlayers;
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -70,13 +104,13 @@ export class Game {
     this.input = new Input(canvas);
     this.ui = new UI(uiRoot, this.settings, this.audio);
     this.materials = new MaterialLibrary(this.ctx.scene);
-    this.maps = new MapManager(this.ctx, this.materials, () => GRAPHICS_PRESETS[this.settings.value.graphicsQuality].batchCell);
+    this.maps = new MapManager(this.ctx, this.materials, () => GRAPHICS_PRESETS[this.settings.value.graphicsQuality].batchCell, !options.multiplayer);
+    this.remotePlayers = new RemotePlayers(this.ctx.scene);
     this.postfx = new PostFX(this.ctx.scene, this.ctx.camera);
     this.instrumentation = new SceneInstrumentation(this.ctx.scene);
     this.instrumentation.captureFrameTime = true;
     this.attacker = {
       id: 'player',
-      bodyRadius: MOVEMENT.radius,
       position: () => {
         const p = this.player?.position ?? { x: 0, y: 0, z: 0 };
         this.tmpPos.x = p.x;
@@ -103,7 +137,8 @@ export class Game {
     this.materials.setAnisotropy(GRAPHICS_PRESETS[s.graphicsQuality].anisotropy);
     this.settings.onChange((v, changed) => this.applySettings(v, changed));
 
-    this.ui.onPlay = (id) => void this.play(id);
+    // The explicit Stage 2 URL uses real networking; ordinary Play remains practice until Stage 5.
+    this.ui.onPlay = () => void this.play(this.wantedMap);
     this.ui.onStart = () => void this.enterPlay();
     this.ui.onResume = () => void this.enterPlay();
     this.ui.onQuit = () => this.quitToMenu();
@@ -118,41 +153,89 @@ export class Game {
         e.returnValue = '';
       }
     });
+    window.addEventListener('pagehide', () => this.network?.disconnect());
     window.addEventListener('keydown', (e) => {
+      // Tab holds the tactical map; never let it move keyboard focus off the game while playing (Input only prevents
+      // the default while it is enabled, which is not the case while waiting for pointer lock)
+      if (e.code === 'Tab' && this.state === 'playing') e.preventDefault();
       if (e.code === 'F3') this.settings.update({ showFps: !this.settings.value.showFps });
       if (e.code === 'F2' && this.map && this.state === 'playing') void this.map.toggleCollisionDebug();
     });
 
     await this.materials.load();
+    const first = MAPS.some((m) => m.id === this.options.map) ? this.options.map! : DEFAULT_MAP_ID;
     this.ui.show('menu');
-    this.ui.setMenuStatus('Loading European Town...');
-    this.ui.setPlayReady(false);
     this.effects = new Effects(this.ctx.scene);
-    this.weaponView = new WeaponView(this.ctx, this.materials);
+    this.effects.onCasingLand = (type, at) => {
+      const d = this.ctx.camera.globalPosition.subtract(at).length();
+      this.sound(type === 'casing_shell' ? 'shell_drop' : 'casing', Math.max(0.05, 0.4 - d * 0.04));
+    };
+    this.weaponView = new WeaponView(this.ctx, this.materials, this.effects);
     this.weaponView.setVisible(false);
-    const weaponLoad = this.weaponView.load();
+    const weaponLoad = Promise.all([this.weaponView.load(), this.effects.loadCasings(this.materials)]);
     this.ui.setWeaponName(this.weapon.stats.name);
+    this.ui.setWeaponSlots(this.loadout.weapons.map((w) => w.stats.name), 0);
     this.ctx.engine.runRenderLoop(() => this.frame(this.ctx.engine.getDeltaTime() / 1000));
-    // start streaming the default map right away so Play is instant
-    this.loadPromise = this.loadMap(DEFAULT_MAP_ID);
+    // start streaming the selected map right away so Play is instant
+    const preload = this.requestMap(first).catch((e) => this.reportLoadError(e));
     await weaponLoad;
-    if (this.options.autoplay) await this.play(DEFAULT_MAP_ID);
+    if (this.weaponView && this.map) this.excludeViewFromSun(this.map);
+    if (this.options.autoplay) {
+      await preload;
+      await this.play(first);
+    }
+  }
+
+  /**
+   * Load a map unless it is the current one. Only one load runs at a time: a request made while another map is
+   * loading waits for it and then loads whatever was asked for last, so overlapping requests never leave two maps
+   * (or a half-loaded one) in the scene.
+   */
+  requestMap(id: string): Promise<LoadedMap> {
+    this.wantedMap = id;
+    if (this.loading) {
+      if (this.loading.id === id) return this.loading.promise;
+      return this.loading.promise.catch(() => null).then(() => this.requestMap(this.wantedMap));
+    }
+    if (this.map && this.map.def.id === id) return Promise.resolve(this.map);
+    const promise = this.loadMap(id).finally(() => {
+      this.loading = null;
+    });
+    this.loading = { id, promise };
+    return promise;
+  }
+
+  /** The view-model never receives direct sun (it gets no shadows, so it would glow in dark alleys). */
+  private excludeViewFromSun(map: LoadedMap): void {
+    if (!this.weaponView) return;
+    const list = map.environment.sun.excludedMeshes;
+    const add = this.weaponView.meshes.filter((m) => !list.includes(m));
+    const bad = add.filter((m) => typeof (m as unknown as { _resyncLightSource?: unknown })._resyncLightSource !== 'function');
+    if (bad.length) console.warn('[crossfire] not meshes:', bad.map((m) => `${m.name}:${m.getClassName?.()}`).join(', '));
+    list.push(...add.filter((m) => !bad.includes(m)));
+  }
+
+  private reportLoadError(e: unknown): void {
+    console.error(e);
+    this.ui.showError(`Could not load the map: ${(e as Error).message}`);
   }
 
   private async loadMap(id: string): Promise<LoadedMap> {
     const def = getMap(id);
+    // the previous map is disposed by the manager; nothing may touch it while the next one streams in
+    this.map = null;
+    this.player = null;
+    this.cameraRig = null;
+    this.ui.setLoadingTitle(def.name);
     const map = await this.maps.load(def, (f, label) => {
       this.ui.setLoading(f, label);
-      if (this.state === 'menu') this.ui.setMenuStatus(`${label}... ${Math.round(f * 100)}%`);
     });
     this.map = map;
-    this.damage = new DamageSystem(map.zones);
     this.player = new PlayerController(map.world);
     this.cameraRig = new PlayerCamera(this.ctx, this.player);
     const s = this.settings.value;
     map.environment.applyShadowPreset(SHADOW_PRESETS[s.shadowQuality], this.ctx.camera);
-    // the view-model ignores direct sun (it never receives shadows, so it would glow in dark alleys)
-    if (this.weaponView) map.environment.sun.excludedMeshes.push(...this.weaponView.meshes);
+    this.excludeViewFromSun(map);
     map.environment.setFog(GRAPHICS_PRESETS[s.graphicsQuality].fog);
     for (const t of map.targets.targets) {
       t.onStateChange = (_t, state) => {
@@ -163,26 +246,62 @@ export class Game {
       };
     }
     this.ui.setMapTitle(def.name, `${def.dimensions[0]} x ${def.dimensions[1]} m · practice`);
-    this.ui.setMenuStatus(`Ready · loaded in ${(map.stats.loadMs / 1000).toFixed(1)} s`);
-    this.ui.setPlayReady(true);
+    this.ui.setStartInfo(def.name, def.briefing ?? def.description);
+    this.ui.tactical.setMap(map.tactical, def.name);
+    this.teammates.clear();
+    this.effects?.clearDecals();
     console.info('[crossfire] map loaded', map.stats);
     return map;
   }
 
   async play(id: string): Promise<void> {
     this.audio.unlock();
-    if (!this.map || this.map.def.id !== id) {
+    if (this.options.multiplayer) {
+      this.state = 'loading';
+      this.ui.setLoadingTitle('Connecting to public-main');
+      this.ui.setLoading(0, 'Opening multiplayer connection');
+      this.ui.show('loading');
+      try {
+        if (!this.network) {
+          this.network = new MultiplayerClient(import.meta.env.VITE_MULTIPLAYER_URL ?? '');
+          this.network.onSnapshot = (snapshot) => {
+            if (!this.networkReady || !this.player || !this.map || this.network?.state !== 'connected') return;
+            if (this.map.revision !== snapshot.mapVersion) { this.network?.disconnect(); this.connectionError('Map assets differ from the server. Rebuild the matching client and server.'); return; }
+            this.network!.reconcile(this.player, snapshot);
+            this.remotePlayers.snapshot(snapshot, this.network!.selfId);
+          };
+          this.network.onState = (state, message) => {
+            if (state !== 'connected') this.remotePlayers.clear();
+            if (state === 'reconnecting') this.ui.showToast(message ?? 'Reconnecting…', 'warn', 5);
+            if (state === 'error') this.connectionError(message ?? 'Multiplayer connection failed');
+          };
+        }
+        const welcome = await this.network.connect();
+        id = welcome.snapshot.mapId;
+      } catch (e) { this.connectionError((e as Error).message); return; }
+    }
+    if (!this.map || this.map.def.id !== id || this.loading) {
       this.state = 'loading';
       this.ui.show('loading');
       try {
-        await (this.loadPromise && getMap(id).id === DEFAULT_MAP_ID ? this.loadPromise : this.loadMap(id));
+        await this.requestMap(id);
       } catch (e) {
         console.error(e);
         this.ui.showError(`Could not load the map: ${(e as Error).message}`);
         return;
       }
+      if (this.map?.def.id !== id) return; // superseded by another request
     }
-    this.spawn();
+    if (this.options.multiplayer && this.network?.latest) {
+      if (this.map!.revision !== this.network.latest.mapVersion) { this.network.disconnect(); this.connectionError('Map assets differ from the server.'); return; }
+      const self = this.network.latest.players.find((p) => p.id === this.network!.selfId);
+      if (!self) { this.connectionError('Server did not assign a player'); return; }
+      this.player!.restore(self.motion);
+      this.networkReady = true;
+      this.remotePlayers.snapshot(this.network.latest, this.network.selfId);
+      this.ui.setMapTitle(this.map!.def.name, 'Multiplayer foundation · movement test');
+      this.ui.setStartInfo(this.map!.def.name, 'Stage 2 movement test in public-main. Connected players share this scene; combat and rounds are not enabled.');
+    } else this.spawn();
     if (this.options.autoplay) {
       this.state = 'playing';
       this.input.enabled = true;
@@ -198,18 +317,29 @@ export class Game {
     document.getElementById('ui')!.style.display = 'none';
   }
 
+  private connectionError(message: string): void {
+    this.state = 'loading';
+    this.input.enabled = false;
+    this.input.releaseLock();
+    this.ui.showConnectionError(message, () => void this.play('european-town'), () => this.quitToMenu());
+  }
+
   private spawn(): void {
     const map = this.map!;
     const player = this.player!;
-    const blue = map.spawns.filter((s) => s.team === 'blue');
-    const sp = blue[Math.floor(Math.random() * blue.length)] ?? map.spawns[0];
+    // free-for-all: any spawn point, never the same one twice in a row
+    let i = Math.floor(Math.random() * map.spawns.length);
+    if (map.spawns.length > 1 && i === this.lastSpawn) i = (i + 1) % map.spawns.length;
+    this.lastSpawn = i;
+    const sp = map.spawns[i];
     player.teleport({ x: sp.pos[0], y: sp.pos[1] + 0.2, z: sp.pos[2] }, sp.heading);
     if (this.options.cam) {
       const [x, y, z, h = 0, pitch = 0] = this.options.cam;
       player.teleport({ x, y, z }, h);
       player.pitch = (pitch * Math.PI) / 180;
     }
-    this.weapon.refill();
+    this.loadout.reset();
+    this.weaponView?.select(this.weapon.stats.id);
     this.health = PLAYER_MAX_HEALTH;
     this.cameraRig?.snapFov(this.settings.value.fov);
   }
@@ -244,6 +374,9 @@ export class Game {
   }
 
   private quitToMenu(): void {
+    this.network?.disconnect();
+    this.networkReady = false;
+    this.remotePlayers.clear();
     this.state = 'menu';
     this.input.enabled = false;
     this.input.releaseLock();
@@ -286,19 +419,33 @@ export class Game {
     } else if (this.map && (this.state === 'menu' || this.state === 'start' || this.state === 'loading')) {
       this.menuCamera(dt);
     }
+    this.updateTacticalMap();
+    if (this.network?.state === 'connected') this.remotePlayers.update(Date.now() + this.network.clockOffset - 100);
     this.effects?.update(dt);
-    this.map?.barriers.update(dt, this.ctx.camera.position);
     this.ui.update(dt);
     this.updateHudMeta();
     this.ctx.scene.render();
     this.input.endFrame();
   }
 
+  /** Tab overlay: visible only while the key is held during play; it never pauses or consumes input. */
+  private updateTacticalMap(): void {
+    const player = this.player;
+    const show = this.state === 'playing' && !!player && !!this.map && this.input.isDown('map');
+    this.ui.tactical.setVisible(show);
+    if (!show) return;
+    this.ui.tactical.draw(
+      { x: player.position.x, z: player.position.z, yaw: player.yaw, team: this.localTeam },
+      this.teammates.friendlies(this.localTeam, this.attacker.id),
+    );
+  }
+
   private menuCamera(dt: number): void {
     this.menuOrbit += dt * 0.04;
     const cam = this.ctx.camera;
-    const r = 34;
-    cam.position.set(Math.sin(this.menuOrbit) * r, 21, Math.cos(this.menuOrbit) * r);
+    const [w, d] = this.map?.def.dimensions ?? [66, 66];
+    const r = Math.max(w, d) * 0.52;
+    cam.position.set(Math.sin(this.menuOrbit) * r, r * 0.62, Math.cos(this.menuOrbit) * r);
     cam.setTarget(new Vector3(0, 2, 0));
     this.ctx.setFov(70);
     this.weaponView?.setVisible(false);
@@ -306,7 +453,13 @@ export class Game {
 
   private intent: MoveIntent = { ...NO_INTENT };
 
+  /** The weapon in hand. */
+  get weapon(): Weapon {
+    return this.loadout.current;
+  }
+
   private simulate(dt: number): void {
+    if (this.options.multiplayer && this.network?.state !== 'connected') return;
     const player = this.player!;
     const rig = this.cameraRig!;
     const map = this.map!;
@@ -315,6 +468,14 @@ export class Game {
     this.weaponView?.setVisible(true);
 
     const zoom = 1 + (this.weapon.stats.adsFovScale - 1) * this.weapon.ads;
+    const events: WeaponEvent[] = [];
+    // weapon switching: number keys, Q (previous weapon), mouse wheel
+    for (let k = 0; k < this.loadout.weapons.length; k++) {
+      if (input.wasPressed(`weapon${k + 1}` as 'weapon1')) this.loadout.select(k, events);
+    }
+    if (input.wasPressed('lastWeapon')) this.loadout.selectPrevious(events);
+    if (input.wasPressed('nextWeapon')) this.loadout.cycle(1, events);
+    if (input.wasPressed('prevWeapon')) this.loadout.cycle(-1, events);
     const look = input.takeMouseDelta();
     rig.applyLook(look.dx, look.dy, s.mouseSensitivity, s.invertY, zoom);
     this.weaponView?.addSway(look.dx, look.dy);
@@ -329,18 +490,19 @@ export class Game {
     let fireEdge = input.wasPressed('fire');
     let reloadEdge = input.wasPressed('reload');
 
+    for (const e of events) this.onWeaponEvent(e);
     this.acc += dt;
-    const events: WeaponEvent[] = [];
     while (this.acc >= FIXED_DT) {
       it.jumpPressed = jumpEdge;
       const wasGrounded = player.grounded;
       player.fixedUpdate(FIXED_DT, it);
+      this.network?.fixedInput(player, it);
       rig.onTick();
       if (jumpEdge && wasGrounded && !player.grounded && player.velocity.y > 0) this.sound('jump', 0.35);
       if (player.landedSpeed > 4) this.sound('land', Math.min(0.8, player.landedSpeed * 0.07));
       const sprinting = it.sprint && it.z > 0.3 && player.grounded && player.horizontalSpeed > MOVEMENT.walkSpeed + 0.3;
       events.length = 0;
-      this.weapon.update(
+      this.loadout.update(
         FIXED_DT,
         {
           trigger: input.isDown('fire'),
@@ -356,44 +518,30 @@ export class Game {
       for (const e of events) this.onWeaponEvent(e);
       map.targets.update(FIXED_DT);
       this.footsteps(FIXED_DT);
-      if (player.position.y < map.def.collision.killY) this.spawn();
+      if (!this.options.multiplayer && player.position.y < map.def.collision.killY) this.spawn();
       jumpEdge = fireEdge = reloadEdge = false;
       this.acc -= FIXED_DT;
     }
     const alpha = this.acc / FIXED_DT;
-    rig.update(dt, alpha, s.fov, zoom);
+    const w = this.weapon;
+    // sniper scope: the overlay fades in over the last part of the aim and replaces the weapon in view
+    this.scope = w.stats.scope ? Math.max(0, Math.min(1, (w.ads - 0.72) / 0.22)) : 0;
+    rig.update(dt, alpha, s.fov, zoom, this.scope);
     const sprinting = it.sprint && it.z > 0.3 && player.grounded && player.horizontalSpeed > MOVEMENT.walkSpeed + 0.3;
-    this.weaponView?.update(dt, {
-      ads: this.weapon.ads,
-      reloadProgress: this.weapon.reloadProgress,
-      reloading: this.weapon.reloading,
-      sprinting,
-      bobX: rig.bobX,
-      bobY: rig.bobY,
-      crouch: player.crouch,
-    });
-    this.blockedToastCooldown = Math.max(0, this.blockedToastCooldown - dt);
+    const shown = this.viewOverride ? ({ ...this.viewOverride, stats: w.stats } as unknown as Weapon) : w;
+    this.weaponView?.update(dt, shown, { sprinting, bobX: rig.bobX, bobY: rig.bobY, crouch: player.crouch });
+    this.weaponView?.setHidden(this.scope > 0.98);
+    this.ui.setScope(this.scope);
 
-    // safe zone state
-    const zone = map.zones.zoneAt(this.attacker.position(), MOVEMENT.radius);
-    const team = zone?.team ?? null;
-    if (team !== this.zoneTeam) {
-      this.zoneTeam = team;
-      this.ui.setZone(team);
-      if (team) {
-        this.sound('zone_enter', 0.5);
-        if (this.weapon.reserve < this.weapon.stats.reserve || this.weapon.ammo < this.weapon.stats.magazine) {
-          this.weapon.refill();
-          this.ui.showToast('Ammo resupplied', 'blue');
-        }
-      }
-    }
     // HUD
-    const spreadDeg = this.weapon.spread({ moveFactor: player.horizontalSpeed / MOVEMENT.sprintSpeed, airborne: !player.grounded });
+    const aimDeg = w.spread({ moveFactor: player.horizontalSpeed / MOVEMENT.sprintSpeed, airborne: !player.grounded });
+    const spreadDeg = aimDeg + w.stats.pelletSpread;
     const px = (Math.tan((spreadDeg * Math.PI) / 180) / Math.tan(this.ctx.camera.fov / 2)) * (this.ctx.engine.getRenderWidth() / 2);
-    // render pixels -> CSS pixels
-    this.ui.setCrosshairSpread(px * this.ctx.engine.getHardwareScalingLevel(), this.weapon.ads < 0.6 && !sprinting);
-    this.ui.setAmmo(this.weapon.ammo, this.weapon.reserve, this.weapon.stats.magazine, this.weapon.reloading, this.weapon.reloadProgress);
+    // render pixels -> CSS pixels; hidden while aimed (the sight has its own reticle), sprinting or switching
+    const crosshair = w.ads < 0.6 && !sprinting && (w.action === 'idle' || w.action === 'cycle' || w.reloading);
+    this.ui.setCrosshairSpread(px * this.ctx.engine.getHardwareScalingLevel(), crosshair);
+    this.ui.setAmmo(w.ammo, w.reserve, w.stats.magazine, w.reloading, w.reloadProgress);
+    this.ui.setWeaponSlots(this.loadout.weapons.map((x) => x.stats.name), this.loadout.switchingTo ?? this.loadout.currentIndex);
     this.ui.setHealth(this.health, PLAYER_MAX_HEALTH);
   }
 
@@ -404,58 +552,80 @@ export class Game {
         break;
       case 'empty':
         this.sound('empty', 0.7);
-        if (this.weapon.reserve === 0) this.ui.showToast('Out of ammo - visit a safe zone to resupply', 'warn');
         break;
-      case 'reloadStart':
-        this.sound('reload_out', 0.6);
+      case 'shellIn':
+        this.sound('shell_in', 0.55);
         break;
-      case 'reloadEnd':
-        this.sound('reload_in', 0.6);
+      case 'cue':
+        if (e.cue === 'eject') this.ejectCase();
+        else if (CUE_SOUNDS[e.cue]) this.sound(CUE_SOUNDS[e.cue], 0.55);
+        break;
+      case 'equipStart':
+        this.weaponView?.select(this.weapon.stats.id);
+        this.ui.setWeaponName(this.weapon.stats.name);
+        this.sound('draw', 0.45);
         break;
     }
+  }
+
+  /** A spent case (or shotgun hull) out of the ejection port. */
+  private ejectCase(): void {
+    const p = this.player;
+    if (!p) return;
+    const v = p.velocity;
+    this.weaponView?.eject(new Vector3(v.x, Math.max(0, v.y), v.z), p.position.y);
   }
 
   private fireShot(spreadDeg: number): void {
     const map = this.map!;
     const cam = this.ctx.camera;
+    const w = this.weapon;
+    const st = w.stats;
     this.stats.shots++;
-    this.sound('shot', 0.55);
+    this.sound(`${st.id}_shot` as SoundName, st.id === 'rifle' ? 0.5 : 0.62);
     this.weaponView?.fire();
-    this.cameraRig?.addRecoil(this.weapon.stats.recoilPitch * (1 - this.weapon.ads * 0.4), this.weapon.stats.recoilYaw);
+    this.cameraRig?.addRecoil(st.recoilPitch * (1 - w.ads * 0.4), st.recoilYaw);
+    // self-loading rifle: the case flies out with every shot (pump and bolt guns eject when worked)
+    if (st.cycleTime === 0) this.ejectCase();
     cam.computeWorldMatrix();
     const origin = cam.globalPosition.clone();
     const fwd = cam.getDirection(new Vector3(0, 0, -1)).normalize();
-    const dir = applySpread({ x: fwd.x, y: fwd.y, z: fwd.z }, spreadDeg);
-    const range = this.weapon.stats.range;
-    const hit = map.world.raycast(origin.x, origin.y, origin.z, dir.x, dir.y, dir.z, range);
-    const muzzle = this.weaponView?.muzzleWorld() ?? origin;
-    const end = hit ? new Vector3(hit.point.x, hit.point.y, hit.point.z) : origin.add(new Vector3(dir.x, dir.y, dir.z).scale(range));
-    this.effects?.tracer(muzzle, end);
-    if (!hit) return;
-    const target = map.targets.find(hit.collider);
-    const normal = new Vector3(hit.normal.x, hit.normal.y, hit.normal.z);
-    if (target) {
-      const zone = target.zoneAt(hit.point);
-      const amount = this.weapon.stats.damage * (zone === 'bullseye' ? this.weapon.stats.critMultiplier : 1);
-      const res = this.damage!.tryApply(this.attacker, target, { amount, point: hit.point, zone });
-      this.effects?.burst(end.add(normal.scale(0.02)), normal, 8);
-      if (res.applied) {
-        this.stats.hits++;
-        this.ui.hitMarker(zone === 'bullseye');
-        this.sound(zone === 'bullseye' ? 'hit_crit' : 'hit', 0.65);
-      } else if (res.reason !== 'target-dead') {
-        this.sound('blocked', 0.5);
-        if (this.blockedToastCooldown <= 0) {
-          this.ui.showToast(
-            res.reason === 'attacker-in-safe-zone' ? 'You are in a safe zone - damage disabled' : 'Target is protected by a safe zone',
-            'blue',
-          );
-          this.blockedToastCooldown = 1.5;
+    const aim = applySpread({ x: fwd.x, y: fwd.y, z: fwd.z }, spreadDeg);
+    const shot = { weapon: st.id, pellets: st.pellets, hits: 0, damage: 0, head: false, target: '' };
+    for (let k = 0; k < st.pellets; k++) {
+      const dir = st.pellets > 1 ? applySpread(aim, st.pelletSpread) : aim;
+      const hit = map.world.raycast(origin.x, origin.y, origin.z, dir.x, dir.y, dir.z, st.range);
+      if (!hit) continue;
+      const end = new Vector3(hit.point.x, hit.point.y, hit.point.z);
+      const normal = new Vector3(hit.normal.x, hit.normal.y, hit.normal.z);
+      const t = map.targets.find(hit.collider);
+      if (t) {
+        const zone: HitZone = t.zone;
+        const res = this.damage.tryApply(this.attacker, t.target, {
+          bodyDamage: damageAt(st, end.subtract(origin).length()),
+          point: hit.point,
+          zone,
+          weapon: st.id,
+        });
+        // steel: sparks, no hole
+        this.effects?.burst(end.add(normal.scale(0.02)), normal, st.pellets > 1 ? 4 : 9);
+        if (res.applied) {
+          shot.hits++;
+          shot.damage += res.amount;
+          shot.head ||= zone === 'head';
+          shot.target = t.target.id;
         }
+      } else {
+        this.effects?.impact(end, normal, k % 2 === 0 || st.pellets === 1);
       }
-    } else {
-      this.effects?.impact(end, normal);
     }
+    if (shot.hits > 0) {
+      this.stats.hits++;
+      if (shot.head) this.stats.headshots++;
+      this.ui.hitMarker(shot.head);
+      this.sound(shot.head ? 'hit_head' : 'hit', 0.65);
+    }
+    this.lastShot = shot;
   }
 
   private footsteps(dt: number): void {
@@ -489,14 +659,18 @@ export class Game {
     }
     if (this.state === 'playing') {
       const acc = this.stats.shots ? Math.round((this.stats.hits / this.stats.shots) * 100) : 0;
-      this.ui.setStats(`Targets down ${this.stats.downs} · Accuracy ${acc}%`);
+      this.ui.setStats(`Targets down ${this.stats.downs} · Headshots ${this.stats.headshots} · Accuracy ${acc}%`);
     }
   }
 
   // --- automation hooks (used by tools/browser-test.mjs) ---------------------------------------
   debugApi() {
     return {
-      ready: () => this.state === 'playing' && !!this.map,
+      ready: () => this.state === 'playing' && !!this.map && (!this.options.multiplayer || this.network?.state === 'connected'),
+      network: () => ({ state: this.network?.state ?? 'idle', selfId: this.network?.selfId ?? '',
+        snapshot: this.network?.latest ?? null, rendered: this.remotePlayers.inspect() }),
+      networkReconnect: () => this.network?.reconnect(),
+      networkLeave: () => this.quitToMenu(),
       state: () => this.state,
       teleport: (x: number, y: number, z: number, heading = 0, pitch = 0) => {
         if (this.state === 'paused' && this.options.autoplay) this.state = 'playing';
@@ -556,16 +730,141 @@ export class Game {
         activeMeshes: this.ctx.scene.getActiveMeshes().length,
         totalVertices: this.ctx.scene.getTotalVertices(),
         map: this.map?.stats,
+        mapId: this.map?.def.id ?? null,
         missingMaterials: [...this.materials.missing],
         shots: this.stats.shots,
         hits: this.stats.hits,
         downs: this.stats.downs,
+        headshots: this.stats.headshots,
         ammo: this.weapon.ammo,
-        zone: this.zoneTeam,
-        zoneBarriers: this.ctx.scene.meshes.filter((m) => m.name.startsWith('zone-barrier:')).length,
-        zoneLabels: this.ctx.scene.meshes.filter((m) => m.name.startsWith('zone-label:')).length,
+        weapon: this.weapon.stats.id,
       }),
+      /** The weapon in hand and the loadout (ammo, action, aim, scope), for tests. */
+      weapon: () => {
+        const w = this.weapon;
+        return {
+          id: w.stats.id,
+          name: w.stats.name,
+          ammo: w.ammo,
+          magazine: w.stats.magazine,
+          reserve: Number.isFinite(w.reserve) ? w.reserve : 'infinite',
+          action: w.action,
+          progress: w.progress,
+          ads: w.ads,
+          scope: this.scope,
+          slots: this.loadout.weapons.map((x) => ({ id: x.stats.id, ammo: x.ammo, action: x.action })),
+          view: this.weaponView ? { ...this.weaponView.debug, shown: this.weaponView.currentId } : null,
+          viewMeshes: this.weaponView?.meshes.filter((m) => m.isEnabled()).map((m) => m.name) ?? [],
+        };
+      },
+      /**
+       * Look at the view-model from outside (an orbit camera around the weapon; angles in degrees, radius in metres),
+       * for checking the model from every side. null: back to the player's eyes.
+       */
+      inspectView: (alpha: number | null, beta = 80, radius = 0.9) => {
+        const scene = this.ctx.scene;
+        if (alpha === null) {
+          scene.activeCamera = this.ctx.camera;
+          return;
+        }
+        const root = scene.getTransformNodeByName('weapon-pivot');
+        root?.computeWorldMatrix(true);
+        const at = root ? root.getAbsolutePosition().clone() : this.ctx.camera.globalPosition.clone();
+        let cam = scene.getCameraByName('debug-inspect') as ArcRotateCamera | null;
+        cam ??= new ArcRotateCamera('debug-inspect', 0, 0, 1, at, scene);
+        cam.minZ = 0.01;
+        cam.fov = 0.6;
+        cam.setTarget(at.add(new Vector3(0, 0.0, 0)));
+        cam.alpha = (alpha * Math.PI) / 180;
+        cam.beta = (beta * Math.PI) / 180;
+        cam.radius = radius;
+        scene.activeCamera = cam;
+      },
+      /** Change a weapon's view-model placement live (hip position, rotation, sight distance) while tuning. */
+      tuneView: (id: keyof typeof RIG_CONFIGS, patch: Record<string, unknown>) => Object.assign(RIG_CONFIGS[id], patch),
+      /** Ejected cases in the world: enabled count and positions (tests). */
+      casingInfo: () =>
+        this.ctx.scene.meshes
+          .filter((m) => m.name.startsWith('casing:') && m.isEnabled())
+          .map((m) => ({ name: m.name, x: +m.position.x.toFixed(2), y: +m.position.y.toFixed(3), z: +m.position.z.toFixed(2) })),
+      /** Hold the muzzle flash on (screenshots). */
+      holdFlash: (on: boolean) => this.weaponView?.holdFlash(on),
+      /** Freeze the view-model at an action and progress (null: back to the live weapon). */
+      viewPose: (action: Weapon['action'] | null, progress = 0, ads = 0) => {
+        this.viewOverride = action ? { action, progress, ads } : null;
+      },
+      /** Switch weapons as the number keys do (0-based slot). */
+      selectWeapon: (i: number) => this.loadout.select(i),
+      /** The last shot's pellets, hits, damage and whether it was a headshot. */
+      lastShot: () => ({ ...this.lastShot }),
+      /** Sounds asked for recently, newest last (works without audio output). */
+      sounds: () => [...this.audio.recent],
+      /** Turn the view toward a world point (tests aim at a target's head or body). */
+      aimAt: (x: number, y: number, z: number) => {
+        if (!this.player) return;
+        const cam = this.ctx.camera.globalPosition;
+        const dx = x - cam.x;
+        const dy = y - cam.y;
+        const dz = z - cam.z;
+        this.player.yaw = Math.atan2(-dx, -dz);
+        this.player.pitch = Math.atan2(dy, Math.hypot(dx, dz));
+      },
+      /** A practice target's head and body centres (world space). */
+      targetPoints: (id: string) => {
+        const t = this.map?.targets.targets.find((q) => q.id === id);
+        if (!t) return null;
+        const c = (k: 'headCollider' | 'bodyCollider') => ({ x: t[k].cx, y: t[k].cy, z: t[k].cz });
+        return { head: c('headCollider'), body: c('bodyCollider'), health: t.health, state: t.state };
+      },
       setSetting: (patch: Partial<Settings>) => this.settings.update(patch),
+      /** Load a map for development/testing and resolve with the loaded map's id. */
+      loadMap: (id: string) => this.requestMap(id).then((m) => m.def.id),
+      /** Play a map as the Play button does (loads it if needed, then spawns). */
+      play: (id: string) => this.play(id).then(() => this.map?.def.id ?? null),
+      /** The loaded map's gameplay data (for tests that need spawn, target and safe-zone positions). */
+      mapInfo: () => {
+        const l = this.map?.def.layout;
+        return l
+          ? {
+              id: l.id,
+              spawns: l.spawns,
+              targets: l.targets,
+              playArea: l.playArea,
+              walls: l.walls.map((w) => ({ id: w.id, style: w.style ?? null })),
+            }
+          : null;
+      },
+      /** Scene object counts, for checking that map switches do not leak. */
+      memory: () => {
+        const scene = this.ctx.scene;
+        return {
+          meshes: scene.meshes.length,
+          materials: scene.materials.length,
+          textures: scene.textures.length,
+          geometries: scene.geometries.length,
+          lights: scene.lights.length,
+          transformNodes: scene.transformNodes.length,
+          library: this.materials.counts(),
+        };
+      },
+      /** Tactical overlay state: visibility, the drawn player marker and where the projection puts the player. */
+      tactical: () => {
+        const view = this.ui.tactical;
+        const p = this.player?.position;
+        return {
+          visible: view.visible,
+          // actually on screen (laid out), not just flagged visible
+          domVisible: view.root.getClientRects().length > 0,
+          map: this.map?.tactical.map ?? null,
+          marker: { ...view.lastMarker },
+          expected: p ? view.projectCss(p.x, p.z) : null,
+          canvas: view.debugInfo(),
+          focus: document.activeElement?.id || document.activeElement?.tagName || null,
+        };
+      },
+      /** Feed the teammate registry like a network client would (automated tests only; nothing calls it in play). */
+      remotePlayer: (p: RemotePlayer) => this.teammates.update(p),
+      clearRemotePlayers: () => this.teammates.clear(),
       /** The applied settings (what the game is using and what is saved). */
       settings: () => ({ ...this.settings.value }),
       /** What the engine is actually using right now, for checking that Apply reaches the game systems. */

@@ -83,6 +83,9 @@ def building_boxes(b):
         holes.append(aabb(cx0, -1.0, cz0, cx1, room.get("clear", 3.0), cz1))
         for _, (dx0, dz0, dx1, dz1) in doors:
             holes.append(aabb(dx0, -1.0, dz0, dx1, bs.ROOM_DOOR_H, dz1))
+    for interior in b.get("interiors", []):
+        for (rx0, rz0, rx1, rz1), clear in bs.interior_openings(interior):
+            holes.append(aabb(rx0, -1.0, rz0, rx1, clear, rz1))
     ch = bs.chamfer_triangle(b)
     if ch:
         k, c, pa, pb = ch
@@ -184,6 +187,25 @@ def arch_boxes(a):
     return [to_obb(aabb(x0, a["spring"], z0, x1, a["spring"] + 1.5, z1), f"arch:{a['id']}")]
 
 
+def railing_boxes(t):
+    """Guard rails along the open edges of a raised platform (layout terraces[].railings: [{side, from, to}])."""
+    x0, z0, x1, z1 = t["rect"]
+    h = t["height"]
+    out = []
+    for r in t.get("railings", []):
+        a, b = r["from"], r["to"]
+        if r["side"] == "n":
+            box = aabb(a, h, z0, b, h + 1.05, z0 + 0.08)
+        elif r["side"] == "s":
+            box = aabb(a, h, z1 - 0.08, b, h + 1.05, z1)
+        elif r["side"] == "w":
+            box = aabb(x0, h, a, x0 + 0.08, h + 1.05, b)
+        else:
+            box = aabb(x1 - 0.08, h, a, x1, h + 1.05, b)
+        out.append(to_obb(box, f"railing:{t['id']}"))
+    return out
+
+
 def map_collision(layout: dict) -> dict:
     boxes = []
     lim = layout["outerLimit"] + 1
@@ -194,6 +216,7 @@ def map_collision(layout: dict) -> dict:
         boxes.extend(wall_boxes(w))
     for t in layout["terraces"]:
         boxes.extend(terrace_boxes(t))
+        boxes.extend(railing_boxes(t))
     for a in layout.get("arches", []):
         boxes.extend(arch_boxes(a))
     # invisible safety ring just outside the playable square

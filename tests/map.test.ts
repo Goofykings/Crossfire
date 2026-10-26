@@ -1,21 +1,23 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { MOVEMENT } from '../src/config/constants';
-import { SafeZoneSystem } from '../src/game/SafeZones';
-import type { CollisionFile, MapLayout } from '../src/maps/types';
+import type { CollisionFile, MapLayout, PropCatalog } from '../src/maps/types';
 import { CollisionWorld } from '../src/physics/CollisionWorld';
 import { PlayerController } from '../src/player/PlayerController';
 
-const layout = JSON.parse(readFileSync('src/maps/european-town/layout.json', 'utf8')) as MapLayout;
-const collision = JSON.parse(
-  readFileSync('public/assets/models/european-town/collision.json', 'utf8'),
-) as CollisionFile;
+/** Every map with a layout and generated collision data gets the same gameplay checks. */
+const MAP_IDS = readdirSync('src/maps', { withFileTypes: true })
+  .filter((d) => d.isDirectory() && existsSync(`src/maps/${d.name}/layout.json`))
+  .map((d) => d.name)
+  .filter((id) => existsSync(`public/assets/models/${id}/collision.json`));
 
-function buildWorld(): CollisionWorld {
-  const w = new CollisionWorld();
-  for (const b of collision.boxes) w.add(b);
-  return w;
+function loadMap(id: string) {
+  const layout = JSON.parse(readFileSync(`src/maps/${id}/layout.json`, 'utf8')) as MapLayout;
+  const collision = JSON.parse(readFileSync(`public/assets/models/${id}/collision.json`, 'utf8')) as CollisionFile;
+  return { layout, collision };
 }
+
+const { layout } = loadMap('european-town');
 
 describe('European Town layout data', () => {
   it('has the expected structure', () => {
@@ -25,86 +27,71 @@ describe('European Town layout data', () => {
     for (const t of ['stone2', 'plaster3', 'shop', 'corner', 'narrow_passage', 'archway', 'balcony', 'room']) {
       expect(types.has(t), `building type ${t}`).toBe(true);
     }
-    expect(layout.safeZones.map((z) => z.team).sort()).toEqual(['blue', 'red']);
     expect(layout.targets.length).toBeGreaterThanOrEqual(8);
-  });
-
-  it('places every spawn inside its own safe zone', () => {
-    for (const s of layout.spawns) {
-      const zone = layout.safeZones.find((z) => z.team === s.team)!;
-      const [x0, z0, x1, z1] = zone.rect;
-      expect(s.pos[0]).toBeGreaterThan(x0);
-      expect(s.pos[0]).toBeLessThan(x1);
-      expect(s.pos[2]).toBeGreaterThan(z0);
-      expect(s.pos[2]).toBeLessThan(z1);
-    }
-  });
-
-  it('has safe zones at opposite edges of the map', () => {
-    const blue = layout.safeZones.find((z) => z.team === 'blue')!.rect;
-    const red = layout.safeZones.find((z) => z.team === 'red')!.rect;
-    expect((blue[0] + blue[2]) / 2).toBeLessThan(-20);
-    expect((red[0] + red[2]) / 2).toBeGreaterThan(20);
   });
 });
 
-describe('safe zone entrances', () => {
-  const world = buildWorld();
-  const zones = new SafeZoneSystem(layout.safeZones);
+const catalog = JSON.parse(readFileSync('public/assets/models/shared/props/props.json', 'utf8')) as PropCatalog;
 
-  it('gives each zone entrances on its own edges with a sensible height', () => {
-    for (const zone of layout.safeZones) {
-      const [x0, z0, x1, z1] = zone.rect;
-      expect(zone.entrances?.length, zone.id).toBeGreaterThanOrEqual(2);
-      for (const e of zone.entrances!) {
-        const [lo, hi] = e.side === 'n' || e.side === 's' ? [x0, x1] : [z0, z1];
-        expect(e.from).toBeGreaterThanOrEqual(lo);
-        expect(e.to).toBeLessThanOrEqual(hi);
-        expect(e.to - e.from).toBeGreaterThanOrEqual(2);
-        expect(e.height).toBeGreaterThan(2);
-        expect(e.height).toBeLessThanOrEqual(3.5);
-      }
+describe.each(MAP_IDS)('map %s: free-for-all layout', (id) => {
+  const { layout } = loadMap(id);
+  const raw = layout as unknown as Record<string, unknown>;
+
+  it('has no safe zones, team spawns or team lights', () => {
+    expect(layout.id).toBe(id);
+    expect(raw.safeZones).toBeUndefined();
+    for (const s of layout.spawns) expect((s as unknown as Record<string, unknown>).team).toBeUndefined();
+    for (const l of layout.lights) expect((l as unknown as Record<string, unknown>).team).toBeUndefined();
+    for (const z of layout.ground.zones) {
+      expect(z.kind as string, z.id).not.toBe('spawn');
+      expect((z as unknown as Record<string, unknown>).team, z.id).toBeUndefined();
+    }
+    expect(layout.targets.length).toBeGreaterThanOrEqual(8);
+  });
+
+  it('spreads its spawn points over the whole map', () => {
+    const pts = layout.spawns.map((s) => s.pos);
+    expect(pts.length).toBeGreaterThanOrEqual(12);
+    expect(new Set(layout.spawns.map((s) => s.id)).size).toBe(pts.length);
+    let minGap = Infinity;
+    for (let a = 0; a < pts.length; a++)
+      for (let b = a + 1; b < pts.length; b++) minGap = Math.min(minGap, Math.hypot(pts[a][0] - pts[b][0], pts[a][2] - pts[b][2]));
+    expect(minGap).toBeGreaterThanOrEqual(4);
+    // every quadrant of the map gets spawns, not just the old team yards at the west and east edges
+    const [x0, z0, x1, z1] = layout.playArea;
+    const cx = (x0 + x1) / 2;
+    const cz = (z0 + z1) / 2;
+    for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+      expect(pts.some((q) => (q[0] - cx) * sx > 0 && (q[2] - cz) * sz > 0), `quadrant ${sx},${sz}`).toBe(true);
     }
   });
 
-  it('leads onto ground a player can stand on, one body width beyond each barrier', () => {
-    for (const zone of layout.safeZones) {
-      const [x0, z0, x1, z1] = zone.rect;
-      for (const e of zone.entrances!) {
-        const mid = (e.from + e.to) / 2;
-        const out = 1.2;
-        const [px, pz] = { n: [mid, z0 - out], s: [mid, z1 + out], w: [x0 - out, mid], e: [x1 + out, mid] }[e.side];
-        const p = new PlayerController(world);
-        p.teleport({ x: px, y: 0.5, z: pz }, 0);
-        expect(p.grounded, `${zone.id} ${e.side}`).toBe(true);
-        expect(world.overlapsCylinder(px, pz, MOVEMENT.radius, 0.45, 1.8), `${zone.id} ${e.side}`).toBe(false);
-        // and that spot is not yet protected, while the spot just behind the barrier plane is
-        expect(zones.isProtected({ x: px, y: 1, z: pz }, MOVEMENT.radius)).toBe(false);
-      }
-    }
-  });
-
-  it('protects a player exactly where the barrier plane stands (one body radius outside the zone edge)', () => {
-    const r = MOVEMENT.radius;
-    for (const zone of layout.safeZones) {
-      const [x0, z0, x1, z1] = zone.rect;
-      for (const e of zone.entrances!) {
-        const mid = (e.from + e.to) / 2;
-        const at = (d: number) =>
-          ({ n: { x: mid, y: 1, z: z0 - r + d }, s: { x: mid, y: 1, z: z1 + r - d }, w: { x: x0 - r + d, y: 1, z: mid }, e: { x: x1 + r - d, y: 1, z: mid } })[e.side];
-        expect(zones.isProtected(at(-0.02), r), `${zone.id} ${e.side} before the plane`).toBe(false);
-        expect(zones.isProtected(at(0.02), r), `${zone.id} ${e.side} past the plane`).toBe(true);
+  it('keeps spawns clear of props and practice targets', () => {
+    for (const s of layout.spawns) {
+      for (const t of layout.targets) expect(Math.hypot(t.pos[0] - s.pos[0], t.pos[2] - s.pos[2]), `${s.id} near ${t.id}`).toBeGreaterThanOrEqual(2);
+      for (const p of [...layout.props, ...layout.obstacles]) {
+        const col = catalog.props[p.type]?.collider;
+        if (!col) continue;
+        const a = (-p.heading * Math.PI) / 180;
+        const rx = s.pos[0] - p.pos[0];
+        const rz = s.pos[2] - p.pos[2];
+        const lx = rx * Math.cos(a) - rz * Math.sin(a);
+        const lz = rx * Math.sin(a) + rz * Math.cos(a);
+        const inside = Math.abs(lx) < col[0] / 2 + MOVEMENT.radius && Math.abs(lz) < col[2] / 2 + MOVEMENT.radius;
+        expect(inside, `${s.id} inside ${p.type}`).toBe(false);
       }
     }
   });
 
   it('no longer ships the old safe-zone sign props', () => {
-    expect(layout.props.filter((p) => p.type.startsWith('sign_'))).toEqual([]);
+    expect(layout.props.filter((p) => p.type === 'sign_blue' || p.type === 'sign_red')).toEqual([]);
   });
 });
 
-describe('European Town collision', () => {
-  const world = buildWorld();
+describe.each(MAP_IDS)('map %s: collision', (id) => {
+  const { layout, collision } = loadMap(id);
+  const world = new CollisionWorld();
+  world.addMany(collision.boxes);
 
   it('spawns players on clear ground', () => {
     for (const s of layout.spawns) {
@@ -122,10 +109,12 @@ describe('European Town collision', () => {
     const key = (x: number, z: number) => `${x.toFixed(2)},${z.toFixed(2)}`;
     const cells = new Map<string, { x: number; z: number; y: number }>();
     const zones = [...layout.ground.zones, ...layout.ground.covered.map((c) => ({ ...c, height: 0 }))];
+    // one global grid for every zone (interiors start at fractional coordinates; per-zone grids would not line up)
+    const first = (v: number) => Math.ceil((v - step / 2) / step) * step + step / 2;
     for (const zn of zones) {
       const [x0, z0, x1, z1] = zn.rect;
-      for (let x = x0 + step / 2; x < x1; x += step) {
-        for (let z = z0 + step / 2; z < z1; z += step) {
+      for (let x = first(x0); x < x1; x += step) {
+        for (let z = first(z0); z < z1; z += step) {
           const y = world.groundHeight(x, z, r * 0.7, 2.0);
           if (y === -Infinity) continue;
           if (world.overlapsCylinder(x, z, r, y + MOVEMENT.stepHeight, y + MOVEMENT.crouchHeight)) continue;
@@ -160,10 +149,11 @@ describe('European Town collision', () => {
     // allow a handful of edge cells squeezed between props/stairs; the network itself must connect
     expect(cells.size).toBeGreaterThan(1500);
     expect(unreachable.length / cells.size).toBeLessThan(0.02);
-    // both safe zones are reachable from each other
-    const red = layout.spawns.find((s) => s.team === 'red')!;
-    const nearRed = [...seen].map((k) => cells.get(k)!).some((c) => Math.hypot(c.x - red.pos[0], c.z - red.pos[2]) < 1);
-    expect(nearRed).toBe(true);
+    // every spawn point is reachable from the first one
+    for (const s of layout.spawns) {
+      const near = [...seen].map((k) => cells.get(k)!).some((c) => Math.hypot(c.x - s.pos[0], c.z - s.pos[2]) < 1);
+      expect(near, `spawn ${s.id}`).toBe(true);
+    }
   });
 
   it('opens every passage, room and gate for walking through', () => {

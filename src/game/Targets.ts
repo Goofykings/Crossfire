@@ -14,21 +14,26 @@ import { assetUrl } from '../core/assets';
 import type { TargetPlacement } from '../maps/types';
 import type { Collider, CollisionWorld } from '../physics/CollisionWorld';
 import type { MaterialLibrary } from '../rendering/MaterialLibrary';
-import type { Damageable, DamageInfo } from './Damage';
-import type { Point3 } from './SafeZones';
+import type { Damageable, DamageInfo, HitZone, Point3 } from './Damage';
 
 const DEG = Math.PI / 180;
 /** Height of the plate hinge above the target's base (matches blender props.target_parts). */
 const HINGE_Y = 0.92;
-const PLATE_CENTER_Y = 0.47;
-const PLATE_RADIUS = 0.42;
+/** Steel silhouette above the hinge (props.TARGET_HEAD / TARGET_BODY): the neck counts as body. */
+const HEAD = { y0: 0.6, y1: 0.855, half: 0.105 };
+const BODY = { y0: 0.03, y1: 0.6, half: 0.245 };
 const DOWN_TIME = 3.0;
+
+/** What a shootable target collider stands for. */
+export interface TargetHit {
+  target: PracticeTarget;
+  zone: HitZone;
+}
 
 type TargetState = 'up' | 'falling' | 'down' | 'rising';
 
-/** A static practice target: tips backwards when knocked down, resets automatically. */
+/** A static steel silhouette: head and body hit zones, tips backwards when knocked down, resets automatically. */
 export class PracticeTarget implements Damageable {
-  readonly bodyRadius = 0.45;
   health = 100;
   state: TargetState = 'up';
   private tilt = 0; // radians, 0 = upright, -PI/2 = flat on its back
@@ -36,7 +41,8 @@ export class PracticeTarget implements Damageable {
   private wobbleVel = 0;
   private timer = 0;
   readonly hinge: TransformNode;
-  readonly plateCollider: Collider;
+  readonly headCollider: Collider;
+  readonly bodyCollider: Collider;
   readonly baseCollider: Collider;
   private readonly center: Point3;
   private readonly forward: { x: number; z: number };
@@ -53,11 +59,14 @@ export class PracticeTarget implements Damageable {
     const [x, y, z] = placement.pos;
     const yaw = -placement.heading * DEG;
     this.forward = { x: -Math.sin(yaw), z: -Math.cos(yaw) };
-    this.center = { x, y: y + HINGE_Y + PLATE_CENTER_Y, z };
-    this.plateCollider = world.add(
-      { c: [x, this.center.y, z], h: [PLATE_RADIUS, PLATE_RADIUS + 0.03, 0.05], yaw, tag: `target:${id}` },
-      { solid: false, shootable: true, userData: this },
-    );
+    this.center = { x, y: y + HINGE_Y + (BODY.y0 + BODY.y1) / 2, z };
+    const zone = (r: { y0: number; y1: number; half: number }, hit: HitZone, tag: string) =>
+      world.add(
+        { c: [x, y + HINGE_Y + (r.y0 + r.y1) / 2, z], h: [r.half, (r.y1 - r.y0) / 2, 0.04], yaw, tag: `${tag}:${id}` },
+        { solid: false, shootable: true, userData: { target: this, zone: hit } satisfies TargetHit },
+      );
+    this.headCollider = zone(HEAD, 'head', 'target-head');
+    this.bodyCollider = zone(BODY, 'body', 'target');
     this.baseCollider = world.add(
       { c: [x, y + 0.5, z], h: [0.3, 0.5, 0.25], yaw, tag: `target-stand:${id}` },
       { solid: true, shootable: true },
@@ -72,14 +81,6 @@ export class PracticeTarget implements Damageable {
     return this.center;
   }
 
-  /** 'bullseye' when the hit lands in the yellow centre. */
-  zoneAt(p: Point3): string {
-    const dx = p.x - this.center.x;
-    const dy = p.y - this.center.y;
-    const dz = p.z - this.center.z;
-    return Math.hypot(dx, dy, dz) < 0.075 ? 'bullseye' : 'body';
-  }
-
   applyDamage(amount: number, info: DamageInfo): void {
     if (this.state !== 'up') return;
     this.health -= amount;
@@ -88,7 +89,7 @@ export class PracticeTarget implements Damageable {
     void info;
     if (this.health <= 0) {
       this.state = 'falling';
-      this.plateCollider.shootable = false;
+      this.headCollider.shootable = this.bodyCollider.shootable = false;
       this.onStateChange?.(this, this.state);
     }
   }
@@ -122,7 +123,7 @@ export class PracticeTarget implements Damageable {
           this.wobbleVel = -1.5;
           this.state = 'up';
           this.health = 100;
-          this.plateCollider.shootable = true;
+          this.headCollider.shootable = this.bodyCollider.shootable = true;
           this.onStateChange?.(this, this.state);
         }
         break;
@@ -192,8 +193,10 @@ export class TargetSystem {
     }
   }
 
-  find(collider: Collider): PracticeTarget | null {
-    return collider.userData instanceof PracticeTarget ? collider.userData : null;
+  /** The target and zone behind a shootable collider, if it belongs to a target. */
+  find(collider: Collider): TargetHit | null {
+    const d = collider.userData as TargetHit | undefined;
+    return d && d.target instanceof PracticeTarget ? d : null;
   }
 
   update(dt: number): void {
@@ -202,7 +205,8 @@ export class TargetSystem {
 
   dispose(): void {
     for (const t of this.targets) {
-      this.world.remove(t.plateCollider);
+      this.world.remove(t.headCollider);
+      this.world.remove(t.bodyCollider);
       this.world.remove(t.baseCollider);
     }
     for (const r of this.roots) r.dispose(false, false);

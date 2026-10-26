@@ -374,6 +374,24 @@ def sign(team: str) -> MeshData:
     return md
 
 
+# Practice target: a steel silhouette (torso and head) on a hinged stand. Heights are above the hinge, which sits 0.92 m
+# above the base, so the head centre is at 1.645 m (eye height). src/game/Targets.ts uses the same numbers for the
+# head and body hit boxes.
+TARGET_HEAD = (0.725, 0.105, 0.13)   # centre height, half-width, half-height
+TARGET_BODY = (0.03, 0.555, 0.245)   # bottom, top of the shoulders, half-width at the shoulders
+TARGET_UV = (0.25, 0.03, 0.5, 0.83)  # x of u = 0, y of v = 0, width and height mapped onto the face texture
+
+
+def target_outline() -> list[tuple[float, float]]:
+    """Silhouette outline (x, y), counter-clockwise with +x right and +y up (the target's back view)."""
+    right = [(0.21, 0.03), (0.232, 0.3), (0.245, 0.415), (0.236, 0.47), (0.205, 0.51), (0.15, 0.538), (0.085, 0.552),
+             (0.056, 0.572), (0.046, 0.6)]
+    hy, hx, hh = TARGET_HEAD
+    head = [(hx * math.cos(math.radians(t)), hy + hh * math.sin(math.radians(t))) for t in range(-62, 243, 9)]
+    left = [(-x, y) for (x, y) in reversed(right)]
+    return right + head + left
+
+
 def target_parts() -> dict[str, MeshData]:
     base = MeshData()
     base.box(-0.45, 0.0, -0.3, 0.45, 0.08, 0.3, "target_frame")
@@ -381,24 +399,21 @@ def target_parts() -> dict[str, MeshData]:
     base.box(-0.3, 0.88, -0.07, 0.3, 0.96, 0.07, "target_frame")
     base.box(-0.4, 0.0, -0.06, 0.4, 0.05, 0.06, "weapon_accent")
     plate = MeshData()
-    seg = 24
-    r = 0.42
-    cy = r + 0.05
-    center_f, center_b = (0.0, cy, -0.03), (0.0, cy, 0.0)
-    for i in range(seg):
-        a, b = 2 * math.pi * i / seg, 2 * math.pi * (i + 1) / seg
-        pa = (math.cos(a) * r, cy + math.sin(a) * r)
-        pb = (math.cos(b) * r, cy + math.sin(b) * r)
-        # front (faces -z): u grows toward local -x (viewer's right), v up
-        ua = (0.5 - math.cos(a) * 0.5, 0.5 + math.sin(a) * 0.5)
-        ub = (0.5 - math.cos(b) * 0.5, 0.5 + math.sin(b) * 0.5)
-        plate.face_toward([center_f, (pa[0], pa[1], -0.03), (pb[0], pb[1], -0.03)], "target_face", (0, 0, -1),
-                          uv=[(0.5, 0.5), ua, ub])
-        plate.face_toward([center_b, (pa[0], pa[1], 0.0), (pb[0], pb[1], 0.0)], "target_frame", (0, 0, 1))
-        mid = ((pa[0] + pb[0]) / 2, (pa[1] + pb[1]) / 2 - cy)
-        plate.face_toward([(pa[0], pa[1], -0.03), (pb[0], pb[1], -0.03), (pb[0], pb[1], 0.0), (pa[0], pa[1], 0.0)],
-                          "target_frame", (mid[0], mid[1], 0))
-    plate.box(-0.04, 0.0, -0.02, 0.04, 0.08, 0.02, "target_frame")
+    poly = target_outline()
+    t = 0.012
+    u0, v0, uw, vh = TARGET_UV
+    # front (faces -z, toward the shooter): u grows toward local -x (the viewer's right), v up
+    front = [(x, y, -t) for (x, y) in poly]
+    plate.face_toward(front, "target_face", (0, 0, -1), uv=[((u0 - x) / uw, (y - v0) / vh) for (x, y) in poly])
+    plate.face_toward([(x, y, 0.0) for (x, y) in poly], "target_frame", (0, 0, 1))
+    n = len(poly)
+    for i in range(n):
+        (ax, ay), (bx, by) = poly[i], poly[(i + 1) % n]
+        out = (by - ay, -(bx - ax), 0.0)  # right-hand normal of a counter-clockwise outline points outward
+        plate.face_toward([(ax, ay, -t), (bx, by, -t), (bx, by, 0.0), (ax, ay, 0.0)], "target_frame", out)
+    # hinge bracket and a stiffening rib on the back
+    plate.box(-0.05, -0.02, -0.004, 0.05, 0.1, 0.03, "target_frame")
+    plate.box(-0.02, 0.1, 0.0, 0.02, 0.5, 0.018, "target_frame")
     return {"base": base, "plate": plate}
 
 
@@ -425,3 +440,10 @@ PROP_BUILDERS = {
     "table": table,
     "stool": stool,
 }
+
+# props of the two newer maps live in their own modules
+from props_industrial import INDUSTRIAL_BUILDERS  # noqa: E402
+from props_city import CITY_BUILDERS  # noqa: E402
+
+PROP_BUILDERS.update(INDUSTRIAL_BUILDERS)
+PROP_BUILDERS.update(CITY_BUILDERS)

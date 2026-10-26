@@ -22,6 +22,19 @@ export interface Vec3 {
   z: number;
 }
 
+/** Full simulation state for trusted snapshots, prediction replay and server reconstruction. */
+export interface ControllerState {
+  position: Vec3;
+  velocity: Vec3;
+  yaw: number;
+  pitch: number;
+  grounded: boolean;
+  crouch: number;
+  airTime: number;
+  jumpBufferTimer: number;
+  jumpedThisAirborne: boolean;
+}
+
 /**
  * Kinematic first-person character controller.
  *
@@ -67,6 +80,26 @@ export class PlayerController {
 
   get horizontalSpeed(): number {
     return Math.hypot(this.velocity.x, this.velocity.z);
+  }
+
+  capture(): ControllerState {
+    return { position: { ...this.position }, velocity: { ...this.velocity }, yaw: this.yaw, pitch: this.pitch,
+      grounded: this.grounded, crouch: this.crouch, airTime: this.airTime, jumpBufferTimer: this.jumpBufferTimer,
+      jumpedThisAirborne: this.jumpedThisAirborne };
+  }
+
+  restore(s: ControllerState): void {
+    Object.assign(this.position, s.position);
+    Object.assign(this.prevPosition, s.position);
+    Object.assign(this.velocity, s.velocity);
+    this.yaw = s.yaw;
+    this.pitch = s.pitch;
+    this.grounded = s.grounded;
+    this.crouch = s.crouch;
+    this.airTime = s.airTime;
+    this.jumpBufferTimer = s.jumpBufferTimer;
+    this.jumpedThisAirborne = s.jumpedThisAirborne;
+    this.stepUpDelta = this.landedSpeed = 0;
   }
 
   /** Compass heading in degrees (0 = north, 90 = east) -> internal yaw. */

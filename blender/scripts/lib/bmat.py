@@ -78,7 +78,16 @@ def get_material(name: str) -> bpy.types.Material:
             nt.links.new(mapping.outputs["Vector"], node.inputs["Vector"])
             return node
 
-        alb = tex(files["albedo"], False, 0)
+        # "albedo": None keeps a set's normal/ORM maps but paints the surface with the tint (painted steel)
+        alb = tex(files["albedo"], False, 0) if files.get("albedo") else None
+        if alb is None:
+            mix = nt.nodes.new("ShaderNodeMix")
+            mix.data_type = "RGBA"
+            mix.blend_type = "MULTIPLY"
+            mix.inputs["Factor"].default_value = 1.0
+            mix.inputs["A"].default_value = tint
+            nt.links.new(vcol.outputs["Color"], mix.inputs["B"])
+            nt.links.new(mix.outputs["Result"], bsdf.inputs["Base Color"])
         if alb is not None:
             mix = nt.nodes.new("ShaderNodeMix")
             mix.data_type = "RGBA"

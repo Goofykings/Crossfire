@@ -524,51 +524,6 @@ class World:
         return [(x1, z) for z in range(z0, z1)]
 
 
-OPEN_BARRIER_HEIGHT = 3.4  # ground-floor storey height: the field's top rail meets the first string course
-
-
-def zone_entrances(world, zone, buildings):
-    """Runs along a safe zone's edge where walkable ground continues outside it.
-
-    Each run is where the runtime puts a translucent barrier and a floating label:
-    {"side", "from", "to"} (along the edge, in metres) plus "height". Runs through a covered passage
-    are lower (they must fit under the lintel/vault) and also carry the passage's "spring"/"apex".
-    """
-    from building_spec import ARCH_RISE, LINTEL_CLEAR
-    r = (int(zone.x0), int(zone.z0), int(zone.x1), int(zone.z1))
-    runs = []
-    for side in SIDES:
-        base = r[0] if side in ("n", "s") else r[1]
-        kinds = []
-        for (x, z) in World.side_samples(r, side):
-            k, _ = world.classify(x, z)
-            kinds.append(k if k in ("open", "covered") else None)
-        i = 0
-        while i < len(kinds):
-            if kinds[i] is None:
-                i += 1
-                continue
-            j = i
-            while j < len(kinds) and kinds[j] == kinds[i]:
-                j += 1
-            run = {"side": side, "from": base + i, "to": base + j, "height": OPEN_BARRIER_HEIGHT}
-            if kinds[i] == "covered":
-                sx, sz = World.side_samples(r, side)[i]
-                psg = next((p for b in buildings for p in b.get("passages", [])
-                            if p["rect"][0] <= sx + 0.5 <= p["rect"][2] and p["rect"][1] <= sz + 0.5 <= p["rect"][3]), None)
-                if psg is None:
-                    i = j
-                    continue  # a walk-through room, not an entrance to the zone
-                if psg["style"] == "lintel":
-                    run["height"] = round(LINTEL_CLEAR - 0.1, 2)
-                else:
-                    run["apex"] = round(psg["clear"] - 0.1, 2)
-                    run["height"] = round(psg["clear"] - ARCH_RISE - 0.1, 2)
-            runs.append(run)
-            i = j
-    return runs
-
-
 def longest_run(flags):
     best, cur, best_end = 0, 0, -1
     for i, f in enumerate(flags):
@@ -732,30 +687,17 @@ def emit_layout(areas, rects):
 
     material = {"street": "cobble", "yard": "cobble", "court": "slabs", "plaza": "slabs", "spawn": "slabs",
                 "terrace": "cobble"}
-    zones = [{"id": a.id, "kind": a.kind, "rect": [a.x0, a.z0, a.x1, a.z1], "height": a.height,
-              "material": material[a.kind], **({"team": a.team} if a.team else {})}
+    # free-for-all: the old spawn yards are ordinary (paved) yards
+    zones = [{"id": a.id, "kind": "yard" if a.kind == "spawn" else a.kind, "rect": [a.x0, a.z0, a.x1, a.z1],
+              "height": a.height, "material": material[a.kind]}
              for a in areas if a.kind not in ("passage", "room")]
     covered_floor = [{"id": a.id, "kind": a.kind, "rect": [a.x0, a.z0, a.x1, a.z1]} for a in covered]
-
-    safe = [{"id": f"safe_{a.team}", "team": a.team, "rect": [a.x0, a.z0, a.x1, a.z1], "height": 6.0,
-             "entrances": zone_entrances(world, a, buildings)}
-            for a in areas if a.kind == "spawn"]
-    spawns = []
-    for a in areas:
-        if a.kind != "spawn":
-            continue
-        sign = 1 if a.team == "blue" else -1
-        cx = (a.x0 + a.x1) / 2
-        for dz in (-4.5, -1.5, 1.5, 4.5):
-            for dx in (-1.6, 1.6):
-                spawns.append({"team": a.team, "pos": [round(cx + dx * sign, 2), 0.0, round(dz * sign, 2)],
-                               "heading": 90 if a.team == "blue" else 270})
 
     dressing = dress(world, areas, buildings, terraces)
     if problems:
         print("LAYOUT PROBLEMS:\n  " + "\n  ".join(problems))
     print("building types:", dict(sorted(type_counts.items())))
-    return {
+    layout = {
         "id": "european-town",
         "name": "European Town",
         "version": 1,
@@ -766,10 +708,11 @@ def emit_layout(areas, rects):
         "terraces": terraces,
         "buildings": buildings,
         "walls": walls,
-        "safeZones": safe,
-        "spawns": spawns,
         **dressing,
     }
+    # free-for-all spawn points over the whole map (they keep clear of the props and targets placed above)
+    layout["spawns"] = ffa_spawns(layout, PROPS)
+    return layout
 
 
 # ----------------------------------------------------------------------------------------------
@@ -778,6 +721,7 @@ def emit_layout(areas, rects):
 # Headings are compass degrees: 0 = facing north (-z), 90 = east (+x).
 # ----------------------------------------------------------------------------------------------
 from catalog import PROPS  # noqa: E402
+from spawn_points import ffa_spawns  # noqa: E402
 
 SIDE_HEADING = {"n": 0, "e": 90, "s": 180, "w": 270}
 
@@ -792,26 +736,23 @@ ARCHES = [
 MANUAL_PROPS = [
     # plaza: market stall against the north frontage, benches facing the well
     ("market_stall", (-2.6, 0, -4.15), 180),
-    ("bench", (-4.3, 0, 1.6), 90),
+    # clear of the door in B42's east face (z 2.45..3.55)
+    ("bench", (-4.3, 0, 1.2), 90),
     # gate yards: a hand cart for cover
     ("cart", (-16.4, 0, 1.9), 0),
     ("crate_stack", (-20.2, 0, -4.2), 90),
     # raised court: stall, bench, fenced herb garden
     ("market_stall", (25.0, 0.54, -31.15), 180),
-    ("bench", (22.45, 0.54, -27.8), 90),
+    # against the garden wall north of its gate (the gate and its stairs are at z -30..-28)
+    ("bench", (22.45, 0.54, -31.1), 90),
     ("fence", (29.0, 0.54, -30.0), 0),
     ("fence_gate", (28.0, 0.54, -31.0), 270),
     ("flower_pot_large", (29.1, 0.54, -31.2), 0),
     ("flower_pot", (29.4, 0.54, -30.5), 0),
-    # safe-zone signage was replaced by translucent entrance barriers + floating labels (see zone_entrances)
+    # (free-for-all: no safe zones, so no zone signage or barriers)
 ]
 
 STREET_LANTERNS = [(-4.3, 0, -4.3), (4.3, 0, -4.3), (-20.4, 0, 3.4), (22.6, 0.54, -26.6)]
-
-LIGHTS = [
-    {"type": "point", "team": "blue", "pos": [-29.0, 3.4, 0.0], "color": [0.35, 0.55, 1.0], "intensity": 18.0,
-     "range": 13.0},
-]
 
 TARGETS = [
     ((-31.2, 0, -29.0), 90), ((-27.0, 0, -25.0), 180), ((-16.0, 0, -16.2), 0), ((-8.0, 0, -9.8), 180),
@@ -1019,13 +960,6 @@ def dress(world, areas, buildings, terraces):
                 props.append({"type": "drain_grate", "pos": [round(gx, 2), a.height + 0.004, round(gz, 2)],
                               "heading": 0 if w >= d else 90})
 
-    for L in LIGHTS:
-        lights.append(dict(L))
-        r = dict(L)
-        r["team"] = "red"
-        r["pos"] = list(rot_pos(L["pos"]))
-        r["color"] = [1.0, 0.38, 0.32]
-        lights.append(r)
 
     targets = []
     for i, (pos, hd) in enumerate(TARGETS):

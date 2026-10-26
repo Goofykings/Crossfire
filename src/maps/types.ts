@@ -6,17 +6,19 @@
  * Rects are [x0, z0, x1, z1]. Headings are compass degrees (0 = facing north / -z, 90 = east / +x).
  */
 
+import type { TacticalOptions } from './tactical';
+
 export type Rect = [number, number, number, number];
 export type Vec3Tuple = [number, number, number];
+/** Team of a player in team modes (the practice maps are free-for-all; kept for the teammate registry). */
 export type Team = 'blue' | 'red';
 
 export interface GroundZone {
   id: string;
-  kind: 'street' | 'yard' | 'court' | 'plaza' | 'spawn' | 'terrace';
+  kind: 'street' | 'yard' | 'court' | 'plaza' | 'terrace' | 'sidewalk' | 'alley';
   rect: Rect;
   height: number;
   material: string;
-  team?: Team;
 }
 
 export interface StairRun {
@@ -64,28 +66,9 @@ export interface PropPlacement {
   heading: number;
 }
 
-/** A stretch of a safe zone's edge where walkable ground continues outside (gets a barrier and a label). */
-export interface ZoneEntrance {
-  side: 'n' | 'e' | 's' | 'w';
-  /** Extent along the edge in metres (x for n/s, z for e/w). */
-  from: number;
-  to: number;
-  /** Height of the barrier (the spring line for an arched passage). */
-  height: number;
-  /** Crown height for arched passages; omitted for flat tops. */
-  apex?: number;
-}
-
-export interface SafeZoneDef {
-  id: string;
-  team: Team;
-  rect: Rect;
-  height: number;
-  entrances?: ZoneEntrance[];
-}
-
+/** Free-for-all spawn point (blender/scripts/lib/spawn_points.py spreads them over the map). */
 export interface SpawnPoint {
-  team: Team;
+  id: string;
   pos: Vec3Tuple;
   heading: number;
 }
@@ -98,7 +81,6 @@ export interface TargetPlacement {
 
 export interface LightDef {
   type: 'point';
-  team?: Team;
   pos: Vec3Tuple;
   color: Vec3Tuple;
   intensity: number;
@@ -119,7 +101,6 @@ export interface MapLayout {
   props: PropPlacement[];
   lights: LightDef[];
   targets: TargetPlacement[];
-  safeZones: SafeZoneDef[];
   spawns: SpawnPoint[];
   obstacles: PropPlacement[];
 }
@@ -129,6 +110,11 @@ export interface MapAssetIndex {
   models: string[];
   collision: string;
   collisionDebug?: string;
+  /**
+   * Optional pre-exported tactical map (TacticalMapData JSON, relative to the map's assetPath). Maps without a full
+   * layout can ship one; otherwise the overlay is derived from the layout at load time.
+   */
+  tactical?: string;
 }
 
 export interface PropCatalog {
@@ -167,6 +153,10 @@ export interface MapDefinition {
   id: string;
   name: string;
   description: string;
+  /** Shown on the click-to-play card (defaults to the description). */
+  briefing?: string;
+  /** Menu thumbnail (relative to the deployed site). */
+  thumbnail?: string;
   /** Base URL (relative to the deployed site) of the map's models. */
   assetPath: string;
   /** Map layout data (bundled JSON). */
@@ -177,4 +167,6 @@ export interface MapDefinition {
   dimensions: [number, number];
   environment: EnvironmentConfig;
   collision: { killY: number };
+  /** Tactical (Tab) map options: landmark names keyed by layout zone id, margins. */
+  tactical?: TacticalOptions;
 }

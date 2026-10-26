@@ -28,6 +28,7 @@ class LayoutIndex:
                 self.steps.append((r, top))
 
     def classify(self, x: float, z: float):
+        # covered ground: passages, walk-through rooms, interiors and their doorways (all listed in ground.covered)
         for c in self.covered:
             if in_rect(x, z, c["rect"]):
                 return "covered", c
@@ -67,11 +68,15 @@ class LayoutIndex:
                 hit = True
         return best
 
+    # walls that do not fill their lot: chain-link fences and railings are see-through, pillar shafts are inset from the
+    # lot edges. A building next to one must build its own wall, or you see into (and through) it.
+    OPEN_WALLS = ("fence", "railing", "pillar")
+
     def neighbour_height(self, x: float, z: float) -> float:
         """Height that hides a wall at this outside point: neighbour eave, wall height, or 0."""
         kind, obj = self.classify(x, z)
         if kind == "building":
             return bs.eave_height(obj)
         if kind == "wall":
-            return obj["height"]
+            return 0.0 if obj.get("style") in self.OPEN_WALLS else obj["height"]
         return 0.0

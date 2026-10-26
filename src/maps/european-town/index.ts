@@ -9,6 +9,8 @@ export const EUROPEAN_TOWN: MapDefinition = {
   id: 'european-town',
   name: 'European Town',
   description: 'Narrow cobbled lanes, arches and tiny courtyards between stone and stucco houses.',
+  briefing: 'Free for all: find the practice targets hidden around the lanes. Headshots deal 1.5x damage.',
+  thumbnail: 'assets/maps/european-town/thumb.jpg',
   assetPath: 'assets/models/european-town/',
   layout: layout as unknown as MapLayout,
   assetIndex: 'map-assets.json',
@@ -30,4 +32,20 @@ export const EUROPEAN_TOWN: MapDefinition = {
     contrast: 1.12,
   },
   collision: { killY: -20 },
+  tactical: {
+    // labels for the Tab map, keyed by layout zone ids (positions come from the zones themselves)
+    landmarks: {
+      plaza: 'Well Plaza',
+      spawn_blue: 'West Yard',
+      spawn_bluer: 'East Yard',
+      n_lane_mid: 'North Terrace',
+      n_lane_midr: 'South Terrace',
+      ne_court: 'NE Court',
+      ne_courtr: 'SW Court',
+      blue_yard: 'Gate Yard',
+      blue_yardr: 'Gate Yard',
+      cn_room: 'Hall',
+      cn_roomr: 'Hall',
+    },
+  },
 };

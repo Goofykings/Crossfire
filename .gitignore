@@ -8,3 +8,4 @@ dist/
 references_images/
 # local test artefacts
 test-results/
+.env.local

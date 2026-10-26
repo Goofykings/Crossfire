@@ -66,7 +66,7 @@ const luminance = (rgb) => {
 try {
   // ---------------------------------------------------------------- main menu entry
   let page = await open();
-  await page.waitForFunction(() => document.querySelector('.status-line')?.textContent?.startsWith('Ready'), { timeout: 180000, polling: 500 });
+  await page.waitForFunction(() => window.__crossfire?.stats().mapId, { timeout: 180000, polling: 500 });
   const start = await applied(page);
   check(start.fov === 90 && start.masterVolume === 0.7 && start.shadowQuality === 'medium', `defaults loaded (fov ${start.fov}, volume ${start.masterVolume}, shadows ${start.shadowQuality})`);
   check((await stored(page)) === null, 'nothing is saved just by starting the game');
@@ -222,7 +222,7 @@ try {
   page = await open();
   const reloaded = await applied(page);
   check(reloaded.fov === 95 && reloaded.masterVolume === 0.3 && reloaded.shadowQuality === 'low', 'after a refresh the saved settings are restored');
-  await page.waitForFunction(() => document.querySelector('.status-line')?.textContent?.startsWith('Ready'), { timeout: 180000, polling: 500 });
+  await page.waitForFunction(() => window.__crossfire?.stats().mapId, { timeout: 180000, polling: 500 });
   await (await page.$$('#menu .menu-buttons > .btn')).at(-1).click();
   await wait(200);
   check((await sliderValue(page, '#set-fov')) === 95 && !(await applyEnabled(page)), 'the menu shows the restored values');

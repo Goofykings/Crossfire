@@ -115,6 +115,16 @@
    "normal": "assets/textures/shared/wood_dark_normal.jpg",
    "orm": "assets/textures/shared/wood_dark_orm.jpg"
   },
+  "interior_dark": {
+   "tile": 1.0,
+   "tint": [
+    0.025,
+    0.024,
+    0.022
+   ],
+   "roughness": 0.95,
+   "metallic": 0.0
+  },
   "cobble": {
    "tile": 2.6,
    "tint": [
@@ -454,7 +464,8 @@
     0.45,
     1.0
    ],
-   "emissive_tex": true
+   "emissive_tex": true,
+   "atlas": true
   },
   "sign_red": {
    "tile": 1.0,
@@ -470,7 +481,8 @@
     0.3,
     0.25
    ],
-   "emissive_tex": true
+   "emissive_tex": true,
+   "atlas": true
   },
   "shop_sign": {
    "tile": 1.0,
@@ -480,7 +492,8 @@
     1.0
    ],
    "albedo": "assets/textures/european-town/shop_signs.jpg",
-   "roughness": 0.7
+   "roughness": 0.7,
+   "atlas": true
   },
   "team_blue_glow": {
    "tile": 1.0,
@@ -614,7 +627,217 @@
     1.0
    ],
    "albedo": "assets/textures/european-town/target_face.png",
-   "roughness": 0.7
+   "roughness": 0.62,
+   "metallic": 0.15,
+   "atlas": true
+  },
+  "gun_black": {
+   "tile": 0.22,
+   "tint": [
+    0.05,
+    0.052,
+    0.056
+   ],
+   "albedo": null,
+   "normal": "assets/textures/shared/metal_normal.jpg",
+   "orm": "assets/textures/shared/metal_orm.jpg",
+   "roughness": 0.55,
+   "metallic": 0.7,
+   "normal_strength": 0.35
+  },
+  "gun_steel": {
+   "tile": 0.22,
+   "tint": [
+    0.085,
+    0.087,
+    0.092
+   ],
+   "albedo": null,
+   "normal": "assets/textures/shared/metal_normal.jpg",
+   "orm": "assets/textures/shared/metal_orm.jpg",
+   "roughness": 0.4,
+   "metallic": 0.92,
+   "normal_strength": 0.3
+  },
+  "gun_polymer": {
+   "tile": 0.3,
+   "tint": [
+    0.042,
+    0.042,
+    0.044
+   ],
+   "albedo": null,
+   "normal": "assets/textures/shared/concrete_smooth_normal.jpg",
+   "orm": "assets/textures/shared/concrete_smooth_orm.jpg",
+   "roughness": 0.78,
+   "metallic": 0.0,
+   "normal_strength": 0.25
+  },
+  "gun_fde": {
+   "tile": 0.3,
+   "tint": [
+    0.34,
+    0.27,
+    0.18
+   ],
+   "albedo": null,
+   "normal": "assets/textures/shared/concrete_smooth_normal.jpg",
+   "orm": "assets/textures/shared/concrete_smooth_orm.jpg",
+   "roughness": 0.74,
+   "metallic": 0.0,
+   "normal_strength": 0.25
+  },
+  "gun_wood": {
+   "tile": 0.4,
+   "tint": [
+    0.78,
+    0.52,
+    0.32
+   ],
+   "albedo": "assets/textures/shared/wood_dark_albedo.jpg",
+   "normal": "assets/textures/shared/wood_dark_normal.jpg",
+   "orm": "assets/textures/shared/wood_dark_orm.jpg",
+   "roughness": 0.42,
+   "metallic": 0.0,
+   "normal_strength": 0.5
+  },
+  "gun_rubber": {
+   "tile": 1.0,
+   "tint": [
+    0.028,
+    0.028,
+    0.028
+   ],
+   "roughness": 0.95,
+   "metallic": 0.0
+  },
+  "gun_glass": {
+   "tile": 1.0,
+   "tint": [
+    0.1,
+    0.16,
+    0.17
+   ],
+   "roughness": 0.03,
+   "metallic": 0.4,
+   "alpha": 0.16
+  },
+  "gun_lens": {
+   "tile": 1.0,
+   "tint": [
+    0.015,
+    0.025,
+    0.045
+   ],
+   "roughness": 0.04,
+   "metallic": 0.65
+  },
+  "reticle_holo": {
+   "tile": 1.0,
+   "tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "albedo": "assets/textures/weapons/reticle_holo.png",
+   "roughness": 1.0,
+   "emissive": [
+    3.0,
+    0.32,
+    0.22
+   ],
+   "alpha_cutoff": 0.15,
+   "emissive_tex": true
+  },
+  "sight_dot": {
+   "tile": 1.0,
+   "tint": [
+    1.0,
+    0.42,
+    0.05
+   ],
+   "roughness": 0.4,
+   "emissive": [
+    2.4,
+    0.75,
+    0.08
+   ]
+  },
+  "brass": {
+   "tile": 0.08,
+   "tint": [
+    0.8,
+    0.56,
+    0.24
+   ],
+   "albedo": null,
+   "normal": "assets/textures/shared/metal_normal.jpg",
+   "orm": "assets/textures/shared/metal_orm.jpg",
+   "roughness": 0.3,
+   "metallic": 1.0,
+   "normal_strength": 0.2
+  },
+  "shell_red": {
+   "tile": 1.0,
+   "tint": [
+    0.5,
+    0.05,
+    0.04
+   ],
+   "roughness": 0.45,
+   "metallic": 0.0
+  },
+  "glove": {
+   "tile": 0.05,
+   "tint": [
+    0.46,
+    0.31,
+    0.16
+   ],
+   "albedo": "assets/textures/weapons/fabric_albedo.jpg",
+   "normal": "assets/textures/weapons/fabric_normal.jpg",
+   "orm": "assets/textures/weapons/fabric_orm.jpg",
+   "roughness": 0.86,
+   "metallic": 0.0,
+   "normal_strength": 0.9
+  },
+  "glove_pad": {
+   "tile": 1.0,
+   "tint": [
+    0.03,
+    0.03,
+    0.03
+   ],
+   "roughness": 0.9,
+   "metallic": 0.0
+  },
+  "sleeve": {
+   "tile": 0.07,
+   "tint": [
+    0.15,
+    0.15,
+    0.095
+   ],
+   "albedo": "assets/textures/weapons/fabric_albedo.jpg",
+   "normal": "assets/textures/weapons/fabric_normal.jpg",
+   "orm": "assets/textures/weapons/fabric_orm.jpg",
+   "roughness": 0.92,
+   "metallic": 0.0,
+   "normal_strength": 1.0
+  },
+  "sleeve_seam": {
+   "tile": 0.04,
+   "tint": [
+    0.11,
+    0.11,
+    0.07
+   ],
+   "albedo": "assets/textures/weapons/fabric_albedo.jpg",
+   "normal": "assets/textures/weapons/fabric_normal.jpg",
+   "orm": "assets/textures/weapons/fabric_orm.jpg",
+   "roughness": 0.92,
+   "metallic": 0.0,
+   "normal_strength": 1.0
   },
   "target_frame": {
    "tile": 1.0,
@@ -914,6 +1137,1369 @@
    "albedo": "assets/textures/shared/plaster_albedo.jpg",
    "normal": "assets/textures/shared/plaster_normal.jpg",
    "orm": "assets/textures/shared/plaster_orm.jpg"
+  },
+  "brick_factory": {
+   "tile": 2.6,
+   "tint": [
+    1.0,
+    0.97,
+    0.95
+   ],
+   "albedo": "assets/textures/shared/brick_factory_albedo.jpg",
+   "normal": "assets/textures/shared/brick_factory_normal.jpg",
+   "orm": "assets/textures/shared/brick_factory_orm.jpg",
+   "normal_strength": 1.1
+  },
+  "brick_factory_soot": {
+   "tile": 2.6,
+   "tint": [
+    0.66,
+    0.6,
+    0.57
+   ],
+   "albedo": "assets/textures/shared/brick_factory_albedo.jpg",
+   "normal": "assets/textures/shared/brick_factory_normal.jpg",
+   "orm": "assets/textures/shared/brick_factory_orm.jpg",
+   "normal_strength": 1.1
+  },
+  "concrete_wall": {
+   "tile": 3.6,
+   "tint": [
+    0.96,
+    0.95,
+    0.93
+   ],
+   "albedo": "assets/textures/shared/concrete_wall_albedo.jpg",
+   "normal": "assets/textures/shared/concrete_wall_normal.jpg",
+   "orm": "assets/textures/shared/concrete_wall_orm.jpg"
+  },
+  "concrete_wall_stained": {
+   "tile": 3.6,
+   "tint": [
+    0.78,
+    0.76,
+    0.72
+   ],
+   "albedo": "assets/textures/shared/concrete_wall_albedo.jpg",
+   "normal": "assets/textures/shared/concrete_wall_normal.jpg",
+   "orm": "assets/textures/shared/concrete_wall_orm.jpg"
+  },
+  "concrete_panel": {
+   "tile": 4.0,
+   "tint": [
+    0.95,
+    0.95,
+    0.94
+   ],
+   "albedo": "assets/textures/shared/concrete_panel_albedo.jpg",
+   "normal": "assets/textures/shared/concrete_panel_normal.jpg",
+   "orm": "assets/textures/shared/concrete_panel_orm.jpg"
+  },
+  "concrete_trim": {
+   "tile": 1.6,
+   "tint": [
+    0.9,
+    0.89,
+    0.87
+   ],
+   "albedo": "assets/textures/shared/concrete_wall_albedo.jpg",
+   "normal": "assets/textures/shared/concrete_wall_normal.jpg",
+   "orm": "assets/textures/shared/concrete_wall_orm.jpg",
+   "normal_strength": 0.6
+  },
+  "cladding_rusty": {
+   "tile": 1.8,
+   "tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "albedo": "assets/textures/shared/corrugated_rusty_albedo.jpg",
+   "normal": "assets/textures/shared/corrugated_rusty_normal.jpg",
+   "orm": "assets/textures/shared/corrugated_rusty_orm.jpg"
+  },
+  "roof_corrugated": {
+   "tile": 2.0,
+   "tint": [
+    0.9,
+    0.9,
+    0.9
+   ],
+   "albedo": "assets/textures/shared/corrugated_worn_albedo.jpg",
+   "normal": "assets/textures/shared/corrugated_worn_normal.jpg",
+   "orm": "assets/textures/shared/corrugated_worn_orm.jpg"
+  },
+  "roof_rusty": {
+   "tile": 2.0,
+   "tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "albedo": "assets/textures/shared/corrugated_rusty_albedo.jpg",
+   "normal": "assets/textures/shared/corrugated_rusty_normal.jpg",
+   "orm": "assets/textures/shared/corrugated_rusty_orm.jpg"
+  },
+  "roof_gravel": {
+   "tile": 2.5,
+   "tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "albedo": "assets/textures/shared/roof_gravel_albedo.jpg",
+   "normal": "assets/textures/shared/roof_gravel_normal.jpg",
+   "orm": "assets/textures/shared/roof_gravel_orm.jpg"
+  },
+  "asphalt": {
+   "tile": 4.5,
+   "tint": [
+    0.92,
+    0.92,
+    0.94
+   ],
+   "albedo": "assets/textures/shared/asphalt_albedo.jpg",
+   "normal": "assets/textures/shared/asphalt_normal.jpg",
+   "orm": "assets/textures/shared/asphalt_orm.jpg",
+   "normal_strength": 0.9
+  },
+  "concrete_floor": {
+   "tile": 3.2,
+   "tint": [
+    0.95,
+    0.94,
+    0.92
+   ],
+   "albedo": "assets/textures/shared/concrete_floor_albedo.jpg",
+   "normal": "assets/textures/shared/concrete_floor_normal.jpg",
+   "orm": "assets/textures/shared/concrete_floor_orm.jpg"
+  },
+  "concrete_floor_dark": {
+   "tile": 3.0,
+   "tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "albedo": "assets/textures/shared/concrete_dark_albedo.jpg",
+   "normal": "assets/textures/shared/concrete_dark_normal.jpg",
+   "orm": "assets/textures/shared/concrete_dark_orm.jpg"
+  },
+  "asphalt_fine": {
+   "tile": 4.5,
+   "tint": [
+    0.9,
+    0.9,
+    0.92
+   ],
+   "albedo": "assets/textures/shared/asphalt_fine_albedo.jpg",
+   "normal": "assets/textures/shared/asphalt_fine_normal.jpg",
+   "orm": "assets/textures/shared/asphalt_fine_orm.jpg"
+  },
+  "pavers": {
+   "tile": 2.0,
+   "tint": [
+    0.96,
+    0.95,
+    0.93
+   ],
+   "albedo": "assets/textures/shared/pavers_albedo.jpg",
+   "normal": "assets/textures/shared/pavers_normal.jpg",
+   "orm": "assets/textures/shared/pavers_orm.jpg"
+  },
+  "curb": {
+   "tile": 1.2,
+   "tint": [
+    0.86,
+    0.85,
+    0.83
+   ],
+   "albedo": "assets/textures/shared/concrete_floor_albedo.jpg",
+   "normal": "assets/textures/shared/concrete_floor_normal.jpg",
+   "orm": "assets/textures/shared/concrete_floor_orm.jpg",
+   "normal_strength": 0.6
+  },
+  "granite": {
+   "tile": 1.6,
+   "tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "albedo": "assets/textures/shared/granite_albedo.jpg",
+   "normal": "assets/textures/shared/granite_normal.jpg",
+   "orm": "assets/textures/shared/granite_orm.jpg"
+  },
+  "metal_plate": {
+   "tile": 1.0,
+   "tint": [
+    0.8,
+    0.8,
+    0.82
+   ],
+   "albedo": "assets/textures/shared/metal_plate_albedo.jpg",
+   "normal": "assets/textures/shared/metal_plate_normal.jpg",
+   "orm": "assets/textures/shared/metal_plate_orm.jpg"
+  },
+  "galvanized": {
+   "tile": 1.4,
+   "tint": [
+    0.56,
+    0.57,
+    0.58
+   ],
+   "albedo": null,
+   "normal": "assets/textures/shared/metal_normal.jpg",
+   "orm": "assets/textures/shared/metal_orm.jpg",
+   "roughness": 0.6,
+   "metallic": 0.9,
+   "normal_strength": 0.6
+  },
+  "aluminium": {
+   "tile": 1.4,
+   "tint": [
+    0.66,
+    0.67,
+    0.69
+   ],
+   "albedo": null,
+   "normal": "assets/textures/shared/metal_normal.jpg",
+   "orm": "assets/textures/shared/metal_orm.jpg",
+   "roughness": 0.55,
+   "metallic": 0.85,
+   "normal_strength": 0.6
+  },
+  "glass_wired": {
+   "tile": 1.0,
+   "tint": [
+    0.07,
+    0.09,
+    0.085
+   ],
+   "roughness": 0.12,
+   "metallic": 0.2
+  },
+  "glass_skylight": {
+   "tile": 1.0,
+   "tint": [
+    0.3,
+    0.34,
+    0.34
+   ],
+   "roughness": 0.3,
+   "metallic": 0.1
+  },
+  "glass_window": {
+   "tile": 1.0,
+   "tint": [
+    0.055,
+    0.075,
+    0.095
+   ],
+   "roughness": 0.04,
+   "metallic": 0.35
+  },
+  "glass_store": {
+   "tile": 1.0,
+   "tint": [
+    0.09,
+    0.11,
+    0.12
+   ],
+   "roughness": 0.03,
+   "metallic": 0.15
+  },
+  "window_blinds": {
+   "tile": 1.0,
+   "tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "albedo": "assets/textures/urban/blinds.jpg",
+   "roughness": 0.12,
+   "metallic": 0.1,
+   "atlas": true
+  },
+  "rubber": {
+   "tile": 1.0,
+   "tint": [
+    0.03,
+    0.03,
+    0.03
+   ],
+   "roughness": 0.92,
+   "metallic": 0.0
+  },
+  "lamp_sodium": {
+   "tile": 1.0,
+   "tint": [
+    1.0,
+    0.85,
+    0.6
+   ],
+   "roughness": 0.3,
+   "metallic": 0.0,
+   "emissive": [
+    2.2,
+    1.5,
+    0.7
+   ]
+  },
+  "lamp_led": {
+   "tile": 1.0,
+   "tint": [
+    0.95,
+    0.97,
+    1.0
+   ],
+   "roughness": 0.3,
+   "metallic": 0.0,
+   "emissive": [
+    1.7,
+    1.85,
+    2.0
+   ]
+  },
+  "plastic_black": {
+   "tile": 1.0,
+   "tint": [
+    0.025,
+    0.025,
+    0.027
+   ],
+   "roughness": 0.6,
+   "metallic": 0.0
+  },
+  "plastic_green": {
+   "tile": 1.0,
+   "tint": [
+    0.05,
+    0.2,
+    0.09
+   ],
+   "roughness": 0.55,
+   "metallic": 0.0
+  },
+  "plastic_blue": {
+   "tile": 1.0,
+   "tint": [
+    0.04,
+    0.11,
+    0.3
+   ],
+   "roughness": 0.55,
+   "metallic": 0.0
+  },
+  "plastic_orange": {
+   "tile": 1.0,
+   "tint": [
+    0.85,
+    0.22,
+    0.02
+   ],
+   "roughness": 0.5,
+   "metallic": 0.0
+  },
+  "plastic_grey": {
+   "tile": 1.0,
+   "tint": [
+    0.28,
+    0.29,
+    0.3
+   ],
+   "roughness": 0.6,
+   "metallic": 0.0
+  },
+  "plastic_white": {
+   "tile": 1.0,
+   "tint": [
+    0.84,
+    0.84,
+    0.81
+   ],
+   "roughness": 0.45,
+   "metallic": 0.0
+  },
+  "plastic_wrap": {
+   "tile": 1.0,
+   "tint": [
+    0.74,
+    0.76,
+    0.77
+   ],
+   "roughness": 0.25,
+   "metallic": 0.0
+  },
+  "cardboard": {
+   "tile": 1.0,
+   "tint": [
+    0.56,
+    0.42,
+    0.27
+   ],
+   "albedo": null,
+   "normal": "assets/textures/shared/wood_weathered_normal.jpg",
+   "orm": "assets/textures/shared/wood_weathered_orm.jpg",
+   "roughness": 1.0,
+   "metallic": 0.0,
+   "normal_strength": 0.25
+  },
+  "ceramic": {
+   "tile": 1.0,
+   "tint": [
+    0.36,
+    0.2,
+    0.12
+   ],
+   "roughness": 0.25,
+   "metallic": 0.0
+  },
+  "headlight": {
+   "tile": 1.0,
+   "tint": [
+    0.85,
+    0.86,
+    0.84
+   ],
+   "roughness": 0.08,
+   "metallic": 0.3
+  },
+  "taillight": {
+   "tile": 1.0,
+   "tint": [
+    0.45,
+    0.02,
+    0.02
+   ],
+   "roughness": 0.15,
+   "metallic": 0.0,
+   "emissive": [
+    0.25,
+    0.0,
+    0.0
+   ]
+  },
+  "signal_off": {
+   "tile": 1.0,
+   "tint": [
+    0.04,
+    0.04,
+    0.035
+   ],
+   "roughness": 0.2,
+   "metallic": 0.0
+  },
+  "signal_green": {
+   "tile": 1.0,
+   "tint": [
+    0.1,
+    0.6,
+    0.3
+   ],
+   "roughness": 0.2,
+   "metallic": 0.0,
+   "emissive": [
+    0.2,
+    1.6,
+    0.6
+   ]
+  },
+  "sign_back": {
+   "tile": 1.0,
+   "tint": [
+    0.32,
+    0.33,
+    0.34
+   ],
+   "albedo": "assets/textures/urban/street_signs.png",
+   "roughness": 0.5,
+   "metallic": 0.6,
+   "alpha_cutoff": 0.5,
+   "atlas": true
+  },
+  "wood_pallet": {
+   "tile": 1.0,
+   "tint": [
+    1.0,
+    0.9,
+    0.74
+   ],
+   "albedo": "assets/textures/shared/wood_weathered_albedo.jpg",
+   "normal": "assets/textures/shared/wood_weathered_normal.jpg",
+   "orm": "assets/textures/shared/wood_weathered_orm.jpg"
+  },
+  "wood_pole": {
+   "tile": 1.6,
+   "tint": [
+    0.46,
+    0.38,
+    0.31
+   ],
+   "albedo": "assets/textures/shared/wood_weathered_albedo.jpg",
+   "normal": "assets/textures/shared/wood_weathered_normal.jpg",
+   "orm": "assets/textures/shared/wood_weathered_orm.jpg"
+  },
+  "paint_yellow": {
+   "tile": 1.6,
+   "tint": [
+    0.86,
+    0.6,
+    0.05
+   ],
+   "albedo": "assets/textures/urban/paint_wear.png",
+   "roughness": 0.7,
+   "alpha_cutoff": 0.5,
+   "decal": true
+  },
+  "paint_white": {
+   "tile": 1.6,
+   "tint": [
+    0.86,
+    0.86,
+    0.84
+   ],
+   "albedo": "assets/textures/urban/paint_wear.png",
+   "roughness": 0.7,
+   "alpha_cutoff": 0.5,
+   "decal": true
+  },
+  "oil_stain": {
+   "tile": 3.0,
+   "tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "albedo": "assets/textures/urban/oil_stains.png",
+   "roughness": 0.35,
+   "alpha_cutoff": 0.3,
+   "decal": true
+  },
+  "hazard": {
+   "tile": 0.8,
+   "tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "albedo": "assets/textures/urban/hazard_stripes.jpg",
+   "roughness": 0.6
+  },
+  "chainlink": {
+   "tile": 0.5,
+   "tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "albedo": "assets/textures/urban/chainlink.png",
+   "roughness": 0.5,
+   "metallic": 0.7,
+   "alpha_cutoff": 0.4,
+   "double_sided": true
+  },
+  "street_signs": {
+   "tile": 1.0,
+   "tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "albedo": "assets/textures/urban/street_signs.png",
+   "roughness": 0.45,
+   "alpha_cutoff": 0.5,
+   "atlas": true
+  },
+  "sign_industrial": {
+   "tile": 1.0,
+   "tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "albedo": "assets/textures/industrial-complex/signs_industrial.jpg",
+   "roughness": 0.6,
+   "atlas": true
+  },
+  "sign_city": {
+   "tile": 1.0,
+   "tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "albedo": "assets/textures/modern-city/shop_signs_city.jpg",
+   "roughness": 0.45,
+   "atlas": true
+  },
+  "posters": {
+   "tile": 1.0,
+   "tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "albedo": "assets/textures/modern-city/posters.jpg",
+   "roughness": 0.8,
+   "atlas": true
+  },
+  "concrete_spawn_blue": {
+   "tile": 3.2,
+   "tint": [
+    0.76,
+    0.83,
+    0.98
+   ],
+   "albedo": "assets/textures/shared/concrete_floor_albedo.jpg",
+   "normal": "assets/textures/shared/concrete_floor_normal.jpg",
+   "orm": "assets/textures/shared/concrete_floor_orm.jpg"
+  },
+  "concrete_spawn_red": {
+   "tile": 3.2,
+   "tint": [
+    0.98,
+    0.8,
+    0.76
+   ],
+   "albedo": "assets/textures/shared/concrete_floor_albedo.jpg",
+   "normal": "assets/textures/shared/concrete_floor_normal.jpg",
+   "orm": "assets/textures/shared/concrete_floor_orm.jpg"
+  },
+  "pavers_spawn_blue": {
+   "tile": 2.0,
+   "tint": [
+    0.78,
+    0.85,
+    1.0
+   ],
+   "albedo": "assets/textures/shared/pavers_albedo.jpg",
+   "normal": "assets/textures/shared/pavers_normal.jpg",
+   "orm": "assets/textures/shared/pavers_orm.jpg"
+  },
+  "pavers_spawn_red": {
+   "tile": 2.0,
+   "tint": [
+    1.0,
+    0.82,
+    0.78
+   ],
+   "albedo": "assets/textures/shared/pavers_albedo.jpg",
+   "normal": "assets/textures/shared/pavers_normal.jpg",
+   "orm": "assets/textures/shared/pavers_orm.jpg"
+  },
+  "asphalt_inlay": {
+   "tile": 4.5,
+   "tint": [
+    0.92,
+    0.92,
+    0.94
+   ],
+   "albedo": "assets/textures/shared/asphalt_albedo.jpg",
+   "normal": "assets/textures/shared/asphalt_normal.jpg",
+   "orm": "assets/textures/shared/asphalt_orm.jpg",
+   "decal": true,
+   "normal_strength": 0.9
+  },
+  "concrete_floor_inlay": {
+   "tile": 3.2,
+   "tint": [
+    0.95,
+    0.94,
+    0.92
+   ],
+   "albedo": "assets/textures/shared/concrete_floor_albedo.jpg",
+   "normal": "assets/textures/shared/concrete_floor_normal.jpg",
+   "orm": "assets/textures/shared/concrete_floor_orm.jpg",
+   "decal": true
+  },
+  "asphalt_fine_inlay": {
+   "tile": 4.5,
+   "tint": [
+    0.9,
+    0.9,
+    0.92
+   ],
+   "albedo": "assets/textures/shared/asphalt_fine_albedo.jpg",
+   "normal": "assets/textures/shared/asphalt_fine_normal.jpg",
+   "orm": "assets/textures/shared/asphalt_fine_orm.jpg",
+   "decal": true
+  },
+  "pavers_inlay": {
+   "tile": 2.0,
+   "tint": [
+    0.96,
+    0.95,
+    0.93
+   ],
+   "albedo": "assets/textures/shared/pavers_albedo.jpg",
+   "normal": "assets/textures/shared/pavers_normal.jpg",
+   "orm": "assets/textures/shared/pavers_orm.jpg",
+   "decal": true
+  },
+  "cladding_grey": {
+   "tile": 1.6,
+   "tint": [
+    0.82,
+    0.83,
+    0.85
+   ],
+   "albedo": "assets/textures/shared/corrugated_albedo.jpg",
+   "normal": "assets/textures/shared/corrugated_normal.jpg",
+   "orm": "assets/textures/shared/corrugated_orm.jpg",
+   "normal_strength": 1.1
+  },
+  "cladding_blue": {
+   "tile": 1.6,
+   "tint": [
+    0.3,
+    0.42,
+    0.6
+   ],
+   "albedo": "assets/textures/shared/corrugated_albedo.jpg",
+   "normal": "assets/textures/shared/corrugated_normal.jpg",
+   "orm": "assets/textures/shared/corrugated_orm.jpg",
+   "normal_strength": 1.1
+  },
+  "cladding_green": {
+   "tile": 1.6,
+   "tint": [
+    0.34,
+    0.48,
+    0.38
+   ],
+   "albedo": "assets/textures/shared/corrugated_albedo.jpg",
+   "normal": "assets/textures/shared/corrugated_normal.jpg",
+   "orm": "assets/textures/shared/corrugated_orm.jpg",
+   "normal_strength": 1.1
+  },
+  "cladding_red": {
+   "tile": 1.6,
+   "tint": [
+    0.6,
+    0.25,
+    0.19
+   ],
+   "albedo": "assets/textures/shared/corrugated_albedo.jpg",
+   "normal": "assets/textures/shared/corrugated_normal.jpg",
+   "orm": "assets/textures/shared/corrugated_orm.jpg",
+   "normal_strength": 1.1
+  },
+  "cladding_cream": {
+   "tile": 1.6,
+   "tint": [
+    0.86,
+    0.8,
+    0.66
+   ],
+   "albedo": "assets/textures/shared/corrugated_albedo.jpg",
+   "normal": "assets/textures/shared/corrugated_normal.jpg",
+   "orm": "assets/textures/shared/corrugated_orm.jpg",
+   "normal_strength": 1.1
+  },
+  "cladding_white": {
+   "tile": 1.6,
+   "tint": [
+    0.95,
+    0.95,
+    0.95
+   ],
+   "albedo": "assets/textures/shared/corrugated_albedo.jpg",
+   "normal": "assets/textures/shared/corrugated_normal.jpg",
+   "orm": "assets/textures/shared/corrugated_orm.jpg",
+   "normal_strength": 1.1
+  },
+  "roller_grey": {
+   "tile": 2.2,
+   "tint": [
+    0.7,
+    0.71,
+    0.72
+   ],
+   "albedo": "assets/textures/shared/metal_shutter_albedo.jpg",
+   "normal": "assets/textures/shared/metal_shutter_normal.jpg",
+   "orm": "assets/textures/shared/metal_shutter_orm.jpg"
+  },
+  "roller_blue": {
+   "tile": 2.2,
+   "tint": [
+    0.26,
+    0.38,
+    0.58
+   ],
+   "albedo": "assets/textures/shared/metal_shutter_albedo.jpg",
+   "normal": "assets/textures/shared/metal_shutter_normal.jpg",
+   "orm": "assets/textures/shared/metal_shutter_orm.jpg"
+  },
+  "roller_yellow": {
+   "tile": 2.2,
+   "tint": [
+    0.86,
+    0.62,
+    0.12
+   ],
+   "albedo": "assets/textures/shared/metal_shutter_albedo.jpg",
+   "normal": "assets/textures/shared/metal_shutter_normal.jpg",
+   "orm": "assets/textures/shared/metal_shutter_orm.jpg"
+  },
+  "roller_red": {
+   "tile": 2.2,
+   "tint": [
+    0.6,
+    0.18,
+    0.14
+   ],
+   "albedo": "assets/textures/shared/metal_shutter_albedo.jpg",
+   "normal": "assets/textures/shared/metal_shutter_normal.jpg",
+   "orm": "assets/textures/shared/metal_shutter_orm.jpg"
+  },
+  "roller_green": {
+   "tile": 2.2,
+   "tint": [
+    0.28,
+    0.44,
+    0.32
+   ],
+   "albedo": "assets/textures/shared/metal_shutter_albedo.jpg",
+   "normal": "assets/textures/shared/metal_shutter_normal.jpg",
+   "orm": "assets/textures/shared/metal_shutter_orm.jpg"
+  },
+  "roller_white": {
+   "tile": 2.2,
+   "tint": [
+    0.92,
+    0.92,
+    0.9
+   ],
+   "albedo": "assets/textures/shared/metal_shutter_albedo.jpg",
+   "normal": "assets/textures/shared/metal_shutter_normal.jpg",
+   "orm": "assets/textures/shared/metal_shutter_orm.jpg"
+  },
+  "steel_grey": {
+   "tile": 1.4,
+   "tint": [
+    0.3,
+    0.31,
+    0.33
+   ],
+   "albedo": null,
+   "normal": "assets/textures/shared/metal_normal.jpg",
+   "orm": "assets/textures/shared/metal_orm.jpg",
+   "roughness": 0.85,
+   "metallic": 0.35,
+   "normal_strength": 0.6
+  },
+  "steel_yellow": {
+   "tile": 1.4,
+   "tint": [
+    0.78,
+    0.52,
+    0.05
+   ],
+   "albedo": null,
+   "normal": "assets/textures/shared/metal_normal.jpg",
+   "orm": "assets/textures/shared/metal_orm.jpg",
+   "roughness": 0.85,
+   "metallic": 0.35,
+   "normal_strength": 0.6
+  },
+  "steel_blue": {
+   "tile": 1.4,
+   "tint": [
+    0.1,
+    0.2,
+    0.4
+   ],
+   "albedo": null,
+   "normal": "assets/textures/shared/metal_normal.jpg",
+   "orm": "assets/textures/shared/metal_orm.jpg",
+   "roughness": 0.85,
+   "metallic": 0.35,
+   "normal_strength": 0.6
+  },
+  "steel_red": {
+   "tile": 1.4,
+   "tint": [
+    0.48,
+    0.07,
+    0.05
+   ],
+   "albedo": null,
+   "normal": "assets/textures/shared/metal_normal.jpg",
+   "orm": "assets/textures/shared/metal_orm.jpg",
+   "roughness": 0.85,
+   "metallic": 0.35,
+   "normal_strength": 0.6
+  },
+  "steel_green": {
+   "tile": 1.4,
+   "tint": [
+    0.08,
+    0.26,
+    0.14
+   ],
+   "albedo": null,
+   "normal": "assets/textures/shared/metal_normal.jpg",
+   "orm": "assets/textures/shared/metal_orm.jpg",
+   "roughness": 0.85,
+   "metallic": 0.35,
+   "normal_strength": 0.6
+  },
+  "steel_dark": {
+   "tile": 1.4,
+   "tint": [
+    0.06,
+    0.065,
+    0.07
+   ],
+   "albedo": null,
+   "normal": "assets/textures/shared/metal_normal.jpg",
+   "orm": "assets/textures/shared/metal_orm.jpg",
+   "roughness": 0.85,
+   "metallic": 0.35,
+   "normal_strength": 0.6
+  },
+  "steel_white": {
+   "tile": 1.4,
+   "tint": [
+    0.8,
+    0.8,
+    0.78
+   ],
+   "albedo": null,
+   "normal": "assets/textures/shared/metal_normal.jpg",
+   "orm": "assets/textures/shared/metal_orm.jpg",
+   "roughness": 0.85,
+   "metallic": 0.35,
+   "normal_strength": 0.6
+  },
+  "steel_orange": {
+   "tile": 1.4,
+   "tint": [
+    0.78,
+    0.28,
+    0.04
+   ],
+   "albedo": null,
+   "normal": "assets/textures/shared/metal_normal.jpg",
+   "orm": "assets/textures/shared/metal_orm.jpg",
+   "roughness": 0.85,
+   "metallic": 0.35,
+   "normal_strength": 0.6
+  },
+  "container_red": {
+   "tile": 2.0,
+   "tint": [
+    0.52,
+    0.1,
+    0.06
+   ],
+   "albedo": null,
+   "normal": "assets/textures/shared/metal_normal.jpg",
+   "orm": "assets/textures/shared/metal_orm.jpg",
+   "roughness": 0.9,
+   "metallic": 0.35,
+   "normal_strength": 0.6
+  },
+  "container_blue": {
+   "tile": 2.0,
+   "tint": [
+    0.07,
+    0.18,
+    0.4
+   ],
+   "albedo": null,
+   "normal": "assets/textures/shared/metal_normal.jpg",
+   "orm": "assets/textures/shared/metal_orm.jpg",
+   "roughness": 0.9,
+   "metallic": 0.35,
+   "normal_strength": 0.6
+  },
+  "container_green": {
+   "tile": 2.0,
+   "tint": [
+    0.1,
+    0.3,
+    0.16
+   ],
+   "albedo": null,
+   "normal": "assets/textures/shared/metal_normal.jpg",
+   "orm": "assets/textures/shared/metal_orm.jpg",
+   "roughness": 0.9,
+   "metallic": 0.35,
+   "normal_strength": 0.6
+  },
+  "container_grey": {
+   "tile": 2.0,
+   "tint": [
+    0.42,
+    0.43,
+    0.44
+   ],
+   "albedo": null,
+   "normal": "assets/textures/shared/metal_normal.jpg",
+   "orm": "assets/textures/shared/metal_orm.jpg",
+   "roughness": 0.9,
+   "metallic": 0.35,
+   "normal_strength": 0.6
+  },
+  "container_orange": {
+   "tile": 2.0,
+   "tint": [
+    0.75,
+    0.3,
+    0.05
+   ],
+   "albedo": null,
+   "normal": "assets/textures/shared/metal_normal.jpg",
+   "orm": "assets/textures/shared/metal_orm.jpg",
+   "roughness": 0.9,
+   "metallic": 0.35,
+   "normal_strength": 0.6
+  },
+  "container_white": {
+   "tile": 2.0,
+   "tint": [
+    0.82,
+    0.82,
+    0.8
+   ],
+   "albedo": null,
+   "normal": "assets/textures/shared/metal_normal.jpg",
+   "orm": "assets/textures/shared/metal_orm.jpg",
+   "roughness": 0.9,
+   "metallic": 0.35,
+   "normal_strength": 0.6
+  },
+  "container_teal": {
+   "tile": 2.0,
+   "tint": [
+    0.05,
+    0.3,
+    0.32
+   ],
+   "albedo": null,
+   "normal": "assets/textures/shared/metal_normal.jpg",
+   "orm": "assets/textures/shared/metal_orm.jpg",
+   "roughness": 0.9,
+   "metallic": 0.35,
+   "normal_strength": 0.6
+  },
+  "brick_city_red": {
+   "tile": 2.4,
+   "tint": [
+    1.0,
+    0.96,
+    0.94
+   ],
+   "albedo": "assets/textures/shared/brick_city_albedo.jpg",
+   "normal": "assets/textures/shared/brick_city_normal.jpg",
+   "orm": "assets/textures/shared/brick_city_orm.jpg"
+  },
+  "brick_city_brown": {
+   "tile": 2.4,
+   "tint": [
+    0.78,
+    0.66,
+    0.6
+   ],
+   "albedo": "assets/textures/shared/brick_city_albedo.jpg",
+   "normal": "assets/textures/shared/brick_city_normal.jpg",
+   "orm": "assets/textures/shared/brick_city_orm.jpg"
+  },
+  "brick_city_pale": {
+   "tile": 2.4,
+   "tint": [
+    1.0,
+    0.92,
+    0.86
+   ],
+   "albedo": "assets/textures/shared/brick_city_albedo.jpg",
+   "normal": "assets/textures/shared/brick_city_normal.jpg",
+   "orm": "assets/textures/shared/brick_city_orm.jpg"
+  },
+  "brick_city_b_orange": {
+   "tile": 2.4,
+   "tint": [
+    1.0,
+    0.97,
+    0.95
+   ],
+   "albedo": "assets/textures/shared/brick_city_b_albedo.jpg",
+   "normal": "assets/textures/shared/brick_city_b_normal.jpg",
+   "orm": "assets/textures/shared/brick_city_b_orm.jpg"
+  },
+  "brick_city_b_dark": {
+   "tile": 2.4,
+   "tint": [
+    0.62,
+    0.56,
+    0.54
+   ],
+   "albedo": "assets/textures/shared/brick_city_b_albedo.jpg",
+   "normal": "assets/textures/shared/brick_city_b_normal.jpg",
+   "orm": "assets/textures/shared/brick_city_b_orm.jpg"
+  },
+  "concrete_smooth_light": {
+   "tile": 3.0,
+   "tint": [
+    0.96,
+    0.95,
+    0.93
+   ],
+   "albedo": "assets/textures/shared/concrete_smooth_albedo.jpg",
+   "normal": "assets/textures/shared/concrete_smooth_normal.jpg",
+   "orm": "assets/textures/shared/concrete_smooth_orm.jpg"
+  },
+  "concrete_smooth_warm": {
+   "tile": 3.0,
+   "tint": [
+    0.92,
+    0.86,
+    0.78
+   ],
+   "albedo": "assets/textures/shared/concrete_smooth_albedo.jpg",
+   "normal": "assets/textures/shared/concrete_smooth_normal.jpg",
+   "orm": "assets/textures/shared/concrete_smooth_orm.jpg"
+  },
+  "concrete_smooth_cool": {
+   "tile": 3.0,
+   "tint": [
+    0.8,
+    0.83,
+    0.86
+   ],
+   "albedo": "assets/textures/shared/concrete_smooth_albedo.jpg",
+   "normal": "assets/textures/shared/concrete_smooth_normal.jpg",
+   "orm": "assets/textures/shared/concrete_smooth_orm.jpg"
+  },
+  "concrete_smooth_dark": {
+   "tile": 3.0,
+   "tint": [
+    0.55,
+    0.56,
+    0.57
+   ],
+   "albedo": "assets/textures/shared/concrete_smooth_albedo.jpg",
+   "normal": "assets/textures/shared/concrete_smooth_normal.jpg",
+   "orm": "assets/textures/shared/concrete_smooth_orm.jpg"
+  },
+  "cladding_panel_white": {
+   "tile": 2.4,
+   "tint": [
+    0.95,
+    0.95,
+    0.94
+   ],
+   "albedo": "assets/textures/shared/cladding_albedo.jpg",
+   "normal": "assets/textures/shared/cladding_normal.jpg",
+   "orm": "assets/textures/shared/cladding_orm.jpg"
+  },
+  "cladding_panel_sage": {
+   "tile": 2.4,
+   "tint": [
+    0.72,
+    0.78,
+    0.68
+   ],
+   "albedo": "assets/textures/shared/cladding_albedo.jpg",
+   "normal": "assets/textures/shared/cladding_normal.jpg",
+   "orm": "assets/textures/shared/cladding_orm.jpg"
+  },
+  "cladding_panel_slate": {
+   "tile": 2.4,
+   "tint": [
+    0.48,
+    0.52,
+    0.56
+   ],
+   "albedo": "assets/textures/shared/cladding_albedo.jpg",
+   "normal": "assets/textures/shared/cladding_normal.jpg",
+   "orm": "assets/textures/shared/cladding_orm.jpg"
+  },
+  "stucco_cream": {
+   "tile": 3.0,
+   "tint": [
+    0.92,
+    0.86,
+    0.74
+   ],
+   "albedo": "assets/textures/shared/stucco_albedo.jpg",
+   "normal": "assets/textures/shared/stucco_normal.jpg",
+   "orm": "assets/textures/shared/stucco_orm.jpg"
+  },
+  "stucco_peach": {
+   "tile": 3.0,
+   "tint": [
+    0.92,
+    0.72,
+    0.58
+   ],
+   "albedo": "assets/textures/shared/stucco_albedo.jpg",
+   "normal": "assets/textures/shared/stucco_normal.jpg",
+   "orm": "assets/textures/shared/stucco_orm.jpg"
+  },
+  "stucco_sky": {
+   "tile": 3.0,
+   "tint": [
+    0.7,
+    0.8,
+    0.88
+   ],
+   "albedo": "assets/textures/shared/stucco_albedo.jpg",
+   "normal": "assets/textures/shared/stucco_normal.jpg",
+   "orm": "assets/textures/shared/stucco_orm.jpg"
+  },
+  "stucco_grey": {
+   "tile": 3.0,
+   "tint": [
+    0.72,
+    0.72,
+    0.71
+   ],
+   "albedo": "assets/textures/shared/stucco_albedo.jpg",
+   "normal": "assets/textures/shared/stucco_normal.jpg",
+   "orm": "assets/textures/shared/stucco_orm.jpg"
+  },
+  "stucco_olive": {
+   "tile": 3.0,
+   "tint": [
+    0.68,
+    0.7,
+    0.54
+   ],
+   "albedo": "assets/textures/shared/stucco_albedo.jpg",
+   "normal": "assets/textures/shared/stucco_normal.jpg",
+   "orm": "assets/textures/shared/stucco_orm.jpg"
+  },
+  "stucco_white": {
+   "tile": 3.0,
+   "tint": [
+    0.95,
+    0.94,
+    0.92
+   ],
+   "albedo": "assets/textures/shared/stucco_albedo.jpg",
+   "normal": "assets/textures/shared/stucco_normal.jpg",
+   "orm": "assets/textures/shared/stucco_orm.jpg"
+  },
+  "facade_tiles_dark": {
+   "tile": 1.8,
+   "tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "albedo": "assets/textures/shared/facade_tiles_albedo.jpg",
+   "normal": "assets/textures/shared/facade_tiles_normal.jpg",
+   "orm": "assets/textures/shared/facade_tiles_orm.jpg"
+  },
+  "facade_tiles_light": {
+   "tile": 1.8,
+   "tint": [
+    2.4,
+    2.4,
+    2.35
+   ],
+   "albedo": "assets/textures/shared/facade_tiles_albedo.jpg",
+   "normal": "assets/textures/shared/facade_tiles_normal.jpg",
+   "orm": "assets/textures/shared/facade_tiles_orm.jpg"
+  },
+  "carpaint_red": {
+   "tile": 1.0,
+   "tint": [
+    0.42,
+    0.03,
+    0.03
+   ],
+   "roughness": 0.28,
+   "metallic": 0.55
+  },
+  "carpaint_blue": {
+   "tile": 1.0,
+   "tint": [
+    0.03,
+    0.08,
+    0.25
+   ],
+   "roughness": 0.28,
+   "metallic": 0.55
+  },
+  "carpaint_silver": {
+   "tile": 1.0,
+   "tint": [
+    0.5,
+    0.52,
+    0.54
+   ],
+   "roughness": 0.28,
+   "metallic": 0.55
+  },
+  "carpaint_black": {
+   "tile": 1.0,
+   "tint": [
+    0.02,
+    0.02,
+    0.022
+   ],
+   "roughness": 0.28,
+   "metallic": 0.55
+  },
+  "carpaint_white": {
+   "tile": 1.0,
+   "tint": [
+    0.78,
+    0.78,
+    0.76
+   ],
+   "roughness": 0.28,
+   "metallic": 0.55
+  },
+  "carpaint_green": {
+   "tile": 1.0,
+   "tint": [
+    0.04,
+    0.16,
+    0.08
+   ],
+   "roughness": 0.28,
+   "metallic": 0.55
+  },
+  "canvas_blue": {
+   "tile": 1.0,
+   "tint": [
+    0.16,
+    0.3,
+    0.55
+   ],
+   "albedo": "assets/textures/shared/plaster_albedo.jpg",
+   "normal": "assets/textures/shared/plaster_normal.jpg",
+   "orm": "assets/textures/shared/plaster_orm.jpg",
+   "roughness": 0.95
+  },
+  "canvas_black": {
+   "tile": 1.0,
+   "tint": [
+    0.06,
+    0.06,
+    0.065
+   ],
+   "albedo": "assets/textures/shared/plaster_albedo.jpg",
+   "normal": "assets/textures/shared/plaster_normal.jpg",
+   "orm": "assets/textures/shared/plaster_orm.jpg",
+   "roughness": 0.95
+  },
+  "canvas_olive": {
+   "tile": 1.0,
+   "tint": [
+    0.32,
+    0.36,
+    0.2
+   ],
+   "albedo": "assets/textures/shared/plaster_albedo.jpg",
+   "normal": "assets/textures/shared/plaster_normal.jpg",
+   "orm": "assets/textures/shared/plaster_orm.jpg",
+   "roughness": 0.95
   }
  }
 }

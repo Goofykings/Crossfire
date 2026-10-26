@@ -17,6 +17,8 @@ interface MaterialDef {
   double_sided?: boolean;
   /** Thin layer over another surface (ground inlays): drawn with a small polygon offset. */
   decal?: boolean;
+  /** UVs address regions of one image (signs, posters): load it without the vertical flip. */
+  atlas?: boolean;
 }
 
 interface MaterialFile {
@@ -59,13 +61,15 @@ export class MaterialLibrary {
     for (const t of this.textures.values()) t.anisotropicFilteringLevel = level;
   }
 
-  private texture(path: string, tile: number, linear: boolean): Texture {
-    const key = `${path}|${tile}|${linear}`;
+  private texture(path: string, tile: number, linear: boolean, invertY = true): Texture {
+    const key = `${path}|${tile}|${linear}|${invertY}`;
     let tex = this.textures.get(key);
     if (!tex) {
       tex = new Texture(assetUrl(path), this.scene, {
         noMipmap: false,
-        invertY: true,
+        // glTF UVs are top-origin, so the flip turns images upside down. Tiling surfaces do not care (and keep it so
+        // existing normal maps read the same); image sheets such as signs set `atlas` and load unflipped.
+        invertY,
         samplingMode: Texture.TRILINEAR_SAMPLINGMODE,
         gammaSpace: !linear,
       });
@@ -83,6 +87,13 @@ export class MaterialLibrary {
   static readonly NO_SHADOW = new Set([
     'glass', 'glass_shop', 'soil', 'flowers', 'foliage', 'lantern_glass', 'team_blue_glow', 'team_red_glow',
     'sign_blue', 'sign_red', 'slabs_inlay', 'stone_inlay', 'water', 'frame_white', 'frame_dark', 'produce', 'shop_sign', 'copper',
+    // Industrial Complex / Modern City: glazing, paint and stain decals, lamps, and the alpha-tested chain-link mesh
+    // (a shadow map would draw it as a solid slab; the fence posts still cast)
+    'glass_wired', 'glass_skylight', 'glass_window', 'glass_store', 'window_blinds', 'paint_yellow', 'paint_white', 'oil_stain',
+    'asphalt_inlay', 'concrete_floor_inlay', 'asphalt_fine_inlay', 'pavers_inlay', 'lamp_sodium', 'lamp_led', 'signal_green',
+    'signal_off', 'headlight', 'taillight', 'chainlink', 'aluminium',
+    // backs of door and shop openings: inside the wall, never in the light's path
+    'interior_dark',
   ]);
 
   /**
@@ -128,7 +139,7 @@ export class MaterialLibrary {
     const tile = def.tile || 1;
     m.albedoColor = new Color3(def.tint[0], def.tint[1], def.tint[2]);
     if (def.albedo) {
-      m.albedoTexture = this.texture(def.albedo, tile, false);
+      m.albedoTexture = this.texture(def.albedo, tile, false, !def.atlas);
       if (def.alpha_cutoff) {
         m.albedoTexture.hasAlpha = true;
         m.useAlphaFromAlbedoTexture = true;
@@ -188,6 +199,39 @@ export class MaterialLibrary {
 
   all(): PBRMaterial[] {
     return [...this.materials.values()];
+  }
+
+  /**
+   * Free the materials (and the textures only they used) that nothing in the scene renders with any more, e.g. the
+   * previous map's after a map switch. Returns how many materials and textures were disposed.
+   */
+  prune(inUse: ReadonlySet<Material>): { materials: number; textures: number } {
+    let materials = 0;
+    for (const [name, m] of this.materials) {
+      if (inUse.has(m)) continue;
+      m.dispose(false, false);
+      this.materials.delete(name);
+      materials++;
+    }
+    const keep = new Set<Texture>();
+    for (const m of this.materials.values()) {
+      for (const t of [m.albedoTexture, m.bumpTexture, m.metallicTexture, m.emissiveTexture]) if (t) keep.add(t as Texture);
+    }
+    let textures = 0;
+    for (const [key, t] of this.textures) {
+      if (keep.has(t)) continue;
+      t.dispose();
+      this.textures.delete(key);
+      textures++;
+    }
+    // canonical groups may now point at disposed materials: rebuild them lazily
+    this.canonByKey.clear();
+    return { materials, textures };
+  }
+
+  /** Loaded material and texture counts (debug API / leak tests). */
+  counts(): { materials: number; textures: number } {
+    return { materials: this.materials.size, textures: this.textures.size };
   }
 
   dispose(): void {

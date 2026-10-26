@@ -14,12 +14,28 @@ CORNICE = 0.35         # cornice band above the top floor
 ARCH_RISE = 0.85       # segmental arch rise for "arch" style openings
 LINTEL_CLEAR = 2.9     # clear height under flat timber lintels
 ROOM_DOOR_W = 1.6
+# Modern City storeys (shared by tools/layout_city.py and building_modern.py so heights and windows agree)
+CITY_GROUND = 3.6
+CITY_UPPER = 3.1
+CITY_PARAPET = 0.9
 ROOM_DOOR_H = 2.5
 GATE_CLEAR = 2.9
 
 
 def eave_height(b: dict) -> float:
+    """Top of the walls. Storey-based for townhouses; warehouses and other non-storey buildings give it directly."""
+    if "height" in b:
+        return b["height"]
     return FLOOR_HEIGHT_GROUND + FLOOR_HEIGHT_UPPER * (b["floors"] - 1) + CORNICE
+
+
+def city_height(floors: int) -> float:
+    """Wall top (parapet included) of a Modern City building with `floors` storeys."""
+    return CITY_GROUND + CITY_UPPER * (floors - 1) + CITY_PARAPET
+
+
+def city_floor_base(floor: int) -> float:
+    return 0.0 if floor == 0 else CITY_GROUND + CITY_UPPER * (floor - 1)
 
 
 def floor_base(b: dict, floor: int) -> float:
@@ -54,6 +70,10 @@ def passage_profile(p: dict):
     span = min(x1 - x0, z1 - z0) if p.get("axis") is None else None
     if p.get("style", "arch") == "lintel":
         return LINTEL_CLEAR, LINTEL_CLEAR, LINTEL_CLEAR
+    if p["style"] == "portal":
+        # flat steel-framed opening of any height (industrial / city vehicle passages)
+        c = p.get("clear", 3.6)
+        return c, c, c
     apex = p.get("clear", 3.2)
     springing = apex - ARCH_RISE
     return springing, apex, springing + 0.25
@@ -101,6 +121,17 @@ def room_layout(b: dict, room: dict):
         doors.append(("s", (xc - ROOM_DOOR_W / 2, z1 - WALL_T - 0.05, xc + ROOM_DOOR_W / 2, z1 + 0.05)))
     # interior side walls (room long sides inside the building mass)
     return (cx0, cz0, cx1, cz1), doors
+
+
+def interior_openings(interior: dict):
+    """Rects a walk-in interior hollows out of its building: the cavity (up to `clear`) and each doorway (up to its own
+    height). Both are explicit in the layout, so the visual generator, the collision boxes and the tactical map read the
+    same numbers.
+    """
+    out = [(tuple(interior["rect"]), interior.get("clear", 4.0))]
+    for d in interior.get("doors", []):
+        out.append((tuple(d["rect"]), d.get("height", 2.4)))
+    return out
 
 
 def chamfer_triangle(b: dict):

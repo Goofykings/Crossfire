@@ -7,11 +7,13 @@ Stages (default: all except previews)
     materials  public/assets/materials.json
     town       European Town buildings (per-block GLBs), terrain.glb, collision.json, collision_debug.glb,
                blender/source/european-town.blend
+    industrial the same outputs for the Industrial Complex (models/industrial-complex/, industrial-complex.blend)
+    city       the same outputs for the Modern City (models/modern-city/, modern-city.blend)
     props      models/shared/props/*.glb, blender/source/props.blend
-    weapon     models/shared/weapons/blaster.glb, blender/source/weapon.blend
+    weapon     models/shared/weapons/{rifle,shotgun,sniper,hands,casings}.glb, blender/source/weapon.blend
     library    models/shared/buildings/*.glb (8 building types x 2 variants), building_library.blend
     kit        models/shared/kit/*.glb, blender/source/modular_kit.blend
-    previews   docs/previews/*.png (EEVEE renders of the town)
+    previews   docs/previews/*.png (EEVEE renders; with a map stage, that map's views)
 
 Writes public/assets/asset-manifest.json and docs/ASSET_MANIFEST.md describing every output.
 """
@@ -35,20 +37,62 @@ import materials  # noqa: E402
 import modular  # noqa: E402
 import props as prop_lib  # noqa: E402
 import weapon as weapon_lib  # noqa: E402
+import hands as hands_lib  # noqa: E402
 from building import BuildingGenerator  # noqa: E402
+from building_industrial import IndustrialBuildingGenerator  # noqa: E402
+from building_modern import ModernBuildingGenerator  # noqa: E402
 from catalog import BUILDING_TYPES, PROPS  # noqa: E402
 from layout_util import LayoutIndex  # noqa: E402
 from meshkit import Transform  # noqa: E402
 from terrain import TerrainBuilder  # noqa: E402
+from terrain_industrial import IndustrialTerrain  # noqa: E402
+from terrain_modern import ModernTerrain  # noqa: E402
 
 ROOT = HERE.parent.parent
 PUBLIC = ROOT / "public"
 MODELS = PUBLIC / "assets" / "models"
-TOWN = MODELS / "european-town"
 SHARED = MODELS / "shared"
 SOURCE = ROOT / "blender" / "source"
-LAYOUT = ROOT / "src" / "maps" / "european-town" / "layout.json"
 MANIFEST: list[dict] = []
+
+# One entry per map stage. `style` picks the generators (layout.json carries the same value in "style").
+MAP_STAGES = {
+    "town": {"id": "european-town", "title": "European Town", "style": "european", "sky": "sky_1k.hdr",
+             "terrain_desc": "Streets, plaza, courts, terraces, stairs, garden walls, gates and flying arches",
+             "sun": (200, 48), "views": {
+                 "aerial": ((-48, 52, 46), (0, 0, 0), 28),
+                 "plaza": ((-12.5, 1.7, -3.0), (2, 2.4, 2), 18),
+                 "north_lane": ((-16.5, 2.4, -25), (6, 2.2, -25), 20),
+                 "blue_spawn": ((-31.5, 1.7, 5.5), (-20, 2.5, -1), 18),
+                 "court": ((22.8, 2.2, -27), (29, 2.0, -31), 16),
+                 "alley": ((-27, 1.7, -14.5), (-27, 3.0, -30), 18)}},
+    "industrial": {"id": "industrial-complex", "title": "Industrial Complex", "style": "industrial", "sky": "sky_industrial_1k.hdr",
+                   "terrain_desc": "Asphalt and concrete yards, loading docks, stairs, railings, fences, canopies, pipe bridges, road paint",
+                   "sun": (205, 59), "views": {
+                       "aerial": ((-46, 50, 48), (0, 0, 0), 28),
+                       "dock_lane": ((-27, 1.7, -28.5), (-6, 2.6, -27.5), 20),
+                       "north_hall": ((-4.7, 1.7, -26.5), (3.5, 2.8, -23.5), 15),
+                       "container_yard": ((5, 1.7, -30.3), (13.5, 1.6, -20.5), 17),
+                       "loading_square": ((-5.5, 1.7, 5.5), (5, 2.2, -3), 18),
+                       "blue_gate": ((-30.5, 1.7, -1.5), (-17, 2.4, -1.5), 18)}},
+    "city": {"id": "modern-city", "title": "Modern City", "style": "modern", "sky": "sky_city_1k.hdr",
+             "terrain_desc": "Roads, sidewalks and curbs, crossings, alleys, plazas, garden walls, railings, overhead wires",
+             "sun": (195, 50), "views": {
+                 "aerial": ((-46, 52, 48), (0, 0, 0), 28),
+                 "north_street": ((-25, 1.85, -24), (-6, 3.2, -24.5), 20),
+                 "plaza": ((-6.3, 1.7, -6.3), (5, 2.6, 5), 18),
+                 "back_alley": ((-32, 1.7, -14), (-16, 3.2, -14), 18),
+                 "ne_road": ((1.5, 1.85, -16), (17, 3.0, -16.5), 18),
+                 "courtyard": ((-20.5, 1.7, -5.5), (-14.5, 2.6, 3.5), 16)}},
+}
+
+
+def make_generators(style: str, index):
+    if style == "industrial":
+        return IndustrialBuildingGenerator(index), IndustrialTerrain
+    if style == "modern":
+        return ModernBuildingGenerator(index), ModernTerrain
+    return BuildingGenerator(index), TerrainBuilder
 
 
 def log(*a):
@@ -135,13 +179,19 @@ def stage_materials():
     log("materials ->", path)
 
 
-def stage_town(previews: bool):
+def stage_map(key: str, previews: bool):
+    cfg = MAP_STAGES[key]
+    out_dir = MODELS / cfg["id"]
+    layout_path = ROOT / "src" / "maps" / cfg["id"] / "layout.json"
+    if not layout_path.exists():
+        log(f"skip {key}: {layout_path} does not exist yet")
+        return []
     exporter.reset_scene()
-    layout = json.loads(LAYOUT.read_text(encoding="utf-8"))
+    layout = json.loads(layout_path.read_text(encoding="utf-8"))
     index = LayoutIndex(layout)
-    gen = BuildingGenerator(index)
+    gen, terrain_cls = make_generators(layout.get("style", cfg["style"]), index)
     groups = building_groups(layout)
-    town_col = exporter.collection("European Town")
+    town_col = exporter.collection(cfg["title"])
     bcol = exporter.collection("Buildings", town_col)
     block_files = []
     for gi, group in enumerate(groups, 1):
@@ -152,7 +202,7 @@ def stage_town(previews: bool):
             md, placements = gen.generate(b)
             x0, z0, x1, z1 = b["rect"]
             objs += realize(md, placements, b["id"], col, ((x0 + x1) / 2, 0.0, (z0 + z1) / 2))
-        path = TOWN / "buildings" / f"{name}.glb"
+        path = out_dir / "buildings" / f"{name}.glb"
         exporter.export_glb(objs, path)
         record(path, "map-buildings", f"{len(group)} buildings: " + ", ".join(f"{b['id']} ({b['type']})" for b in group),
                [o for o in objs if o.type == "MESH"])
@@ -160,21 +210,21 @@ def stage_town(previews: bool):
         log(f"{name}: {len(group)} buildings, {path.stat().st_size // 1024} KB")
 
     tcol = exporter.collection("Terrain", town_col)
-    terrain = TerrainBuilder(layout).build()
+    terrain = terrain_cls(layout).build()
     tobj = terrain.to_object("terrain", tcol)
-    path = TOWN / "terrain.glb"
+    path = out_dir / "terrain.glb"
     exporter.export_glb([tobj], path)
-    record(path, "map-terrain", "Streets, plaza, courts, terraces, stairs, garden walls, gates and flying arches", [tobj])
+    record(path, "map-terrain", cfg["terrain_desc"], [tobj])
     log("terrain", path.stat().st_size // 1024, "KB")
 
     coll = collision_gen.map_collision(layout)
-    cpath = TOWN / "collision.json"
+    cpath = out_dir / "collision.json"
     cpath.write_text(json.dumps(coll, separators=(",", ":")), encoding="utf-8")
     record(cpath, "collision", f"{len(coll['boxes'])} oriented collision boxes (runtime physics)", script="lib/collision_gen.py")
     ccol = exporter.collection("Collision", town_col)
     cobjs = [exporter.box_object(f"COL_{i:04d}_{b['tag'].replace(':', '_')}", b["c"], b["h"], b["yaw"], ccol)
              for i, b in enumerate(coll["boxes"])]
-    path = TOWN / "collision_debug.glb"
+    path = out_dir / "collision_debug.glb"
     exporter.export_glb(cobjs, path)
     record(path, "collision-debug", "Collision boxes as meshes for in-game debug view (F2)", cobjs)
     ccol.hide_render = True
@@ -184,16 +234,12 @@ def stage_town(previews: bool):
     # gameplay markers for designers (not exported)
     gcol = exporter.collection("Gameplay (markers)", town_col)
     for s in layout["spawns"]:
-        e = exporter.empty(f"spawn_{s['team']}", gcol, tuple(s["pos"]))
+        e = exporter.empty(f"spawn_{s['id']}", gcol, tuple(s["pos"]))
         e.empty_display_type = "SINGLE_ARROW"
         e.rotation_euler = (math.radians(90), 0, -math.radians(s["heading"]) + math.pi)
     for t in layout["targets"]:
         e = exporter.empty(f"target_{t['id']}", gcol, tuple(t["pos"]))
         e.empty_display_type = "CIRCLE"
-    for z in layout["safeZones"]:
-        x0, z0, x1, z1 = z["rect"]
-        exporter.box_object(f"safe_zone_{z['team']}", ((x0 + x1) / 2, z["height"] / 2, (z0 + z1) / 2),
-                            ((x1 - x0) / 2, z["height"] / 2, (z1 - z0) / 2), 0.0, gcol)
     gcol.hide_render = True
 
     # props preview (linked duplicates of the prop meshes at their layout placements)
@@ -222,7 +268,7 @@ def stage_town(previews: bool):
     for src in tmeshes.values():
         bpy.data.objects.remove(src)
 
-    index_path = TOWN / "map-assets.json"
+    index_path = out_dir / "map-assets.json"
     index_path.write_text(json.dumps({
         "map": layout["id"],
         "models": block_files + ["terrain.glb"],
@@ -231,12 +277,17 @@ def stage_town(previews: bool):
     }, indent=1), encoding="utf-8")
     record(index_path, "map-index", "List of model files the runtime loads for this map")
 
-    setup_world()
-    exporter.save_blend(SOURCE / "european-town.blend")
-    record(SOURCE / "european-town.blend", "blend", "Editable source: buildings, terrain, collision, markers, prop preview")
+    setup_world(cfg["sky"])
+    blend = SOURCE / f"{cfg['id']}.blend"
+    exporter.save_blend(blend)
+    record(blend, "blend", "Editable source: buildings, terrain, collision, markers, prop preview")
     if previews:
-        render_previews(layout)
+        render_previews(layout, cfg)
     return block_files
+
+
+def stage_town(previews: bool):
+    return stage_map("town", previews)
 
 
 def stage_props():
@@ -273,20 +324,51 @@ def stage_props():
 
 
 def stage_weapon():
+    """First-person weapons (rifle, shotgun, sniper), hands and ejected cases."""
     exporter.reset_scene()
-    col = exporter.collection("Weapon")
-    obj = weapon_lib.blaster().to_object("blaster", col, smooth_angle=30)
-    m = exporter.empty("muzzle", col, weapon_lib.MUZZLE)
-    s = exporter.empty("sight", col, weapon_lib.SIGHT)
-    m.parent = obj
-    s.parent = obj
-    path = SHARED / "weapons" / "blaster.glb"
-    exporter.export_glb([obj, m, s], path)
-    record(path, "weapon", "VK-7 pulse carbine first-person model with 'muzzle' and 'sight' nodes", [obj])
+    col = exporter.collection("Weapons")
+    for wid, build in weapon_lib.WEAPONS.items():
+        wcol = exporter.collection(wid.capitalize(), col)
+        parts, anchors = build()
+        body = parts["body"].to_object(wid, wcol, smooth_angle=32)
+        objs = [body]
+        for name, md in parts.items():
+            if name == "body":
+                continue
+            o = md.to_object(name, wcol, smooth_angle=32)
+            o.parent = body
+            objs.append(o)
+        for name, pos in anchors.items():
+            objs.append(exporter.empty(name, wcol, pos, parent=body))
+        path = SHARED / "weapons" / f"{wid}.glb"
+        exporter.export_glb(objs, path)
+        moving = ", ".join(k for k in parts if k != "body")
+        record(path, "weapon", f"{wid} first-person model: moving parts ({moving}) and anchors ({', '.join(anchors)})",
+               [o for o in objs if o.type == "MESH"])
+        # free the part and anchor names for the next weapon (Blender would export them as 'muzzle.001')
+        for o in objs[1:]:
+            o.name = f"{wid}_{o.name}"
+    # hands and forearm sleeve
+    hcol = exporter.collection("Hands", col)
+    objs = []
+    for name, md, wrist in (("hand_r", hands_lib.hand_right(), hands_lib.WRIST),
+                            ("hand_l", hands_lib.hand_left(), (-hands_lib.WRIST[0], hands_lib.WRIST[1], hands_lib.WRIST[2]))):
+        h = md.to_object(name, hcol, smooth_angle=60)
+        objs += [h, exporter.empty(f"{name}_wrist", hcol, wrist, parent=h)]
+    objs.append(hands_lib.forearm().to_object("forearm", hcol, smooth_angle=60))
+    path = SHARED / "weapons" / "hands.glb"
+    exporter.export_glb(objs, path)
+    record(path, "weapon", "First-person gloved hands (hand_r, hand_l with wrist points) and a unit-length forearm sleeve",
+           [o for o in objs if o.type == "MESH"])
+    ccol = exporter.collection("Casings", col)
+    objs = [md.to_object(name, ccol, smooth_angle=40) for name, md in weapon_lib.casings().items()]
+    path = SHARED / "weapons" / "casings.glb"
+    exporter.export_glb(objs, path)
+    record(path, "weapon", "Ejected cases: casing_rifle, casing_sniper, casing_shell", objs)
     setup_world()
     exporter.save_blend(SOURCE / "weapon.blend")
-    record(SOURCE / "weapon.blend", "blend", "Editable source: blaster")
-    log("weapon ok")
+    record(SOURCE / "weapon.blend", "blend", "Editable source: rifle, shotgun, sniper, hands, casings")
+    log("weapons ok")
 
 
 class _OpenIndex:
@@ -367,7 +449,7 @@ def stage_kit():
     log("kit ok")
 
 
-def setup_world():
+def setup_world(sky: str = "sky_1k.hdr"):
     scene = bpy.context.scene
     world = bpy.data.worlds.get("CrossfireSky") or bpy.data.worlds.new("CrossfireSky")
     scene.world = world
@@ -377,7 +459,7 @@ def setup_world():
     out = nt.nodes.new("ShaderNodeOutputWorld")
     bg = nt.nodes.new("ShaderNodeBackground")
     env = nt.nodes.new("ShaderNodeTexEnvironment")
-    hdr = PUBLIC / "assets" / "env" / "sky_1k.hdr"
+    hdr = PUBLIC / "assets" / "env" / sky
     if hdr.exists():
         env.image = bpy.data.images.load(str(hdr), check_existing=True)
         mapping = nt.nodes.new("ShaderNodeMapping")
@@ -395,7 +477,8 @@ def setup_world():
 SKY_ROTATION_DEG = 0.0
 
 
-def render_previews(layout):
+def render_previews(layout, cfg=None):
+    cfg = cfg or MAP_STAGES["town"]
     scene = bpy.context.scene
     engines = [e.identifier for e in bpy.types.RenderSettings.bl_rna.properties["engine"].enum_items]
     scene.render.engine = "BLENDER_EEVEE" if "BLENDER_EEVEE" in engines else "BLENDER_EEVEE_NEXT"
@@ -405,23 +488,17 @@ def render_previews(layout):
     sun.energy = 3.5
     sun.angle = math.radians(1.5)
     so = bpy.data.objects.new("preview_sun", sun)
-    # sunlight from the south-south-west (heading 200), elevation 48 degrees
-    so.rotation_euler = (math.radians(90 - 48), 0, math.radians(180 - 200))
+    # sunlight from the map's sun heading and elevation (European Town: heading 200, elevation 48 degrees)
+    heading, elevation = cfg["sun"]
+    so.rotation_euler = (math.radians(90 - elevation), 0, math.radians(180 - heading))
     scene.collection.objects.link(so)
     cam = bpy.data.cameras.new("preview_cam")
     co = bpy.data.objects.new("preview_cam", cam)
     scene.collection.objects.link(co)
     scene.camera = co
     from mathutils import Vector
-    views = {
-        "aerial": ((-48, 52, 46), (0, 0, 0), 28),
-        "plaza": ((-12.5, 1.7, -3.0), (2, 2.4, 2), 18),
-        "north_lane": ((-16.5, 2.4, -25), (6, 2.2, -25), 20),
-        "blue_spawn": ((-31.5, 1.7, 5.5), (-20, 2.5, -1), 18),
-        "court": ((22.8, 2.2, -27), (29, 2.0, -31), 16),
-        "alley": ((-27, 1.7, -14.5), (-27, 3.0, -30), 18),
-    }
-    outdir = ROOT / "docs" / "previews"
+    views = cfg["views"]
+    outdir = ROOT / "docs" / "previews" if cfg["id"] == "european-town" else ROOT / "docs" / "previews" / cfg["id"]
     outdir.mkdir(parents=True, exist_ok=True)
     for name, (pos, tgt, lens) in views.items():
         cam.lens = lens
@@ -439,7 +516,9 @@ def write_manifest():
     path = PUBLIC / "assets" / "asset-manifest.json"
     old = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {"assets": []}
     fresh = {a["path"] for a in MANIFEST}
-    data["assets"] = [a for a in old.get("assets", []) if a["path"] not in fresh] + MANIFEST
+    # entries from stages that did not run this time are kept, unless their file is gone (a removed output)
+    kept = [a for a in old.get("assets", []) if a["path"] not in fresh and ((PUBLIC / a["path"]).exists() or (ROOT / a["path"]).exists())]
+    data["assets"] = kept + MANIFEST
     data["assets"].sort(key=lambda a: a["path"])
     path.write_text(json.dumps(data, indent=1), encoding="utf-8")
     lines = ["# Asset manifest", "", f"Generated by `{data['generator']}` with Blender {data['blender']} on {data['generated']}.",
@@ -465,9 +544,11 @@ def main():
         if only is None or name in only:
             log("== stage", name)
             fn()
-    if only is None or "town" in only or "previews" in only:
-        log("== stage town")
-        stage_town(previews)
+    for key in MAP_STAGES:
+        # "--only previews" alone keeps its old meaning: the European Town previews
+        if only is None or key in only or (key == "town" and only == {"previews"}):
+            log(f"== stage {key}")
+            stage_map(key, previews)
     write_manifest()
     log(f"done in {time.time() - t0:.1f}s")
 

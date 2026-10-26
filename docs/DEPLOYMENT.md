@@ -1,6 +1,10 @@
 # Deploying to GitHub Pages
 
-The game is a static site: `npm run build` writes everything to `dist/`. No backend is needed.
+The frontend remains a static site: `npm run build` writes it to `dist/`, and GitHub Pages hosts it. Stage 2 adds a separate Worker/Durable Object backend that runs locally; it has not been publicly deployed. See [server startup/configuration](../server/README.md) and [current progress](../PROGRESS.md).
+
+The [connectivity diagnosis](MULTIPLAYER_DIAGNOSIS.md) records the historical pre-backend findings. Current exact PowerShell commands for both processes and the explicit multiplayer test URL are in the server README.
+
+The separate deployment boundary and later match migration are described in the [multiplayer architecture and migration plan](MULTIPLAYER_ARCHITECTURE.md). The existing Pages workflow still deploys no server. Public backend deployment remains a separate approval step; the server build uses Wrangler's local dry-run mode.
 
 ## First-time setup
 

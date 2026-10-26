@@ -11,16 +11,15 @@ import {
   type AbstractMesh,
   type AssetContainer,
 } from '@babylonjs/core';
-import { MOVEMENT } from '../config/constants';
 import { assetUrl, fetchJson } from '../core/assets';
-import { SafeZoneSystem } from '../game/SafeZones';
 import { TargetSystem } from '../game/Targets';
-import { CollisionWorld } from '../physics/CollisionWorld';
+import type { CollisionWorld } from '../physics/CollisionWorld';
+import { createMapWorld, mapVersion } from '../../shared/world';
 import { Environment } from '../rendering/Environment';
 import { MaterialLibrary } from '../rendering/MaterialLibrary';
-import { ZoneBarriers } from '../rendering/ZoneBarriers';
 import type { RenderContext } from '../rendering/RenderContext';
 import { GeometryBatcher } from '../rendering/StaticBatcher';
+import { deriveTacticalMap, type TacticalMapData } from './tactical';
 import type { CollisionFile, MapAssetIndex, MapDefinition, PropCatalog, PropPlacement, SpawnPoint } from './types';
 
 const DEG = Math.PI / 180;
@@ -36,13 +35,14 @@ export interface MapStats {
 }
 
 export interface LoadedMap {
+  readonly revision: string;
   readonly def: MapDefinition;
   readonly world: CollisionWorld;
-  readonly zones: SafeZoneSystem;
-  readonly barriers: ZoneBarriers;
   readonly targets: TargetSystem;
   readonly environment: Environment;
   readonly spawns: SpawnPoint[];
+  /** Overhead map for the Tab overlay, derived from the same layout as the geometry and collision. */
+  readonly tactical: TacticalMapData;
   readonly stats: MapStats;
   /** Toggle the collision debug view (boxes from collision_debug.glb). */
   toggleCollisionDebug(): Promise<void>;
@@ -63,6 +63,7 @@ export class MapManager {
     private readonly ctx: RenderContext,
     private readonly materials: MaterialLibrary,
     private readonly batchCell: () => number,
+    private readonly practiceTargets = true,
   ) {}
 
   async load(def: MapDefinition, onProgress: ProgressFn = () => {}): Promise<LoadedMap> {
@@ -119,8 +120,7 @@ export class MapManager {
     onProgress(0.7, 'Placing props');
 
     // --- props --------------------------------------------------------------------------------
-    const world = new CollisionWorld();
-    world.addMany(collision.boxes);
+    const world = createMapWorld(collision, def.layout, catalog);
     const placements: PropPlacement[] = [...def.layout.props, ...def.layout.obstacles];
     const byType = new Map<string, PropPlacement[]>();
     for (const p of placements) {
@@ -137,7 +137,7 @@ export class MapManager {
         return { type, list, entry, c };
       }),
     );
-    for (const { type, list, entry, c } of propContainers) {
+    for (const { list, c } of propContainers) {
       containers.push(c);
       c.addAllToScene();
       const place = list.map((p) =>
@@ -149,12 +149,6 @@ export class MapManager {
         for (const pm of place) addMesh(m, local.multiply(pm));
         propInstances += place.length;
       }
-      if (entry.collider) {
-        const [w, h, d] = entry.collider;
-        for (const p of list) {
-          world.add({ c: [p.pos[0], p.pos[1] + h / 2, p.pos[2]], h: [w / 2, h / 2, d / 2], yaw: -p.heading * DEG, tag: `prop:${type}` });
-        }
-      }
     }
     onProgress(0.8, 'Baking geometry');
     const batched = batcher.build();
@@ -165,14 +159,15 @@ export class MapManager {
     onProgress(0.86, 'Setting up targets');
 
     // --- gameplay -----------------------------------------------------------------------------
-    const zones = new SafeZoneSystem(def.layout.safeZones);
-    const barriers = new ZoneBarriers(scene, def.layout.safeZones, MOVEMENT.radius);
+    const tactical = index.tactical
+      ? await fetchJson<TacticalMapData>(base + index.tactical)
+      : deriveTacticalMap(def.layout, catalog, def.tactical);
     const targets = new TargetSystem(scene, world, this.materials);
-    await targets.load(def.layout.targets);
+    if (this.practiceTargets) await targets.load(def.layout.targets);
 
     const lights: PointLight[] = [];
     for (const l of def.layout.lights) {
-      const pl = new PointLight(`light:${l.team ?? 'map'}`, new Vector3(l.pos[0], l.pos[1], l.pos[2]), scene);
+      const pl = new PointLight('light:map', new Vector3(l.pos[0], l.pos[1], l.pos[2]), scene);
       pl.diffuse = new Color3(...l.color);
       pl.specular = new Color3(...l.color).scale(0.3);
       pl.intensity = l.intensity;
@@ -190,6 +185,11 @@ export class MapManager {
       targets.meshes,
     );
 
+    // the previous map's materials and textures are no longer drawn by anything: free them
+    const inUse = new Set(scene.meshes.map((m) => m.material).filter((m): m is NonNullable<typeof m> => !!m));
+    const pruned = this.materials.prune(inUse);
+    if (pruned.materials) console.info('[crossfire] released', pruned.materials, 'materials and', pruned.textures, 'textures');
+
     onProgress(0.94, 'Compiling shaders');
     await scene.whenReadyAsync();
 
@@ -205,13 +205,13 @@ export class MapManager {
       colliders: world.size,
     };
     const map: LoadedMap = {
+      revision: mapVersion(collision, def.layout, catalog),
       def,
       world,
-      zones,
-      barriers,
       targets,
       environment,
       spawns: def.layout.spawns,
+      tactical,
       stats,
       toggleCollisionDebug: async () => {
         if (!debugMeshes) {
@@ -234,7 +234,6 @@ export class MapManager {
       },
       dispose: () => {
         targets.dispose();
-        barriers.dispose();
         for (const l of lights) l.dispose();
         for (const m of created) m.dispose(false, false);
         for (const c of containers) c.dispose();

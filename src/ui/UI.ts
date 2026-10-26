@@ -2,8 +2,8 @@ import type { AudioManager } from '../audio/AudioManager';
 import { SETTING_LIMITS, type Settings, type SettingsStore } from '../config/settings';
 import { SettingsDraft } from '../config/settingsDraft';
 import { Dropdown } from './Dropdown';
-import { MAPS, UPCOMING_MAPS } from '../maps/registry';
-import type { Team } from '../maps/types';
+import { TacticalMapView } from './TacticalMap';
+import { MAPS } from '../maps/registry';
 
 export type Screen = 'menu' | 'loading' | 'start' | 'hud' | 'pause' | 'settings' | 'error';
 
@@ -23,6 +23,7 @@ const CONTROLS: [string, string][] = [
   ['Left click', 'Fire'],
   ['Right click', 'Aim down sights'],
   ['R', 'Reload'],
+  ['Tab (hold)', 'Tactical map'],
   ['Esc', 'Pause / release mouse'],
   ['F3', 'Toggle FPS counter'],
 ];
@@ -31,15 +32,41 @@ const CONTROLS: [string, string][] = [
  * DOM user interface: main menu, loading, click-to-play, HUD, pause and settings.
  * Plain HTML/CSS so it scales crisply at any resolution.
  */
+/**
+ * Sniper scope picture: everything outside a centred circle is black (with a soft edge), and inside a thin reticle
+ * with mil-dots and thicker posts toward the edge. The viewBox is square; `preserveAspectRatio slice` keeps the circle
+ * round on any screen while the outer rectangle covers the whole view.
+ */
+const SCOPE_SVG = `<svg viewBox="-100 -100 200 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <defs>
+    <radialGradient id="scope-edge" cx="0" cy="0" r="46" gradientUnits="userSpaceOnUse">
+      <stop offset="0.9" stop-color="#000" stop-opacity="0"/>
+      <stop offset="0.985" stop-color="#000" stop-opacity="0.85"/>
+      <stop offset="1" stop-color="#000" stop-opacity="1"/>
+    </radialGradient>
+    <mask id="scope-hole"><rect x="-400" y="-400" width="800" height="800" fill="#fff"/><circle r="46" fill="#000"/></mask>
+  </defs>
+  <rect x="-400" y="-400" width="800" height="800" fill="#000" mask="url(#scope-hole)"/>
+  <circle r="46" fill="url(#scope-edge)"/>
+  <g stroke="#080808" fill="#080808">
+    <line x1="-46" y1="0" x2="46" y2="0" stroke-width="0.16"/>
+    <line x1="0" y1="-46" x2="0" y2="46" stroke-width="0.16"/>
+    <rect x="-46" y="-0.55" width="30" height="1.1" stroke="none"/>
+    <rect x="16" y="-0.55" width="30" height="1.1" stroke="none"/>
+    <rect x="-0.55" y="16" width="1.1" height="30" stroke="none"/>
+    ${[-12, -9, -6, -3, 3, 6, 9, 12].map((d) => `<circle cx="${d}" cy="0" r="0.42" stroke="none"/><circle cx="0" cy="${d}" r="0.42" stroke="none"/>`).join('')}
+  </g>
+  <circle r="0.32" fill="#d22" />
+</svg>`;
+
 export class UI {
   private readonly screens = new Map<Screen, HTMLElement>();
   private settingsReturn: Screen = 'menu';
   /** What the settings screen edits. The game only sees changes when Apply hands them to the SettingsStore. */
   private readonly draft: SettingsDraft;
-  selectedMap = MAPS[0].id;
 
   // callbacks set by the game
-  onPlay: (mapId: string) => void = () => {};
+  onPlay: () => void = () => {};
   onStart: () => void = () => {};
   onResume: () => void = () => {};
   onQuit: () => void = () => {};
@@ -53,8 +80,8 @@ export class UI {
   private ammoValue!: HTMLElement;
   private ammoReserve!: HTMLElement;
   private reloadBar!: HTMLElement;
-  private zonePill!: HTMLElement;
-  private zoneText!: HTMLElement;
+  private weaponSlots!: HTMLElement;
+  private scope!: HTMLElement;
   private fpsBox!: HTMLElement;
   /** The FPS readout element (read by the debug API). */
   get fpsElement(): HTMLElement {
@@ -66,11 +93,15 @@ export class UI {
   private lockHint!: HTMLElement;
   private loadingBar!: HTMLElement;
   private loadingLabel!: HTMLElement;
-  private menuStatus!: HTMLElement;
-  private playButton!: HTMLButtonElement;
   private errorText!: HTMLElement;
+  private errorActions!: HTMLElement;
   private weaponName!: HTMLElement;
   private mapTitle!: HTMLElement;
+  private loadingTitle!: HTMLElement;
+  private startTitle!: HTMLElement;
+  private startText!: HTMLElement;
+  /** Overhead map shown while Tab is held (lives in the HUD, so it is only ever visible in play). */
+  tactical!: TacticalMapView;
 
   constructor(
     private readonly root: HTMLElement,
@@ -86,7 +117,7 @@ export class UI {
     this.buildSettings();
     this.buildError();
     root.addEventListener('mouseover', (e) => {
-      if ((e.target as HTMLElement).closest?.('.btn, .map-card, .tab')) this.audio.play('ui_hover', { volume: 0.5 });
+      if ((e.target as HTMLElement).closest?.('.btn, .tab')) this.audio.play('ui_hover', { volume: 0.5 });
     });
   }
 
@@ -111,57 +142,21 @@ export class UI {
   // ---------------------------------------------------------------------------------------------
   private buildMenu(): void {
     const s = this.screen('menu');
+    s.setAttribute('aria-label', 'Crossfire home');
     const col = el('div', 'menu-col');
     col.appendChild(el('h1', 'logo', 'CROSSFIRE'));
-    col.appendChild(el('div', 'tagline', 'Prototype &middot; Milestone 1'));
     const buttons = el('div', 'menu-buttons');
-    const map = MAPS.find((m) => m.id === this.selectedMap)!;
-    this.playButton = this.button('Play', map.name, 'primary', () => this.onPlay(this.selectedMap));
-    buttons.appendChild(this.playButton);
-    const mapList = el('div', 'map-list');
-    const mapBtn = this.button('Map', map.name, '', () => mapList.classList.toggle('open'));
-    buttons.appendChild(mapBtn);
-    buttons.appendChild(mapList);
-    for (const m of MAPS) {
-      const card = el('button', 'map-card selected', `<div><div class="name">${m.name}</div><div class="desc">${m.description}</div></div><span class="badge">Ready</span>`);
-      card.addEventListener('click', () => {
-        this.selectedMap = m.id;
-        mapList.classList.remove('open');
-      });
-      mapList.appendChild(card);
-    }
-    for (const m of UPCOMING_MAPS) {
-      const card = el('button', 'map-card locked', `<div><div class="name">${m.name}</div><div class="desc">${m.description}</div></div><span class="badge">Coming soon</span>`);
-      card.disabled = true;
-      mapList.appendChild(card);
-    }
-    buttons.appendChild(
-      this.button('Settings', '', '', () => this.openSettings('menu')),
-    );
+    buttons.appendChild(this.button('Play', '', 'primary', () => this.onPlay()));
+    buttons.appendChild(this.button('Settings', '', '', () => this.openSettings('menu')));
     col.appendChild(buttons);
-    this.menuStatus = el('div', 'status-line', '');
-    col.appendChild(this.menuStatus);
-    col.appendChild(
-      el(
-        'div',
-        'menu-footer',
-        `<span class="kbd">WASD</span> move &nbsp; <span class="kbd">Shift</span> sprint &nbsp; <span class="kbd">Space</span> jump<br>
-         <span class="kbd">Ctrl</span> / <span class="kbd">C</span> crouch &nbsp; <span class="kbd">R</span> reload &nbsp; <span class="kbd">Esc</span> pause<br>
-         <span class="kbd">LMB</span> fire &nbsp; <span class="kbd">RMB</span> aim down sights<br>
-         Single-player prototype &middot; Babylon.js + Blender`,
-      ),
-    );
     s.appendChild(col);
-  }
-
-  setMenuStatus(text: string): void {
-    this.menuStatus.textContent = text;
   }
 
   private buildLoading(): void {
     const s = this.screen('loading');
     const card = el('div', 'card');
-    card.appendChild(el('h2', '', 'Entering the town'));
+    this.loadingTitle = el('h2', '', 'Loading');
+    card.appendChild(this.loadingTitle);
     this.loadingLabel = el('p', '', 'Preparing...');
     card.appendChild(this.loadingLabel);
     const prog = el('div', 'progress');
@@ -169,6 +164,10 @@ export class UI {
     prog.appendChild(this.loadingBar);
     card.appendChild(prog);
     s.appendChild(card);
+  }
+
+  setLoadingTitle(mapName: string): void {
+    this.loadingTitle.textContent = `Entering ${mapName}`;
   }
 
   setLoading(fraction: number, label: string): void {
@@ -179,8 +178,10 @@ export class UI {
   private buildStart(): void {
     const s = this.screen('start');
     const card = el('div', 'card');
-    card.appendChild(el('h2', '', 'European Town'));
-    card.appendChild(el('p', '', 'Find the practice targets hidden around the lanes. Damage is disabled inside the blue and red safe zones.'));
+    this.startTitle = el('h2', '', MAPS[0].name);
+    card.appendChild(this.startTitle);
+    this.startText = el('p', '', MAPS[0].briefing ?? MAPS[0].description);
+    card.appendChild(this.startText);
     const grid = el('div', 'controls-grid');
     for (const [k, v] of CONTROLS) {
       grid.appendChild(el('span', 'kbd', k));
@@ -202,11 +203,6 @@ export class UI {
     this.mapTitle = el('div', 'hud-map', `European Town<small>Practice</small>`);
     tl.appendChild(this.mapTitle);
     s.appendChild(tl);
-    this.zonePill = el('div', 'zone-pill');
-    this.zoneText = el('span');
-    this.zonePill.appendChild(el('span', 'shield'));
-    this.zonePill.appendChild(this.zoneText);
-    s.appendChild(this.zonePill);
     const tr = el('div', 'hud-tr');
     this.fpsBox = el('div');
     this.statsBox = el('div');
@@ -229,20 +225,26 @@ export class UI {
     const br = el('div', 'hud-br');
     this.ammoBox = el('div', 'ammo');
     this.ammoValue = el('div', 'value', '30');
-    this.ammoReserve = el('div', 'reserve', '/ 150');
+    this.ammoReserve = el('div', 'reserve', '/ &infin;');
     this.ammoBox.appendChild(this.ammoValue);
     this.ammoBox.appendChild(this.ammoReserve);
     this.weaponName = el('div', 'weapon-name', '');
     this.reloadBar = el('div', 'reload-bar');
     this.reloadBar.appendChild(el('div'));
+    this.weaponSlots = el('div', 'weapon-slots');
     br.appendChild(this.ammoBox);
     br.appendChild(this.reloadBar);
     br.appendChild(this.weaponName);
+    br.appendChild(this.weaponSlots);
     s.appendChild(br);
+    // sniper scope: black surround, the round field of view with a mil-dot reticle (SVG, crisp at any resolution)
+    this.scope = el('div', 'scope', SCOPE_SVG);
+    s.insertBefore(this.scope, s.firstChild);
     this.toast = el('div', 'toast');
     s.appendChild(this.toast);
     this.lockHint = el('div', 'lock-hint', 'Click to capture the mouse');
     s.appendChild(this.lockHint);
+    this.tactical = new TacticalMapView(s);
   }
 
   private buildPause(): void {
@@ -265,12 +267,23 @@ export class UI {
     card.appendChild(el('h2', '', 'Something went wrong'));
     this.errorText = el('p');
     card.appendChild(this.errorText);
+    this.errorActions = el('div', 'menu-buttons');
+    this.errorActions.hidden = true;
+    card.appendChild(this.errorActions);
     s.appendChild(card);
   }
 
   showError(message: string): void {
+    this.errorActions.replaceChildren();
+    this.errorActions.hidden = true;
     this.errorText.textContent = message;
     this.show('error');
+  }
+
+  showConnectionError(message: string, retry: () => void, back: () => void): void {
+    this.showError(message);
+    this.errorActions.hidden = false;
+    this.errorActions.append(this.button('Retry', '', 'primary', retry), this.button('Back', '', '', back));
   }
 
   // --- settings --------------------------------------------------------------------------------
@@ -533,10 +546,9 @@ export class UI {
     if (screen === 'settings') this.syncSettings();
   }
 
-  setPlayReady(ready: boolean, label?: string): void {
-    this.playButton.disabled = false;
-    const sub = this.playButton.querySelector('.sub');
-    if (sub) sub.textContent = label ?? (ready ? MAPS[0].name : 'Loading...');
+  setStartInfo(title: string, text: string): void {
+    this.startTitle.textContent = title;
+    this.startText.textContent = text;
   }
 
   setMapTitle(name: string, sub: string): void {
@@ -552,20 +564,26 @@ export class UI {
     this.healthBar.style.width = `${Math.max(0, (hp / max) * 100)}%`;
   }
 
+  /** The weapon slots strip: names in slot order, the one in hand highlighted. */
+  setWeaponSlots(names: readonly string[], current: number): void {
+    if (this.weaponSlots.childElementCount !== names.length) {
+      this.weaponSlots.innerHTML = names.map((n, i) => `<span><b>${i + 1}</b>${n}</span>`).join('');
+    }
+    [...this.weaponSlots.children].forEach((c, i) => c.classList.toggle('current', i === current));
+  }
+
+  /** Scope overlay (sniper fully aimed): `amount` 0..1 fades it in as the scope reaches the eye. */
+  setScope(amount: number): void {
+    this.scope.style.opacity = String(amount);
+    this.scope.classList.toggle('visible', amount > 0.001);
+  }
+
   setAmmo(ammo: number, reserve: number, magazine: number, reloading: boolean, progress: number): void {
     this.ammoValue.textContent = String(ammo);
-    this.ammoReserve.textContent = `/ ${reserve}`;
+    this.ammoReserve.innerHTML = Number.isFinite(reserve) ? `/ ${reserve}` : '/ &infin;';
     this.ammoBox.classList.toggle('low', ammo <= Math.floor(magazine * 0.2));
     this.reloadBar.classList.toggle('active', reloading);
     (this.reloadBar.firstElementChild as HTMLElement).style.width = `${Math.round(progress * 100)}%`;
-  }
-
-  setZone(team: Team | null): void {
-    this.zonePill.classList.toggle('visible', team !== null);
-    this.zonePill.classList.toggle('blue', team === 'blue');
-    this.zonePill.classList.toggle('red', team === 'red');
-    this.crosshair.classList.toggle('blocked', team !== null);
-    if (team) this.zoneText.innerHTML = `${team} safe zone <small>&middot; damage disabled</small>`;
   }
 
   setCrosshairSpread(px: number, visible: boolean): void {

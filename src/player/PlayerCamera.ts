@@ -21,6 +21,7 @@ export class PlayerCamera {
   private kickYaw = 0;
   private kickVel = 0;
   private fov = 90;
+  private swayTime = 0;
   private readonly tmp: Vec3 = { x: 0, y: 0, z: 0 };
   /** Lateral head-bob offset this frame (for the weapon view). */
   bobX = 0;
@@ -60,7 +61,11 @@ export class PlayerCamera {
     this.fov = fov;
   }
 
-  update(dt: number, alpha: number, baseFov: number, zoom: number): void {
+  /**
+   * `scopeSway` (0..1): the slow figure-of-eight drift of a magnified scope held by a breathing shooter. It moves the
+   * view itself, so shots go where the reticle is.
+   */
+  update(dt: number, alpha: number, baseFov: number, zoom: number, scopeSway = 0): void {
     const p = this.player;
     const pos = p.interpolated(alpha, this.tmp);
     // smooth stair snaps back to zero
@@ -88,7 +93,11 @@ export class PlayerCamera {
     cam.position.set(pos.x + this.bobX * Math.cos(p.yaw), pos.y + eye, pos.z - this.bobX * Math.sin(p.yaw));
     const roll = this.bobX * 0.35;
     cam.rotationQuaternion ??= Quaternion.Identity();
-    Quaternion.RotationYawPitchRollToRef(p.yaw + this.kickYaw, p.pitch + this.kickPitch, roll, cam.rotationQuaternion);
+    this.swayTime += dt;
+    const steady = p.crouch > 0.5 ? 0.45 : 1;
+    const sy = Math.sin(this.swayTime * 0.85) * 0.0016 * scopeSway * steady;
+    const sp = Math.sin(this.swayTime * 1.7 + 1.1) * 0.0011 * scopeSway * steady;
+    Quaternion.RotationYawPitchRollToRef(p.yaw + this.kickYaw + sy, p.pitch + this.kickPitch + sp, roll, cam.rotationQuaternion);
     const targetFov = baseFov * zoom;
     this.fov += (targetFov - this.fov) * Math.min(1, dt * 18);
     this.ctx.setFov(this.fov);

@@ -1,14 +1,27 @@
 import { assetUrl } from '../core/assets';
 
 export type SoundName =
-  | 'shot'
+  | 'rifle_shot'
+  | 'shotgun_shot'
+  | 'sniper_shot'
   | 'empty'
-  | 'reload_out'
-  | 'reload_in'
+  | 'mag_out'
+  | 'mag_in'
+  | 'bolt_release'
+  | 'pump_back'
+  | 'pump_fwd'
+  | 'shell_in'
+  | 'bolt_up'
+  | 'bolt_back'
+  | 'bolt_fwd'
+  | 'bolt_down'
+  | 'draw'
+  | 'casing'
+  | 'shell_drop'
   | 'hit'
   | 'hit_crit'
+  | 'hit_head'
   | 'target_down'
-  | 'blocked'
   | 'step1'
   | 'step2'
   | 'step3'
@@ -16,18 +29,30 @@ export type SoundName =
   | 'land'
   | 'jump'
   | 'ui_click'
-  | 'ui_hover'
-  | 'zone_enter';
+  | 'ui_hover';
 
 const FILES: Record<SoundName, string> = {
-  shot: 'blaster_shot.wav',
+  rifle_shot: 'rifle_shot.wav',
+  shotgun_shot: 'shotgun_shot.wav',
+  sniper_shot: 'sniper_shot.wav',
   empty: 'empty_click.wav',
-  reload_out: 'reload_out.wav',
-  reload_in: 'reload_in.wav',
+  mag_out: 'mag_out.wav',
+  mag_in: 'mag_in.wav',
+  bolt_release: 'bolt_release.wav',
+  pump_back: 'pump_back.wav',
+  pump_fwd: 'pump_fwd.wav',
+  shell_in: 'shell_in.wav',
+  bolt_up: 'bolt_up.wav',
+  bolt_back: 'bolt_back.wav',
+  bolt_fwd: 'bolt_fwd.wav',
+  bolt_down: 'bolt_down.wav',
+  draw: 'draw.wav',
+  casing: 'casing.wav',
+  shell_drop: 'shell_drop.wav',
   hit: 'hit_marker.wav',
   hit_crit: 'hit_crit.wav',
+  hit_head: 'hit_head.wav',
   target_down: 'target_down.wav',
-  blocked: 'blocked.wav',
   step1: 'step_1.wav',
   step2: 'step_2.wav',
   step3: 'step_3.wav',
@@ -36,7 +61,6 @@ const FILES: Record<SoundName, string> = {
   jump: 'jump.wav',
   ui_click: 'ui_click.wav',
   ui_hover: 'ui_hover.wav',
-  zone_enter: 'zone_enter.wav',
 };
 
 /**
@@ -97,7 +121,12 @@ export class AudioManager {
     return this.loading ?? Promise.resolve();
   }
 
+  /** The last sounds asked for (whether or not audio is unlocked), newest last: lets tests check cues. */
+  readonly recent: SoundName[] = [];
+
   play(name: SoundName, opts: { volume?: number; rate?: number; pan?: number; jitter?: number } = {}): void {
+    this.recent.push(name);
+    if (this.recent.length > 48) this.recent.shift();
     const ctx = this.ctx;
     const buf = this.buffers.get(name);
     if (!ctx || !this.master || !buf) return;

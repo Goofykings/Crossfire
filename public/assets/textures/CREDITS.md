@@ -23,6 +23,29 @@ Files were downloaded by `tools/fetch_textures.py`, resized and re-encoded as JP
 | `wood_painted` | [Blue Painted Planks](https://polyhaven.com/a/blue_painted_planks) | Rob Tuytel | CC0 1.0 |
 | `wood_weathered` | [Weathered Planks](https://polyhaven.com/a/weathered_planks) | Dario Barresi, Dimitrios Savva | CC0 1.0 |
 | `metal` | [Rusty Metal 02](https://polyhaven.com/a/rusty_metal_02) | Rob Tuytel | CC0 1.0 |
+| `brick_factory` | [Factory Brick](https://polyhaven.com/a/factory_brick) | Rob Tuytel | CC0 1.0 |
+| `concrete_wall` | [Concrete Wall 008](https://polyhaven.com/a/concrete_wall_008) | Dario Barresi, Charlotte Baglioni | CC0 1.0 |
+| `concrete_panel` | [Concrete Slab Wall](https://polyhaven.com/a/concrete_slab_wall) | Dimitrios Savva | CC0 1.0 |
+| `corrugated` | [Corrugated Iron](https://polyhaven.com/a/corrugated_iron) | Jenelle van Heerden, Dimitrios Savva | CC0 1.0 |
+| `corrugated_worn` | [Worn Corrugated Iron](https://polyhaven.com/a/worn_corrugated_iron) | Jenelle van Heerden, Dimitrios Savva | CC0 1.0 |
+| `corrugated_rusty` | [Rusty Corrugated Iron](https://polyhaven.com/a/rusty_corrugated_iron) | Charlotte Baglioni | CC0 1.0 |
+| `metal_shutter` | [Painted Metal Shutter](https://polyhaven.com/a/painted_metal_shutter) | Dario Barresi, Rico Cilliers, Charlotte Baglioni | CC0 1.0 |
+| `metal_plate` | [Metal Plate](https://polyhaven.com/a/metal_plate) | Rob Tuytel | CC0 1.0 |
+| `asphalt` | [Asphalt 02](https://polyhaven.com/a/asphalt_02) | Rob Tuytel | CC0 1.0 |
+| `concrete_floor` | [Concrete Floor Worn 001](https://polyhaven.com/a/concrete_floor_worn_001) | Dimitrios Savva, Rico Cilliers | CC0 1.0 |
+| `concrete_dark` | [Hangar Concrete Floor](https://polyhaven.com/a/hangar_concrete_floor) | Dimitrios Savva | CC0 1.0 |
+| `brick_city` | [Brick Wall 09](https://polyhaven.com/a/brick_wall_09) | Rob Tuytel, Matterfield | CC0 1.0 |
+| `brick_city_b` | [Brick Wall 07](https://polyhaven.com/a/brick_wall_07) | Dimitrios Savva | CC0 1.0 |
+| `concrete_smooth` | [Concrete Wall 004](https://polyhaven.com/a/concrete_wall_004) | Dario Barresi, Charlotte Baglioni | CC0 1.0 |
+| `cladding` | [Exterior Wall Cladding 03](https://polyhaven.com/a/exterior_wall_cladding_03) | Charlotte Baglioni | CC0 1.0 |
+| `stucco` | [White Stucco](https://polyhaven.com/a/white_stucco) | Amal Kumar | CC0 1.0 |
+| `facade_tiles` | [Rectangular Facade Tiles](https://polyhaven.com/a/rectangular_facade_tiles) | Charlotte Baglioni | CC0 1.0 |
+| `pavers` | [Square Concrete Pavers](https://polyhaven.com/a/square_concrete_pavers) | Amal Kumar | CC0 1.0 |
+| `asphalt_fine` | [Asphalt 01](https://polyhaven.com/a/asphalt_01) | Dario Barresi, Charlotte Baglioni | CC0 1.0 |
+| `roof_gravel` | [Tarred Gravel](https://polyhaven.com/a/tarred_gravel) | Dimitrios Savva | CC0 1.0 |
+| `granite` | [Granite Tile](https://polyhaven.com/a/granite_tile) | Charlotte Baglioni | CC0 1.0 |
 | `sky_1k.hdr`, `sky_4k.jpg` | [Kloofendal 48d Partly Cloudy (Pure Sky)](https://polyhaven.com/a/kloofendal_48d_partly_cloudy_puresky) | Greg Zaal, Jarod Guest | CC0 1.0 |
+| `sky_industrial_1k.hdr`, `sky_industrial_4k.jpg` | [Kloppenheim 03 (Pure Sky)](https://polyhaven.com/a/kloppenheim_03_puresky) | Greg Zaal, Jarod Guest | CC0 1.0 |
+| `sky_city_1k.hdr`, `sky_city_4k.jpg` | [Qwantani Noon (Pure Sky)](https://polyhaven.com/a/qwantani_noon_puresky) | Greg Zaal, Jarod Guest | CC0 1.0 |
 
 Procedurally generated textures (signs, leaves, decals) are created by `tools/make_procedural_textures.py` and are original to this project.

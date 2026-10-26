@@ -1,0 +1,3906 @@
+{
+ "id": "industrial-complex",
+ "name": "Industrial Complex",
+ "version": 1,
+ "style": "industrial",
+ "units": "metres; +x east, +z south, +y up (glTF / Babylon right-handed). Rects are [x0, z0, x1, z1].",
+ "playArea": [
+  -34,
+  -34,
+  34,
+  34
+ ],
+ "outerLimit": 42,
+ "ground": {
+  "baseHeight": 0.0,
+  "zones": [
+   {
+    "id": "spawn_blue",
+    "kind": "yard",
+    "rect": [
+     -33,
+     -6,
+     -25,
+     6
+    ],
+    "height": 0.0,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "spawn_bluer",
+    "kind": "yard",
+    "rect": [
+     25,
+     -6,
+     33,
+     6
+    ],
+    "height": 0.0,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "blue_exit_n",
+    "kind": "street",
+    "rect": [
+     -33,
+     -12,
+     -29,
+     -6
+    ],
+    "height": 0.0,
+    "material": "asphalt"
+   },
+   {
+    "id": "blue_exit_nr",
+    "kind": "street",
+    "rect": [
+     29,
+     6,
+     33,
+     12
+    ],
+    "height": 0.0,
+    "material": "asphalt"
+   },
+   {
+    "id": "blue_yard",
+    "kind": "yard",
+    "rect": [
+     -21,
+     -5,
+     -15,
+     5
+    ],
+    "height": 0.0,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "blue_yardr",
+    "kind": "yard",
+    "rect": [
+     15,
+     -5,
+     21,
+     5
+    ],
+    "height": 0.0,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "w_road",
+    "kind": "street",
+    "rect": [
+     -33,
+     -16,
+     -16,
+     -12
+    ],
+    "height": 0.0,
+    "material": "asphalt"
+   },
+   {
+    "id": "w_roadr",
+    "kind": "street",
+    "rect": [
+     16,
+     12,
+     33,
+     16
+    ],
+    "height": 0.0,
+    "material": "asphalt"
+   },
+   {
+    "id": "nw_link",
+    "kind": "alley",
+    "rect": [
+     -26,
+     -26,
+     -23,
+     -16
+    ],
+    "height": 0.0,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "nw_linkr",
+    "kind": "alley",
+    "rect": [
+     23,
+     16,
+     26,
+     26
+    ],
+    "height": 0.0,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "n_lane_w",
+    "kind": "street",
+    "rect": [
+     -31,
+     -31,
+     -16,
+     -26
+    ],
+    "height": 0.0,
+    "material": "asphalt"
+   },
+   {
+    "id": "n_lane_wr",
+    "kind": "street",
+    "rect": [
+     16,
+     26,
+     31,
+     31
+    ],
+    "height": 0.0,
+    "material": "asphalt"
+   },
+   {
+    "id": "dock_n",
+    "kind": "terrace",
+    "rect": [
+     -16,
+     -31,
+     -6,
+     -28
+    ],
+    "height": 1.1,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "dock_nr",
+    "kind": "terrace",
+    "rect": [
+     6,
+     28,
+     16,
+     31
+    ],
+    "height": 1.1,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "n_lane_mid",
+    "kind": "street",
+    "rect": [
+     -16,
+     -28,
+     -6,
+     -24
+    ],
+    "height": 0.0,
+    "material": "asphalt"
+   },
+   {
+    "id": "n_lane_midr",
+    "kind": "street",
+    "rect": [
+     6,
+     24,
+     16,
+     28
+    ],
+    "height": 0.0,
+    "material": "asphalt"
+   },
+   {
+    "id": "cyard",
+    "kind": "yard",
+    "rect": [
+     4,
+     -31,
+     14,
+     -20
+    ],
+    "height": 0.0,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "cyardr",
+    "kind": "yard",
+    "rect": [
+     -14,
+     20,
+     -4,
+     31
+    ],
+    "height": 0.0,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "ne_lane",
+    "kind": "street",
+    "rect": [
+     14,
+     -24,
+     24,
+     -20
+    ],
+    "height": 0.0,
+    "material": "asphalt"
+   },
+   {
+    "id": "ne_laner",
+    "kind": "street",
+    "rect": [
+     -24,
+     20,
+     -14,
+     24
+    ],
+    "height": 0.0,
+    "material": "asphalt"
+   },
+   {
+    "id": "ne_link",
+    "kind": "alley",
+    "rect": [
+     14,
+     -20,
+     17,
+     -16
+    ],
+    "height": 0.0,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "ne_linkr",
+    "kind": "alley",
+    "rect": [
+     -17,
+     16,
+     -14,
+     20
+    ],
+    "height": 0.0,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "e_cross",
+    "kind": "street",
+    "rect": [
+     14,
+     -16,
+     29,
+     -12
+    ],
+    "height": 0.0,
+    "material": "asphalt"
+   },
+   {
+    "id": "e_crossr",
+    "kind": "street",
+    "rect": [
+     -29,
+     12,
+     -14,
+     16
+    ],
+    "height": 0.0,
+    "material": "asphalt"
+   },
+   {
+    "id": "red_exit_n",
+    "kind": "street",
+    "rect": [
+     25,
+     -12,
+     29,
+     -6
+    ],
+    "height": 0.0,
+    "material": "asphalt"
+   },
+   {
+    "id": "red_exit_nr",
+    "kind": "street",
+    "rect": [
+     -29,
+     6,
+     -25,
+     12
+    ],
+    "height": 0.0,
+    "material": "asphalt"
+   },
+   {
+    "id": "sub_gantry",
+    "kind": "terrace",
+    "rect": [
+     24,
+     -28,
+     31,
+     -25
+    ],
+    "height": 1.8,
+    "material": "metal_plate"
+   },
+   {
+    "id": "sub_gantryr",
+    "kind": "terrace",
+    "rect": [
+     -31,
+     25,
+     -24,
+     28
+    ],
+    "height": 1.8,
+    "material": "metal_plate"
+   },
+   {
+    "id": "substation",
+    "kind": "yard",
+    "rect": [
+     24,
+     -25,
+     31,
+     -20
+    ],
+    "height": 0.0,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "substationr",
+    "kind": "yard",
+    "rect": [
+     -31,
+     20,
+     -24,
+     25
+    ],
+    "height": 0.0,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "sub_link",
+    "kind": "alley",
+    "rect": [
+     29,
+     -20,
+     31,
+     -16
+    ],
+    "height": 0.0,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "sub_linkr",
+    "kind": "alley",
+    "rect": [
+     -31,
+     16,
+     -29,
+     20
+    ],
+    "height": 0.0,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "cl_w",
+    "kind": "alley",
+    "rect": [
+     -16,
+     -24,
+     -13,
+     -16
+    ],
+    "height": 0.0,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "cl_wr",
+    "kind": "alley",
+    "rect": [
+     13,
+     16,
+     16,
+     24
+    ],
+    "height": 0.0,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "w_cross",
+    "kind": "street",
+    "rect": [
+     -16,
+     -16,
+     -11,
+     -12
+    ],
+    "height": 0.0,
+    "material": "asphalt"
+   },
+   {
+    "id": "w_crossr",
+    "kind": "street",
+    "rect": [
+     11,
+     12,
+     16,
+     16
+    ],
+    "height": 0.0,
+    "material": "asphalt"
+   },
+   {
+    "id": "c_link_n",
+    "kind": "alley",
+    "rect": [
+     -4,
+     -22,
+     0,
+     -12
+    ],
+    "height": 0.0,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "c_link_nr",
+    "kind": "alley",
+    "rect": [
+     0,
+     12,
+     4,
+     22
+    ],
+    "height": 0.0,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "e_link",
+    "kind": "alley",
+    "rect": [
+     8,
+     -20,
+     11,
+     -12
+    ],
+    "height": 0.0,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "e_linkr",
+    "kind": "alley",
+    "rect": [
+     -11,
+     12,
+     -8,
+     20
+    ],
+    "height": 0.0,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "c_north",
+    "kind": "street",
+    "rect": [
+     -11,
+     -12,
+     11,
+     -8
+    ],
+    "height": 0.0,
+    "material": "asphalt"
+   },
+   {
+    "id": "c_northr",
+    "kind": "street",
+    "rect": [
+     -11,
+     8,
+     11,
+     12
+    ],
+    "height": 0.0,
+    "material": "asphalt"
+   },
+   {
+    "id": "c_link_s",
+    "kind": "alley",
+    "rect": [
+     -4,
+     -8,
+     0,
+     -6
+    ],
+    "height": 0.0,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "c_link_sr",
+    "kind": "alley",
+    "rect": [
+     0,
+     6,
+     4,
+     8
+    ],
+    "height": 0.0,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "w_entry",
+    "kind": "alley",
+    "rect": [
+     -15,
+     1,
+     -6,
+     5
+    ],
+    "height": 0.0,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "w_entryr",
+    "kind": "alley",
+    "rect": [
+     6,
+     -5,
+     15,
+     -1
+    ],
+    "height": 0.0,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "centre",
+    "kind": "yard",
+    "rect": [
+     -6,
+     -6,
+     6,
+     6
+    ],
+    "height": 0.0,
+    "material": "concrete_floor"
+   }
+  ],
+  "covered": [
+   {
+    "id": "hall_n",
+    "kind": "interior",
+    "rect": [
+     -5.7,
+     -31,
+     3.7,
+     -22.3
+    ]
+   },
+   {
+    "id": "hall_n_door0",
+    "kind": "doorway",
+    "rect": [
+     3.7,
+     -28.3,
+     4,
+     -24.7
+    ]
+   },
+   {
+    "id": "hall_n_door1",
+    "kind": "doorway",
+    "rect": [
+     -2.8,
+     -22.3,
+     -1.2,
+     -22
+    ]
+   },
+   {
+    "id": "hall_n_door2",
+    "kind": "doorway",
+    "rect": [
+     -6,
+     -26.8,
+     -5.7,
+     -25.2
+    ]
+   },
+   {
+    "id": "w_shop",
+    "kind": "interior",
+    "rect": [
+     -11,
+     -7.7,
+     -7,
+     0.7
+    ]
+   },
+   {
+    "id": "w_shop_door0",
+    "kind": "doorway",
+    "rect": [
+     -9.8,
+     -8,
+     -8.2,
+     -7.7
+    ]
+   },
+   {
+    "id": "w_shop_door1",
+    "kind": "doorway",
+    "rect": [
+     -9.8,
+     0.7,
+     -8.2,
+     1
+    ]
+   },
+   {
+    "id": "w_shopr",
+    "kind": "interior",
+    "rect": [
+     7,
+     -0.7,
+     11,
+     7.7
+    ]
+   },
+   {
+    "id": "w_shopr_door0",
+    "kind": "doorway",
+    "rect": [
+     8.2,
+     -1,
+     9.8,
+     -0.7
+    ]
+   },
+   {
+    "id": "w_shopr_door1",
+    "kind": "doorway",
+    "rect": [
+     8.2,
+     7.7,
+     9.8,
+     8
+    ]
+   },
+   {
+    "id": "hall_nr",
+    "kind": "interior",
+    "rect": [
+     -3.7,
+     22.3,
+     5.7,
+     31
+    ]
+   },
+   {
+    "id": "hall_nr_door0",
+    "kind": "doorway",
+    "rect": [
+     1.2,
+     22,
+     2.8,
+     22.3
+    ]
+   },
+   {
+    "id": "hall_nr_door1",
+    "kind": "doorway",
+    "rect": [
+     5.7,
+     25.2,
+     6,
+     26.8
+    ]
+   },
+   {
+    "id": "hall_nr_door2",
+    "kind": "doorway",
+    "rect": [
+     -4,
+     24.7,
+     -3.7,
+     28.3
+    ]
+   },
+   {
+    "id": "blue_gate",
+    "kind": "passage",
+    "rect": [
+     -25,
+     -3,
+     -21,
+     0
+    ]
+   },
+   {
+    "id": "blue_gater",
+    "kind": "passage",
+    "rect": [
+     21,
+     0,
+     25,
+     3
+    ]
+   },
+   {
+    "id": "yard_passage",
+    "kind": "passage",
+    "rect": [
+     -19,
+     -12,
+     -16,
+     -5
+    ]
+   },
+   {
+    "id": "yard_passager",
+    "kind": "passage",
+    "rect": [
+     16,
+     5,
+     19,
+     12
+    ]
+   }
+  ]
+ },
+ "terraces": [
+  {
+   "id": "dock_n",
+   "rect": [
+    -16,
+    -31,
+    -6,
+    -28
+   ],
+   "height": 1.1,
+   "stairs": [
+    {
+     "side": "w",
+     "from": -31,
+     "to": -28,
+     "steps": 6,
+     "rise": 0.1833,
+     "run": 0.3
+    }
+   ],
+   "style": "dock"
+  },
+  {
+   "id": "dock_nr",
+   "rect": [
+    6,
+    28,
+    16,
+    31
+   ],
+   "height": 1.1,
+   "stairs": [
+    {
+     "side": "e",
+     "from": 28,
+     "to": 31,
+     "steps": 6,
+     "rise": 0.1833,
+     "run": 0.3
+    }
+   ],
+   "style": "dock"
+  },
+  {
+   "id": "sub_gantry",
+   "rect": [
+    24,
+    -28,
+    31,
+    -25
+   ],
+   "height": 1.8,
+   "stairs": [
+    {
+     "side": "s",
+     "from": 28,
+     "to": 31,
+     "steps": 9,
+     "rise": 0.2,
+     "run": 0.3
+    }
+   ],
+   "style": "platform",
+   "railings": [
+    {
+     "side": "s",
+     "from": 24,
+     "to": 28
+    }
+   ]
+  },
+  {
+   "id": "sub_gantryr",
+   "rect": [
+    -31,
+    25,
+    -24,
+    28
+   ],
+   "height": 1.8,
+   "stairs": [
+    {
+     "side": "n",
+     "from": -31,
+     "to": -28,
+     "steps": 9,
+     "rise": 0.2,
+     "run": 0.3
+    }
+   ],
+   "style": "platform",
+   "railings": [
+    {
+     "side": "n",
+     "from": -28,
+     "to": -24
+    }
+   ]
+  }
+ ],
+ "buildings": [
+  {
+   "id": "I01",
+   "type": "warehouse",
+   "rect": [
+    -42,
+    -42,
+    -29,
+    -31
+   ],
+   "height": 8.6,
+   "floors": 1,
+   "palette": "brick_red",
+   "seed": 7383,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "s",
+   "doors": [],
+   "sign": 6
+  },
+  {
+   "id": "I02",
+   "type": "warehouse",
+   "rect": [
+    -29,
+    -42,
+    -16,
+    -31
+   ],
+   "height": 9.1,
+   "floors": 1,
+   "palette": "brick_red",
+   "seed": 2879,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "s",
+     "at": 3.5,
+     "width": 3.8,
+     "kind": "roller"
+    },
+    {
+     "side": "s",
+     "at": 9.5,
+     "width": 3.8,
+     "kind": "roller"
+    },
+    {
+     "side": "s",
+     "at": 6.5,
+     "width": 1.0,
+     "kind": "door"
+    }
+   ],
+   "sign": 12
+  },
+  {
+   "id": "I03",
+   "type": "warehouse",
+   "rect": [
+    -16,
+    -42,
+    -6,
+    -31
+   ],
+   "height": 8.6,
+   "floors": 1,
+   "palette": "clad_red",
+   "seed": 3766,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "s",
+     "at": 5.0,
+     "width": 3.8,
+     "kind": "dock"
+    },
+    {
+     "side": "s",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    }
+   ],
+   "sign": 3
+  },
+  {
+   "id": "I04",
+   "type": "warehouse",
+   "rect": [
+    4,
+    -42,
+    14,
+    -31
+   ],
+   "height": 7.6,
+   "floors": 1,
+   "palette": "clad_green",
+   "seed": 8237,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "s",
+     "at": 5.0,
+     "width": 3.8,
+     "kind": "roller"
+    },
+    {
+     "side": "s",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    }
+   ],
+   "sign": 9
+  },
+  {
+   "id": "I05",
+   "type": "warehouse",
+   "rect": [
+    14,
+    -42,
+    27,
+    -28
+   ],
+   "height": 8.1,
+   "floors": 1,
+   "palette": "brick_clad",
+   "seed": 1304,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "w",
+     "at": 13.0,
+     "width": 1.0,
+     "kind": "door"
+    }
+   ],
+   "sign": 9
+  },
+  {
+   "id": "I06",
+   "type": "warehouse",
+   "rect": [
+    27,
+    -42,
+    42,
+    -28
+   ],
+   "height": 8.6,
+   "floors": 1,
+   "palette": "concrete",
+   "seed": 4473,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "s",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    }
+   ],
+   "sign": 12
+  },
+  {
+   "id": "I07",
+   "type": "workshop",
+   "rect": [
+    -42,
+    -31,
+    -31,
+    -26
+   ],
+   "height": 6.5,
+   "floors": 1,
+   "palette": "brick_soot",
+   "seed": 8952,
+   "roof": {
+    "type": "shed",
+    "low": "e"
+   },
+   "front": "e",
+   "doors": [
+    {
+     "side": "e",
+     "at": 2.5,
+     "width": 3.2,
+     "kind": "roller"
+    }
+   ],
+   "sign": 2
+  },
+  {
+   "id": "I08",
+   "type": "warehouse",
+   "rect": [
+    -6,
+    -42,
+    4,
+    -22
+   ],
+   "height": 7.6,
+   "floors": 1,
+   "palette": "panel",
+   "seed": 5870,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "e",
+   "doors": [
+    {
+     "side": "w",
+     "at": 13.0,
+     "width": 1.0,
+     "kind": "door"
+    }
+   ],
+   "sign": 14,
+   "interiors": [
+    {
+     "id": "hall_n",
+     "rect": [
+      -5.7,
+      -31,
+      3.7,
+      -22.3
+     ],
+     "clear": 5.6,
+     "doors": [
+      {
+       "side": "e",
+       "rect": [
+        3.7,
+        -28.3,
+        4,
+        -24.7
+       ],
+       "height": 3.8,
+       "kind": "roller_open"
+      },
+      {
+       "side": "s",
+       "rect": [
+        -2.8,
+        -22.3,
+        -1.2,
+        -22
+       ],
+       "height": 2.4,
+       "kind": "doorway"
+      },
+      {
+       "side": "w",
+       "rect": [
+        -6,
+        -26.8,
+        -5.7,
+        -25.2
+       ],
+       "height": 2.4,
+       "kind": "doorway"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "I09",
+   "type": "workshop",
+   "rect": [
+    14,
+    -28,
+    24,
+    -24
+   ],
+   "height": 6.2,
+   "floors": 1,
+   "palette": "rusty",
+   "seed": 3690,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "s",
+     "at": 5.0,
+     "width": 3.2,
+     "kind": "roller"
+    },
+    {
+     "side": "s",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    }
+   ],
+   "sign": 2
+  },
+  {
+   "id": "I10",
+   "type": "warehouse",
+   "rect": [
+    -42,
+    -26,
+    -26,
+    -16
+   ],
+   "height": 8.6,
+   "floors": 1,
+   "palette": "brick_soot",
+   "seed": 8988,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "e",
+   "doors": [
+    {
+     "side": "e",
+     "at": 5.0,
+     "width": 3.8,
+     "kind": "roller"
+    },
+    {
+     "side": "e",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    },
+    {
+     "side": "s",
+     "at": 12.5,
+     "width": 3.8,
+     "kind": "roller"
+    },
+    {
+     "side": "n",
+     "at": 13.5,
+     "width": 3.8,
+     "kind": "roller"
+    }
+   ],
+   "sign": 2
+  },
+  {
+   "id": "I11",
+   "type": "workshop",
+   "rect": [
+    -23,
+    -26,
+    -16,
+    -16
+   ],
+   "height": 5.4,
+   "floors": 1,
+   "palette": "brick_red",
+   "seed": 2864,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "e",
+     "at": 5.0,
+     "width": 3.2,
+     "kind": "roller"
+    },
+    {
+     "side": "e",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    },
+    {
+     "side": "w",
+     "at": 5.0,
+     "width": 3.2,
+     "kind": "roller"
+    },
+    {
+     "side": "w",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    },
+    {
+     "side": "n",
+     "at": 3.5,
+     "width": 3.2,
+     "kind": "roller"
+    },
+    {
+     "side": "s",
+     "at": 3.5,
+     "width": 3.2,
+     "kind": "roller"
+    }
+   ],
+   "sign": 3
+  },
+  {
+   "id": "I12",
+   "type": "warehouse",
+   "rect": [
+    31,
+    -28,
+    42,
+    -16
+   ],
+   "height": 8.6,
+   "floors": 1,
+   "palette": "brick_soot",
+   "seed": 861,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "w",
+     "at": 3.0,
+     "width": 3.8,
+     "kind": "roller"
+    },
+    {
+     "side": "w",
+     "at": 9.0,
+     "width": 3.8,
+     "kind": "roller"
+    },
+    {
+     "side": "w",
+     "at": 6.0,
+     "width": 1.0,
+     "kind": "door"
+    }
+   ],
+   "sign": 2
+  },
+  {
+   "id": "I13",
+   "type": "workshop",
+   "rect": [
+    -11,
+    -22,
+    -4,
+    -12
+   ],
+   "height": 5.8,
+   "floors": 1,
+   "palette": "clad_cream",
+   "seed": 8395,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "e",
+   "doors": [
+    {
+     "side": "e",
+     "at": 5.0,
+     "width": 3.2,
+     "kind": "roller"
+    },
+    {
+     "side": "e",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    },
+    {
+     "side": "s",
+     "at": 3.5,
+     "width": 3.2,
+     "kind": "roller"
+    }
+   ],
+   "sign": 6
+  },
+  {
+   "id": "I14",
+   "type": "office",
+   "rect": [
+    17,
+    -20,
+    29,
+    -16
+   ],
+   "height": 10.6,
+   "floors": 3,
+   "palette": "brick_red",
+   "seed": 6133,
+   "roof": {
+    "type": "flat"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "n",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    },
+    {
+     "side": "s",
+     "at": 2.0,
+     "width": 1.8,
+     "kind": "double"
+    }
+   ],
+   "sign": 0
+  },
+  {
+   "id": "I15",
+   "type": "workshop",
+   "rect": [
+    0,
+    -20,
+    8,
+    -12
+   ],
+   "height": 5.8,
+   "floors": 1,
+   "palette": "brick_red",
+   "seed": 2512,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "e",
+     "at": 4.0,
+     "width": 3.2,
+     "kind": "roller"
+    },
+    {
+     "side": "s",
+     "at": 4.0,
+     "width": 3.2,
+     "kind": "roller"
+    },
+    {
+     "side": "w",
+     "at": 4.0,
+     "width": 3.2,
+     "kind": "roller"
+    }
+   ],
+   "sign": 0
+  },
+  {
+   "id": "I16",
+   "type": "shed",
+   "rect": [
+    11,
+    -20,
+    14,
+    -12
+   ],
+   "height": 4.5,
+   "floors": 1,
+   "palette": "clad_blue",
+   "seed": 5034,
+   "roof": {
+    "type": "shed",
+    "low": "w"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "e",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    },
+    {
+     "side": "w",
+     "at": 4.0,
+     "width": 2.8,
+     "kind": "roller"
+    }
+   ],
+   "sign": 3
+  },
+  {
+   "id": "I17",
+   "type": "workshop",
+   "rect": [
+    -42,
+    -16,
+    -33,
+    -4
+   ],
+   "height": 6.5,
+   "floors": 1,
+   "palette": "rusty",
+   "seed": 52,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "e",
+   "doors": [
+    {
+     "side": "e",
+     "at": 6.0,
+     "width": 3.2,
+     "kind": "roller"
+    },
+    {
+     "side": "e",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    }
+   ],
+   "sign": 12
+  },
+  {
+   "id": "I18",
+   "type": "workshop",
+   "rect": [
+    -29,
+    -12,
+    -21,
+    -8
+   ],
+   "height": 5.4,
+   "floors": 1,
+   "palette": "brick_red",
+   "seed": 7652,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "n",
+   "doors": [
+    {
+     "side": "n",
+     "at": 4.0,
+     "width": 3.2,
+     "kind": "roller"
+    }
+   ],
+   "sign": 1
+  },
+  {
+   "id": "I19",
+   "type": "workshop",
+   "rect": [
+    -21,
+    -12,
+    -15,
+    -5
+   ],
+   "height": 5.8,
+   "floors": 1,
+   "palette": "brick_red",
+   "seed": 4862,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "s",
+   "doors": [],
+   "sign": 8,
+   "passages": [
+    {
+     "rect": [
+      -19,
+      -12,
+      -16,
+      -5
+     ],
+     "style": "portal",
+     "clear": 4.2
+    }
+   ]
+  },
+  {
+   "id": "I20",
+   "type": "workshop",
+   "rect": [
+    -15,
+    -12,
+    -11,
+    -8
+   ],
+   "height": 6.2,
+   "floors": 1,
+   "palette": "brick_soot",
+   "seed": 9481,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "n",
+   "doors": [
+    {
+     "side": "n",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    }
+   ],
+   "sign": 10
+  },
+  {
+   "id": "I21",
+   "type": "workshop",
+   "rect": [
+    11,
+    -12,
+    25,
+    -5
+   ],
+   "height": 6.2,
+   "floors": 1,
+   "palette": "rusty",
+   "seed": 8452,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "n",
+   "doors": [
+    {
+     "side": "n",
+     "at": 8.5,
+     "width": 3.2,
+     "kind": "roller"
+    },
+    {
+     "side": "n",
+     "at": 5.0,
+     "width": 1.0,
+     "kind": "door"
+    },
+    {
+     "side": "s",
+     "at": 5.0,
+     "width": 3.2,
+     "kind": "roller"
+    },
+    {
+     "side": "s",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    },
+    {
+     "side": "e",
+     "at": 3.5,
+     "width": 3.2,
+     "kind": "roller"
+    }
+   ],
+   "sign": 8
+  },
+  {
+   "id": "I22",
+   "type": "warehouse",
+   "rect": [
+    31,
+    -16,
+    42,
+    -6
+   ],
+   "height": 7.6,
+   "floors": 1,
+   "palette": "brick_soot",
+   "seed": 2104,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "s",
+   "doors": [],
+   "sign": 0
+  },
+  {
+   "id": "I23",
+   "type": "workshop",
+   "rect": [
+    6,
+    -8,
+    11,
+    -5
+   ],
+   "height": 5.4,
+   "floors": 1,
+   "palette": "brick_clad",
+   "seed": 8087,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "n",
+     "at": 2.5,
+     "width": 3.2,
+     "kind": "roller"
+    },
+    {
+     "side": "s",
+     "at": 2.5,
+     "width": 3.2,
+     "kind": "roller"
+    }
+   ],
+   "sign": 10
+  },
+  {
+   "id": "I24",
+   "type": "workshop",
+   "rect": [
+    -25,
+    -8,
+    -21,
+    5
+   ],
+   "height": 5.4,
+   "floors": 1,
+   "palette": "brick_red",
+   "seed": 3660,
+   "roof": {
+    "type": "shed",
+    "low": "w"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "w",
+     "at": 4.0,
+     "width": 1.0,
+     "kind": "door"
+    },
+    {
+     "side": "e",
+     "at": 11.0,
+     "width": 1.0,
+     "kind": "door"
+    }
+   ],
+   "sign": 15,
+   "passages": [
+    {
+     "rect": [
+      -25,
+      -3,
+      -21,
+      0
+     ],
+     "style": "portal",
+     "clear": 4.2
+    }
+   ]
+  },
+  {
+   "id": "I25",
+   "type": "warehouse",
+   "rect": [
+    -15,
+    -8,
+    -6,
+    1
+   ],
+   "height": 8.1,
+   "floors": 1,
+   "palette": "clad_green",
+   "seed": 6281,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "s",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    },
+    {
+     "side": "e",
+     "at": 5.5,
+     "width": 3.8,
+     "kind": "roller"
+    },
+    {
+     "side": "w",
+     "at": 6.0,
+     "width": 3.8,
+     "kind": "roller"
+    }
+   ],
+   "sign": 3,
+   "interiors": [
+    {
+     "id": "w_shop",
+     "rect": [
+      -11,
+      -7.7,
+      -7,
+      0.7
+     ],
+     "clear": 5.6,
+     "doors": [
+      {
+       "side": "n",
+       "rect": [
+        -9.8,
+        -8,
+        -8.2,
+        -7.7
+       ],
+       "height": 2.4,
+       "kind": "doorway"
+      },
+      {
+       "side": "s",
+       "rect": [
+        -9.8,
+        0.7,
+        -8.2,
+        1
+       ],
+       "height": 2.4,
+       "kind": "doorway"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "I26",
+   "type": "workshop",
+   "rect": [
+    -42,
+    -4,
+    -33,
+    6
+   ],
+   "height": 6.5,
+   "floors": 1,
+   "palette": "brick_clad",
+   "seed": 9745,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "e",
+   "doors": [
+    {
+     "side": "e",
+     "at": 5.0,
+     "width": 3.2,
+     "kind": "roller"
+    },
+    {
+     "side": "e",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    }
+   ],
+   "sign": 12
+  },
+  {
+   "id": "I27",
+   "type": "warehouse",
+   "rect": [
+    6,
+    -1,
+    15,
+    8
+   ],
+   "height": 8.1,
+   "floors": 1,
+   "palette": "clad_red",
+   "seed": 5385,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "n",
+   "doors": [
+    {
+     "side": "n",
+     "at": 7.0,
+     "width": 1.0,
+     "kind": "door"
+    },
+    {
+     "side": "w",
+     "at": 3.5,
+     "width": 3.8,
+     "kind": "roller"
+    },
+    {
+     "side": "e",
+     "at": 3.0,
+     "width": 3.8,
+     "kind": "roller"
+    }
+   ],
+   "sign": 1,
+   "interiors": [
+    {
+     "id": "w_shopr",
+     "rect": [
+      7,
+      -0.7,
+      11,
+      7.7
+     ],
+     "clear": 5.6,
+     "doors": [
+      {
+       "side": "n",
+       "rect": [
+        8.2,
+        -1,
+        9.8,
+        -0.7
+       ],
+       "height": 2.4,
+       "kind": "doorway"
+      },
+      {
+       "side": "s",
+       "rect": [
+        8.2,
+        7.7,
+        9.8,
+        8
+       ],
+       "height": 2.4,
+       "kind": "doorway"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "I28",
+   "type": "workshop",
+   "rect": [
+    21,
+    -5,
+    25,
+    8
+   ],
+   "height": 6.2,
+   "floors": 1,
+   "palette": "brick_clad",
+   "seed": 6926,
+   "roof": {
+    "type": "shed",
+    "low": "e"
+   },
+   "front": "e",
+   "doors": [
+    {
+     "side": "e",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    },
+    {
+     "side": "w",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    }
+   ],
+   "sign": 9,
+   "passages": [
+    {
+     "rect": [
+      21,
+      0,
+      25,
+      3
+     ],
+     "style": "portal",
+     "clear": 4.2
+    }
+   ]
+  },
+  {
+   "id": "I29",
+   "type": "workshop",
+   "rect": [
+    33,
+    -6,
+    42,
+    6
+   ],
+   "height": 6.5,
+   "floors": 1,
+   "palette": "rusty",
+   "seed": 8086,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "w",
+     "at": 6.0,
+     "width": 3.2,
+     "kind": "roller"
+    },
+    {
+     "side": "w",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    }
+   ],
+   "sign": 13
+  },
+  {
+   "id": "I30",
+   "type": "workshop",
+   "rect": [
+    -11,
+    5,
+    -6,
+    8
+   ],
+   "height": 6.2,
+   "floors": 1,
+   "palette": "brick_red",
+   "seed": 9670,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "n",
+     "at": 2.5,
+     "width": 3.2,
+     "kind": "roller"
+    },
+    {
+     "side": "s",
+     "at": 2.5,
+     "width": 3.2,
+     "kind": "roller"
+    }
+   ],
+   "sign": 15
+  },
+  {
+   "id": "I31",
+   "type": "workshop",
+   "rect": [
+    -25,
+    5,
+    -11,
+    12
+   ],
+   "height": 5.8,
+   "floors": 1,
+   "palette": "brick_clad",
+   "seed": 4720,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "s",
+     "at": 5.5,
+     "width": 3.2,
+     "kind": "roller"
+    },
+    {
+     "side": "s",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    },
+    {
+     "side": "n",
+     "at": 9.0,
+     "width": 3.2,
+     "kind": "roller"
+    },
+    {
+     "side": "n",
+     "at": 6.0,
+     "width": 1.0,
+     "kind": "door"
+    },
+    {
+     "side": "w",
+     "at": 3.5,
+     "width": 3.2,
+     "kind": "roller"
+    }
+   ],
+   "sign": 0
+  },
+  {
+   "id": "I32",
+   "type": "workshop",
+   "rect": [
+    11,
+    8,
+    15,
+    12
+   ],
+   "height": 6.2,
+   "floors": 1,
+   "palette": "brick_red",
+   "seed": 3535,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "w",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    }
+   ],
+   "sign": 0
+  },
+  {
+   "id": "I33",
+   "type": "workshop",
+   "rect": [
+    15,
+    5,
+    21,
+    12
+   ],
+   "height": 5.8,
+   "floors": 1,
+   "palette": "brick_soot",
+   "seed": 1544,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "s",
+   "doors": [],
+   "sign": 15,
+   "passages": [
+    {
+     "rect": [
+      16,
+      5,
+      19,
+      12
+     ],
+     "style": "portal",
+     "clear": 4.2
+    }
+   ]
+  },
+  {
+   "id": "I34",
+   "type": "workshop",
+   "rect": [
+    21,
+    8,
+    29,
+    12
+   ],
+   "height": 5.4,
+   "floors": 1,
+   "palette": "brick_clad",
+   "seed": 7587,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "s",
+     "at": 4.0,
+     "width": 3.2,
+     "kind": "roller"
+    }
+   ],
+   "sign": 15
+  },
+  {
+   "id": "I35",
+   "type": "workshop",
+   "rect": [
+    33,
+    6,
+    42,
+    16
+   ],
+   "height": 6.5,
+   "floors": 1,
+   "palette": "rusty",
+   "seed": 8825,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "w",
+     "at": 5.0,
+     "width": 3.2,
+     "kind": "roller"
+    },
+    {
+     "side": "w",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    }
+   ],
+   "sign": 0
+  },
+  {
+   "id": "I36",
+   "type": "warehouse",
+   "rect": [
+    -42,
+    6,
+    -31,
+    18
+   ],
+   "height": 7.6,
+   "floors": 1,
+   "palette": "clad_blue",
+   "seed": 8226,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "n",
+   "doors": [],
+   "sign": 7
+  },
+  {
+   "id": "I37",
+   "type": "office",
+   "rect": [
+    -29,
+    16,
+    -17,
+    20
+   ],
+   "height": 10.6,
+   "floors": 3,
+   "palette": "panel",
+   "seed": 6679,
+   "roof": {
+    "type": "flat"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "n",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    },
+    {
+     "side": "s",
+     "at": 2.0,
+     "width": 1.8,
+     "kind": "double"
+    }
+   ],
+   "sign": 0
+  },
+  {
+   "id": "I38",
+   "type": "shed",
+   "rect": [
+    -14,
+    12,
+    -11,
+    20
+   ],
+   "height": 4.5,
+   "floors": 1,
+   "palette": "clad_green",
+   "seed": 7368,
+   "roof": {
+    "type": "shed",
+    "low": "w"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "e",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    },
+    {
+     "side": "w",
+     "at": 4.0,
+     "width": 2.8,
+     "kind": "roller"
+    }
+   ],
+   "sign": 5
+  },
+  {
+   "id": "I39",
+   "type": "workshop",
+   "rect": [
+    -8,
+    12,
+    0,
+    20
+   ],
+   "height": 5.8,
+   "floors": 1,
+   "palette": "brick_soot",
+   "seed": 4471,
+   "roof": {
+    "type": "shed",
+    "low": "w"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "n",
+     "at": 4.0,
+     "width": 3.2,
+     "kind": "roller"
+    },
+    {
+     "side": "e",
+     "at": 4.0,
+     "width": 3.2,
+     "kind": "roller"
+    },
+    {
+     "side": "w",
+     "at": 4.0,
+     "width": 3.2,
+     "kind": "roller"
+    }
+   ],
+   "sign": 13
+  },
+  {
+   "id": "I40",
+   "type": "workshop",
+   "rect": [
+    4,
+    12,
+    11,
+    22
+   ],
+   "height": 5.8,
+   "floors": 1,
+   "palette": "rusty",
+   "seed": 2854,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "w",
+     "at": 5.0,
+     "width": 3.2,
+     "kind": "roller"
+    },
+    {
+     "side": "w",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    },
+    {
+     "side": "n",
+     "at": 3.5,
+     "width": 3.2,
+     "kind": "roller"
+    }
+   ],
+   "sign": 11
+  },
+  {
+   "id": "I41",
+   "type": "warehouse",
+   "rect": [
+    -42,
+    18,
+    -31,
+    28
+   ],
+   "height": 8.6,
+   "floors": 1,
+   "palette": "clad_red",
+   "seed": 1925,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "e",
+   "doors": [
+    {
+     "side": "e",
+     "at": 5.0,
+     "width": 3.8,
+     "kind": "roller"
+    },
+    {
+     "side": "e",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    }
+   ],
+   "sign": 9
+  },
+  {
+   "id": "I42",
+   "type": "workshop",
+   "rect": [
+    16,
+    16,
+    23,
+    26
+   ],
+   "height": 6.2,
+   "floors": 1,
+   "palette": "rusty",
+   "seed": 8596,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "e",
+     "at": 5.0,
+     "width": 3.2,
+     "kind": "roller"
+    },
+    {
+     "side": "e",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    },
+    {
+     "side": "w",
+     "at": 5.0,
+     "width": 3.2,
+     "kind": "roller"
+    },
+    {
+     "side": "w",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    },
+    {
+     "side": "n",
+     "at": 3.5,
+     "width": 3.2,
+     "kind": "roller"
+    },
+    {
+     "side": "s",
+     "at": 3.5,
+     "width": 3.2,
+     "kind": "roller"
+    }
+   ],
+   "sign": 4
+  },
+  {
+   "id": "I43",
+   "type": "warehouse",
+   "rect": [
+    26,
+    16,
+    42,
+    26
+   ],
+   "height": 8.6,
+   "floors": 1,
+   "palette": "brick_soot",
+   "seed": 2635,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "w",
+     "at": 5.0,
+     "width": 3.8,
+     "kind": "roller"
+    },
+    {
+     "side": "w",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    },
+    {
+     "side": "n",
+     "at": 3.5,
+     "width": 3.8,
+     "kind": "roller"
+    },
+    {
+     "side": "s",
+     "at": 2.5,
+     "width": 3.8,
+     "kind": "roller"
+    }
+   ],
+   "sign": 10
+  },
+  {
+   "id": "I44",
+   "type": "workshop",
+   "rect": [
+    -24,
+    24,
+    -14,
+    28
+   ],
+   "height": 5.8,
+   "floors": 1,
+   "palette": "rusty",
+   "seed": 9889,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "n",
+   "doors": [
+    {
+     "side": "n",
+     "at": 5.0,
+     "width": 3.2,
+     "kind": "roller"
+    },
+    {
+     "side": "n",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    }
+   ],
+   "sign": 2
+  },
+  {
+   "id": "I45",
+   "type": "workshop",
+   "rect": [
+    31,
+    26,
+    42,
+    31
+   ],
+   "height": 6.5,
+   "floors": 1,
+   "palette": "brick_soot",
+   "seed": 7714,
+   "roof": {
+    "type": "shed",
+    "low": "w"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "w",
+     "at": 2.5,
+     "width": 3.2,
+     "kind": "roller"
+    }
+   ],
+   "sign": 6
+  },
+  {
+   "id": "I46",
+   "type": "warehouse",
+   "rect": [
+    -42,
+    28,
+    -27,
+    42
+   ],
+   "height": 8.6,
+   "floors": 1,
+   "palette": "brick_soot",
+   "seed": 924,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "n",
+   "doors": [
+    {
+     "side": "n",
+     "at": 13.0,
+     "width": 1.0,
+     "kind": "door"
+    }
+   ],
+   "sign": 0
+  },
+  {
+   "id": "I47",
+   "type": "warehouse",
+   "rect": [
+    -27,
+    28,
+    -14,
+    42
+   ],
+   "height": 8.1,
+   "floors": 1,
+   "palette": "brick_soot",
+   "seed": 1093,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "n",
+   "doors": [
+    {
+     "side": "n",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    }
+   ],
+   "sign": 14
+  },
+  {
+   "id": "I48",
+   "type": "warehouse",
+   "rect": [
+    -4,
+    22,
+    6,
+    42
+   ],
+   "height": 7.6,
+   "floors": 1,
+   "palette": "concrete",
+   "seed": 7590,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "e",
+     "at": 7.0,
+     "width": 1.0,
+     "kind": "door"
+    }
+   ],
+   "sign": 8,
+   "interiors": [
+    {
+     "id": "hall_nr",
+     "rect": [
+      -3.7,
+      22.3,
+      5.7,
+      31
+     ],
+     "clear": 5.6,
+     "doors": [
+      {
+       "side": "n",
+       "rect": [
+        1.2,
+        22,
+        2.8,
+        22.3
+       ],
+       "height": 2.4,
+       "kind": "doorway"
+      },
+      {
+       "side": "e",
+       "rect": [
+        5.7,
+        25.2,
+        6,
+        26.8
+       ],
+       "height": 2.4,
+       "kind": "doorway"
+      },
+      {
+       "side": "w",
+       "rect": [
+        -4,
+        24.7,
+        -3.7,
+        28.3
+       ],
+       "height": 3.8,
+       "kind": "roller_open"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "I49",
+   "type": "warehouse",
+   "rect": [
+    -14,
+    31,
+    -4,
+    42
+   ],
+   "height": 8.6,
+   "floors": 1,
+   "palette": "concrete",
+   "seed": 5788,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "n",
+   "doors": [
+    {
+     "side": "n",
+     "at": 5.0,
+     "width": 3.8,
+     "kind": "roller"
+    },
+    {
+     "side": "n",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    }
+   ],
+   "sign": 8
+  },
+  {
+   "id": "I50",
+   "type": "warehouse",
+   "rect": [
+    6,
+    31,
+    18,
+    42
+   ],
+   "height": 8.6,
+   "floors": 1,
+   "palette": "clad_blue",
+   "seed": 6161,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "n",
+   "doors": [
+    {
+     "side": "n",
+     "at": 3.0,
+     "width": 3.8,
+     "kind": "dock"
+    },
+    {
+     "side": "n",
+     "at": 9.0,
+     "width": 3.8,
+     "kind": "dock"
+    },
+    {
+     "side": "n",
+     "at": 6.0,
+     "width": 1.0,
+     "kind": "door"
+    }
+   ],
+   "sign": 3
+  },
+  {
+   "id": "I51",
+   "type": "warehouse",
+   "rect": [
+    18,
+    31,
+    30,
+    42
+   ],
+   "height": 9.1,
+   "floors": 1,
+   "palette": "panel",
+   "seed": 9161,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "n",
+   "doors": [
+    {
+     "side": "n",
+     "at": 3.0,
+     "width": 3.8,
+     "kind": "roller"
+    },
+    {
+     "side": "n",
+     "at": 9.0,
+     "width": 3.8,
+     "kind": "roller"
+    },
+    {
+     "side": "n",
+     "at": 6.0,
+     "width": 1.0,
+     "kind": "door"
+    }
+   ],
+   "sign": 12
+  },
+  {
+   "id": "I52",
+   "type": "warehouse",
+   "rect": [
+    30,
+    31,
+    42,
+    42
+   ],
+   "height": 8.6,
+   "floors": 1,
+   "palette": "brick_soot",
+   "seed": 5968,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "n",
+   "doors": [],
+   "sign": 8
+  }
+ ],
+ "walls": [
+  {
+   "rect": [
+    -11,
+    -24,
+    -6,
+    -22
+   ],
+   "height": 3.0,
+   "style": "concrete",
+   "gates": [],
+   "id": "W01"
+  },
+  {
+   "rect": [
+    0,
+    -22,
+    4,
+    -20
+   ],
+   "height": 2.6,
+   "style": "fence",
+   "gates": [],
+   "id": "W02"
+  },
+  {
+   "rect": [
+    -13,
+    -24,
+    -11,
+    -16
+   ],
+   "height": 3.0,
+   "style": "concrete",
+   "gates": [],
+   "id": "W03"
+  },
+  {
+   "rect": [
+    29,
+    -16,
+    31,
+    -6
+   ],
+   "height": 2.6,
+   "style": "fence",
+   "gates": [],
+   "id": "W04"
+  },
+  {
+   "rect": [
+    -29,
+    -8,
+    -25,
+    -6
+   ],
+   "height": 2.6,
+   "style": "fence",
+   "gates": [],
+   "id": "W05"
+  },
+  {
+   "rect": [
+    -6,
+    -8,
+    -4,
+    -6
+   ],
+   "height": 3.0,
+   "style": "pillar",
+   "gates": [],
+   "id": "W06"
+  },
+  {
+   "rect": [
+    0,
+    -8,
+    6,
+    -6
+   ],
+   "height": 2.6,
+   "style": "fence",
+   "gates": [],
+   "id": "W07"
+  },
+  {
+   "rect": [
+    -6,
+    6,
+    0,
+    8
+   ],
+   "height": 2.6,
+   "style": "fence",
+   "gates": [],
+   "id": "W08"
+  },
+  {
+   "rect": [
+    4,
+    6,
+    6,
+    8
+   ],
+   "height": 3.0,
+   "style": "pillar",
+   "gates": [],
+   "id": "W09"
+  },
+  {
+   "rect": [
+    25,
+    6,
+    29,
+    8
+   ],
+   "height": 2.6,
+   "style": "fence",
+   "gates": [],
+   "id": "W10"
+  },
+  {
+   "rect": [
+    -31,
+    6,
+    -29,
+    16
+   ],
+   "height": 2.6,
+   "style": "fence",
+   "gates": [],
+   "id": "W11"
+  },
+  {
+   "rect": [
+    -4,
+    20,
+    0,
+    22
+   ],
+   "height": 2.6,
+   "style": "fence",
+   "gates": [],
+   "id": "W12"
+  },
+  {
+   "rect": [
+    6,
+    22,
+    11,
+    24
+   ],
+   "height": 3.0,
+   "style": "concrete",
+   "gates": [],
+   "id": "W13"
+  },
+  {
+   "rect": [
+    11,
+    16,
+    13,
+    24
+   ],
+   "height": 3.0,
+   "style": "concrete",
+   "gates": [],
+   "id": "W14"
+  }
+ ],
+ "props": [
+  {
+   "type": "container_stack_a",
+   "pos": [
+    0.0,
+    0,
+    0.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "container_blue",
+   "pos": [
+    9.0,
+    0,
+    -26.0
+   ],
+   "heading": 90
+  },
+  {
+   "type": "container_blue",
+   "pos": [
+    -9.0,
+    0,
+    26.0
+   ],
+   "heading": 270
+  },
+  {
+   "type": "container_stack_b",
+   "pos": [
+    11.6,
+    0,
+    -23.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "container_stack_b",
+   "pos": [
+    -11.6,
+    0,
+    23.0
+   ],
+   "heading": 180
+  },
+  {
+   "type": "container_red",
+   "pos": [
+    6.4,
+    0,
+    -21.6
+   ],
+   "heading": 0
+  },
+  {
+   "type": "container_red",
+   "pos": [
+    -6.4,
+    0,
+    21.6
+   ],
+   "heading": 180
+  },
+  {
+   "type": "forklift",
+   "pos": [
+    -12.0,
+    0,
+    -25.4
+   ],
+   "heading": 90
+  },
+  {
+   "type": "forklift",
+   "pos": [
+    12.0,
+    0,
+    25.4
+   ],
+   "heading": 270
+  },
+  {
+   "type": "pallet_goods",
+   "pos": [
+    -13.4,
+    1.1,
+    -30.4
+   ],
+   "heading": 0
+  },
+  {
+   "type": "pallet_goods",
+   "pos": [
+    13.4,
+    1.1,
+    30.4
+   ],
+   "heading": 180
+  },
+  {
+   "type": "pallet_wrapped",
+   "pos": [
+    -10.6,
+    1.1,
+    -30.4
+   ],
+   "heading": 0
+  },
+  {
+   "type": "pallet_wrapped",
+   "pos": [
+    10.6,
+    1.1,
+    30.4
+   ],
+   "heading": 180
+  },
+  {
+   "type": "pallet_goods",
+   "pos": [
+    -8.2,
+    1.1,
+    -30.4
+   ],
+   "heading": 0
+  },
+  {
+   "type": "pallet_goods",
+   "pos": [
+    8.2,
+    1.1,
+    30.4
+   ],
+   "heading": 180
+  },
+  {
+   "type": "skip_bin",
+   "pos": [
+    -29.5,
+    0,
+    -21.0
+   ],
+   "heading": 90
+  },
+  {
+   "type": "skip_bin",
+   "pos": [
+    29.5,
+    0,
+    21.0
+   ],
+   "heading": 270
+  },
+  {
+   "type": "jersey_barrier",
+   "pos": [
+    -23.5,
+    0,
+    -15.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "jersey_barrier",
+   "pos": [
+    23.5,
+    0,
+    15.0
+   ],
+   "heading": 180
+  },
+  {
+   "type": "transformer",
+   "pos": [
+    26.0,
+    0,
+    -22.6
+   ],
+   "heading": 0
+  },
+  {
+   "type": "transformer",
+   "pos": [
+    -26.0,
+    0,
+    22.6
+   ],
+   "heading": 180
+  },
+  {
+   "type": "electrical_cabinet",
+   "pos": [
+    30.3,
+    0,
+    -22.5
+   ],
+   "heading": 270
+  },
+  {
+   "type": "electrical_cabinet",
+   "pos": [
+    -30.3,
+    0,
+    22.5
+   ],
+   "heading": 90
+  },
+  {
+   "type": "gas_cage",
+   "pos": [
+    -20.4,
+    0,
+    -1.2
+   ],
+   "heading": 90
+  },
+  {
+   "type": "gas_cage",
+   "pos": [
+    20.4,
+    0,
+    1.2
+   ],
+   "heading": 270
+  },
+  {
+   "type": "drum_group",
+   "pos": [
+    -16.0,
+    0,
+    4.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "drum_group",
+   "pos": [
+    16.0,
+    0,
+    -4.0
+   ],
+   "heading": 180
+  },
+  {
+   "type": "cable_reel",
+   "pos": [
+    -20.0,
+    0,
+    4.2
+   ],
+   "heading": 90
+  },
+  {
+   "type": "cable_reel",
+   "pos": [
+    20.0,
+    0,
+    -4.2
+   ],
+   "heading": 270
+  },
+  {
+   "type": "pipe_bundle",
+   "pos": [
+    22.5,
+    0,
+    -23.3
+   ],
+   "heading": 0
+  },
+  {
+   "type": "pipe_bundle",
+   "pos": [
+    -22.5,
+    0,
+    23.3
+   ],
+   "heading": 180
+  },
+  {
+   "type": "tire_stack",
+   "pos": [
+    -30.4,
+    0,
+    -29.4
+   ],
+   "heading": 0
+  },
+  {
+   "type": "tire_stack",
+   "pos": [
+    30.4,
+    0,
+    29.4
+   ],
+   "heading": 180
+  },
+  {
+   "type": "crate_large",
+   "pos": [
+    -11.65,
+    0.0,
+    -15.5
+   ],
+   "heading": 264
+  },
+  {
+   "type": "pallet_goods",
+   "pos": [
+    -20.55,
+    0.0,
+    1.0
+   ],
+   "heading": 90
+  },
+  {
+   "type": "pallet_wrapped",
+   "pos": [
+    20.55,
+    0.0,
+    4.0
+   ],
+   "heading": 264
+  },
+  {
+   "type": "crate_large",
+   "pos": [
+    19.0,
+    0.0,
+    4.35
+   ],
+   "heading": 90
+  },
+  {
+   "type": "shelving_rack",
+   "pos": [
+    -1.75,
+    0.0,
+    -30.4
+   ],
+   "heading": 0
+  },
+  {
+   "type": "pallet_goods",
+   "pos": [
+    0.5,
+    0.0,
+    -26.65
+   ],
+   "heading": 0
+  },
+  {
+   "type": "shelving_rack",
+   "pos": [
+    -10.4,
+    0.0,
+    -3.75
+   ],
+   "heading": 90
+  },
+  {
+   "type": "shelving_rack",
+   "pos": [
+    10.4,
+    0.0,
+    3.25
+   ],
+   "heading": 90
+  },
+  {
+   "type": "shelving_rack",
+   "pos": [
+    0.25,
+    0.0,
+    30.4
+   ],
+   "heading": 0
+  },
+  {
+   "type": "pallet_goods",
+   "pos": [
+    2.5,
+    0.0,
+    26.65
+   ],
+   "heading": 0
+  },
+  {
+   "type": "floodlight_pole",
+   "pos": [
+    -20.4,
+    0.0,
+    -4.4
+   ],
+   "heading": 135
+  },
+  {
+   "type": "floodlight_pole",
+   "pos": [
+    -4.6,
+    0.0,
+    30.4
+   ],
+   "heading": 135
+  }
+ ],
+ "targets": [
+  {
+   "id": "T01",
+   "pos": [
+    -29.5,
+    0,
+    -29.0
+   ],
+   "heading": 90
+  },
+  {
+   "id": "T02",
+   "pos": [
+    29.5,
+    0,
+    29.0
+   ],
+   "heading": 270
+  },
+  {
+   "id": "T03",
+   "pos": [
+    -14.5,
+    0,
+    -22.5
+   ],
+   "heading": 0
+  },
+  {
+   "id": "T04",
+   "pos": [
+    14.5,
+    0,
+    22.5
+   ],
+   "heading": 180
+  },
+  {
+   "id": "T05",
+   "pos": [
+    -12.0,
+    1.1,
+    -29.6
+   ],
+   "heading": 180
+  },
+  {
+   "id": "T06",
+   "pos": [
+    12.0,
+    1.1,
+    29.6
+   ],
+   "heading": 0
+  },
+  {
+   "id": "T07",
+   "pos": [
+    -24.5,
+    0,
+    -18.0
+   ],
+   "heading": 0
+  },
+  {
+   "id": "T08",
+   "pos": [
+    24.5,
+    0,
+    18.0
+   ],
+   "heading": 180
+  },
+  {
+   "id": "T09",
+   "pos": [
+    -1.0,
+    0,
+    -27.5
+   ],
+   "heading": 90
+  },
+  {
+   "id": "T10",
+   "pos": [
+    1.0,
+    0,
+    27.5
+   ],
+   "heading": 270
+  },
+  {
+   "id": "T11",
+   "pos": [
+    0.0,
+    0,
+    -14.0
+   ],
+   "heading": 180
+  },
+  {
+   "id": "T12",
+   "pos": [
+    -0.0,
+    0,
+    14.0
+   ],
+   "heading": 0
+  },
+  {
+   "id": "T13",
+   "pos": [
+    12.5,
+    0,
+    -27.5
+   ],
+   "heading": 270
+  },
+  {
+   "id": "T14",
+   "pos": [
+    -12.5,
+    0,
+    27.5
+   ],
+   "heading": 90
+  },
+  {
+   "id": "T15",
+   "pos": [
+    25.5,
+    0,
+    -26.5
+   ],
+   "heading": 90
+  },
+  {
+   "id": "T16",
+   "pos": [
+    -25.5,
+    0,
+    26.5
+   ],
+   "heading": 270
+  },
+  {
+   "id": "T17",
+   "pos": [
+    25.0,
+    1.8,
+    -26.5
+   ],
+   "heading": 90
+  },
+  {
+   "id": "T18",
+   "pos": [
+    -25.0,
+    1.8,
+    26.5
+   ],
+   "heading": 270
+  },
+  {
+   "id": "T19",
+   "pos": [
+    9.5,
+    0,
+    -13.5
+   ],
+   "heading": 180
+  },
+  {
+   "id": "T20",
+   "pos": [
+    -9.5,
+    0,
+    13.5
+   ],
+   "heading": 0
+  },
+  {
+   "id": "T21",
+   "pos": [
+    -18.0,
+    0,
+    3.6
+   ],
+   "heading": 90
+  },
+  {
+   "id": "T22",
+   "pos": [
+    18.0,
+    0,
+    -3.6
+   ],
+   "heading": 270
+  },
+  {
+   "id": "T23",
+   "pos": [
+    -4.5,
+    0,
+    -4.5
+   ],
+   "heading": 135
+  },
+  {
+   "id": "T24",
+   "pos": [
+    4.5,
+    0,
+    4.5
+   ],
+   "heading": 315
+  }
+ ],
+ "lights": [],
+ "arches": [
+  {
+   "id": "cv_w_entry",
+   "rect": [
+    -14.5,
+    1,
+    -11.5,
+    5
+   ],
+   "spring": 3.6,
+   "style": "canopy",
+   "axis": "z"
+  },
+  {
+   "id": "cv_w_entryr",
+   "rect": [
+    11.5,
+    -5,
+    14.5,
+    -1
+   ],
+   "spring": 3.6,
+   "style": "canopy",
+   "axis": "z"
+  },
+  {
+   "id": "cv_cl_w",
+   "rect": [
+    -16,
+    -21,
+    -13,
+    -19
+   ],
+   "spring": 3.6,
+   "style": "canopy",
+   "axis": "x"
+  },
+  {
+   "id": "cv_cl_wr",
+   "rect": [
+    13,
+    19,
+    16,
+    21
+   ],
+   "spring": 3.6,
+   "style": "canopy",
+   "axis": "x"
+  },
+  {
+   "id": "pb_ne_lane",
+   "rect": [
+    19.4,
+    -24,
+    20.6,
+    -20
+   ],
+   "spring": 5.0,
+   "style": "pipes",
+   "axis": "z"
+  },
+  {
+   "id": "pb_ne_laner",
+   "rect": [
+    -20.6,
+    20,
+    -19.4,
+    24
+   ],
+   "spring": 5.0,
+   "style": "pipes",
+   "axis": "z"
+  },
+  {
+   "id": "pb_c_north",
+   "rect": [
+    5.4,
+    -12,
+    6.6,
+    -8
+   ],
+   "spring": 5.4,
+   "style": "pipes",
+   "axis": "z"
+  },
+  {
+   "id": "pb_c_northr",
+   "rect": [
+    -6.6,
+    8,
+    -5.4,
+    12
+   ],
+   "spring": 5.4,
+   "style": "pipes",
+   "axis": "z"
+  }
+ ],
+ "obstacles": [],
+ "spawns": [
+  {
+   "id": "S01",
+   "pos": [
+    -30.0,
+    0.0,
+    0.0
+   ],
+   "heading": 165
+  },
+  {
+   "id": "S02",
+   "pos": [
+    30.0,
+    0.0,
+    0.0
+   ],
+   "heading": 345
+  },
+  {
+   "id": "S03",
+   "pos": [
+    -5.0,
+    0.0,
+    29.0
+   ],
+   "heading": 45
+  },
+  {
+   "id": "S04",
+   "pos": [
+    5.0,
+    0.0,
+    -29.0
+   ],
+   "heading": 225
+  },
+  {
+   "id": "S05",
+   "pos": [
+    -24.5,
+    0.0,
+    -29.0
+   ],
+   "heading": 90
+  },
+  {
+   "id": "S06",
+   "pos": [
+    24.5,
+    0.0,
+    29.0
+   ],
+   "heading": 270
+  },
+  {
+   "id": "S07",
+   "pos": [
+    -2.5,
+    0.0,
+    -2.5
+   ],
+   "heading": 0
+  },
+  {
+   "id": "S08",
+   "pos": [
+    2.5,
+    0.0,
+    2.5
+   ],
+   "heading": 180
+  },
+  {
+   "id": "S09",
+   "pos": [
+    -28.0,
+    0.0,
+    23.5
+   ],
+   "heading": 330
+  },
+  {
+   "id": "S10",
+   "pos": [
+    28.0,
+    0.0,
+    -23.5
+   ],
+   "heading": 150
+  },
+  {
+   "id": "S11",
+   "pos": [
+    -16.5,
+    0.0,
+    -13.5
+   ],
+   "heading": 180
+  },
+  {
+   "id": "S12",
+   "pos": [
+    16.5,
+    0.0,
+    13.5
+   ],
+   "heading": 0
+  },
+  {
+   "id": "S13",
+   "pos": [
+    -15.0,
+    0.0,
+    13.5
+   ],
+   "heading": 270
+  },
+  {
+   "id": "S14",
+   "pos": [
+    15.0,
+    0.0,
+    -13.5
+   ],
+   "heading": 90
+  },
+  {
+   "id": "S15",
+   "pos": [
+    -31.5,
+    0.0,
+    -15.0
+   ],
+   "heading": 165
+  },
+  {
+   "id": "S16",
+   "pos": [
+    31.5,
+    0.0,
+    15.0
+   ],
+   "heading": 345
+  }
+ ]
+}

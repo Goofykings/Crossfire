@@ -38,6 +38,18 @@ class Opening:
     data: dict = field(default_factory=dict)
 
 
+# Openings whose kit piece (door leaves, shop glass, roller door) stands in a hole in the shell with nothing behind it:
+# the seams between leaves and frames would show the sky through the building. They get a dark back face at the back
+# of the reveal. Doorways into walkable rooms and interiors (roomdoor, doorway, roller_open) and passages stay open.
+BACKED_OPENINGS = ("door", "double", "shop", "store", "entrance", "garage", "roller", "dock")
+
+
+def back_opening(md: MeshData, P, e, o: "Opening", y0: float) -> None:
+    """Close an opening at the back of its reveal (faces outward, like the wall cells)."""
+    d = o.depth
+    md.face([P(e, o.s0, y0, d), P(e, o.s1, y0, d), P(e, o.s1, o.y1, d), P(e, o.s0, o.y1, d)], "interior_dark")
+
+
 @dataclass
 class KitPlacement:
     name: str
@@ -148,10 +160,12 @@ class BuildingGenerator:
             kind, obj = self.index.classify(x, z)
             if kind == "covered":
                 # A passage/room inside another building already has its own side wall facing us. A second facade on
-                # the same plane would be coplanar with it (and z-fight), so treat it like any party wall.
+                # the same plane would be coplanar with it (and z-fight), so treat it like any party wall. Except at a
+                # passage's mouth: a passage that ends at our wall has no side wall there, so we build a plain wall.
                 other = self.index.building_at(x, z)
                 if other is not None and other["id"] != self.b["id"]:
-                    out.append(("party", bs.eave_height(other), s))
+                    mouth = obj.get("kind") == "passage" and self._passage_ends_at(e, obj["rect"], other["rect"])
+                    out.append(("party", 0.0 if mouth else bs.eave_height(other), s))
                     continue
             if kind in ("open", "covered"):
                 out.append(("open", 0.0, s))
@@ -162,6 +176,22 @@ class BuildingGenerator:
             else:
                 out.append(("party", self.H + 10, s))
         return out
+
+    def _passage_ends_at(self, e: Edge, passage, owner) -> bool:
+        """True when a passage runs toward this edge, so its mouth (not a side wall) is what we face.
+
+        A passage runs between the two ends that open onto walkable ground: a bridge over a lane opens at both ends of
+        the lane, a gate through a block opens on the streets on either side of the block.
+        """
+        x0, z0, x1, z1 = passage
+        cx, cz = (x0 + x1) / 2, (z0 + z1) / 2
+        walk = ("open", "covered")
+        open_x = sum(self.index.classify(x, cz)[0] in walk for x in (x0 - 0.3, x1 + 0.3))
+        open_z = sum(self.index.classify(cx, z)[0] in walk for z in (z0 - 0.3, z1 + 0.3))
+        if open_x == open_z:
+            return False  # cannot tell: keep the old, z-fight-safe party wall
+        along_z = abs(e.t[0]) < 0.5  # the edge itself runs north-south: a passage running east-west ends at it
+        return (open_x > open_z) if along_z else (open_z > open_x)
 
     @staticmethod
     def runs(exp, kind):
@@ -382,6 +412,8 @@ class BuildingGenerator:
                 # windows get a stone sill piece whose top is the first part of this floor: start behind it
                 d0 = min(kit.SILL_BACK, d) if o.kind == "window" else 0.0
                 md.quad(self.P(e, o.s1, o.y0, d0), self.P(e, o.s1, o.y0, d), self.P(e, o.s0, o.y0, d), self.P(e, o.s0, o.y0, d0), mat)
+            if o.kind in BACKED_OPENINGS:
+                back_opening(md, self.P, e, o, o.y0)
 
     def arch_spandrel(self, e: Edge, o: Opening):
         """Fill between a segmental arch and its rectangular hole; add a voussoir ring."""

@@ -7,7 +7,9 @@
  * waits for the map, then:
  *   - reports console errors, missing materials and render statistics
  *   - walks the player through a scripted route (collision sanity in the real build)
- *   - fires at a practice target and checks hits / safe-zone blocking
+ *   - fires at practice targets: hits, headshots (1.5x), sniper one-shot headshots, shotgun pellets
+ *   - weapon switching, infinite reserve, weapon-only reload lowering/return and sounds (no hands/arms)
+ *   - free-for-all: no safe zones
  *   - optionally captures screenshots from several viewpoints (--shots)
  * Exit code is non-zero when a check fails.
  */
@@ -148,38 +150,207 @@ check(after.shots > before.shots, `weapon fired (${after.shots - before.shots} s
 check(after.hits > before.hits, `hits registered on the practice target (${after.hits - before.hits})`);
 check(after.downs > before.downs, `target knocked down (${after.downs - before.downs})`);
 
-// safe zone: shooting from inside blue spawn at the protected target must not register hits
-await page.evaluate(() => window.__crossfire.teleport(-27.5, 0, 0.4, 0, 0));
-await new Promise((r) => setTimeout(r, 400));
-const zoneStats = await page.evaluate(() => window.__crossfire.stats());
-check(zoneStats.zone === 'blue', `player inside the blue safe zone is detected (zone=${zoneStats.zone})`);
-// T11 (protected target) at (-31.6, 0, 5.4) facing east; aim at its plate from inside the zone
-await page.evaluate(() => {
-  const dx = -31.6 - -27.5;
-  const dz = 5.4 - 0.4;
-  const heading = (Math.atan2(dx, -dz) * 180) / Math.PI;
-  window.__crossfire.look(heading, 0);
-});
-await new Promise((r) => setTimeout(r, 300));
-await page.evaluate(() => window.__crossfire.hold('fire', true));
-await new Promise((r) => setTimeout(r, 600));
-await page.evaluate(() => window.__crossfire.hold('fire', false));
-await new Promise((r) => setTimeout(r, 200));
-if (flag('shots')) await page.screenshot({ path: path.join(OUT, 'safe_zone_blocked.png') });
-const zoneAfter = await page.evaluate(() => window.__crossfire.stats());
-check(zoneAfter.shots > zoneStats.shots && zoneAfter.hits === zoneStats.hits, 'no damage dealt from inside the safe zone');
+// --- free-for-all: no safe zones anywhere -----------------------------------------------------------
+{
+  const st = await page.evaluate(() => ({
+    barriers: window.__crossfire.stats().zoneBarriers,
+    zones: window.__crossfire.tactical().zones,
+    info: window.__crossfire.mapInfo(),
+  }));
+  check(st.barriers === undefined && st.zones === undefined && !st.info.safeZones, 'free-for-all: no safe zones, barriers or zone labels');
+  check(st.info.spawns.length >= 12 && st.info.spawns.every((q) => q.team === undefined), `free-for-all spawns spread over the map (${st.info.spawns.length})`);
+}
 
-// entrance barriers + labels exist, and the veil's plane coincides with where protection starts
-// (blue north entrance: zone edge z = -7, body radius 0.34 -> plane at z = -7.34, x in [-33, -29])
-const veil = await page.evaluate(() => window.__crossfire.stats());
-check(veil.zoneBarriers === 6 && veil.zoneLabels === 6, `safe-zone barriers and labels present (${veil.zoneBarriers} / ${veil.zoneLabels})`);
-await page.evaluate(() => window.__crossfire.teleport(-31, 0, -7.45, 180, 0));
-await new Promise((r) => setTimeout(r, 400));
-const beforeVeil = await page.evaluate(() => window.__crossfire.stats().zone);
-await page.evaluate(() => window.__crossfire.teleport(-31, 0, -7.2, 180, 0));
-await new Promise((r) => setTimeout(r, 400));
-const behindVeil = await page.evaluate(() => window.__crossfire.stats().zone);
-check(beforeVeil === null && behindVeil === 'blue', `protection starts at the veil (before=${beforeVeil}, past=${behindVeil})`);
+// --- weapons: headshots, the three guns, infinite reserve, reload animation -------------------------
+const cfw = (fn, ...a) => page.evaluate(fn, ...a);
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const targets = (await cfw(() => window.__crossfire.mapInfo())).targets;
+/** Stand `dist` m in front of a target (on its facing side), wait for it to be up, aim at a zone, fire one shot. */
+async function shootTarget(id, zone, dist, scoped = false) {
+  const t = targets.find((q) => q.id === id);
+  const h = (t.heading * Math.PI) / 180;
+  for (let k = 0; k < 40; k++) {
+    const tp = await cfw((q) => window.__crossfire.targetPoints(q), id);
+    if (tp.state === 'up' && tp.health === 100) break;
+    await wait(250);
+  }
+  await cfw((q) => window.__crossfire.teleport(q[0], q[1] + 0.2, q[2], q[3], 0), [t.pos[0] + Math.sin(h) * dist, t.pos[1], t.pos[2] - Math.cos(h) * dist, (t.heading + 180) % 360]);
+  await wait(350);
+  if (scoped) {
+    await cfw(() => window.__crossfire.hold('aim', true));
+    await wait(500);
+  }
+  const pt = await cfw((q) => window.__crossfire.targetPoints(q), id);
+  const aim = zone === 'head' ? pt.head : pt.body;
+  await cfw((q) => window.__crossfire.aimAt(q.x, q.y, q.z), aim);
+  await wait(120);
+  await cfw((q) => window.__crossfire.aimAt(q.x, q.y, q.z), aim);
+  await cfw(() => window.__crossfire.hold('fire', true));
+  await wait(45);
+  await cfw(() => window.__crossfire.hold('fire', false));
+  await wait(150);
+  const shot = await cfw(() => window.__crossfire.lastShot());
+  const after = await cfw((q) => window.__crossfire.targetPoints(q), id);
+  if (scoped) await cfw(() => window.__crossfire.hold('aim', false));
+  return { shot, after };
+}
+async function select(slot, id) {
+  await page.keyboard.press(`Digit${slot}`);
+  for (let k = 0; k < 20; k++) {
+    const w = await cfw(() => window.__crossfire.weapon());
+    if (w.id === id && w.action === 'idle') return w;
+    await wait(100);
+  }
+  return cfw(() => window.__crossfire.weapon());
+}
+// pick targets standing in the open (the terrace one was knocked down above)
+const pool = targets.map((t) => t.id).filter((id) => id !== 'T05');
+{
+  let w = await select(1, 'rifle');
+  check(w.id === 'rifle' && w.reserve === 'infinite', `key 1 selects the assault rifle; reserve ammunition is infinite (${w.reserve})`);
+  const head = await shootTarget(pool[0], 'head', 6);
+  check(head.shot.head && Math.abs(head.shot.damage - 37.5) < 1e-6, `rifle headshot deals 1.5x body damage (${head.shot.damage}, head=${head.shot.head})`);
+  const body = await shootTarget(pool[1], 'body', 6);
+  check(!body.shot.head && Math.abs(body.shot.damage - 25) < 1e-6, `rifle body shot deals body damage (${body.shot.damage})`);
+
+  // Reload: a short weapon dip and return, without loading hands or displaying loose magazines.
+  await cfw(() => window.__crossfire.hold('reload', true));
+  await wait(40);
+  await cfw(() => window.__crossfire.hold('reload', false));
+  if (flag('shots')) {
+    await wait(200);
+    await page.screenshot({ path: path.join(OUT, 'reload-no-arms.png') });
+  }
+  const seen = { lowered: false, returned: false };
+  for (let k = 0; k < 40; k++) {
+    const v = (await cfw(() => window.__crossfire.weapon())).view;
+    if (v.lower > 0.15) seen.lowered = true;
+    if (seen.lowered && v.lower < 0.01) seen.returned = true;
+    if (v.action === 'idle' && k > 5) break;
+    await wait(60);
+  }
+  const sounds = await cfw(() => window.__crossfire.sounds());
+  w = await cfw(() => window.__crossfire.weapon());
+  check(seen.lowered && seen.returned, `reload lowers and returns the weapon (${JSON.stringify(seen)})`);
+  check(w.viewMeshes.length > 0 && w.viewMeshes.every((n) => !/hand|forearm|mag-spare/i.test(n)), 'weapon is visible without hands, arms or a spare magazine');
+  check(sounds.includes('mag_out') && sounds.includes('mag_in'), 'reload plays magazine-out and magazine-in sounds');
+  check(w.ammo === 30, `magazine full after the reload (${w.ammo})`);
+  // three magazines in a row: never runs dry
+  for (let m = 0; m < 3; m++) {
+    await cfw(() => window.__crossfire.hold('fire', true));
+    await wait(3000);
+    await cfw(() => window.__crossfire.hold('fire', false));
+    await wait(3000);
+  }
+  w = await cfw(() => window.__crossfire.weapon());
+  check(w.ammo === 30 && w.reserve === 'infinite', `three magazines emptied and reloaded, still full (${w.ammo}) with infinite reserve`);
+
+  // sniper: one-shot headshot, body shot leaves the target standing, bolt worked after each shot
+  w = await select(3, 'sniper');
+  check(w.id === 'sniper', 'key 3 selects the sniper rifle');
+  const sh = await shootTarget(pool[2], 'head', 14, true);
+  check(sh.shot.head && sh.shot.damage >= 100 && sh.after.state !== 'up', `sniper headshot kills in one shot (${sh.shot.damage}, target ${sh.after.state})`);
+  await wait(1300);
+  const sb = await shootTarget(pool[3], 'body', 14, true);
+  check(!sb.shot.head && sb.shot.damage === 75 && sb.after.state === 'up', `sniper body shot does not (${sb.shot.damage}, target ${sb.after.state})`);
+  const snds = await cfw(() => window.__crossfire.sounds());
+  check(['bolt_up', 'bolt_back', 'bolt_fwd', 'bolt_down'].every((n) => snds.includes(n)), 'the bolt is worked after a shot (bolt sounds)');
+  // the bolt has to close before the eye goes back to the scope
+  for (let k = 0; k < 30 && (await cfw(() => window.__crossfire.weapon())).action !== 'idle'; k++) await wait(100);
+  await cfw(() => window.__crossfire.hold('aim', true));
+  await wait(600);
+  const sc = await cfw(() => window.__crossfire.weapon());
+  if (flag('shots')) await page.screenshot({ path: path.join(OUT, 'sniper_scope.png') });
+  check(sc.scope > 0.98, `aiming the sniper rifle shows the scope (${sc.scope.toFixed(2)})`);
+  await cfw(() => window.__crossfire.hold('aim', false));
+  await wait(400);
+
+  // shotgun: a spread of pellets, a hard kick and a pump
+  w = await select(2, 'shotgun');
+  check(w.id === 'shotgun', 'key 2 selects the pump shotgun');
+  const sg = await shootTarget(pool[4], 'body', 3);
+  check(sg.shot.pellets === 9 && sg.shot.hits >= 6 && sg.shot.damage >= 70, `shotgun: 9 pellets, ${sg.shot.hits} on target at 3 m for ${sg.shot.damage.toFixed(0)} damage`);
+  await wait(800);
+  const gs = await cfw(() => window.__crossfire.sounds());
+  check(gs.includes('shotgun_shot') && gs.includes('pump_back') && gs.includes('pump_fwd'), 'shotgun fires and is pumped (sounds)');
+  for (const [slot, id] of [[3, 'sniper'], [2, 'shotgun']]) {
+    await select(slot, id);
+    await cfw(() => window.__crossfire.hold('reload', true));
+    await wait(40);
+    await cfw(() => window.__crossfire.hold('reload', false));
+    let lowered = false;
+    let returned = false;
+    let limbsAbsent = true;
+    for (let k = 0; k < 85; k++) {
+      const state = await cfw(() => window.__crossfire.weapon());
+      lowered ||= state.view.lower > 0.15;
+      returned ||= lowered && state.view.lower < 0.01;
+      limbsAbsent &&= state.viewMeshes.every((n) => !/hand|forearm|mag-spare/i.test(n));
+      if (state.action === 'idle' && k > 5) break;
+      await wait(60);
+    }
+    const loaded = await cfw(() => window.__crossfire.weapon());
+    check(limbsAbsent, `${id}: no visible reload limbs or spare magazine`);
+    check(lowered && returned && loaded.ammo === loaded.magazine && loaded.reserve === 'infinite', `${id}: reload dips, returns and fills the magazine with infinite reserve`);
+  }
+  await select(1, 'rifle');
+}
+
+// --- tactical map (hold Tab) -------------------------------------------------------------------
+{
+  const tac = () => page.evaluate(() => window.__crossfire.tactical());
+  // the page was opened with ?nohud for clean screenshots; the overlay lives in the HUD, so show the UI again
+  await page.evaluate(() => (document.getElementById('ui').style.display = ''));
+  // a known open spot: the first spawn point, facing east
+  const sp = await page.evaluate(() => {
+    const s = window.__crossfire.mapInfo().spawns[0];
+    return { x: s.pos[0], z: s.pos[2] };
+  });
+  await page.evaluate((p) => window.__crossfire.teleport(p.x, 0.2, p.z, 90, 0), sp);
+  await new Promise((r) => setTimeout(r, 300));
+  const focusBefore = (await tac()).focus;
+  check(!(await tac()).visible, 'tactical map hidden before Tab');
+  await page.keyboard.down('Tab');
+  await new Promise((r) => setTimeout(r, 250));
+  let t = await tac();
+  check(t.visible && t.domVisible, 'holding Tab shows the tactical map');
+  check(t.focus === focusBefore, `Tab does not move keyboard focus (${focusBefore} -> ${t.focus})`);
+  const mapId = await page.evaluate(() => window.__crossfire.stats().mapId);
+  check(!!t.map && t.map === mapId, `tactical layout belongs to the loaded map (${t.map} / ${mapId})`);
+  const off = Math.hypot(t.marker.x - t.expected.x, t.marker.y - t.expected.y);
+  check(off < 1, `player marker sits on the player's world position (${off.toFixed(2)} px off)`);
+  check(Math.abs(t.marker.rotation - Math.PI / 2) < 0.02, `marker faces east for heading 90 (rotation ${t.marker.rotation.toFixed(3)} rad)`);
+  check(t.marker.teammates === 0, 'no teammate markers without teammate data');
+  // walking east while the map is open: movement keeps working and the marker moves right on the map
+  const m0 = t.marker;
+  await page.evaluate(() => window.__crossfire.hold('forward', true));
+  await new Promise((r) => setTimeout(r, 600));
+  await page.evaluate(() => window.__crossfire.hold('forward', false));
+  t = await tac();
+  check(t.visible && t.marker.x - m0.x > 5 && Math.abs(t.marker.y - m0.y) < 2, `marker moves east (right) while walking east with the map open (dx=${(t.marker.x - m0.x).toFixed(1)}, dy=${(t.marker.y - m0.y).toFixed(1)})`);
+  // (screenshots stall the page's frames for a moment, so they come after the movement checks)
+  if (flag('shots')) await page.screenshot({ path: path.join(OUT, 'tactical_map.png') });
+  // turning north rotates the arrow to point up
+  await page.evaluate(() => window.__crossfire.look(0, 0));
+  await new Promise((r) => setTimeout(r, 150));
+  t = await tac();
+  check(Math.abs(t.marker.rotation) < 0.02, `marker points north after turning north (rotation ${t.marker.rotation.toFixed(3)})`);
+  // free-for-all: reported players never appear (nobody is a teammate, and enemies are never shown)
+  const p = await page.evaluate(() => window.__crossfire.player());
+  await page.evaluate((q) => {
+    window.__crossfire.remotePlayer({ id: 'test-ally', name: 'Ally', team: 'blue', x: q.x + 2, z: q.z + 2, yaw: 0 });
+    window.__crossfire.remotePlayer({ id: 'test-enemy', team: 'red', x: q.x - 2, z: q.z - 2 });
+  }, p);
+  await new Promise((r) => setTimeout(r, 150));
+  t = await tac();
+  check(t.marker.teammates === 0, `free-for-all: no markers for other players, friend or foe (${t.marker.teammates})`);
+  if (flag('shots')) await page.screenshot({ path: path.join(OUT, 'tactical_map_teammate.png') });
+  await page.evaluate(() => window.__crossfire.clearRemotePlayers());
+  await page.keyboard.up('Tab');
+  await new Promise((r) => setTimeout(r, 150));
+  t = await tac();
+  check(!t.visible && !t.domVisible, 'releasing Tab hides the tactical map');
+}
 
 check(errors.length === 0, `no console errors (${errors.length})`);
 for (const e of errors.slice(0, 10)) console.log('   ', e.slice(0, 400));

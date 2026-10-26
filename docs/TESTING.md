@@ -1,5 +1,9 @@
 # Testing
 
+Stage 2 multiplayer: run `npm.cmd run typecheck --prefix server`, `npm.cmd test --prefix server`, and `node tools/multiplayer-test.mjs` with the local backend/frontend started as described in [server/README.md](../server/README.md). The backend suite uses real local workerd, SQLite and TCP/WebSocket clients; the browser test uses two independent Chrome contexts and actual network-failure/retry handling. Current results: 13 backend checks and 126 frontend unit tests passing, plus the two-browser integration and production practice/home/all-map regressions. These establish local movement/session functionality, not public deployment or a completed match system.
+
+Latest focused cleanup (2026-10-25): `tools/home-test.mjs` now checks the minimal CROSSFIRE/PLAY/SETTINGS layout, title visibility at desktop and narrow sizes, absence of map controls, Settings/Back, the practice start flow and observed network requests. `tools/browser-test.mjs` checks weapon-only reload lowering/return, real ammo refill and no hand/arm meshes for all three weapons. `tools/maps-test.mjs` loads the existing maps through the test API instead of the removed selector. See [PROGRESS.md](../PROGRESS.md) for current results and [MULTIPLAYER_DIAGNOSIS.md](MULTIPLAYER_DIAGNOSIS.md) for connectivity findings; the older counts and safe-zone descriptions below are historical.
+
 ## Unit tests (`npm test`, Vitest in Node)
 
 | File | Covers |

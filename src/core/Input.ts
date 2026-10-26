@@ -15,7 +15,14 @@ export type Action =
   | 'fire'
   | 'aim'
   | 'toggleFps'
-  | 'debugCollision';
+  | 'debugCollision'
+  | 'map'
+  | 'weapon1'
+  | 'weapon2'
+  | 'weapon3'
+  | 'lastWeapon'
+  | 'nextWeapon'
+  | 'prevWeapon';
 
 const KEY_BINDINGS: Record<string, Action> = {
   KeyW: 'forward',
@@ -33,6 +40,15 @@ const KEY_BINDINGS: Record<string, Action> = {
   ControlRight: 'crouch',
   KeyC: 'crouch',
   KeyR: 'reload',
+  Digit1: 'weapon1',
+  Digit2: 'weapon2',
+  Digit3: 'weapon3',
+  Numpad1: 'weapon1',
+  Numpad2: 'weapon2',
+  Numpad3: 'weapon3',
+  KeyQ: 'lastWeapon',
+  // held: shows the tactical map (keydown is prevented while playing, so focus never moves)
+  Tab: 'map',
   F3: 'toggleFps',
   F2: 'debugCollision',
 };
@@ -88,6 +104,17 @@ export class Input {
       if (action) this.down.delete(action);
     });
     on(canvas, 'contextmenu', (e) => e.preventDefault());
+    // mouse wheel cycles weapons (one step per notch, however large the browser's delta)
+    on(
+      canvas,
+      'wheel',
+      (e) => {
+        if (!this.enabled || e.deltaY === 0) return;
+        e.preventDefault();
+        this.pressedEdges.add(e.deltaY > 0 ? 'nextWeapon' : 'prevWeapon');
+      },
+      { passive: false },
+    );
     on(document, 'mousemove', (e) => {
       if (!this.locked || !this.enabled) return;
       // some browsers report a huge spurious delta right after locking

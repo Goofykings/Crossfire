@@ -12,7 +12,7 @@ import building_spec as bs
 from collision_gen import stair_rects
 from meshkit import MeshData
 
-ZONE_PRIORITY = {"spawn": 6, "plaza": 5, "court": 4, "terrace": 3, "yard": 2, "street": 1}
+ZONE_PRIORITY = {"spawn": 6, "plaza": 5, "court": 4, "terrace": 3, "sidewalk": 2.5, "yard": 2, "street": 1, "alley": 1}
 
 
 def _in(x, z, r):
@@ -420,7 +420,8 @@ class TerrainBuilder:
     def team_strips(self, md: MeshData):
         """Thin glowing inlays on the ground along each safe zone boundary that faces open ground."""
         lim = self.lim
-        for sz in self.L["safeZones"]:
+        # free-for-all layouts have no safe zones (and so no strips); kept for layouts that still define them
+        for sz in self.L.get("safeZones", []):
             x0, z0, x1, z1 = sz["rect"]
             mat = "team_blue_glow" if sz["team"] == "blue" else "team_red_glow"
             y = 0.008

@@ -1,0 +1,20 @@
+{
+ "map": "industrial-complex",
+ "models": [
+  "buildings/block_01.glb",
+  "buildings/block_02.glb",
+  "buildings/block_03.glb",
+  "buildings/block_04.glb",
+  "buildings/block_05.glb",
+  "buildings/block_06.glb",
+  "buildings/block_07.glb",
+  "buildings/block_08.glb",
+  "buildings/block_09.glb",
+  "buildings/block_10.glb",
+  "buildings/block_11.glb",
+  "buildings/block_12.glb",
+  "terrain.glb"
+ ],
+ "collision": "collision.json",
+ "collisionDebug": "collision_debug.glb"
+}

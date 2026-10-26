@@ -16,17 +16,14 @@ page.on('console', (m) => m.type() === 'error' && console.log('ERR', m.text().sl
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 await page.goto('http://localhost:5173/', { waitUntil: 'domcontentloaded' });
-await page.waitForFunction(() => document.querySelector('.status-line')?.textContent?.startsWith('Ready'), { timeout: 180000, polling: 500 });
+await page.waitForFunction(() => window.__crossfire?.stats().mapId, { timeout: 180000, polling: 500 });
 await wait(1500);
 await page.screenshot({ path: `${out}/ui_menu_${width}.png` });
-await page.click('#menu .btn:nth-of-type(2)'); // map list
-await wait(300);
-await page.screenshot({ path: `${out}/ui_maps_${width}.png` });
 const buttons = await page.$$('#menu .menu-buttons > .btn');
 await buttons[buttons.length - 1].click(); // settings
 await wait(400);
 await page.screenshot({ path: `${out}/ui_settings_${width}.png` });
-await page.click('#settings .settings-actions .btn.primary'); // back
+await page.evaluate(() => [...document.querySelectorAll('#settings .settings-foot .btn')].find((b) => b.textContent.trim() === 'Back').click());
 await wait(200);
 await page.click('#menu .btn.primary'); // play
 await wait(800);

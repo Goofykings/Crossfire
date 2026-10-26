@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 function glbJson(file: string): { meshes?: unknown[]; materials?: { name: string }[]; nodes?: { name?: string }[] } {
@@ -14,6 +14,44 @@ const index = JSON.parse(readFileSync('public/assets/models/european-town/map-as
   collision: string;
 };
 
+const MAP_IDS = readdirSync('src/maps', { withFileTypes: true })
+  .filter((d) => d.isDirectory() && existsSync(`src/maps/${d.name}/layout.json`))
+  .map((d) => d.name);
+
+
+const WEAPON_FILES = ['rifle', 'shotgun', 'sniper', 'hands', 'casings'].map((n) => `public/assets/models/shared/weapons/${n}.glb`);
+describe.each(MAP_IDS)('map %s assets', (id) => {
+  const dir = `public/assets/models/${id}`;
+  const idx = JSON.parse(readFileSync(`${dir}/map-assets.json`, 'utf8')) as { models: string[]; collision: string; collisionDebug?: string };
+  const layout = JSON.parse(readFileSync(`src/maps/${id}/layout.json`, 'utf8'));
+
+  it('ships every model the asset index lists, plus collision data', () => {
+    expect(idx.models.length).toBeGreaterThan(5);
+    for (const f of [...idx.models, idx.collision]) {
+      expect(existsSync(`${dir}/${f}`), f).toBe(true);
+      expect(statSync(`${dir}/${f}`).size, f).toBeGreaterThan(10_000);
+    }
+    const col = JSON.parse(readFileSync(`${dir}/${idx.collision}`, 'utf8'));
+    expect(col.map).toBe(id);
+  });
+
+  it('only references materials the runtime library defines', () => {
+    for (const f of idx.models) {
+      const j = glbJson(`${dir}/${f}`);
+      expect(j.meshes?.length ?? 0, f).toBeGreaterThan(0);
+      for (const m of j.materials ?? []) expect(m.name.replace(/\.\d{3}$/, '') in materials, `${f}: ${m.name}`).toBe(true);
+    }
+  });
+
+  it('has a model for every prop type it places', () => {
+    const props = JSON.parse(readFileSync('public/assets/models/shared/props/props.json', 'utf8')).props as Record<string, { file: string }>;
+    for (const t of new Set<string>([...layout.props, ...layout.obstacles].map((p: { type: string }) => p.type))) {
+      expect(props[t], `prop ${t}`).toBeDefined();
+      expect(existsSync(`public/assets/models/shared/props/${props[t].file}`), t).toBe(true);
+    }
+  });
+});
+
 describe('generated assets', () => {
   it('ships every European Town model referenced by the asset index', () => {
     expect(index.models.length).toBeGreaterThan(5);
@@ -27,7 +65,7 @@ describe('generated assets', () => {
   it('only references materials that the runtime library defines', () => {
     const files = [
       ...index.models.map((f) => `public/assets/models/european-town/${f}`),
-      'public/assets/models/shared/weapons/blaster.glb',
+      ...WEAPON_FILES,
       'public/assets/models/shared/props/target.glb',
     ];
     for (const f of files) {
@@ -37,11 +75,25 @@ describe('generated assets', () => {
     }
   });
 
-  it('exports the weapon with muzzle and sight nodes and the target with a hinged plate', () => {
-    const weapon = glbJson('public/assets/models/shared/weapons/blaster.glb');
-    const names = (weapon.nodes ?? []).map((n) => n.name);
-    expect(names).toContain('muzzle');
-    expect(names).toContain('sight');
+  it('exports each weapon with its moving parts and the anchors the view-model animates between', () => {
+    const need: Record<string, string[]> = {
+      rifle: ['muzzle', 'sight', 'eject', 'grip_r', 'grip_l', 'mag_grip', 'mag'],
+      shotgun: ['muzzle', 'sight', 'eject', 'grip_r', 'grip_l', 'port', 'pump', 'shell'],
+      sniper: ['muzzle', 'sight', 'eject', 'grip_r', 'grip_l', 'mag_grip', 'bolt_grip', 'bolt', 'mag'],
+    };
+    for (const [id, nodes] of Object.entries(need)) {
+      const names = (glbJson(`public/assets/models/shared/weapons/${id}.glb`).nodes ?? []).map((n) => n.name);
+      for (const n of nodes) expect(names, `${id}: ${n}`).toContain(n);
+    }
+    const hands = (glbJson('public/assets/models/shared/weapons/hands.glb').nodes ?? []).map((n) => n.name);
+    for (const n of ['hand_r', 'hand_l', 'hand_r_wrist', 'hand_l_wrist', 'forearm']) expect(hands).toContain(n);
+    const cases = (glbJson('public/assets/models/shared/weapons/casings.glb').nodes ?? []).map((n) => n.name);
+    for (const n of ['casing_rifle', 'casing_sniper', 'casing_shell']) expect(cases).toContain(n);
+    // the energy weapon is gone
+    expect(existsSync('public/assets/models/shared/weapons/blaster.glb')).toBe(false);
+  });
+
+  it('exports the practice target as a hinged steel silhouette', () => {
     const target = glbJson('public/assets/models/shared/props/target.glb');
     expect((target.nodes ?? []).map((n) => n.name)).toContain('plate');
   });
