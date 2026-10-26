@@ -86,7 +86,7 @@ try {
   await a.waitForFunction(() => window.__crossfire.ready(), { timeout: 20000 });
   check((await state(a)).state === 'connected', 'Retry recovers a real server connection');
   await a.evaluate(() => window.__crossfire.networkLeave());
-  check(await a.$eval('#menu', (e) => e.innerText.trim().split(/\s+/).join(' ') === 'CROSSFIRE PLAY SETTINGS'), 'normal home layout remains minimal');
+  check(await a.$eval('#menu', (e) => /^CROSSFIRE PLAY SETTINGS (Offline|\d+ Players? Online)$/.test(e.innerText.trim().split(/\s+/).join(' '))), 'normal home layout remains minimal');
   check(errors.length === 0, `no uncaught browser errors: ${errors.join('; ')}`);
   await contextA.close();
 } catch (error) {

@@ -8,3 +8,5 @@ import { createMapWorld, mapVersion } from '../../shared/world';
 export const town = layout as unknown as MapLayout;
 export const world = createMapWorld(collision as CollisionFile, town, catalog as unknown as PropCatalog);
 export const revision = mapVersion(collision as CollisionFile, town, catalog as unknown as PropCatalog);
+
+export { MOVEMENT } from '../../src/config/constants';

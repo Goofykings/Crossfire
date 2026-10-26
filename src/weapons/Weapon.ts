@@ -460,6 +460,7 @@ export class Loadout {
   private index = 0;
   private previous = 0;
   private pending: number | null = null;
+  private locked = false;
 
   constructor(stats: readonly WeaponStats[] = WEAPONS) {
     this.weapons = stats.map((s) => new Weapon(s));
@@ -481,7 +482,7 @@ export class Loadout {
 
   /** Ask for weapon `i` (0-based); ignored if it is already in hand or on its way. */
   select(i: number, events: WeaponEvent[] = []): void {
-    if (i < 0 || i >= this.weapons.length) return;
+    if (this.locked || !Number.isInteger(i) || i < 0 || i >= this.weapons.length) return;
     if (this.pending === null ? i === this.index : i === this.pending) return;
     if (this.pending === null) this.current.holster(events);
     this.pending = i;
@@ -512,11 +513,12 @@ export class Loadout {
   }
 
   /** Spawn: every magazine full, the first weapon in hand and ready. */
-  reset(): void {
+  reset(index = 0, locked = false): void {
+    this.locked = locked;
     for (const w of this.weapons) w.refill();
-    for (const w of this.weapons.slice(1)) w.action = 'holstered';
+    for (const [i, w] of this.weapons.entries()) if (i !== index) w.action = 'holstered';
     this.previous = this.index === 0 ? 1 : this.index;
-    this.index = 0;
+    this.index = index;
     this.pending = null;
   }
 }

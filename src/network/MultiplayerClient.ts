@@ -1,5 +1,7 @@
 import { FIXED_DT } from '../config/constants';
 import type { MoveIntent, PlayerController } from '../player/PlayerController';
+import type { WeaponId } from '../weapons/Weapon';
+import { multiplayerEndpoint } from './endpoint';
 import { INPUT_BATCH_LIMIT, NETWORK_HZ, parseServerMessage, type ClientMessage, type InputFrame,
   type ServerMessage, type Snapshot } from '../../shared/protocol';
 
@@ -32,15 +34,12 @@ export class MultiplayerClient {
   private fatal = false;
   private lastYaw = NaN;
   private lastPitch = NaN;
+  private life = -1;
   private readonly url: string;
+  private spawning: { id: string; resolve: (s: Snapshot) => void; reject: (e: Error) => void; timeout: number } | null = null;
 
   constructor(url: string, private readonly name = 'Player') {
-    if (!url) throw new Error('Set VITE_MULTIPLAYER_URL to the local or public WebSocket endpoint.');
-    const parsed = new URL(url);
-    if (parsed.protocol !== 'wss:' && !(parsed.protocol === 'ws:' && ['localhost', '127.0.0.1', '[::1]'].includes(parsed.hostname))) {
-      throw new Error('Multiplayer requires wss://, or ws:// on localhost for development.');
-    }
-    if (parsed.username || parsed.password || parsed.search || parsed.hash) throw new Error('Use a WebSocket endpoint without credentials or query parameters.');
+    const parsed = multiplayerEndpoint(url);
     this.url = parsed.href;
     try {
       const stored = sessionStorage.getItem(this.storageKey) ?? '';
@@ -80,7 +79,7 @@ export class MultiplayerClient {
     this.deadline = window.setTimeout(() => socket.close(), 5000);
     socket.onopen = () => {
       if (this.socket !== socket) return;
-      this.send({ v: 1, type: 'join', name: this.name, ...(this.token ? { resumeToken: this.token } : {}) });
+      this.send({ v: 2, type: 'join', name: this.name, ...(this.token ? { resumeToken: this.token } : {}) });
     };
     socket.onmessage = (event) => {
       if (this.socket !== socket || typeof event.data !== 'string') return;
@@ -88,6 +87,7 @@ export class MultiplayerClient {
       if (!m) { this.fail('Invalid message from multiplayer server'); socket.close(); return; }
       this.lastMessage = Date.now();
       if (m.type === 'error') {
+        this.cancelSpawn(m.message);
         if (m.code === 'resume_expired') { this.token = ''; this.saveToken(); return; }
         if (m.fatal) { this.fail(m.message); socket.close(); }
         return;
@@ -98,6 +98,7 @@ export class MultiplayerClient {
         this.token = m.resumeToken;
         this.saveToken();
         this.sequence = m.snapshot.players.find((p) => p.id === m.selfId)?.ack ?? 0;
+        this.life = m.snapshot.players.find((p) => p.id === m.selfId)?.life ?? -1;
         this.pending = [];
         this.unsent = [];
         this.attempts = 0;
@@ -108,11 +109,23 @@ export class MultiplayerClient {
         this.resolve?.(m);
         this.resolve = this.reject = null;
         this.onSnapshot(m.snapshot);
-      } else if (m.type === 'snapshot') {
+      } else if (m.type === 'snapshot' || m.type === 'spawned') {
         this.latest = m.snapshot;
-        const ack = m.snapshot.players.find((p) => p.id === this.selfId)?.ack ?? 0;
-        this.pending = this.pending.filter((f) => f.seq > ack);
+        const self = m.snapshot.players.find((p) => p.id === this.selfId);
+        const ack = self?.ack ?? 0;
+        if (!self?.alive || self.life !== this.life) {
+          this.pending = this.unsent = [];
+          this.sequence = ack;
+          this.life = self?.life ?? -1;
+          this.lastYaw = this.lastPitch = NaN;
+        } else this.pending = this.pending.filter((f) => f.seq > ack);
         this.onSnapshot(m.snapshot);
+        if (m.type === 'spawned' && this.spawning?.id === m.requestId) {
+          const pending = this.spawning;
+          this.spawning = null;
+          window.clearTimeout(pending.timeout);
+          pending.resolve(m.snapshot);
+        }
       } else if (m.type === 'left' && this.latest) {
         this.latest = { ...this.latest, players: this.latest.players.filter((p) => p.id !== m.id) };
         this.onSnapshot(this.latest);
@@ -124,6 +137,7 @@ export class MultiplayerClient {
     socket.onclose = (event) => {
       if (this.socket !== socket) return;
       this.stopTimers();
+      this.cancelSpawn('Connection interrupted. Try spawning again after reconnection.');
       this.socket = null;
       this.pending = this.unsent = [];
       if (this.stopped || this.fatal) return;
@@ -154,10 +168,10 @@ export class MultiplayerClient {
     this.flushTimer = window.setInterval(() => {
       if (Date.now() - this.lastMessage > 8000) { this.socket?.close(); return; }
       if (this.unsent.length && this.latest && (this.socket?.bufferedAmount ?? 0) < 32768) {
-        this.send({ v: 1, type: 'input', mapVersion: this.latest.mapVersion, frames: this.unsent.splice(0, INPUT_BATCH_LIMIT) });
+        this.send({ v: 2, type: 'input', mapVersion: this.latest.mapVersion, frames: this.unsent.splice(0, INPUT_BATCH_LIMIT) });
       }
     }, 1000 / NETWORK_HZ);
-    this.pingTimer = window.setInterval(() => this.send({ v: 1, type: 'ping', at: Date.now() }), 2000);
+    this.pingTimer = window.setInterval(() => this.send({ v: 2, type: 'ping', at: Date.now() }), 2000);
   }
   private stopTimers(): void {
     for (const t of [this.flushTimer, this.pingTimer]) window.clearInterval(t);
@@ -169,7 +183,7 @@ export class MultiplayerClient {
   }
 
   fixedInput(player: PlayerController, intent: MoveIntent): void {
-    if (this.state !== 'connected') return;
+    if (this.state !== 'connected' || !this.latest?.players.find((p) => p.id === this.selfId)?.alive) return;
     const yaw = Math.atan2(Math.sin(player.yaw), Math.cos(player.yaw));
     // No need to stream 120 identical standing frames per second. The room's
     // neutral input still settles gravity/friction, and heartbeats maintain liveness.
@@ -186,7 +200,7 @@ export class MultiplayerClient {
 
   reconcile(player: PlayerController, snapshot: Snapshot): void {
     const self = snapshot.players.find((p) => p.id === this.selfId);
-    if (!self) return;
+    if (!self?.alive) return;
     const yaw = player.yaw, pitch = player.pitch;
     player.restore(self.motion);
     for (const frame of this.pending) {
@@ -208,8 +222,9 @@ export class MultiplayerClient {
   }
 
   disconnect(): void {
+    this.cancelSpawn('Left match');
     this.stopped = true;
-    this.send({ v: 1, type: 'leave' });
+    this.send({ v: 2, type: 'leave' });
     this.socket?.close(1000, 'left');
     this.socket = null;
     this.stopTimers();
@@ -221,5 +236,22 @@ export class MultiplayerClient {
     this.reject = this.resolve = null;
     this.ready = null;
     this.setState('closed');
+  }
+
+  spawn(weapon: WeaponId): Promise<Snapshot> {
+    if (this.state !== 'connected' || !this.latest) return Promise.reject(new Error('Wait for the multiplayer connection.'));
+    if (this.spawning) return Promise.reject(new Error('Spawn request already pending.'));
+    const id = crypto.randomUUID();
+    return new Promise((resolve, reject) => {
+      this.spawning = { id, resolve, reject, timeout: window.setTimeout(() => this.cancelSpawn('Spawn request timed out. Try again.'), 5000) };
+      this.send({ v: 2, type: 'spawn', requestId: id, weapon, mapVersion: this.latest!.mapVersion });
+    });
+  }
+
+  private cancelSpawn(message: string): void {
+    if (!this.spawning) return;
+    window.clearTimeout(this.spawning.timeout);
+    this.spawning.reject(new Error(message));
+    this.spawning = null;
   }
 }

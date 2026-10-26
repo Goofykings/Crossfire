@@ -14,10 +14,10 @@ export class RemotePlayers {
     this.material.emissiveColor = new Color3(0.08, 0.06, 0.03);
   }
   snapshot(s: Snapshot, selfId: string): void {
-    const ids = new Set(s.players.filter((p) => p.id !== selfId).map((p) => p.id));
+    const ids = new Set(s.players.filter((p) => p.id !== selfId && p.alive).map((p) => p.id));
     for (const [id, avatar] of this.avatars) if (!ids.has(id)) { avatar.root.dispose(); this.avatars.delete(id); }
     for (const player of s.players) {
-      if (player.id === selfId) continue;
+      if (player.id === selfId || !player.alive) continue;
       let a = this.avatars.get(player.id);
       if (!a) {
         const root = new TransformNode(`remote:${player.id}`, this.scene);

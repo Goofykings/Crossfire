@@ -1,8 +1,16 @@
 # Testing
 
-Stage 2 multiplayer: run `npm.cmd run typecheck --prefix server`, `npm.cmd test --prefix server`, and `node tools/multiplayer-test.mjs` with the local backend/frontend started as described in [server/README.md](../server/README.md). The backend suite uses real local workerd, SQLite and TCP/WebSocket clients; the browser test uses two independent Chrome contexts and actual network-failure/retry handling. Current results: 13 backend checks and 126 frontend unit tests passing, plus the two-browser integration and production practice/home/all-map regressions. These establish local movement/session functionality, not public deployment or a completed match system.
+Latest Gameplay/UI Stage 1: run `npm.cmd run typecheck`, `npm.cmd test`, `npm.cmd run build`, `npm.cmd run typecheck --prefix server` and `npm.cmd test --prefix server`. The frontend suite includes protocol/loadout/scoreboard presentation; the backend suite uses real workerd/SQLite/WebSockets. Start local servers with [server/README.md](../server/README.md), then run:
 
-Latest focused cleanup (2026-10-25): `tools/home-test.mjs` now checks the minimal CROSSFIRE/PLAY/SETTINGS layout, title visibility at desktop and narrow sizes, absence of map controls, Settings/Back, the practice start flow and observed network requests. `tools/browser-test.mjs` checks weapon-only reload lowering/return, real ammo refill and no hand/arm meshes for all three weapons. `tools/maps-test.mjs` loads the existing maps through the test API instead of the removed selector. See [PROGRESS.md](../PROGRESS.md) for current results and [MULTIPLAYER_DIAGNOSIS.md](MULTIPLAYER_DIAGNOSIS.md) for connectivity findings; the older counts and safe-zone descriptions below are historical.
+```powershell
+node tools/multiplayer-test.mjs
+node tools/prespawn-test.mjs
+node tools/prespawn-test.mjs --lifecycle-fixture
+```
+
+The first checks independent real movement/reconnect/failure recovery. The second checks normal Play, HTTP online count (0 -> 1 -> 2 -> 1 -> 0), three real asset previews, the disabled future SMG, pre-spawn/no avatar, approval, weapon lock, settings return, real leaderboard rows/local highlight, release/blur and Leave Match. The optional isolated real Worker fixture adds fall elimination and approved respawn with another loadout; the test-only RPC is not bundled into production. Fixtures for FFA sorting and Teams grouping are unit presentation tests, not evidence of real Teams gameplay. No fake players or public deployment are used.
+
+Production `/crossfire/` regressions use `tools/home-test.mjs` (five viewport widths), `tools/browser-test.mjs` (movement/weapons/reloads/headshots/held leaderboard), `tools/maps-test.mjs` and `tools/settings-test.mjs`. Practice tools explicitly use `?practice&autoplay`; normal Play never falls back to practice. The current exact results and remaining match/combat dependencies are in [PROGRESS.md](../PROGRESS.md). Older counts/safe-zone/tactical-overlay descriptions below are historical.
 
 ## Unit tests (`npm test`, Vitest in Node)
 

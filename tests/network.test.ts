@@ -23,8 +23,8 @@ describe('network simulation state', () => {
   it('rejects malformed envelopes, versions, nonfinite look and client-assigned state', () => {
     expect(parseClientMessage('{')).toBeNull();
     expect(parseClientMessage(JSON.stringify({ v: 99, type: 'join', name: 'Player' }))).toBeNull();
-    expect(parseClientMessage(JSON.stringify({ v: 1, type: 'join', name: 'Player', kills: 999 }))).toBeNull();
-    expect(parseClientMessage(JSON.stringify({ v: 1, type: 'input', mapVersion: 'test', frames: [{ seq: 1, yaw: NaN, pitch: 0, intent: NO_INTENT }] }))).toBeNull();
+    expect(parseClientMessage(JSON.stringify({ v: 2, type: 'join', name: 'Player', kills: 999 }))).toBeNull();
+    expect(parseClientMessage(JSON.stringify({ v: 2, type: 'input', mapVersion: 'test', frames: [{ seq: 1, yaw: NaN, pitch: 0, intent: NO_INTENT }] }))).toBeNull();
     expect(parseClientMessage(' '.repeat(8193))).toBeNull();
   });
 });

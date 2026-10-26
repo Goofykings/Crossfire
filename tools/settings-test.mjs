@@ -42,7 +42,7 @@ async function open(query = '') {
   const page = await browser.newPage();
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
   page.on('pageerror', (e) => errors.push(String(e)));
-  await page.goto(`${BASE}${query}`, { waitUntil: 'domcontentloaded' });
+  await page.goto(`${BASE}${query ? query + '&practice' : '?practice'}`, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => window.__crossfire, { timeout: 120000 });
   return page;
 }

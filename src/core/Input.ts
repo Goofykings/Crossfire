@@ -16,7 +16,7 @@ export type Action =
   | 'aim'
   | 'toggleFps'
   | 'debugCollision'
-  | 'map'
+  | 'leaderboard'
   | 'weapon1'
   | 'weapon2'
   | 'weapon3'
@@ -47,8 +47,8 @@ const KEY_BINDINGS: Record<string, Action> = {
   Numpad2: 'weapon2',
   Numpad3: 'weapon3',
   KeyQ: 'lastWeapon',
-  // held: shows the tactical map (keydown is prevented while playing, so focus never moves)
-  Tab: 'map',
+  // held: shows the leaderboard (keydown is prevented while playing, so focus never moves)
+  Tab: 'leaderboard',
   F3: 'toggleFps',
   F2: 'debugCollision',
 };
@@ -91,7 +91,7 @@ export class Input {
       const action = KEY_BINDINGS[e.code];
       if (action) this.down.delete(action);
     });
-    on(window, 'blur', () => this.down.clear());
+    on(window, 'blur', () => this.clearState());
     on(canvas, 'mousedown', (e) => {
       const action = MOUSE_BINDINGS[e.button];
       if (!action || !this.enabled) return;

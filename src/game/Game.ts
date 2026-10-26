@@ -5,7 +5,6 @@ import { SettingsStore, type Settings } from '../config/settings';
 import { Input } from '../core/Input';
 import { MapManager, type LoadedMap } from '../maps/MapManager';
 import { DEFAULT_MAP_ID, getMap, MAPS } from '../maps/registry';
-import type { Team } from '../maps/types';
 import { PlayerCamera } from '../player/PlayerCamera';
 import { NO_INTENT, PlayerController, type MoveIntent } from '../player/PlayerController';
 import { MaterialLibrary } from '../rendering/MaterialLibrary';
@@ -20,6 +19,9 @@ import { DamageSystem, type Attacker, type HitZone } from './Damage';
 import { TeammateRegistry, type RemotePlayer } from './Teammates';
 import { MultiplayerClient } from '../network/MultiplayerClient';
 import { RemotePlayers } from './RemotePlayers';
+import { Presence } from '../network/Presence';
+import { weaponPreviews } from '../ui/WeaponPreviews';
+import type { Snapshot } from '../../shared/protocol';
 
 type State = 'menu' | 'loading' | 'start' | 'playing' | 'paused';
 
@@ -37,7 +39,7 @@ const CUE_SOUNDS: Record<string, SoundName> = {
 };
 
 export interface GameOptions {
-  /** Explicit Stage 2 test path; the ordinary home continues to launch practice. */
+  /** Public multiplayer by default; ?practice retains the explicit development path. */
   multiplayer?: boolean;
   /** Skip menus and pointer lock (automated tests / screenshots). */
   autoplay: boolean;
@@ -89,10 +91,13 @@ export class Game {
   private readonly tmpPos = { x: 0, y: 0, z: 0 };
   /** Other players' last known positions (fed by a future network client; empty in single player). */
   readonly teammates = new TeammateRegistry();
-  /** Team of the local player in team modes; the practice maps are free-for-all (null: nobody is a teammate). */
-  private localTeam: Team | null = null;
   private network: MultiplayerClient | null = null;
   private networkReady = false;
+  private networkLife = -1;
+  private appliedPlayerId = '';
+  private tabHeld = false;
+  private preSpawnPaused = false;
+  private presence: Presence | null = null;
   private readonly remotePlayers: RemotePlayers;
 
   constructor(
@@ -137,10 +142,13 @@ export class Game {
     this.materials.setAnisotropy(GRAPHICS_PRESETS[s.graphicsQuality].anisotropy);
     this.settings.onChange((v, changed) => this.applySettings(v, changed));
 
-    // The explicit Stage 2 URL uses real networking; ordinary Play remains practice until Stage 5.
+    // Public Play has no silent practice fallback.
     this.ui.onPlay = () => void this.play(this.wantedMap);
-    this.ui.onStart = () => void this.enterPlay();
-    this.ui.onResume = () => void this.enterPlay();
+    this.ui.onStart = () => void this.spawnSelected();
+    this.ui.onResume = () => {
+      if (this.preSpawnPaused) { this.preSpawnPaused = false; this.showPreSpawn(); }
+      else void this.enterPlay();
+    };
     this.ui.onQuit = () => this.quitToMenu();
     this.input.lockListeners.add((locked) => this.onPointerLock(locked));
     this.ctx.canvas.addEventListener('click', () => {
@@ -153,11 +161,21 @@ export class Game {
         e.returnValue = '';
       }
     });
-    window.addEventListener('pagehide', () => this.network?.disconnect());
+    window.addEventListener('pagehide', () => { this.network?.disconnect(); this.presence?.dispose(); });
+    window.addEventListener('keyup', (e) => { if (e.code === 'Tab') { this.tabHeld = false; this.ui.scoreboard.setVisible(false); } });
+    window.addEventListener('blur', () => { this.tabHeld = false; this.ui.scoreboard.setVisible(false); });
+    document.addEventListener('visibilitychange', () => { if (document.hidden) { this.tabHeld = false; this.input.clearState(); this.ui.scoreboard.setVisible(false); } });
     window.addEventListener('keydown', (e) => {
-      // Tab holds the tactical map; never let it move keyboard focus off the game while playing (Input only prevents
-      // the default while it is enabled, which is not the case while waiting for pointer lock)
-      if (e.code === 'Tab' && this.state === 'playing') e.preventDefault();
+      if (e.code === 'Escape' && this.state === 'start' && !this.ui.spawnPending && (this.ui.currentScreen === 'start' || this.ui.currentScreen === 'weapons')) {
+        this.preSpawnPaused = true;
+        this.state = 'paused';
+        this.tabHeld = false;
+        this.ui.show('pause');
+      }
+      if (e.code === 'Tab' && (this.ui.currentScreen === 'hud' || this.ui.currentScreen === 'start')) {
+        e.preventDefault();
+        this.tabHeld = true;
+      }
       if (e.code === 'F3') this.settings.update({ showFps: !this.settings.value.showFps });
       if (e.code === 'F2' && this.map && this.state === 'playing') void this.map.toggleCollisionDebug();
     });
@@ -165,6 +183,9 @@ export class Game {
     await this.materials.load();
     const first = MAPS.some((m) => m.id === this.options.map) ? this.options.map! : DEFAULT_MAP_ID;
     this.ui.show('menu');
+    this.presence = new Presence(import.meta.env.VITE_MULTIPLAYER_URL ?? '', (count) => this.ui.setOnline(count),
+      () => this.ui.currentScreen === 'menu');
+    this.presence.start();
     this.effects = new Effects(this.ctx.scene);
     this.effects.onCasingLand = (type, at) => {
       const d = this.ctx.camera.globalPosition.subtract(at).length();
@@ -179,6 +200,7 @@ export class Game {
     // start streaming the selected map right away so Play is instant
     const preload = this.requestMap(first).catch((e) => this.reportLoadError(e));
     await weaponLoad;
+    void weaponPreviews((id, url) => this.ui.setWeaponPreview(id, url)).catch((e) => console.warn('Weapon previews unavailable', e));
     if (this.weaponView && this.map) this.excludeViewFromSun(this.map);
     if (this.options.autoplay) {
       await preload;
@@ -246,8 +268,6 @@ export class Game {
       };
     }
     this.ui.setMapTitle(def.name, `${def.dimensions[0]} x ${def.dimensions[1]} m · practice`);
-    this.ui.setStartInfo(def.name, def.briefing ?? def.description);
-    this.ui.tactical.setMap(map.tactical, def.name);
     this.teammates.clear();
     this.effects?.clearDecals();
     console.info('[crossfire] map loaded', map.stats);
@@ -264,14 +284,9 @@ export class Game {
       try {
         if (!this.network) {
           this.network = new MultiplayerClient(import.meta.env.VITE_MULTIPLAYER_URL ?? '');
-          this.network.onSnapshot = (snapshot) => {
-            if (!this.networkReady || !this.player || !this.map || this.network?.state !== 'connected') return;
-            if (this.map.revision !== snapshot.mapVersion) { this.network?.disconnect(); this.connectionError('Map assets differ from the server. Rebuild the matching client and server.'); return; }
-            this.network!.reconcile(this.player, snapshot);
-            this.remotePlayers.snapshot(snapshot, this.network!.selfId);
-          };
+          this.network.onSnapshot = (snapshot) => this.acceptSnapshot(snapshot);
           this.network.onState = (state, message) => {
-            if (state !== 'connected') this.remotePlayers.clear();
+            if (state !== 'connected') { this.remotePlayers.clear(); this.ui.scoreboard.setVisible(false); }
             if (state === 'reconnecting') this.ui.showToast(message ?? 'Reconnecting…', 'warn', 5);
             if (state === 'error') this.connectionError(message ?? 'Multiplayer connection failed');
           };
@@ -296,21 +311,82 @@ export class Game {
       if (this.map!.revision !== this.network.latest.mapVersion) { this.network.disconnect(); this.connectionError('Map assets differ from the server.'); return; }
       const self = this.network.latest.players.find((p) => p.id === this.network!.selfId);
       if (!self) { this.connectionError('Server did not assign a player'); return; }
-      this.player!.restore(self.motion);
       this.networkReady = true;
-      this.remotePlayers.snapshot(this.network.latest, this.network.selfId);
-      this.ui.setMapTitle(this.map!.def.name, 'Multiplayer foundation · movement test');
-      this.ui.setStartInfo(this.map!.def.name, 'Stage 2 movement test in public-main. Connected players share this scene; combat and rounds are not enabled.');
-    } else this.spawn();
-    if (this.options.autoplay) {
-      this.state = 'playing';
-      this.input.enabled = true;
-      this.ui.show('hud');
-      if (this.options.hideHud) this.hideAllUi();
-      return;
+      this.acceptSnapshot(this.network.latest);
+      this.ui.setMapTitle(this.map!.def.name, 'public-main');
+      if (self.alive) {
+        if (this.options.autoplay) this.activateWithoutLock();
+        else { this.state = 'paused'; this.ui.show('pause'); }
+        return;
+      }
     }
+    this.showPreSpawn();
+    // Automation explicitly requests a spawn; normal Play always stops at the menu.
+    if (this.options.autoplay) await this.spawnSelected();
+  }
+
+  private acceptSnapshot(snapshot: Snapshot): void {
+    if (!this.networkReady || !this.player || !this.map || this.network?.state !== 'connected') return;
+    if (this.map.revision !== snapshot.mapVersion) { this.network.disconnect(); this.connectionError('Map assets differ from the server. Rebuild the matching client and server.'); return; }
+    const self = snapshot.players.find((p) => p.id === this.network!.selfId);
+    this.remotePlayers.snapshot(snapshot, this.network.selfId);
+    if (!self) return;
+    if (self.alive) {
+      if ((self.life !== this.networkLife || self.id !== this.appliedPlayerId) && self.weapon) {
+        this.networkLife = self.life;
+        this.appliedPlayerId = self.id;
+        this.player.restore(self.motion);
+        this.loadout.reset(WEAPONS.findIndex((w) => w.id === self.weapon), true);
+        this.weaponView?.select(self.weapon);
+        this.ui.setWeaponName(this.weapon.stats.name);
+        this.health = PLAYER_MAX_HEALTH;
+        this.acc = 0;
+        this.cameraRig?.snapFov(this.settings.value.fov);
+      } else this.network.reconcile(this.player, snapshot);
+    } else if (this.state === 'playing' || (this.state === 'paused' && !this.preSpawnPaused)) this.showPreSpawn();
+  }
+
+  private showPreSpawn(): void {
     this.state = 'start';
+    this.tabHeld = false;
+    this.input.enabled = false;
+    this.input.clearState();
+    this.input.releaseLock();
+    this.weaponView?.setVisible(false);
+    this.ui.setScope(0);
+    this.ui.setSpawnState((this.network?.latest?.players.find((p) => p.id === this.network?.selfId)?.deaths ?? 0) > 0);
     this.ui.show('start');
+  }
+
+  private async spawnSelected(): Promise<void> {
+    if (this.state !== 'start' || this.ui.currentScreen !== 'start') return;
+    const respawn = (this.network?.latest?.players.find((p) => p.id === this.network?.selfId)?.deaths ?? 0) > 0;
+    this.ui.setSpawnState(respawn, true);
+    try {
+      if (this.options.multiplayer) {
+        const snapshot = await this.network!.spawn(this.ui.selectedWeapon);
+        if (!this.networkReady || this.network?.state !== 'connected' || this.state !== 'start') return;
+        this.acceptSnapshot(snapshot);
+      } else {
+        this.spawn();
+        this.loadout.reset(WEAPONS.findIndex((w) => w.id === this.ui.selectedWeapon), !this.options.autoplay);
+        this.weaponView?.select(this.weapon.stats.id);
+        this.ui.setWeaponName(this.weapon.stats.name);
+      }
+      if (this.options.autoplay) this.activateWithoutLock();
+      else await this.enterPlay();
+    } catch (e) {
+      if (this.state === 'start') this.ui.setSpawnState(respawn, false, (e as Error).message);
+    }
+  }
+
+  private activateWithoutLock(): void {
+    this.preSpawnPaused = false;
+    this.state = 'playing';
+    this.input.enabled = true;
+    this.input.clearState();
+    this.ui.show('hud');
+    if (this.options.hideHud) this.hideAllUi();
   }
 
   private hideAllUi(): void {
@@ -319,6 +395,10 @@ export class Game {
 
   private connectionError(message: string): void {
     this.state = 'loading';
+    this.tabHeld = false;
+    this.input.clearState();
+    this.weaponView?.setVisible(false);
+    this.ui.setScope(0);
     this.input.enabled = false;
     this.input.releaseLock();
     this.ui.showConnectionError(message, () => void this.play('european-town'), () => this.quitToMenu());
@@ -345,8 +425,15 @@ export class Game {
   }
 
   private async enterPlay(): Promise<void> {
+    if (this.options.multiplayer && !this.network?.latest?.players.find((p) => p.id === this.network?.selfId)?.alive) return;
     this.audio.unlock();
+    this.preSpawnPaused = false;
+    this.cameraRig?.snapFov(this.settings.value.fov);
     await this.input.requestLock();
+    if (this.options.multiplayer && !this.network?.latest?.players.find((p) => p.id === this.network?.selfId)?.alive) {
+      this.input.releaseLock();
+      return;
+    }
     if (!this.input.pointerLocked) {
       // browsers refuse to re-lock for ~1 s after Esc; keep the game visible and hint
       this.state = 'playing';
@@ -358,6 +445,10 @@ export class Game {
 
   private onPointerLock(locked: boolean): void {
     if (locked) {
+      if (this.options.multiplayer && !this.network?.latest?.players.find((p) => p.id === this.network?.selfId)?.alive) {
+        this.input.releaseLock();
+        return;
+      }
       if (this.state === 'start' || this.state === 'paused' || this.state === 'playing') {
         this.state = 'playing';
         this.input.enabled = true;
@@ -374,8 +465,14 @@ export class Game {
   }
 
   private quitToMenu(): void {
+    this.preSpawnPaused = false;
     this.network?.disconnect();
     this.networkReady = false;
+    this.networkLife = -1;
+    this.tabHeld = false;
+    this.acc = 0;
+    this.input.clearState();
+    this.ui.setScope(0);
     this.remotePlayers.clear();
     this.state = 'menu';
     this.input.enabled = false;
@@ -383,6 +480,7 @@ export class Game {
     this.weaponView?.setVisible(false);
     this.effects?.clearDecals();
     this.ui.show('menu');
+    void this.presence?.poll();
   }
 
   private applySettings(v: Readonly<Settings>, changed: (keyof Settings)[]): void {
@@ -419,7 +517,7 @@ export class Game {
     } else if (this.map && (this.state === 'menu' || this.state === 'start' || this.state === 'loading')) {
       this.menuCamera(dt);
     }
-    this.updateTacticalMap();
+    this.updateScoreboard();
     if (this.network?.state === 'connected') this.remotePlayers.update(Date.now() + this.network.clockOffset - 100);
     this.effects?.update(dt);
     this.ui.update(dt);
@@ -428,16 +526,12 @@ export class Game {
     this.input.endFrame();
   }
 
-  /** Tab overlay: visible only while the key is held during play; it never pauses or consumes input. */
-  private updateTacticalMap(): void {
-    const player = this.player;
-    const show = this.state === 'playing' && !!player && !!this.map && this.input.isDown('map');
-    this.ui.tactical.setVisible(show);
-    if (!show) return;
-    this.ui.tactical.draw(
-      { x: player.position.x, z: player.position.z, yaw: player.yaw, team: this.localTeam },
-      this.teammates.friendlies(this.localTeam, this.attacker.id),
-    );
+  /** No tactical-map DOM is created. Release, blur and screen changes hide Tab immediately. */
+  private updateScoreboard(): void {
+    const show = (this.ui.currentScreen === 'hud' || this.ui.currentScreen === 'start')
+      && (this.tabHeld || this.input.isDown('leaderboard')) && (!this.options.multiplayer || this.network?.state === 'connected');
+    this.ui.scoreboard.setVisible(show);
+    if (show) this.ui.scoreboard.update(this.network?.latest ?? null, this.network?.selfId ?? '', Date.now() + (this.network?.clockOffset ?? 0));
   }
 
   private menuCamera(dt: number): void {
@@ -459,7 +553,7 @@ export class Game {
   }
 
   private simulate(dt: number): void {
-    if (this.options.multiplayer && this.network?.state !== 'connected') return;
+    if (this.options.multiplayer && (this.network?.state !== 'connected' || !this.network.latest?.players.find((p) => p.id === this.network?.selfId)?.alive)) return;
     const player = this.player!;
     const rig = this.cameraRig!;
     const map = this.map!;
@@ -541,7 +635,7 @@ export class Game {
     const crosshair = w.ads < 0.6 && !sprinting && (w.action === 'idle' || w.action === 'cycle' || w.reloading);
     this.ui.setCrosshairSpread(px * this.ctx.engine.getHardwareScalingLevel(), crosshair);
     this.ui.setAmmo(w.ammo, w.reserve, w.stats.magazine, w.reloading, w.reloadProgress);
-    this.ui.setWeaponSlots(this.loadout.weapons.map((x) => x.stats.name), this.loadout.switchingTo ?? this.loadout.currentIndex);
+    this.ui.setWeaponSlots(this.options.multiplayer ? [w.stats.name] : this.loadout.weapons.map((x) => x.stats.name), this.options.multiplayer ? 0 : this.loadout.switchingTo ?? this.loadout.currentIndex);
     this.ui.setHealth(this.health, PLAYER_MAX_HEALTH);
   }
 
@@ -657,7 +751,8 @@ export class Game {
     } else {
       this.ui.setFps(null);
     }
-    if (this.state === 'playing') {
+    if (this.options.multiplayer) this.ui.setStats('');
+    else if (this.state === 'playing') {
       const acc = this.stats.shots ? Math.round((this.stats.hits / this.stats.shots) * 100) : 0;
       this.ui.setStats(`Targets down ${this.stats.downs} · Headshots ${this.stats.headshots} · Accuracy ${acc}%`);
     }
@@ -847,21 +942,8 @@ export class Game {
           library: this.materials.counts(),
         };
       },
-      /** Tactical overlay state: visibility, the drawn player marker and where the projection puts the player. */
-      tactical: () => {
-        const view = this.ui.tactical;
-        const p = this.player?.position;
-        return {
-          visible: view.visible,
-          // actually on screen (laid out), not just flagged visible
-          domVisible: view.root.getClientRects().length > 0,
-          map: this.map?.tactical.map ?? null,
-          marker: { ...view.lastMarker },
-          expected: p ? view.projectCss(p.x, p.z) : null,
-          canvas: view.debugInfo(),
-          focus: document.activeElement?.id || document.activeElement?.tagName || null,
-        };
-      },
+      scoreboard: () => ({ visible: this.ui.scoreboard.visible, text: this.ui.scoreboard.root.innerText }),
+      spawn: () => this.spawnSelected(),
       /** Feed the teammate registry like a network client would (automated tests only; nothing calls it in play). */
       remotePlayer: (p: RemotePlayer) => this.teammates.update(p),
       clearRemotePlayers: () => this.teammates.clear(),
@@ -878,6 +960,7 @@ export class Game {
       pause: () => {
         this.state = 'paused';
         this.input.enabled = false;
+        this.input.releaseLock();
         this.ui.show('pause', true);
       },
       /** Raw world-space triangles of every batched mesh, for geometry audits (tools/dev-zfight.mjs). */

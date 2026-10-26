@@ -9,7 +9,7 @@ function parseOptions(): GameOptions {
   const shadows = q.get('shadows');
   const scale = q.get('scale');
   return {
-    multiplayer: q.has('multiplayer'),
+    multiplayer: !q.has('practice'),
     autoplay: q.has('autoplay'),
     map: q.get('map') ?? undefined,
     cam: cam ? cam.split(',').map(Number) : null,

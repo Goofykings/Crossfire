@@ -2,10 +2,11 @@ import type { AudioManager } from '../audio/AudioManager';
 import { SETTING_LIMITS, type Settings, type SettingsStore } from '../config/settings';
 import { SettingsDraft } from '../config/settingsDraft';
 import { Dropdown } from './Dropdown';
-import { TacticalMapView } from './TacticalMap';
-import { MAPS } from '../maps/registry';
+import { Scoreboard } from './Scoreboard';
+import { validWeapon } from '../../shared/protocol';
+import type { WeaponId } from '../weapons/Weapon';
 
-export type Screen = 'menu' | 'loading' | 'start' | 'hud' | 'pause' | 'settings' | 'error';
+export type Screen = 'menu' | 'loading' | 'start' | 'weapons' | 'hud' | 'pause' | 'settings' | 'error';
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, html?: string): HTMLElementTagNameMap[K] {
   const e = document.createElement(tag);
@@ -13,20 +14,6 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, html?: 
   if (html !== undefined) e.innerHTML = html;
   return e;
 }
-
-const CONTROLS: [string, string][] = [
-  ['W A S D', 'Move'],
-  ['Mouse', 'Look'],
-  ['Shift', 'Sprint'],
-  ['Space', 'Jump'],
-  ['Ctrl / C', 'Crouch'],
-  ['Left click', 'Fire'],
-  ['Right click', 'Aim down sights'],
-  ['R', 'Reload'],
-  ['Tab (hold)', 'Tactical map'],
-  ['Esc', 'Pause / release mouse'],
-  ['F3', 'Toggle FPS counter'],
-];
 
 /**
  * DOM user interface: main menu, loading, click-to-play, HUD, pause and settings.
@@ -62,6 +49,7 @@ const SCOPE_SVG = `<svg viewBox="-100 -100 200 200" preserveAspectRatio="xMidYMi
 export class UI {
   private readonly screens = new Map<Screen, HTMLElement>();
   private settingsReturn: Screen = 'menu';
+  private settingsFocus: HTMLElement | null = null;
   /** What the settings screen edits. The game only sees changes when Apply hands them to the SettingsStore. */
   private readonly draft: SettingsDraft;
 
@@ -81,6 +69,7 @@ export class UI {
   private ammoReserve!: HTMLElement;
   private reloadBar!: HTMLElement;
   private weaponSlots!: HTMLElement;
+  private slotNames = '';
   private scope!: HTMLElement;
   private fpsBox!: HTMLElement;
   /** The FPS readout element (read by the debug API). */
@@ -98,10 +87,17 @@ export class UI {
   private weaponName!: HTMLElement;
   private mapTitle!: HTMLElement;
   private loadingTitle!: HTMLElement;
-  private startTitle!: HTMLElement;
-  private startText!: HTMLElement;
-  /** Overhead map shown while Tab is held (lives in the HUD, so it is only ever visible in play). */
-  tactical!: TacticalMapView;
+  private onlineCount!: HTMLElement;
+  private selectedName!: HTMLElement;
+  private selectedPreview!: HTMLImageElement;
+  private spawnButton!: HTMLButtonElement;
+  private spawnError!: HTMLElement;
+  private pendingWeapon: WeaponId = 'rifle';
+  private readonly previews = new Map<WeaponId, string>();
+  private readonly weaponCards = new Map<WeaponId, HTMLButtonElement>();
+  private readonly labels: Record<WeaponId, string> = { rifle: 'Assault Rifle', shotgun: 'Shotgun', sniper: 'Sniper Rifle' };
+  currentScreen: Screen = 'menu';
+  readonly scoreboard: Scoreboard;
 
   constructor(
     private readonly root: HTMLElement,
@@ -111,11 +107,14 @@ export class UI {
     this.draft = new SettingsDraft(settings);
     this.buildMenu();
     this.buildLoading();
+    try { const saved = localStorage.getItem('crossfire.pending-weapon'); if (validWeapon(saved)) this.pendingWeapon = saved; } catch { /* Optional preference. */ }
     this.buildStart();
+    this.buildWeapons();
     this.buildHud();
     this.buildPause();
     this.buildSettings();
     this.buildError();
+    this.scoreboard = new Scoreboard(root);
     root.addEventListener('mouseover', (e) => {
       if ((e.target as HTMLElement).closest?.('.btn, .tab')) this.audio.play('ui_hover', { volume: 0.5 });
     });
@@ -149,6 +148,8 @@ export class UI {
     buttons.appendChild(this.button('Play', '', 'primary', () => this.onPlay()));
     buttons.appendChild(this.button('Settings', '', '', () => this.openSettings('menu')));
     col.appendChild(buttons);
+    this.onlineCount = el('div', 'online-count', 'Offline');
+    col.appendChild(this.onlineCount);
     s.appendChild(col);
   }
 
@@ -177,19 +178,71 @@ export class UI {
 
   private buildStart(): void {
     const s = this.screen('start');
-    const card = el('div', 'card');
-    this.startTitle = el('h2', '', MAPS[0].name);
-    card.appendChild(this.startTitle);
-    this.startText = el('p', '', MAPS[0].briefing ?? MAPS[0].description);
-    card.appendChild(this.startText);
-    const grid = el('div', 'controls-grid');
-    for (const [k, v] of CONTROLS) {
-      grid.appendChild(el('span', 'kbd', k));
-      grid.appendChild(el('span', '', v));
-    }
-    card.appendChild(grid);
-    card.appendChild(this.button('Click to play', 'captures the mouse', 'primary', () => this.onStart()));
+    const card = el('div', 'prespawn');
+    card.appendChild(this.button('Switch Gun', '', '', () => this.show('weapons')));
+    this.selectedPreview = el('img', 'selected-preview');
+    this.selectedPreview.alt = '';
+    this.selectedPreview.hidden = true;
+    this.selectedName = el('div', 'selected-name', this.labels[this.pendingWeapon]);
+    card.append(this.selectedPreview, this.selectedName);
+    card.appendChild(this.button('Settings', '', '', () => this.openSettings('start')));
+    this.spawnButton = this.button('Spawn', '', 'primary', () => this.onStart());
+    this.spawnError = el('div', 'spawn-error');
+    this.spawnError.setAttribute('role', 'status');
+    card.append(this.spawnButton, this.spawnError);
     s.appendChild(card);
+  }
+
+  private buildWeapons(): void {
+    const s = this.screen('weapons');
+    s.setAttribute('aria-label', 'Select weapon');
+    const grid = el('div', 'weapon-grid');
+    for (const id of ['rifle', 'shotgun', 'sniper'] as const) {
+      const card = this.button(this.labels[id], '', 'weapon-card', () => {
+        this.pendingWeapon = id;
+        try { localStorage.setItem('crossfire.pending-weapon', id); } catch { /* Optional preference. */ }
+        this.refreshSelection();
+        this.show('start');
+      });
+      card.dataset.weapon = id;
+      this.weaponCards.set(id, card);
+      grid.appendChild(card);
+    }
+    const smg = this.button('SMG', 'Stage 2', 'weapon-card unavailable', () => {});
+    smg.disabled = true;
+    smg.setAttribute('aria-label', 'SMG unavailable until Stage 2');
+    grid.appendChild(smg);
+    s.append(grid, this.button('Back', '', 'weapon-back', () => this.show('start')));
+  }
+
+  get selectedWeapon(): WeaponId { return this.pendingWeapon; }
+  get spawnPending(): boolean { return this.spawnButton.disabled; }
+
+  private refreshSelection(): void {
+    this.selectedName.textContent = this.labels[this.pendingWeapon];
+    const url = this.previews.get(this.pendingWeapon);
+    this.selectedPreview.hidden = !url;
+    if (url) this.selectedPreview.src = url;
+    for (const [id, card] of this.weaponCards) card.classList.toggle('selected', id === this.pendingWeapon);
+  }
+
+  setWeaponPreview(id: WeaponId, url: string): void {
+    this.previews.set(id, url);
+    const img = el('img');
+    img.src = url;
+    img.alt = this.labels[id];
+    this.weaponCards.get(id)?.prepend(img);
+    this.refreshSelection();
+  }
+
+  setSpawnState(respawn: boolean, busy = false, error = ''): void {
+    this.spawnButton.firstElementChild!.textContent = respawn ? 'Respawn' : 'Spawn';
+    for (const button of this.screens.get('start')!.querySelectorAll('button')) button.disabled = busy;
+    this.spawnError.textContent = error;
+  }
+
+  setOnline(count: number | null): void {
+    this.onlineCount.textContent = count === null ? 'Offline' : `${count} ${count === 1 ? 'Player' : 'Players'} Online`;
   }
 
   private buildHud(): void {
@@ -244,7 +297,7 @@ export class UI {
     s.appendChild(this.toast);
     this.lockHint = el('div', 'lock-hint', 'Click to capture the mouse');
     s.appendChild(this.lockHint);
-    this.tactical = new TacticalMapView(s);
+
   }
 
   private buildPause(): void {
@@ -256,7 +309,7 @@ export class UI {
     b.appendChild(
       this.button('Settings', '', '', () => this.openSettings('pause')),
     );
-    b.appendChild(this.button('Main menu', '', '', () => this.onQuit()));
+    b.appendChild(this.button('Leave Match', '', '', () => this.onQuit()));
     card.appendChild(b);
     s.appendChild(card);
   }
@@ -297,17 +350,20 @@ export class UI {
 
   /** Open the settings screen from the main menu or the pause menu; edits start from the applied settings. */
   private openSettings(from: Screen): void {
+    this.settingsFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     this.settingsReturn = from;
     this.draft.discard();
     this.selectSettingsTab(0, false);
     this.setSettingsStatus('');
     this.show('settings', from === 'pause');
+    this.settingTabs[0]?.tab.focus();
   }
 
   /** Back: drop every unapplied edit and return to where settings were opened from. */
   private closeSettings(): void {
     this.draft.discard();
     this.show(this.settingsReturn, this.settingsReturn === 'pause');
+    this.settingsFocus?.focus();
   }
 
   private applySettings(): void {
@@ -433,7 +489,11 @@ export class UI {
 
     // Escape goes back (an open dropdown swallows it first)
     s.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') this.closeSettings();
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        this.closeSettings();
+      }
     });
     this.selectSettingsTab(0, false);
     this.syncSettings();
@@ -540,15 +600,12 @@ export class UI {
 
   // ---------------------------------------------------------------------------------------------
   show(screen: Screen, overlayHud = false): void {
+    this.currentScreen = screen;
+    this.scoreboard?.setVisible(false);
     for (const [id, s] of this.screens) {
       s.classList.toggle('visible', id === screen || (overlayHud && id === 'hud'));
     }
     if (screen === 'settings') this.syncSettings();
-  }
-
-  setStartInfo(title: string, text: string): void {
-    this.startTitle.textContent = title;
-    this.startText.textContent = text;
   }
 
   setMapTitle(name: string, sub: string): void {
@@ -566,8 +623,10 @@ export class UI {
 
   /** The weapon slots strip: names in slot order, the one in hand highlighted. */
   setWeaponSlots(names: readonly string[], current: number): void {
-    if (this.weaponSlots.childElementCount !== names.length) {
-      this.weaponSlots.innerHTML = names.map((n, i) => `<span><b>${i + 1}</b>${n}</span>`).join('');
+    const signature = JSON.stringify(names);
+    if (this.slotNames !== signature) {
+      this.slotNames = signature;
+      this.weaponSlots.innerHTML = names.map((n, i) => `<span>${names.length > 1 ? `<b>${i + 1}</b>` : ''}${n}</span>`).join('');
     }
     [...this.weaponSlots.children].forEach((c, i) => c.classList.toggle('current', i === current));
   }

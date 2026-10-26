@@ -2,7 +2,7 @@
 
 Stage 1 design, 2026-10-25. **Stage 2 is implemented and tested locally; later stages remain a plan.** Stage numbers follow Part 15 of the user's full Crossfire brief. The current implementation/runbook is in [server/README.md](../server/README.md); verified status is in [PROGRESS.md](../PROGRESS.md). The original audit and future-stage design below remain useful migration context; they are not all current implementation claims.
 
-The home screen has only CROSSFIRE, PLAY and SETTINGS, with no map controls or status panels, and the view model has no visible hands/arms. These requirements supersede this older plan's menu embellishments. Stage 2 adds an explicit `?multiplayer` movement-test path; normal Play remains practice until its later public-match integration. The earlier [connectivity diagnosis](MULTIPLAYER_DIAGNOSIS.md) is historical.
+The latest separate Gameplay/UI brief authorizes its own Stage 1 ahead of this historical order: normal Play now uses real pre-spawn networking, HTTP presence, approved loadouts and a Tab leaderboard. `?practice` retains the local development path. Protocol v2 adds life/weapon/score fields; connected menu clients count online but have no live avatar. The original round/combat stages below remain unimplemented, and runtime match mode/deadline are explicitly null. The SMG belongs to the new brief's Stage 2. Current details are in PROGRESS.md and server/README.md; the rest of this document is the original migration plan.
 
 ## What exists and what can be reused
 

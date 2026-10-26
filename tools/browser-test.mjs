@@ -63,7 +63,7 @@ page.on('console', (m) => {
 page.on('pageerror', (e) => errors.push(String(e)));
 
 async function open(query) {
-  await page.goto(`${BASE}?autoplay&quality=${QUALITY}&${query}`, { waitUntil: 'domcontentloaded' });
+  await page.goto(`${BASE}?practice&autoplay&quality=${QUALITY}&${query}`, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => window.__crossfire && window.__crossfire.ready(), { timeout: 180000, polling: 500 });
   await new Promise((r) => setTimeout(r, 1500));
 }
@@ -154,10 +154,9 @@ check(after.downs > before.downs, `target knocked down (${after.downs - before.d
 {
   const st = await page.evaluate(() => ({
     barriers: window.__crossfire.stats().zoneBarriers,
-    zones: window.__crossfire.tactical().zones,
     info: window.__crossfire.mapInfo(),
   }));
-  check(st.barriers === undefined && st.zones === undefined && !st.info.safeZones, 'free-for-all: no safe zones, barriers or zone labels');
+  check(st.barriers === undefined && !st.info.safeZones, 'free-for-all: no safe zones, barriers or zone labels');
   check(st.info.spawns.length >= 12 && st.info.spawns.every((q) => q.team === undefined), `free-for-all spawns spread over the map (${st.info.spawns.length})`);
 }
 
@@ -296,60 +295,18 @@ const pool = targets.map((t) => t.id).filter((id) => id !== 'T05');
   await select(1, 'rifle');
 }
 
-// --- tactical map (hold Tab) -------------------------------------------------------------------
+// --- held Tab leaderboard ---------------------------------------------------------------------
 {
-  const tac = () => page.evaluate(() => window.__crossfire.tactical());
-  // the page was opened with ?nohud for clean screenshots; the overlay lives in the HUD, so show the UI again
   await page.evaluate(() => (document.getElementById('ui').style.display = ''));
-  // a known open spot: the first spawn point, facing east
-  const sp = await page.evaluate(() => {
-    const s = window.__crossfire.mapInfo().spawns[0];
-    return { x: s.pos[0], z: s.pos[2] };
-  });
-  await page.evaluate((p) => window.__crossfire.teleport(p.x, 0.2, p.z, 90, 0), sp);
-  await new Promise((r) => setTimeout(r, 300));
-  const focusBefore = (await tac()).focus;
-  check(!(await tac()).visible, 'tactical map hidden before Tab');
+  const focusBefore = await page.evaluate(() => document.activeElement?.tagName);
   await page.keyboard.down('Tab');
-  await new Promise((r) => setTimeout(r, 250));
-  let t = await tac();
-  check(t.visible && t.domVisible, 'holding Tab shows the tactical map');
-  check(t.focus === focusBefore, `Tab does not move keyboard focus (${focusBefore} -> ${t.focus})`);
-  const mapId = await page.evaluate(() => window.__crossfire.stats().mapId);
-  check(!!t.map && t.map === mapId, `tactical layout belongs to the loaded map (${t.map} / ${mapId})`);
-  const off = Math.hypot(t.marker.x - t.expected.x, t.marker.y - t.expected.y);
-  check(off < 1, `player marker sits on the player's world position (${off.toFixed(2)} px off)`);
-  check(Math.abs(t.marker.rotation - Math.PI / 2) < 0.02, `marker faces east for heading 90 (rotation ${t.marker.rotation.toFixed(3)} rad)`);
-  check(t.marker.teammates === 0, 'no teammate markers without teammate data');
-  // walking east while the map is open: movement keeps working and the marker moves right on the map
-  const m0 = t.marker;
-  await page.evaluate(() => window.__crossfire.hold('forward', true));
-  await new Promise((r) => setTimeout(r, 600));
-  await page.evaluate(() => window.__crossfire.hold('forward', false));
-  t = await tac();
-  check(t.visible && t.marker.x - m0.x > 5 && Math.abs(t.marker.y - m0.y) < 2, `marker moves east (right) while walking east with the map open (dx=${(t.marker.x - m0.x).toFixed(1)}, dy=${(t.marker.y - m0.y).toFixed(1)})`);
-  // (screenshots stall the page's frames for a moment, so they come after the movement checks)
-  if (flag('shots')) await page.screenshot({ path: path.join(OUT, 'tactical_map.png') });
-  // turning north rotates the arrow to point up
-  await page.evaluate(() => window.__crossfire.look(0, 0));
   await new Promise((r) => setTimeout(r, 150));
-  t = await tac();
-  check(Math.abs(t.marker.rotation) < 0.02, `marker points north after turning north (rotation ${t.marker.rotation.toFixed(3)})`);
-  // free-for-all: reported players never appear (nobody is a teammate, and enemies are never shown)
-  const p = await page.evaluate(() => window.__crossfire.player());
-  await page.evaluate((q) => {
-    window.__crossfire.remotePlayer({ id: 'test-ally', name: 'Ally', team: 'blue', x: q.x + 2, z: q.z + 2, yaw: 0 });
-    window.__crossfire.remotePlayer({ id: 'test-enemy', team: 'red', x: q.x - 2, z: q.z - 2 });
-  }, p);
-  await new Promise((r) => setTimeout(r, 150));
-  t = await tac();
-  check(t.marker.teammates === 0, `free-for-all: no markers for other players, friend or foe (${t.marker.teammates})`);
-  if (flag('shots')) await page.screenshot({ path: path.join(OUT, 'tactical_map_teammate.png') });
-  await page.evaluate(() => window.__crossfire.clearRemotePlayers());
+  check(await page.evaluate(() => window.__crossfire.scoreboard().visible), 'holding Tab shows the leaderboard');
+  check(await page.evaluate((f) => document.activeElement?.tagName === f, focusBefore), 'Tab does not move browser focus');
+  check(await page.$$eval('.scoreboard tbody tr', (rows) => rows.length === 0), 'practice leaderboard contains no invented online players');
+  check(!(await page.$('.tactical-map')), 'no tactical map overlay is created');
   await page.keyboard.up('Tab');
-  await new Promise((r) => setTimeout(r, 150));
-  t = await tac();
-  check(!t.visible && !t.domVisible, 'releasing Tab hides the tactical map');
+  check(await page.evaluate(() => !window.__crossfire.scoreboard().visible), 'releasing Tab hides leaderboard immediately');
 }
 
 check(errors.length === 0, `no console errors (${errors.length})`);

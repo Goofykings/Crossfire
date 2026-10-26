@@ -30,7 +30,7 @@ try {
   page.on('request', (request) => requests.push(request.url()));
   await page.goto(base, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => window.__crossfire?.stats().mapId && document.querySelector('#menu.visible'), { timeout: 240000 });
-  check(await page.$eval('#menu', (e) => e.innerText.trim().split(/\s+/).join(' ') === 'CROSSFIRE PLAY SETTINGS'), 'home contains only CROSSFIRE, PLAY and SETTINGS');
+  check(await page.$eval('#menu', (e) => /^CROSSFIRE PLAY SETTINGS (Offline|\d+ Players? Online)$/.test(e.innerText.trim().split(/\s+/).join(' '))), 'home contains title, two buttons and subtle real presence status');
   check((await page.$$('#menu button')).length === 2 && !(await page.$('#map-list')), 'home has exactly two buttons and no map selector');
 
   for (const [width, height] of [[1920, 1080], [1280, 720], [1024, 600], [390, 844], [320, 568]]) {
@@ -54,7 +54,7 @@ try {
   check(await page.$('#menu.visible'), 'Back returns to home');
   await page.click('#menu .btn.primary');
   await page.waitForSelector('#start.visible', { timeout: 240000 });
-  check(await page.$eval('#start h2', (e) => e.textContent === 'European Town'), 'Play preserves the existing practice start flow');
+  check(await page.$eval('#start .prespawn', (e) => e.innerText.includes('SWITCH GUN') && e.innerText.includes('SPAWN')), 'Play connects and opens the pre-spawn menu');
   check(!requests.some((url) => url.endsWith('/hands.glb')), 'first-person hand/arm asset is never requested');
   console.log(`WebSocket URLs observed (Vite HMR may appear in development): ${JSON.stringify(sockets)}`);
   check(errors.length === 0, `no browser errors: ${errors.join('; ')}`);

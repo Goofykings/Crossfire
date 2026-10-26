@@ -56,7 +56,7 @@ const ids = fs.readdirSync('src/maps', { withFileTypes: true })
 check(ids.length === 3, `all three existing map layouts remain available (${ids.join(', ')})`);
 
 // --- each existing map through the gameplay loading path -------------------------------------------
-await page.goto(`${BASE}?autoplay&nohud&quality=low&shadows=low`, { waitUntil: 'domcontentloaded' });
+await page.goto(`${BASE}?practice&autoplay&nohud&quality=low&shadows=low`, { waitUntil: 'domcontentloaded' });
 await page.waitForFunction(() => window.__crossfire && window.__crossfire.ready(), { timeout: 240000, polling: 500 });
 await api(() => window.__crossfire.setSetting({ fov: 101, mouseSensitivity: 1.35 }));
 const memory = {};
@@ -88,15 +88,12 @@ for (const round of [1, 2]) {
     const walked = await api(() => window.__crossfire.player());
     const dist = Math.hypot(walked.x - sp.pos[0], walked.z - sp.pos[2]);
     check(dist > 2 && walked.grounded, `${id}: walking moves the player (${dist.toFixed(1)} m, grounded=${walked.grounded})`);
-    // tactical map
+    // The old tactical overlay is gone on every map.
     await api(() => (document.getElementById('ui').style.display = ''));
-    await api(() => window.__crossfire.hold('map', true));
-    await wait(300);
-    const tac = await api(() => window.__crossfire.tactical());
-    const off = tac.expected ? Math.hypot(tac.marker.x - tac.expected.x, tac.marker.y - tac.expected.y) : 99;
-    check(tac.visible && tac.domVisible && tac.map === id && off < 1, `${id}: Tab map shows this map with the marker on the player (${off.toFixed(2)} px)`);
-    if (shots) await page.screenshot({ path: path.join(OUT, `${id}_tactical.png`) });
-    await api(() => window.__crossfire.hold('map', false));
+    await api(() => window.__crossfire.hold('leaderboard', true));
+    await wait(100);
+    check((await api(() => window.__crossfire.scoreboard())).visible, `${id}: held Tab leaderboard opens`);
+    await api(() => window.__crossfire.hold('leaderboard', false));
     await api(() => (document.getElementById('ui').style.display = 'none'));
     // shooting: stand 5 m in front of a target, put one rifle round through its head (1.5x body damage)
     const target = info.targets[0];
@@ -105,6 +102,10 @@ for (const round of [1, 2]) {
     const look = ((target.heading + 180) % 360);
     await api((q) => window.__crossfire.teleport(q[0], q[1] + 0.2, q[2], q[3], 0), [fx, target.pos[1], fz, look]);
     await wait(500);
+    // ADS makes this a headshot/collision regression rather than a random
+    // hip-fire accuracy test (the 1.4-degree hip cone can miss a head at 5 m).
+    await api(() => window.__crossfire.hold('aim', true));
+    await wait(600);
     const tp = await api((q) => window.__crossfire.targetPoints(q), target.id);
     await api((q) => window.__crossfire.aimAt(q.x, q.y, q.z), tp.head);
     await wait(100);
@@ -116,6 +117,7 @@ for (const round of [1, 2]) {
     await wait(200);
     const s1 = await api(() => window.__crossfire.stats());
     const shot = await api(() => window.__crossfire.lastShot());
+    await api(() => window.__crossfire.hold('aim', false));
     check(s1.hits > s0.hits && shot.head && Math.abs(shot.damage - 37.5) < 1e-6,
       `${id}: headshot on practice target ${target.id} deals 1.5x body damage (${shot.damage}, head=${shot.head})`);
     if (shots) {

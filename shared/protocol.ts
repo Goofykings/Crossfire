@@ -1,6 +1,8 @@
 import type { MoveIntent, ControllerState } from '../src/player/PlayerController';
+import type { WeaponId } from '../src/weapons/Weapon';
 
-export const PROTOCOL_VERSION = 1;
+export const PROTOCOL_VERSION = 2;
+export const validWeapon = (x: unknown): x is WeaponId => x === 'rifle' || x === 'shotgun' || x === 'sniper';
 export const PUBLIC_ROOM = 'public-main';
 export const INPUT_BATCH_LIMIT = 12;
 export const MESSAGE_LIMIT = 8192;
@@ -19,6 +21,12 @@ export interface PlayerState {
   name: string;
   motion: ControllerState;
   ack: number;
+  alive: boolean;
+  life: number;
+  weapon: WeaponId | null;
+  kills: number;
+  deaths: number;
+  team: 'blue' | 'red' | null;
 }
 export interface Snapshot {
   room: typeof PUBLIC_ROOM;
@@ -26,18 +34,21 @@ export interface Snapshot {
   mapVersion: string;
   serverTime: number;
   players: PlayerState[];
+  match: { mode: 'ffa' | 'teams' | null; endsAt: number | null; teamScores: { blue: number; red: number } | null };
 }
 export type ClientMessage =
-  | { v: 1; type: 'join'; name: string; resumeToken?: string }
-  | { v: 1; type: 'input'; mapVersion: string; frames: InputFrame[] }
-  | { v: 1; type: 'ping'; at: number }
-  | { v: 1; type: 'leave' };
+  | { v: 2; type: 'join'; name: string; resumeToken?: string }
+  | { v: 2; type: 'spawn'; mapVersion: string; weapon: WeaponId; requestId: string }
+  | { v: 2; type: 'input'; mapVersion: string; frames: InputFrame[] }
+  | { v: 2; type: 'ping'; at: number }
+  | { v: 2; type: 'leave' };
 export type ServerMessage =
-  | { v: 1; type: 'welcome'; selfId: string; resumeToken: string; resumed: boolean; snapshot: Snapshot }
-  | { v: 1; type: 'snapshot'; snapshot: Snapshot }
-  | { v: 1; type: 'left'; id: string }
-  | { v: 1; type: 'pong'; at: number; serverTime: number }
-  | { v: 1; type: 'error'; code: string; message: string; fatal: boolean };
+  | { v: 2; type: 'welcome'; selfId: string; resumeToken: string; resumed: boolean; snapshot: Snapshot }
+  | { v: 2; type: 'spawned'; requestId: string; snapshot: Snapshot }
+  | { v: 2; type: 'snapshot'; snapshot: Snapshot }
+  | { v: 2; type: 'left'; id: string }
+  | { v: 2; type: 'pong'; at: number; serverTime: number }
+  | { v: 2; type: 'error'; code: string; message: string; fatal: boolean };
 
 const record = (x: unknown): x is Record<string, unknown> => !!x && typeof x === 'object' && !Array.isArray(x);
 const finite = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x);
@@ -58,6 +69,9 @@ export function parseClientMessage(text: string): ClientMessage | null {
   try { x = JSON.parse(text); } catch { return null; }
   if (!record(x) || x.v !== PROTOCOL_VERSION) return null;
   switch (x.type) {
+    case 'spawn': return keys(x, ['v', 'type', 'mapVersion', 'weapon', 'requestId']) && validWeapon(x.weapon)
+      && typeof x.mapVersion === 'string' && x.mapVersion.length <= 64 && typeof x.requestId === 'string'
+      && /^[a-zA-Z0-9-]{1,48}$/.test(x.requestId) ? x as unknown as ClientMessage : null;
     case 'join': return keys(x, ['v', 'type', 'name', 'resumeToken']) && typeof x.name === 'string' && x.name.length <= 64
       && (x.resumeToken === undefined || (typeof x.resumeToken === 'string' && /^[a-f0-9]{64}$/.test(x.resumeToken))) ? x as unknown as ClientMessage : null;
     case 'input': return keys(x, ['v', 'type', 'mapVersion', 'frames']) && typeof x.mapVersion === 'string'
@@ -82,15 +96,24 @@ export function parseServerMessage(text: string): ServerMessage | null {
   if (text.length > 131072) return null;
   let x: unknown;
   try { x = JSON.parse(text); } catch { return null; }
-  if (!record(x) || x.v !== 1) return null;
+  if (!record(x) || x.v !== PROTOCOL_VERSION) return null;
   if (x.type === 'left' && typeof x.id === 'string') return x as unknown as ServerMessage;
   if (x.type === 'pong' && finite(x.at) && finite(x.serverTime)) return x as unknown as ServerMessage;
   if (x.type === 'error' && typeof x.code === 'string' && typeof x.message === 'string' && typeof x.fatal === 'boolean') return x as unknown as ServerMessage;
-  if (x.type !== 'snapshot' && x.type !== 'welcome') return null;
+  if (x.type !== 'snapshot' && x.type !== 'welcome' && x.type !== 'spawned') return null;
+  if (x.type === 'spawned' && typeof x.requestId !== 'string') return null;
   if (x.type === 'welcome' && (typeof x.selfId !== 'string' || typeof x.resumeToken !== 'string' || typeof x.resumed !== 'boolean')) return null;
   const s = x.snapshot;
   if (!record(s) || s.room !== PUBLIC_ROOM || s.mapId !== 'european-town' || typeof s.mapVersion !== 'string' || !finite(s.serverTime)
     || !Array.isArray(s.players) || s.players.length > 16 || !s.players.every((p) => record(p) && typeof p.id === 'string'
-      && typeof p.name === 'string' && Number.isSafeInteger(p.ack) && validMotion(p.motion))) return null;
+      && typeof p.name === 'string' && Number.isSafeInteger(p.ack) && validMotion(p.motion)
+      && typeof p.alive === 'boolean' && Number.isSafeInteger(p.life) && (p.life as number) >= 0
+      && (p.weapon === null || validWeapon(p.weapon)) && (!p.alive || p.weapon !== null)
+      && Number.isSafeInteger(p.kills) && (p.kills as number) >= 0 && Number.isSafeInteger(p.deaths) && (p.deaths as number) >= 0
+      && (p.team === null || p.team === 'blue' || p.team === 'red'))) return null;
+  const m = s.match;
+  if (!record(m) || ![null, 'ffa', 'teams'].includes(m.mode as null | string) || !(m.endsAt === null || finite(m.endsAt))
+    || !(m.teamScores === null || (record(m.teamScores) && ['blue', 'red'].every((k) => Number.isSafeInteger((m.teamScores as Record<string, unknown>)[k])
+      && ((m.teamScores as Record<string, unknown>)[k] as number) >= 0)))) return null;
   return x as unknown as ServerMessage;
 }
