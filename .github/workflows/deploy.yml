@@ -41,6 +41,7 @@ jobs:
         env:
           # "./" works for any repository name. Set e.g. "/my-repo/" to force absolute URLs.
           BASE_PATH: ./
+          VITE_MULTIPLAYER_URL: ${{ vars.VITE_MULTIPLAYER_URL }}
 
       - uses: actions/configure-pages@v5
 
