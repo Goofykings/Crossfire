@@ -43,8 +43,9 @@ export class MaterialLibrary {
 
   constructor(private readonly scene: Scene) {}
 
-  async load(url = assetUrl('assets/materials.json')): Promise<void> {
-    const file = await fetchJson<MaterialFile>(url);
+  async load(url = assetUrl('assets/materials.json'), signal?: AbortSignal): Promise<void> {
+    const file = await fetchJson<MaterialFile>(url, signal);
+    signal?.throwIfAborted();
     this.defs = file.materials;
   }
 

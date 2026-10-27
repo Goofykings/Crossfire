@@ -15,8 +15,8 @@ export function splitUrl(url: string): { root: string; file: string } {
   return { root: url.slice(0, i + 1), file: url.slice(i + 1) };
 }
 
-export async function fetchJson<T>(url: string): Promise<T> {
-  const res = await fetch(url);
+export async function fetchJson<T>(url: string, signal?: AbortSignal): Promise<T> {
+  const res = await fetch(url, { signal });
   if (!res.ok) throw new Error(`Failed to load ${url}: ${res.status} ${res.statusText}`);
   return (await res.json()) as T;
 }

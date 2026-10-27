@@ -1,3 +1,4 @@
+import { completeGuestProfile } from './guest-profile-helper.mjs';
 /**
  * Multi-map browser test: every map in the registry, map switching and leaks.
  *
@@ -57,6 +58,7 @@ check(ids.length === 3, `all three existing map layouts remain available (${ids.
 
 // --- each existing map through the gameplay loading path -------------------------------------------
 await page.goto(`${BASE}?practice&autoplay&nohud&quality=low&shadows=low`, { waitUntil: 'domcontentloaded' });
+await completeGuestProfile(page);
 await page.waitForFunction(() => window.__crossfire && window.__crossfire.ready(), { timeout: 240000, polling: 500 });
 await api(() => window.__crossfire.setSetting({ fov: 101, mouseSensitivity: 1.35 }));
 const memory = {};

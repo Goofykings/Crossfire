@@ -1,7 +1,7 @@
+import { loadContainer } from '../core/loadContainer';
 import {
   Color3,
   Color4,
-  LoadAssetContainerAsync,
   Matrix,
   Mesh,
   MeshBuilder,
@@ -11,6 +11,7 @@ import {
   Texture,
   Vector3,
   type AbstractMesh,
+  type AssetContainer,
   type Scene,
 } from '@babylonjs/core';
 import { assetUrl } from '../core/assets';
@@ -45,6 +46,7 @@ export class Effects {
   private sparkCursor = 0;
   private readonly casings: Casing[] = [];
   private readonly casingSources = new Map<CasingType, Mesh>();
+  private casingContainer: AssetContainer | null = null;
   private casingCursor = 0;
   /** Called when a case first hits the ground (the game plays the bounce sound). */
   onCasingLand: ((type: CasingType, position: Vector3) => void) | null = null;
@@ -122,8 +124,9 @@ export class Effects {
   }
 
   /** Load the case models (casings.glb) and build the pool. */
-  async loadCasings(materials: MaterialLibrary): Promise<void> {
-    const c = await LoadAssetContainerAsync(assetUrl('assets/models/shared/weapons/casings.glb'), this.scene);
+  async loadCasings(materials: MaterialLibrary, signal?: AbortSignal): Promise<void> {
+    const c = await loadContainer(assetUrl('assets/models/shared/weapons/casings.glb'), this.scene, signal);
+    this.casingContainer = c;
     c.addAllToScene();
     for (const m of c.meshes) {
       if (m.getTotalVertices() === 0) continue;
@@ -263,5 +266,6 @@ export class Effects {
     for (const d of this.dust) d.dispose();
     for (const c of this.casings) c.mesh?.dispose();
     for (const m of this.casingSources.values()) m.dispose();
+    this.casingContainer?.dispose();
   }
 }

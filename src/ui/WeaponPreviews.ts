@@ -1,11 +1,13 @@
-import { ArcRotateCamera, Color3, Color4, DirectionalLight, Engine, HemisphericLight, LoadAssetContainerAsync, Scene, Vector3 } from '@babylonjs/core';
+import { loadContainer } from '../core/loadContainer';
+import { abortable } from '../core/cancellation';
+import { ArcRotateCamera, Color3, Color4, DirectionalLight, Engine, HemisphericLight, Scene, Vector3 } from '@babylonjs/core';
 import { assetUrl } from '../core/assets';
 import { MaterialLibrary } from '../rendering/MaterialLibrary';
 import { RIG_CONFIGS } from '../weapons/WeaponView';
 import type { WeaponId } from '../weapons/Weapon';
 
 /** Render the existing assets once, then release the preview GPU resources. */
-export async function weaponPreviews(onPreview: (id: WeaponId, url: string) => void): Promise<void> {
+export async function weaponPreviews(onPreview: (id: WeaponId, url: string) => void, signal?: AbortSignal): Promise<void> {
   const canvas = document.createElement('canvas');
   canvas.width = 960;
   canvas.height = 460;
@@ -24,9 +26,9 @@ export async function weaponPreviews(onPreview: (id: WeaponId, url: string) => v
   key.intensity = 2;
   const materials = new MaterialLibrary(scene);
   try {
-    await materials.load();
+    await materials.load(undefined, signal);
     for (const cfg of Object.values(RIG_CONFIGS)) {
-      const container = await LoadAssetContainerAsync(assetUrl(cfg.file), scene);
+      const container = await loadContainer(assetUrl(cfg.file), scene, signal);
       container.addAllToScene();
       for (const mesh of container.meshes) {
         if (mesh.material) mesh.material = materials.get(mesh.material.name);
@@ -36,7 +38,8 @@ export async function weaponPreviews(onPreview: (id: WeaponId, url: string) => v
       const size = bounds.max.subtract(bounds.min);
       camera.setTarget(bounds.min.add(bounds.max).scale(0.5));
       camera.radius = Math.max(size.y, size.z / engine.getAspectRatio(camera), size.x / engine.getAspectRatio(camera)) / (2 * Math.tan(camera.fov / 2)) * 1.3;
-      await scene.whenReadyAsync();
+      await abortable(scene.whenReadyAsync(), signal);
+      signal?.throwIfAborted();
       scene.render();
       onPreview(cfg.id, canvas.toDataURL('image/png'));
       container.dispose();

@@ -1,3 +1,4 @@
+import { completeGuestProfile } from './guest-profile-helper.mjs';
 // Dev helper: capture the menu, settings, start card and HUD screens.
 //   node tools/dev-ui-shots.mjs [outDir] [width] [height]
 import puppeteer from 'puppeteer-core';
@@ -16,6 +17,7 @@ page.on('console', (m) => m.type() === 'error' && console.log('ERR', m.text().sl
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 await page.goto('http://localhost:5173/', { waitUntil: 'domcontentloaded' });
+await completeGuestProfile(page);
 await page.waitForFunction(() => window.__crossfire?.stats().mapId, { timeout: 180000, polling: 500 });
 await wait(1500);
 await page.screenshot({ path: `${out}/ui_menu_${width}.png` });
@@ -31,6 +33,7 @@ await page.screenshot({ path: `${out}/ui_start_${width}.png` });
 
 // HUD in autoplay mode
 await page.goto('http://localhost:5173/?autoplay&cam=-12,0,-3,95,0', { waitUntil: 'domcontentloaded' });
+await completeGuestProfile(page);
 await page.waitForFunction(() => window.__crossfire && window.__crossfire.ready(), { timeout: 180000, polling: 500 });
 await wait(1500);
 await page.screenshot({ path: `${out}/ui_hud_${width}.png` });

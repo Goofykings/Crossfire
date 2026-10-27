@@ -1,3 +1,4 @@
+import { completeGuestProfile } from './guest-profile-helper.mjs';
 /** Two independent browser sessions against running Vite + Wrangler. No fake players.
  * VITE_MULTIPLAYER_URL must be set before starting Vite.
  * node tools/multiplayer-test.mjs [--url http://127.0.0.1:5180/]
@@ -31,6 +32,7 @@ async function open(context) {
   });
   page.on('pageerror', (e) => errors.push(String(e)));
   await page.goto(`${base}?multiplayer&autoplay&quality=low&shadows=low`, { waitUntil: 'domcontentloaded' });
+  await completeGuestProfile(page);
   await page.waitForFunction(() => window.__crossfire?.ready() || document.querySelector('#error.visible'), { timeout: 240000 });
   const state = await page.evaluate(() => ({ network: window.__crossfire.network(), error: document.querySelector('#error.visible p')?.textContent }));
   assert.ok(!state.error, state.error);

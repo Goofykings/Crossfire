@@ -165,6 +165,11 @@ button:disabled { cursor: default; opacity: 0.45; }
 @media (max-width: 760px) { .weapon-grid { grid-template-columns: repeat(4, minmax(210px, 1fr)); overflow-x: auto; scroll-snap-type: x mandatory; } .weapon-card { scroll-snap-align: center; } #weapons { align-items: stretch; } }
 #loading { background: #292c31; align-items: center; justify-content: center; z-index: 60; }
 .loading-word { font-weight: 800; font-size: clamp(20px, 3vw, 34px); letter-spacing: 0.2em; color: #edf0f3; }
+.loading-progress { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+.loading-spinner { width: 28px; height: 28px; border: 3px solid #ffffff24; border-top-color: #eef2f8; border-radius: 50%; animation: loading-spin 800ms linear infinite; }
+#loading .loading-back { position: absolute; top: 24px; left: 24px; width: auto; padding: 12px 18px; }
+@keyframes loading-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .loading-spinner { animation: none; } #loading .loading-back { transition: none; } }
 #menu.visible, #start.visible, #weapons.visible, #settings.visible { animation: menu-reveal 180ms ease-out; }
 @keyframes menu-reveal { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {
@@ -1256,4 +1261,20 @@ button:disabled { cursor: default; opacity: 0.45; }
   .home-settings .settings-foot { gap: 10px; }
   .home-settings .settings-foot .btn { min-width: 0; flex: 1; padding: 12px 8px; }
   .scoreboard th, .scoreboard td { padding-left: 4px; padding-right: 4px; }
+}
+
+/* First-visit guest setup stays off the regular home layout. */
+.guest-dialog { width: min(400px, calc(100vw - 40px)); padding: 30px; border: 1px solid var(--line); border-radius: 12px; background: #171f2b; color: var(--text); box-shadow: 0 20px 80px #0008; pointer-events: auto; }
+.guest-dialog::backdrop { background: #060b13b8; backdrop-filter: blur(5px); }
+.guest-dialog h2 { margin: 0 0 24px; font-size: 1.4em; }
+.guest-dialog label { display: block; color: var(--muted); font-size: 0.85em; margin-bottom: 8px; }
+.username-input { min-width: 0; width: 100%; padding: 11px 12px; font: inherit; color: var(--text); background: #ffffff08; border: 1px solid #ffffff25; border-radius: 6px; user-select: text; }
+.username-input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.guest-error { min-height: 28px; padding-top: 6px; font-size: 0.8em; color: #ffb2ab; }
+.guest-dialog .btn { justify-content: center; margin-top: 12px; }
+.profile-note { grid-column: 2 / -1; color: var(--muted); font-size: 0.75em; }
+.profile-setting .username-input { grid-column: 2 / -1; }
+.profile-setting > output { display: none; }
+@media (max-width: 720px) {
+  .profile-setting .username-input, .profile-note { grid-column: 1 / -1; }
 }

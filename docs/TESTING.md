@@ -14,6 +14,30 @@ Production `/crossfire/` regressions use `tools/home-test.mjs` (five viewport wi
 
 To reproduce the home background, start Vite and run `node tools/capture-home-background.mjs --url http://127.0.0.1:5180/`. It screenshots the existing Town well plaza at eye level into `public/assets/ui/town-plaza.webp`; it does not modify map geometry or load a live map on home.
 
+## Loading cancellation
+
+`tests/cancellation.test.ts` verifies immediate cancellation, late-result disposal, consumed late errors and retained successful resources. After frontend/server builds and starting the existing production preview, run:
+
+```powershell
+node tools/loading-cancel-test.mjs --url http://127.0.0.1:4176/crossfire/
+```
+
+This uses independent real browser/Worker transports, delays an actual join message and actual asset transfers, then clicks the real Back button while waiting for the server, material definitions, weapon models, previews, map models and a real round transition. It checks the spinner, reduced motion, empty server presence, home state/no stale completion, successful retries and approved spawning. No fabricated players or snapshots are used. Intentional request cancellations can emit browser-level ERR_ABORTED messages; uncaught or other unexpected errors fail the test. The fixture-only round RPC is not in production. `tools/prespawn-test.mjs --lifecycle-fixture`, `tools/multiplayer-test.mjs` and `tools/browser-test.mjs` cover the existing multiplayer and gameplay paths after these changes. The home browser check now expects Back, a spinner and LOADING on the gray screen.
+
+## Guest profiles
+
+`tests/guestProfile.test.ts` covers persistence, separate settings storage, cleared/corrupt data, missing/throwing storage, invalid/Unicode names and rejection of guest IDs as join/session credentials. Worker runtime tests validate server names, reject client-selected identifiers, and verify that an authenticated resume can change the display name while retaining authoritative identity/state.
+
+After frontend and server builds and starting the existing production preview, run:
+
+```powershell
+node tools/guest-profile-test.mjs --url http://127.0.0.1:4176/crossfire/
+node tools/settings-test.mjs --url http://127.0.0.1:4176/crossfire/ --out test-results/guest-settings
+node tools/home-test.mjs --appearance-only --url http://127.0.0.1:4176/crossfire/
+```
+
+The profile browser test starts an isolated real Worker runtime and uses actual WebSocket clients. It checks first-visit/blank-name behavior, restoration, draft cancellation and Apply with existing settings, real server names/independent IDs, reconnect/leave/rejoin, blocked-storage multiplayer, cleared/corrupt data and browser errors. It retains only name/key evidence from join frames, never resume credentials. Browser automation uses `tools/guest-profile-helper.mjs` to complete the real first-visit form rather than bypassing setup or creating fake players. Existing development browser helpers also complete that form; their other behavior is unchanged.
+
 ## Unit tests (`npm test`, Vitest in Node)
 
 | File | Covers |

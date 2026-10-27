@@ -1,3 +1,4 @@
+import { completeGuestProfile } from './guest-profile-helper.mjs';
 // Geometry audit: finds pairs of visible triangles that sit in (nearly) the same plane and overlap, which is what
 // z-fights on screen. Needs a running server. Usage:
 //   node tools/dev-zfight.mjs [--url http://localhost:5173/] [--eps 0.02] [--out test-results/zfight.json]
@@ -28,6 +29,7 @@ const browser = await puppeteer.launch({
 });
 const page = await browser.newPage();
 await page.goto(`${URL}?autoplay&nohud`, { waitUntil: 'domcontentloaded' });
+await completeGuestProfile(page);
 await page.waitForFunction(() => window.__crossfire && window.__crossfire.ready(), { timeout: 240000, polling: 500 });
 batches = await page.evaluate(() => window.__crossfire.dumpBatches());
 await browser.close();

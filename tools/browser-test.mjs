@@ -1,3 +1,4 @@
+import { completeGuestProfile } from './guest-profile-helper.mjs';
 /**
  * Headless browser smoke test + screenshot tool.
  *
@@ -64,6 +65,7 @@ page.on('pageerror', (e) => errors.push(String(e)));
 
 async function open(query) {
   await page.goto(`${BASE}?practice&autoplay&quality=${QUALITY}&${query}`, { waitUntil: 'domcontentloaded' });
+  await completeGuestProfile(page);
   await page.waitForFunction(() => window.__crossfire && window.__crossfire.ready(), { timeout: 180000, polling: 500 });
   await new Promise((r) => setTimeout(r, 1500));
 }
@@ -207,7 +209,8 @@ const pool = targets.map((t) => t.id).filter((id) => id !== 'T05');
 {
   let w = await select(1, 'rifle');
   check(w.id === 'rifle' && w.reserve === 'infinite', `key 1 selects the assault rifle; reserve ammunition is infinite (${w.reserve})`);
-  const head = await shootTarget(pool[0], 'head', 6);
+  // Test damage/collision with ADS; the real hip-fire cone can randomly miss a head at 6 m.
+  const head = await shootTarget(pool[0], 'head', 6, true);
   check(head.shot.head && Math.abs(head.shot.damage - 37.5) < 1e-6, `rifle headshot deals 1.5x body damage (${head.shot.damage}, head=${head.shot.head})`);
   const body = await shootTarget(pool[1], 'body', 6);
   check(!body.shot.head && Math.abs(body.shot.damage - 25) < 1e-6, `rifle body shot deals body damage (${body.shot.damage})`);

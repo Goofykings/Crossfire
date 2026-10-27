@@ -1,3 +1,4 @@
+import { completeGuestProfile } from './guest-profile-helper.mjs';
 /** Capture the existing Town plaza at eye level; no geometry or generated map assets are changed.
  * Start Vite, then: node tools/capture-home-background.mjs --url http://127.0.0.1:5180/
  */
@@ -13,6 +14,7 @@ const browser = await puppeteer.launch({ executablePath, headless: true, pipe: t
 try {
   const page = await browser.newPage();
   await page.goto(`${base}?practice&autoplay&nohud&map=european-town&quality=high`, { waitUntil: 'domcontentloaded' });
+  await completeGuestProfile(page);
   await page.waitForFunction(() => window.__crossfire?.ready(), { timeout: 240000 });
   // This map has a well, not a fountain. Frame the actual landmark and surrounding facades.
   await page.evaluate(() => window.__crossfire.freeCam(-3.7, 1.9, 2.8, 54, 0));

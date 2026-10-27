@@ -44,6 +44,8 @@ export class Environment {
   shadows: ShadowGenerator | null = null;
   private casters: AbstractMesh[] = [];
   private receivers: AbstractMesh[] = [];
+  private hdrSettled = false;
+  private disposed = false;
 
   constructor(
     private readonly scene: Scene,
@@ -54,7 +56,11 @@ export class Environment {
     // (tools/dev-sun-sweep.mjs) as the sun's heading with no rotation applied.
     const rot = (cfg.hdriSunHeading - cfg.sunHeading) * DEG;
 
-    this.hdr = new HDRCubeTexture(assetUrl(cfg.hdr), scene, 256, false, true, false, true);
+    const hdrSettled = () => {
+      this.hdrSettled = true;
+      if (this.disposed) this.hdr.dispose();
+    };
+    this.hdr = new HDRCubeTexture(assetUrl(cfg.hdr), scene, 256, false, true, false, true, hdrSettled, hdrSettled);
     this.hdr.rotationY = -rot;
     scene.environmentTexture = this.hdr;
     scene.environmentIntensity = cfg.environmentIntensity;
@@ -186,11 +192,15 @@ export class Environment {
   }
 
   dispose(): void {
+    if (this.disposed) return;
+    this.disposed = true;
     this.shadows?.dispose();
     this.sun.dispose();
     this.sky.material?.dispose(true, true);
     this.sky.dispose();
-    this.hdr.dispose();
-    this.scene.environmentTexture = null;
+    // Babylon's native async prefilter cannot be interrupted safely. Detach now,
+    // then release its texture after the prefilter settles instead of invalidating it mid-pass.
+    if (this.hdrSettled) this.hdr.dispose();
+    if (this.scene.environmentTexture === this.hdr) this.scene.environmentTexture = null;
   }
 }

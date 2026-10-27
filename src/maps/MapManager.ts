@@ -1,3 +1,5 @@
+import { loadContainer } from '../core/loadContainer';
+import { abortable } from '../core/cancellation';
 import {
   Color3,
   InstancedMesh,
@@ -66,184 +68,205 @@ export class MapManager {
     private readonly practiceTargets = true,
   ) {}
 
-  async load(def: MapDefinition, onProgress: ProgressFn = () => {}): Promise<LoadedMap> {
+  async load(def: MapDefinition, onProgress: ProgressFn = () => {}, signal?: AbortSignal): Promise<LoadedMap> {
+    signal?.throwIfAborted();
     this.unload();
-    const t0 = performance.now();
-    const scene = this.ctx.scene;
-    const base = assetUrl(def.assetPath);
-    onProgress(0.02, 'Reading map data');
-    const index = await fetchJson<MapAssetIndex>(base + def.assetIndex);
-    const collision = await fetchJson<CollisionFile>(base + index.collision);
-    this.propCatalog ??= await fetchJson<PropCatalog>(assetUrl('assets/models/shared/props/props.json'));
-    const catalog = this.propCatalog;
-
-    const environment = new Environment(scene, def.environment);
+    const lifetime = new AbortController();
+    const cancel = () => lifetime.abort(signal?.reason);
+    signal?.addEventListener('abort', cancel, { once: true });
+    const active = lifetime.signal;
+    const cleanup: (() => void)[] = [];
     const created: AbstractMesh[] = [];
     const containers: AssetContainer[] = [];
+    try {
+      const t0 = performance.now();
+      const scene = this.ctx.scene;
+      const base = assetUrl(def.assetPath);
+      onProgress(0.02, 'Reading map data');
+      const index = await fetchJson<MapAssetIndex>(base + def.assetIndex, active);
+      const collision = await fetchJson<CollisionFile>(base + index.collision, active);
+      this.propCatalog ??= await fetchJson<PropCatalog>(assetUrl('assets/models/shared/props/props.json'), active);
+      const catalog = this.propCatalog;
 
-    // --- models -------------------------------------------------------------------------------
-    let done = 0;
-    const total = index.models.length;
-    const loaded = await Promise.all(
-      index.models.map(async (file) => {
-        const c = await LoadAssetContainerAsync(base + file, scene);
-        done++;
-        onProgress(0.05 + 0.55 * (done / total), `Loading ${file}`);
-        return c;
-      }),
-    );
-    containers.push(...loaded);
-    onProgress(0.62, 'Building town');
+      active.throwIfAborted();
+      const environment = new Environment(scene, def.environment);
+      cleanup.push(() => environment.dispose());
 
-    // Everything static (building shells, terrain, kit pieces, props) is baked into one mesh per
-    // canonical material and map quadrant. Kit pieces arrive as glTF instances of shared meshes.
-    const batcher = new GeometryBatcher(scene, this.batchCell());
-    let kitInstances = 0;
-    const kitKeys = new Set<string>();
-    const addMesh = (m: AbstractMesh, world: Matrix) => {
-      const source = m instanceof InstancedMesh ? m.sourceMesh : (m as Mesh);
-      const matName = source.material?.name ?? '';
-      batcher.add(source, world, this.materials.canonical(matName));
-    };
-    for (const c of loaded) {
-      c.addAllToScene();
-      for (const m of c.meshes) {
-        if (m.getTotalVertices() === 0) continue;
-        const key = kitKey(m.name);
-        if (key) {
-          kitInstances++;
-          kitKeys.add(key);
-        }
-        addMesh(m, m.computeWorldMatrix(true).clone());
-      }
-    }
-    onProgress(0.7, 'Placing props');
-
-    // --- props --------------------------------------------------------------------------------
-    const world = createMapWorld(collision, def.layout, catalog);
-    const placements: PropPlacement[] = [...def.layout.props, ...def.layout.obstacles];
-    const byType = new Map<string, PropPlacement[]>();
-    for (const p of placements) {
-      if (!catalog.props[p.type]) continue;
-      let list = byType.get(p.type);
-      if (!list) byType.set(p.type, (list = []));
-      list.push(p);
-    }
-    let propInstances = 0;
-    const propContainers = await Promise.all(
-      [...byType.entries()].map(async ([type, list]) => {
-        const entry = catalog.props[type];
-        const c = await LoadAssetContainerAsync(assetUrl(`assets/models/shared/props/${entry.file}`), scene);
-        return { type, list, entry, c };
-      }),
-    );
-    for (const { list, c } of propContainers) {
-      containers.push(c);
-      c.addAllToScene();
-      const place = list.map((p) =>
-        Matrix.Compose(Vector3.One(), Quaternion.RotationAxis(Vector3.Up(), -p.heading * DEG), new Vector3(p.pos[0], p.pos[1], p.pos[2])),
-      );
-      for (const m of c.meshes) {
-        if (m.getTotalVertices() === 0) continue;
-        const local = m.computeWorldMatrix(true).clone();
-        for (const pm of place) addMesh(m, local.multiply(pm));
-        propInstances += place.length;
-      }
-    }
-    onProgress(0.8, 'Baking geometry');
-    const batched = batcher.build();
-    // the source GLB meshes are no longer needed
-    for (const c of containers) c.dispose();
-    containers.length = 0;
-    created.push(...batched);
-    onProgress(0.86, 'Setting up targets');
-
-    // --- gameplay -----------------------------------------------------------------------------
-    const tactical = index.tactical
-      ? await fetchJson<TacticalMapData>(base + index.tactical)
-      : deriveTacticalMap(def.layout, catalog, def.tactical);
-    const targets = new TargetSystem(scene, world, this.materials);
-    if (this.practiceTargets) await targets.load(def.layout.targets);
-
-    const lights: PointLight[] = [];
-    for (const l of def.layout.lights) {
-      const pl = new PointLight('light:map', new Vector3(l.pos[0], l.pos[1], l.pos[2]), scene);
-      pl.diffuse = new Color3(...l.color);
-      pl.specular = new Color3(...l.color).scale(0.3);
-      pl.intensity = l.intensity;
-      pl.range = l.range;
-      lights.push(pl);
-    }
-
-    const shadowCasters = [
-      ...batched.filter((m) => !MaterialLibrary.NO_SHADOW.has((m.metadata as { canonical: string }).canonical)),
-      ...targets.meshes,
-    ];
-    environment.registerShadowMeshes(
-      shadowCasters.filter((m) => !targets.meshes.includes(m)),
-      [...batched, ...targets.meshes],
-      targets.meshes,
-    );
-
-    // the previous map's materials and textures are no longer drawn by anything: free them
-    const inUse = new Set(scene.meshes.map((m) => m.material).filter((m): m is NonNullable<typeof m> => !!m));
-    const pruned = this.materials.prune(inUse);
-    if (pruned.materials) console.info('[crossfire] released', pruned.materials, 'materials and', pruned.textures, 'textures');
-
-    onProgress(0.94, 'Compiling shaders');
-    await scene.whenReadyAsync();
-
-    let debugMeshes: AbstractMesh[] | null = null;
-    let debugVisible = false;
-    const stats: MapStats = {
-      loadMs: Math.round(performance.now() - t0),
-      batchedMeshes: batched.length,
-      kitPieces: kitKeys.size,
-      kitInstances,
-      propInstances,
-      vertices: batched.reduce((n, m) => n + m.getTotalVertices(), 0),
-      colliders: world.size,
-    };
-    const map: LoadedMap = {
-      revision: mapVersion(collision, def.layout, catalog),
-      def,
-      world,
-      targets,
-      environment,
-      spawns: def.layout.spawns,
-      tactical,
-      stats,
-      toggleCollisionDebug: async () => {
-        if (!debugMeshes) {
-          if (!index.collisionDebug) return;
-          const c = await LoadAssetContainerAsync(base + index.collisionDebug, scene);
+      // --- models -------------------------------------------------------------------------------
+      let done = 0;
+      const total = index.models.length;
+      const loaded = await Promise.all(
+        index.models.map(async (file) => {
+          const c = await loadContainer(base + file, scene, active);
           containers.push(c);
-          c.addAllToScene();
-          const mat = new StandardMaterial('collision-debug', scene);
-          mat.wireframe = true;
-          mat.emissiveColor = new Color3(0.1, 1, 0.4);
-          mat.disableLighting = true;
-          debugMeshes = c.meshes.filter((m) => m.getTotalVertices() > 0);
-          for (const m of debugMeshes) {
-            m.material = mat;
-            m.isPickable = false;
+          done++;
+          onProgress(0.05 + 0.55 * (done / total), `Loading ${file}`);
+          return c;
+        }),
+      );
+      onProgress(0.62, 'Building town');
+
+      // Everything static (building shells, terrain, kit pieces, props) is baked into one mesh per
+      // canonical material and map quadrant. Kit pieces arrive as glTF instances of shared meshes.
+      const batcher = new GeometryBatcher(scene, this.batchCell());
+      let kitInstances = 0;
+      const kitKeys = new Set<string>();
+      const addMesh = (m: AbstractMesh, world: Matrix) => {
+        const source = m instanceof InstancedMesh ? m.sourceMesh : (m as Mesh);
+        const matName = source.material?.name ?? '';
+        batcher.add(source, world, this.materials.canonical(matName));
+      };
+      for (const c of loaded) {
+        c.addAllToScene();
+        for (const m of c.meshes) {
+          if (m.getTotalVertices() === 0) continue;
+          const key = kitKey(m.name);
+          if (key) {
+            kitInstances++;
+            kitKeys.add(key);
           }
+          addMesh(m, m.computeWorldMatrix(true).clone());
         }
-        debugVisible = !debugVisible;
-        for (const m of debugMeshes) m.setEnabled(debugVisible);
-      },
-      dispose: () => {
-        targets.dispose();
-        for (const l of lights) l.dispose();
-        for (const m of created) m.dispose(false, false);
-        for (const c of containers) c.dispose();
-        environment.dispose();
-        world.clear();
-      },
-    };
-    this.current = map;
-    onProgress(1, 'Ready');
-    return map;
+      }
+      onProgress(0.7, 'Placing props');
+
+      // --- props --------------------------------------------------------------------------------
+      const world = createMapWorld(collision, def.layout, catalog);
+      cleanup.push(() => world.clear());
+      const placements: PropPlacement[] = [...def.layout.props, ...def.layout.obstacles];
+      const byType = new Map<string, PropPlacement[]>();
+      for (const p of placements) {
+        if (!catalog.props[p.type]) continue;
+        let list = byType.get(p.type);
+        if (!list) byType.set(p.type, (list = []));
+        list.push(p);
+      }
+      let propInstances = 0;
+      const propContainers = await Promise.all(
+        [...byType.entries()].map(async ([type, list]) => {
+          const entry = catalog.props[type];
+          const c = await loadContainer(assetUrl(`assets/models/shared/props/${entry.file}`), scene, active);
+          containers.push(c);
+          return { type, list, entry, c };
+        }),
+      );
+      for (const { list, c } of propContainers) {
+        c.addAllToScene();
+        const place = list.map((p) =>
+          Matrix.Compose(Vector3.One(), Quaternion.RotationAxis(Vector3.Up(), -p.heading * DEG), new Vector3(p.pos[0], p.pos[1], p.pos[2])),
+        );
+        for (const m of c.meshes) {
+          if (m.getTotalVertices() === 0) continue;
+          const local = m.computeWorldMatrix(true).clone();
+          for (const pm of place) addMesh(m, local.multiply(pm));
+          propInstances += place.length;
+        }
+      }
+      onProgress(0.8, 'Baking geometry');
+      const batched = batcher.build();
+      // the source GLB meshes are no longer needed
+      for (const c of containers) c.dispose();
+      containers.length = 0;
+      created.push(...batched);
+      onProgress(0.86, 'Setting up targets');
+
+      // --- gameplay -----------------------------------------------------------------------------
+      const tactical = index.tactical
+        ? await fetchJson<TacticalMapData>(base + index.tactical, active)
+        : deriveTacticalMap(def.layout, catalog, def.tactical);
+      const targets = new TargetSystem(scene, world, this.materials);
+      cleanup.push(() => targets.dispose());
+      if (this.practiceTargets) await targets.load(def.layout.targets, active);
+
+      const lights: PointLight[] = [];
+      for (const l of def.layout.lights) {
+        const pl = new PointLight('light:map', new Vector3(l.pos[0], l.pos[1], l.pos[2]), scene);
+        pl.diffuse = new Color3(...l.color);
+        pl.specular = new Color3(...l.color).scale(0.3);
+        pl.intensity = l.intensity;
+        pl.range = l.range;
+        lights.push(pl);
+        cleanup.push(() => pl.dispose());
+      }
+
+      const shadowCasters = [
+        ...batched.filter((m) => !MaterialLibrary.NO_SHADOW.has((m.metadata as { canonical: string }).canonical)),
+        ...targets.meshes,
+      ];
+      environment.registerShadowMeshes(
+        shadowCasters.filter((m) => !targets.meshes.includes(m)),
+        [...batched, ...targets.meshes],
+        targets.meshes,
+      );
+
+      // the previous map's materials and textures are no longer drawn by anything: free them
+      const inUse = new Set(scene.meshes.map((m) => m.material).filter((m): m is NonNullable<typeof m> => !!m));
+      const pruned = this.materials.prune(inUse);
+      if (pruned.materials) console.info('[crossfire] released', pruned.materials, 'materials and', pruned.textures, 'textures');
+
+      onProgress(0.94, 'Compiling shaders');
+      await abortable(scene.whenReadyAsync(), active);
+      active.throwIfAborted();
+
+      let debugMeshes: AbstractMesh[] | null = null;
+      let debugVisible = false;
+      const stats: MapStats = {
+        loadMs: Math.round(performance.now() - t0),
+        batchedMeshes: batched.length,
+        kitPieces: kitKeys.size,
+        kitInstances,
+        propInstances,
+        vertices: batched.reduce((n, m) => n + m.getTotalVertices(), 0),
+        colliders: world.size,
+      };
+      const map: LoadedMap = {
+        revision: mapVersion(collision, def.layout, catalog),
+        def,
+        world,
+        targets,
+        environment,
+        spawns: def.layout.spawns,
+        tactical,
+        stats,
+        toggleCollisionDebug: async () => {
+          if (!debugMeshes) {
+            if (!index.collisionDebug) return;
+            const c = await LoadAssetContainerAsync(base + index.collisionDebug, scene);
+            containers.push(c);
+            c.addAllToScene();
+            const mat = new StandardMaterial('collision-debug', scene);
+            mat.wireframe = true;
+            mat.emissiveColor = new Color3(0.1, 1, 0.4);
+            mat.disableLighting = true;
+            debugMeshes = c.meshes.filter((m) => m.getTotalVertices() > 0);
+            for (const m of debugMeshes) {
+              m.material = mat;
+              m.isPickable = false;
+            }
+          }
+          debugVisible = !debugVisible;
+          for (const m of debugMeshes) m.setEnabled(debugVisible);
+        },
+        dispose: () => {
+          targets.dispose();
+          for (const l of lights) l.dispose();
+          for (const m of created) m.dispose(false, false);
+          for (const c of containers) c.dispose();
+          environment.dispose();
+          world.clear();
+        },
+      };
+      this.current = map;
+      onProgress(1, 'Ready');
+      return map;
+    } catch (error) {
+      lifetime.abort(); // Stop sibling transfers if any one asset fails.
+      for (const container of containers) container.dispose();
+      for (const mesh of created) mesh.dispose(false, false);
+      for (const dispose of cleanup.reverse()) dispose();
+      this.materials.prune(new Set(this.ctx.scene.meshes.map((m) => m.material).filter((m): m is NonNullable<typeof m> => !!m)));
+      throw error;
+    } finally { signal?.removeEventListener('abort', cancel); }
   }
 
   unload(): void {

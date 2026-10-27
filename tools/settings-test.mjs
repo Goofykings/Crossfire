@@ -1,3 +1,4 @@
+import { completeGuestProfile } from './guest-profile-helper.mjs';
 /**
  * Settings menu test: drives the real UI (mouse and keyboard) in headless Chrome.
  *
@@ -43,6 +44,7 @@ async function open(query = '') {
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
   page.on('pageerror', (e) => errors.push(String(e)));
   await page.goto(`${BASE}${query ? query + '&practice' : '?practice'}`, { waitUntil: 'domcontentloaded' });
+  await completeGuestProfile(page);
   await page.waitForFunction(() => window.__crossfire, { timeout: 120000 });
   return page;
 }

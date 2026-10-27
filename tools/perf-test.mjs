@@ -1,3 +1,4 @@
+import { completeGuestProfile } from './guest-profile-helper.mjs';
 /**
  * Measure frame rate across graphics presets and viewpoints (uncapped, headless Chrome/Edge).
  *   node tools/perf-test.mjs [--url http://localhost:5173/] [--width 1920] [--height 1080] [--map european-town]
@@ -66,6 +67,7 @@ console.log('preset (gfx/shadows/scale) | view        |   fps | draw calls');
 for (const [q, s, scale] of presets) {
   const page = await browser.newPage();
   await page.goto(`${BASE}?autoplay&nohud&quality=${q}&shadows=${s}&scale=${scale}&map=${MAP}`, { waitUntil: 'domcontentloaded' });
+  await completeGuestProfile(page);
   await page.waitForFunction(() => window.__crossfire && window.__crossfire.ready(), { timeout: 180000, polling: 500 });
   for (const [name, v] of views) {
     await page.evaluate((v) => window.__crossfire.teleport(...v), v);

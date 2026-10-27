@@ -2,6 +2,8 @@ import { assetUrl } from '../core/assets';
 import type { AudioManager } from '../audio/AudioManager';
 import { SETTING_LIMITS, type Settings, type SettingsStore } from '../config/settings';
 import { SettingsDraft } from '../config/settingsDraft';
+import type { GuestProfileStore } from '../config/guestProfile';
+import { normalizeUsername } from '../../shared/username';
 import { Dropdown } from './Dropdown';
 import { Scoreboard } from './Scoreboard';
 import { CROSSFIRE_LOGO } from './WeaponIcons';
@@ -54,12 +56,19 @@ export class UI {
   private settingsFocus: HTMLElement | null = null;
   /** What the settings screen edits. The game only sees changes when Apply hands them to the SettingsStore. */
   private readonly draft: SettingsDraft;
+  private usernameDraft: string;
+  private usernameInput!: HTMLInputElement;
+  private usernameRow!: HTMLElement;
+  private guestDialog!: HTMLDialogElement;
+  private guestSetup: Promise<void> | null = null;
+  private finishGuestSetup: () => void = () => {};
 
   // callbacks set by the game
   onPlay: () => void = () => {};
   onStart: () => void = () => {};
   onResume: () => void = () => {};
   onQuit: () => void = () => {};
+  onCancelLoading: () => void = () => {};
 
   // HUD elements
   private crosshair!: HTMLElement;
@@ -105,8 +114,10 @@ export class UI {
     private readonly root: HTMLElement,
     settings: SettingsStore,
     private readonly audio: AudioManager,
+    private readonly profile: GuestProfileStore,
   ) {
     this.draft = new SettingsDraft(settings);
+    this.usernameDraft = profile.value.username;
     this.buildMenu();
     this.buildLoading();
     try { const saved = localStorage.getItem('crossfire.pending-weapon'); if (validWeapon(saved)) this.pendingWeapon = saved; } catch { /* Optional preference. */ }
@@ -116,6 +127,7 @@ export class UI {
     this.buildPause();
     this.buildSettings();
     this.buildError();
+    this.buildGuestPrompt();
     this.scoreboard = new Scoreboard(root);
   }
 
@@ -135,6 +147,65 @@ export class UI {
       onClick();
     });
     return b;
+  }
+
+  private buildGuestPrompt(): void {
+    const dialog = el('dialog', 'guest-dialog');
+    dialog.id = 'guest-profile';
+    dialog.setAttribute('aria-labelledby', 'guest-heading');
+    const form = el('form');
+    form.noValidate = true;
+    const heading = el('h2', '', 'Choose your username');
+    heading.id = 'guest-heading';
+    const input = this.usernameField('guest-username');
+    const label = el('label', '', 'Username');
+    label.htmlFor = input.id;
+    const error = el('div', 'guest-error');
+    error.id = 'guest-error';
+    error.setAttribute('role', 'status');
+    input.setAttribute('aria-describedby', error.id);
+    input.addEventListener('input', () => { error.textContent = ''; input.removeAttribute('aria-invalid'); });
+    form.append(heading, label, input, error, this.button('Continue', '', 'primary', () => {}));
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      if (!this.profile.setUsername(input.value)) {
+        error.textContent = 'Enter a username (1–24 characters).';
+        input.setAttribute('aria-invalid', 'true');
+        input.focus();
+        return;
+      }
+      this.usernameDraft = this.profile.value.username;
+      this.syncSettings();
+      dialog.close();
+      this.finishGuestSetup();
+      this.guestSetup = null;
+      this.root.querySelector<HTMLButtonElement>('.home-actions button')?.focus();
+    });
+    // Keep first-visit setup keyboard accessible without dismissing it unnamed.
+    dialog.addEventListener('cancel', (event) => event.preventDefault());
+    dialog.appendChild(form);
+    this.root.appendChild(dialog);
+    this.guestDialog = dialog;
+  }
+
+  ensureGuestProfile(): Promise<void> {
+    if (this.profile.value.username) return Promise.resolve();
+    if (this.guestSetup) return this.guestSetup;
+    this.guestSetup = new Promise((resolve) => { this.finishGuestSetup = resolve; });
+    this.guestDialog.showModal();
+    this.guestDialog.querySelector<HTMLInputElement>('input')!.focus();
+    return this.guestSetup;
+  }
+
+  private usernameField(id: string): HTMLInputElement {
+    const input = el('input', 'username-input');
+    input.type = 'text';
+    input.id = id;
+    input.maxLength = 48;
+    input.setAttribute('autocomplete', 'nickname');
+    input.spellcheck = false;
+    input.required = true;
+    return input;
   }
 
   // ---------------------------------------------------------------------------------------------
@@ -190,7 +261,12 @@ export class UI {
     const s = this.screen('loading');
     s.setAttribute('role', 'status');
     s.setAttribute('aria-live', 'polite');
-    s.appendChild(el('div', 'loading-word', 'LOADING'));
+    const back = this.button('Back', '', 'loading-back', () => this.onCancelLoading());
+    const progress = el('div', 'loading-progress');
+    const spinner = el('span', 'loading-spinner');
+    spinner.setAttribute('aria-hidden', 'true');
+    progress.append(spinner, el('div', 'loading-word', 'LOADING'));
+    s.append(back, progress);
   }
 
   setLoading(fraction: number, _label: string): void {
@@ -254,6 +330,7 @@ export class UI {
     const img = el('img');
     img.src = url;
     img.alt = this.labels[id];
+    this.weaponCards.get(id)?.querySelector('img')?.remove();
     this.weaponCards.get(id)?.prepend(img);
     this.refreshSelection();
   }
@@ -379,6 +456,8 @@ export class UI {
     this.settingsFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     this.settingsReturn = from;
     this.draft.discard();
+    this.usernameDraft = this.profile.value.username;
+    this.usernameInput.setCustomValidity('');
     this.selectSettingsTab(0, false);
     this.setSettingsStatus('');
     this.show('settings', from === 'pause');
@@ -388,15 +467,27 @@ export class UI {
   /** Back: drop every unapplied edit and return to where settings were opened from. */
   private closeSettings(): void {
     this.draft.discard();
+    this.usernameDraft = this.profile.value.username;
+    this.usernameInput.setCustomValidity('');
     this.show(this.settingsReturn, this.settingsReturn === 'pause');
     this.settingsFocus?.focus();
   }
 
   private applySettings(): void {
-    if (!this.draft.dirty) return;
+    const rename = this.usernameDraft !== this.profile.value.username;
+    if (!this.draft.dirty && !rename) return;
+    if (rename && !normalizeUsername(this.usernameDraft)) {
+      this.setSettingsStatus('Enter a username (1–24 characters).');
+      this.usernameInput.setCustomValidity('Enter a username.');
+      this.usernameInput.reportValidity();
+      return;
+    }
+    if (rename) this.profile.setUsername(this.usernameDraft);
+    this.usernameDraft = this.profile.value.username;
     const changed = this.draft.apply();
     this.syncSettings();
-    this.setSettingsStatus(`Applied ${changed.length} change${changed.length === 1 ? '' : 's'}`, true);
+    const count = changed.length + Number(rename);
+    this.setSettingsStatus(`Applied ${count} change${count === 1 ? '' : 's'}`, true);
   }
 
   private setSettingsStatus(text: string, flash = false): void {
@@ -476,6 +567,7 @@ export class UI {
       panel.id = `panel-${c.key}`;
       panel.setAttribute('role', 'tabpanel');
       panel.setAttribute('aria-labelledby', tab.id);
+      if (c.key === 'gameplay') panel.appendChild(this.buildUsernameSetting());
       for (const [key, row] of c.rows) {
         panel.appendChild(row);
         this.settingRows.set(key, row);
@@ -536,16 +628,36 @@ export class UI {
     });
   }
 
+  private buildUsernameSetting(): HTMLElement {
+    const { row, lab } = this.settingRow('Username', 'set-username');
+    row.classList.add('profile-setting');
+    this.usernameRow = row;
+    this.usernameInput = this.usernameField('set-username');
+    this.usernameInput.addEventListener('input', () => {
+      this.usernameDraft = this.usernameInput.value;
+      this.usernameInput.setCustomValidity('');
+      this.syncSettings();
+    });
+    const note = el('small', 'profile-note', 'Used on your next join.');
+    note.id = 'username-note';
+    this.usernameInput.setAttribute('aria-describedby', note.id);
+    row.append(lab, this.usernameInput, el('output'), note);
+    return row;
+  }
+
   /** Push the draft into every control and refresh the "unapplied" markers. */
   private syncSettings(): void {
     for (const f of this.settingSyncs) f();
     const dirty = new Set(this.draft.dirtyKeys);
+    const rename = this.usernameDraft !== this.profile.value.username;
+    if (this.usernameInput.value !== this.usernameDraft) this.usernameInput.value = this.usernameDraft;
+    this.usernameRow.classList.toggle('changed', rename);
     for (const [key, row] of this.settingRows) row.classList.toggle('changed', dirty.has(key));
-    for (const t of this.settingTabs) t.tab.classList.toggle('changed', t.keys.some((k) => dirty.has(k)));
-    this.dirtyPill.hidden = dirty.size === 0;
-    this.applyButton.setAttribute('aria-disabled', String(dirty.size === 0));
-    this.applyButton.classList.toggle('inactive', dirty.size === 0);
-    if (dirty.size && this.settingsStatus.classList.contains('ok')) this.setSettingsStatus('');
+    for (const t of this.settingTabs) t.tab.classList.toggle('changed', t.keys.some((k) => dirty.has(k)) || (t.key === 'gameplay' && rename));
+    this.dirtyPill.hidden = dirty.size === 0 && !rename;
+    this.applyButton.setAttribute('aria-disabled', String(dirty.size === 0 && !rename));
+    this.applyButton.classList.toggle('inactive', dirty.size === 0 && !rename);
+    if ((dirty.size || rename) && this.settingsStatus.classList.contains('ok')) this.setSettingsStatus('');
   }
 
   private settingRow(label: string, forId: string): { row: HTMLElement; lab: HTMLLabelElement } {

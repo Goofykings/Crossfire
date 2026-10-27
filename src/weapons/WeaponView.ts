@@ -1,6 +1,6 @@
+import { loadContainer } from '../core/loadContainer';
 import {
   Color3,
-  LoadAssetContainerAsync,
   Mesh,
   MeshBuilder,
   PointLight,
@@ -10,6 +10,7 @@ import {
   TransformNode,
   Vector3,
   type AbstractMesh,
+  type AssetContainer,
   type Scene,
 } from '@babylonjs/core';
 import { assetUrl } from '../core/assets';
@@ -136,6 +137,8 @@ export class WeaponView {
   private readonly rigs = new Map<WeaponId, Rig>();
   private current: Rig | null = null;
   private flashLight: PointLight | null = null;
+  private reticle: StandardMaterial | null = null;
+  private readonly containers: AssetContainer[] = [];
   private flashTimer = 0;
   private swayX = 0;
   private swayY = 0;
@@ -161,10 +164,11 @@ export class WeaponView {
     scene.setRenderingAutoClearDepthStencil(WEAPON_RENDER_GROUP, true, true, false);
   }
 
-  async load(): Promise<void> {
+  async load(signal?: AbortSignal): Promise<void> {
     const scene = this.ctx.scene;
     const reticle = this.reticleMaterial(scene);
-    await Promise.all(Object.values(RIG_CONFIGS).map((cfg) => this.loadRig(cfg, reticle)));
+    this.reticle = reticle;
+    await Promise.all(Object.values(RIG_CONFIGS).map((cfg) => this.loadRig(cfg, reticle, signal)));
     const light = new PointLight('muzzle-light', Vector3.Zero(), scene);
     light.diffuse = new Color3(1.0, 0.72, 0.38);
     light.specular = new Color3(0.5, 0.35, 0.2);
@@ -174,9 +178,10 @@ export class WeaponView {
     this.select('rifle');
   }
 
-  private async loadRig(cfg: RigConfig, reticle: StandardMaterial): Promise<void> {
+  private async loadRig(cfg: RigConfig, reticle: StandardMaterial, signal?: AbortSignal): Promise<void> {
     const scene = this.ctx.scene;
-    const c = await LoadAssetContainerAsync(assetUrl(cfg.file), scene);
+    const c = await loadContainer(assetUrl(cfg.file), scene, signal);
+    this.containers.push(c);
     c.addAllToScene();
     const root = c.rootNodes[0] as TransformNode;
     root.parent = this.pivot;
@@ -458,6 +463,10 @@ export class WeaponView {
   }
 
   dispose(): void {
-    this.root.dispose(false, true);
+    this.flashLight?.dispose();
+    for (const container of this.containers) container.dispose();
+    this.containers.length = 0;
+    this.root.dispose(false, false);
+    this.reticle?.dispose(false, true);
   }
 }

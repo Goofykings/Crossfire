@@ -1,5 +1,5 @@
+import { loadContainer } from '../core/loadContainer';
 import {
-  LoadAssetContainerAsync,
   Matrix,
   Quaternion,
   TransformNode,
@@ -148,8 +148,8 @@ export class TargetSystem {
     private readonly materials: MaterialLibrary,
   ) {}
 
-  async load(placements: TargetPlacement[]): Promise<void> {
-    const container = await LoadAssetContainerAsync(assetUrl('assets/models/shared/props/target.glb'), this.scene);
+  async load(placements: TargetPlacement[], signal?: AbortSignal): Promise<void> {
+    const container = await loadContainer(assetUrl('assets/models/shared/props/target.glb'), this.scene, signal);
     this.container = container;
     container.addAllToScene();
     const sources = container.meshes.filter((m) => m.getTotalVertices() > 0) as Mesh[];

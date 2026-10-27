@@ -1,3 +1,4 @@
+import { completeGuestProfile } from './guest-profile-helper.mjs';
 /**
  * Wall-gap audit: finds places where you can see into (or through) something solid. Needs a running server.
  *
@@ -32,6 +33,7 @@ const browser = await puppeteer.launch({
 });
 const page = await browser.newPage();
 await page.goto(`${URL}?autoplay&nohud&map=${MAP}`, { waitUntil: 'domcontentloaded' });
+await completeGuestProfile(page);
 await page.waitForFunction(() => window.__crossfire && window.__crossfire.ready(), { timeout: 240000, polling: 500 });
 const batches = await page.evaluate(() => window.__crossfire.dumpBatches());
 const { boxes } = await page.evaluate(async (m) => (await fetch(`assets/models/${m}/collision.json`)).json(), MAP);

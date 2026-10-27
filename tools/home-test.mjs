@@ -1,3 +1,4 @@
+import { completeGuestProfile } from './guest-profile-helper.mjs';
 /** Real-browser home screen checks. Needs npm run dev (or a production preview).
  * node tools/home-test.mjs [--url http://localhost:5173/]
  */
@@ -29,6 +30,7 @@ try {
   const requests = [];
   page.on('request', (request) => requests.push(request.url()));
   await page.goto(base, { waitUntil: 'domcontentloaded' });
+  await completeGuestProfile(page);
   await page.waitForFunction(() => window.__crossfire && document.querySelector('#menu.visible'), { timeout: 240000 });
   check(await page.$eval('.logo', (e) => e.getAttribute('aria-label') === 'CROSSFIRE' && e.querySelectorAll('svg').length === 1), 'original CROSS / crossed rifles / FIRE logo has an accessible full title');
   check(await page.evaluate(() => window.__crossfire.stats().mapId == null), 'home loads no playable map');
@@ -144,7 +146,8 @@ try {
     });
     await page.click('#menu .btn.primary');
     await page.waitForSelector('#loading.visible');
-    check(await page.$eval('#loading', (e) => e.innerText.trim() === 'LOADING' && getComputedStyle(e).backgroundColor === 'rgb(41, 44, 49)'), 'join shows only centered LOADING on an opaque dark-gray screen');
+    check(await page.$eval('#loading', (e) => e.querySelector('.loading-word')?.textContent === 'LOADING' && e.querySelector('.loading-back')?.textContent.trim() === 'Back'
+      && e.querySelector('.loading-spinner') && getComputedStyle(e).backgroundColor === 'rgb(41, 44, 49)'), 'join shows centered LOADING, spinner and Back on an opaque dark-gray screen');
     await page.screenshot({ path: 'test-results/home/loading.png' });
     hold = false;
     await Promise.all(pending.splice(0).map((r) => r.continue()));
@@ -157,6 +160,7 @@ try {
     const observer = await browser.newPage();
     observer.on('pageerror', (error) => errors.push(String(error)));
     await observer.goto(base, { waitUntil: 'domcontentloaded' });
+    await completeGuestProfile(observer);
     await observer.waitForFunction(() => document.querySelector('.online-count')?.dataset.available === 'true');
     await observer.setOfflineMode(true);
     await observer.waitForFunction(() => document.querySelector('.online-count')?.dataset.available === 'false'

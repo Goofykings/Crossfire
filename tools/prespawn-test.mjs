@@ -1,3 +1,4 @@
+import { completeGuestProfile } from './guest-profile-helper.mjs';
 /** Real Stage 1 UI against local Worker. No synthetic multiplayer roster or scores.
  * node tools/prespawn-test.mjs [--url http://127.0.0.1:5180/]
  */
@@ -54,6 +55,7 @@ async function home() {
   }, fixtureUrl);
   page.on('pageerror', (e) => errors.push(String(e)));
   await page.goto(`${base}?quality=low&shadows=low`, { waitUntil: 'domcontentloaded' });
+  await completeGuestProfile(page);
   await page.waitForFunction(() => window.__crossfire && document.querySelector('#menu.visible'), { timeout: 240000 });
   check(await page.evaluate(() => window.__crossfire.stats().mapId == null), 'home opens without a playable map');
   return page;
@@ -239,7 +241,7 @@ try {
   await a.waitForSelector('#menu.visible');
   await b.waitForFunction(() => window.__crossfire.network().snapshot.players.length === 1 && window.__crossfire.network().rendered.length === 0);
   await count(observer, 1);
-  check((await state(a)).state === 'closed', 'Leave Match closes the session and removes its remote avatar');
+  check((await state(a)).state === 'idle', 'Leave Match disposes the closed session and removes its remote avatar');
   await b.bringToFront();
   await b.keyboard.press('Escape');
   await b.waitForSelector('#pause.visible');

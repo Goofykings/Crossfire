@@ -1,3 +1,4 @@
+import { completeGuestProfile } from './guest-profile-helper.mjs';
 // Flicker test. Renders each view several times with the camera nudged by millimetres, then (tools/jitter_analyze.py)
 // compares the frames: a stable surface barely changes when the camera moves a millimetre, a z-fight rewrites its
 // pattern. Needs a running dev server.   node tools/dev-jitter.mjs [--url http://localhost:5173/] [--out test-results/jitter]
@@ -60,6 +61,7 @@ const browser = await puppeteer.launch({
 });
 const page = await browser.newPage();
 await page.goto(`${URL}?autoplay&nohud`, { waitUntil: 'domcontentloaded' });
+await completeGuestProfile(page);
 await page.waitForFunction(() => window.__crossfire && window.__crossfire.ready(), { timeout: 240000, polling: 500 });
 // ready() means loaded, not that every shader has compiled: meshes without a ready effect are skipped. Warm up first.
 await page.evaluate(() => window.__crossfire.freeCam(0, 1.64, 8, 0, 0));

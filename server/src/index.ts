@@ -6,6 +6,7 @@ import { HEARTBEAT_TIMEOUT_MS, NETWORK_HZ, PUBLIC_ROOM, SESSION_GRACE_MS, parseC
 import { WORLDS, MOVEMENT } from './world';
 import { mapRound, type MapSchedule, type MapRound } from '../../shared/maps';
 import type { WeaponId } from '../../src/weapons/Weapon';
+import { normalizeUsername } from '../../shared/username';
 
 interface Bindings {
   ROOM: DurableObjectNamespace<PublicRoom>;
@@ -238,14 +239,16 @@ export class PublicRoom extends DurableObject<Bindings> {
     let e = resume ? [...this.players.values()].find((p) => p.session.token === resume) : undefined;
     if (resume && !e) { this.error(socket, 'resume_expired', 'Session expired; join again', true); return; }
     const resumed = !!e;
+    const name = normalizeUsername(requested) ?? 'Player';
     if (!e) {
       if (this.players.size >= 16) { this.error(socket, 'room_full', 'Room capacity reached', true); return; }
       const controller = new PlayerController(this.activeMap.world);
-      const name = requested.normalize('NFKC').replace(/[\p{C}<>]/gu, '').trim().slice(0, 24) || 'Player';
       e = this.entry({ id: crypto.randomUUID(), name, token: token(), generation: 0, motion: controller.capture(), ack: 0,
         roundId: this.round.id, alive: false, life: 0, weapon: null, kills: 0, deaths: 0, lastSeen: Date.now(), expiresAt: 0 });
       this.players.set(e.session.id, e);
     }
+    // A valid resume credential preserves the session, while display names remain editable.
+    e.session.name = name;
     const old = e.socket;
     e.socket = socket;
     e.session.generation++;

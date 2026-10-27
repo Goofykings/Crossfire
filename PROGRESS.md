@@ -1,3 +1,84 @@
+# Current task: cancellable match loading and spinner
+
+Updated: 2026-10-26. Completed the requested loading-screen Back button and activity animation.
+
+## Completed
+
+- Added a top-left Back button to the existing gray loading screen and a small CSS wheel above LOADING. The wheel spins every 800 ms and stays static for reduced-motion preferences. Visually inspected the actual production layout.
+- Back immediately returns home, aborts the active membership/load attempt, explicitly leaves/closes its transport, stops reconnect/heartbeat timers and invalidates pending round/map work. Late completions/errors cannot switch the screen back into a match or overwrite a newer attempt. Fresh Play can join again.
+- Threaded optional AbortSignals through existing material/JSON, geometry, weapon/casing, preview, target and map loaders. GLB transfers use cancellable fetch plus the existing Babylon loader on the same bytes/root URL/name; the map/world/batching/render architecture and Pages asset paths remain intact.
+- Cancelling releases partial models, pools, preview engines, map environment/lights and unused shared materials. Completed reusable game assets remain cached. Failed/cancelled preparation clears its promise, and preview updates replace existing images instead of duplicating them after retry. Promise finalizers only clear their own load.
+- A repeat cancellation test caught Babylon HDR prefiltering accessing a texture after disposal. Fixed by detaching the retired environment immediately and releasing that native GPU resource once its non-interruptible prefilter settles. Other cancelled work stops; no retired join or UI continuation resumes. No library patches or graphics-quality changes were made.
+
+## Validation
+
+- Frontend TypeScript/production build and **144 unit tests in 14 files** pass. Three new cancellation tests cover immediate rejection, late-result disposal, consumed late errors and preservation of successful resources. Existing bundle-size warning remains.
+- Final production cancellation test passes against an isolated real Worker/WebSocket runtime: Back during a delayed actual join, material definitions, weapon downloads, preview generation, map downloads and a real round transition. Verified real server presence returns to zero, no stale pre-spawn/error/map appears, retries work, previews do not duplicate, and joining/spawning remains server-approved. Spinner timing/position and reduced motion pass. No uncaught or unexpected browser errors; deliberately aborted browser requests are expected.
+- Real two-client lifecycle regression passes pre-spawn/loadouts, authoritative icons/scores, spawn/respawn, SMG firing/reload/audio, all three map transitions, reconnect during loading and Leave Match. The independent two-browser movement test also passes position/orientation synchronization, authenticated reconnect without duplicate players and offline Retry/Back recovery.
+- Final production practice gameplay regression passes map materials, movement/stairs/collision, firing/headshots, all original weapons, scopes/pump/bolt, finite magazines/infinite reserves, weapon-only reloads and held leaderboard, with no console errors. Stabilized its existing rifle headshot check with normal ADS (matching the map regression); randomized hip-fire could miss the small head at 6 m. Gameplay accuracy/stats were not changed.
+- Evidence: ignored `test-results/loading-cancel/loading.png`, `test-results/loading-cancel-build.log`, `test-results/loading-cancel-browser.log`, `test-results/loading-cancel-multiplayer.log`, `test-results/loading-cancel-retry.log`, `test-results/loading-cancel-gameplay.log`. `git diff --check` passes.
+
+## Files modified by this task
+
+- `src/core/cancellation.ts` (new)
+- `src/core/loadContainer.ts` (new)
+- `src/core/assets.ts`
+- `src/game/Game.ts`
+- `src/game/Targets.ts`
+- `src/maps/MapManager.ts`
+- `src/rendering/Environment.ts`
+- `src/rendering/MaterialLibrary.ts`
+- `src/ui/UI.ts`
+- `src/ui/WeaponPreviews.ts`
+- `src/styles.css`
+- `src/weapons/Effects.ts`
+- `src/weapons/WeaponView.ts`
+- `tests/cancellation.test.ts` (new)
+- `tools/loading-cancel-test.mjs` (new)
+- `tools/home-test.mjs`
+- `tools/prespawn-test.mjs`
+- `tools/browser-test.mjs`
+- `README.md`
+- `docs/TESTING.md`
+- `CLAUDE.md`
+- `PROGRESS.md`
+
+Existing guest-profile work and other uncommitted changes were preserved. No backend, protocol, map geometry, weapon mechanics or deployment configuration was changed by this task. No commit, push or deployment was performed. **Loading cancellation feature complete; stop here.**
+
+---
+
+# Current task: simple guest profiles
+
+Updated: 2026-10-26. Completed the requested guest-profile feature using the existing UI/settings and Cloudflare multiplayer architecture.
+
+## Behavior
+
+- First visit opens one small, keyboard-accessible username dialog over the existing home. Empty names are rejected; no account, password, login or profile panel is added to the regular home layout. Actual Play/autoplay waits for name setup.
+- A separate `crossfire.guest.v1` localStorage record holds the normalized username and cryptographically random UUID guest ID. Future visits restore it. Clearing or corrupting data safely creates a fresh profile; unavailable/blocked/full storage retains a temporary in-memory guest without crashing.
+- Settings > Gameplay > Username edits a draft. Apply saves it; Back/Escape/navigation discard it. Invalid names prevent partial application of graphics/gameplay/audio edits. Existing settings schema/storage, Defaults, graphics/sound controls and pause Settings remain intact. Defaults do not reset the guest name or ID.
+- Names are used on the **next join/reconnect**, with a short note beside the Settings control. The reused networking client reads the applied name on each join. Joining without credentials gets a new authoritative session even when the local guest ID stays the same.
+- No guest ID is sent to the Worker. Existing v3 join/resume messages and server UUID/resume-credential model are preserved. The Worker independently normalizes/trims/limits names (24 Unicode characters, controls/angle brackets removed), including valid resumed joins; renaming on resume preserves the existing authoritative session/state. Empty independently supplied server names still fall back to Player. No authentication/profile database, account endpoints or protocol-version change was added.
+
+## Verification
+
+- Frontend TypeScript/production build pass; **141 unit tests in 13 files** pass, including five profile tests covering persistence, unrelated settings, clearing/corruption, storage failures, Unicode/invalid names and rejection of guest IDs/client session IDs as join credentials.
+- Backend TypeScript, Wrangler dry-run build and **19 real runtime checks** pass. Tests validate sanitized/fallback/long Unicode names, rejected local guest identifiers, distinct server IDs and renamed credential-authorized resumption, plus the existing movement/disconnection/reconnection/round cases.
+- Dedicated production browser test passes with independent real clients against an isolated actual Worker/SQLite/WebSocket runtime: first-visit/blank-name setup, saved profile reload, Apply/Back and invalid-name atomicity with existing settings, visible authoritative names for two real players, local-ID/session-ID separation, renamed reconnect preserving identity, explicit Leave/rejoin producing a new server identity, actual temporary multiplayer with blocked localStorage, re-prompt on temporary reload, fresh IDs after clearing data and safe corrupted-data recovery. No fabricated roster, server snapshots, counts or connections; no browser console errors.
+- Full existing Settings browser regression passes graphics, sound, gameplay, mouse/keyboard controls, draft/Apply/Back/Escape/Defaults, persisted/corrupt settings and pause entry. Responsive home checks pass at five viewport sizes with no console errors; the clean home, tab/hover behavior and lazy map loading are preserved.
+- Visually inspected first-visit dialog, username Settings row and leaderboard displaying the two actual clients' names. Evidence/logs: ignored `test-results/guest/`, `test-results/guest-settings/`, `test-results/guest-*.log`. Existing large Babylon bundle warning remains. `git diff --check` passes.
+
+## Files / limits
+
+Core: `shared/username.ts`, `src/config/guestProfile.ts`, `src/ui/UI.ts`, `src/styles.css`, `src/game/Game.ts`, `src/network/MultiplayerClient.ts`, `server/src/index.ts`.
+
+Tests: `tests/guestProfile.test.ts`, `server/tests/integration.mjs`, new `tools/guest-profile-test.mjs` and `tools/guest-profile-helper.mjs`. Existing browser/home/settings/prespawn/multiplayer/maps/performance/capture tools and nine `tools/dev-*.mjs` browser helpers now complete the real first-visit form, preserving their automation entry points. These helper-only edits do not change gameplay; the dedicated profile, Settings and home tools were run, not every historical developer tool.
+
+Docs: `README.md`, `server/README.md`, `docs/TESTING.md`, `CLAUDE.md`, `PROGRESS.md`.
+
+Display names are not unique accounts or identity proof. Profile persistence is limited to this browser/site storage; temporary profiles cannot survive reload when storage is blocked. Public deployment/operation was not tested; the updated Worker must be deployed later for renamed resumes. GitHub Pages/Vite/Worker configuration and unrelated game systems are unchanged. Existing combat/Teams/results limitations remain outside scope. No commit, push or deployment was performed. **Guest-profile feature complete; stop here.**
+
+---
+
 # Current task: larger main PLAY text
 
 Updated: 2026-10-26. Increased only the main home PLAY button text from 23-30px to 34-42px responsively. Kept its desktop 88px button height, centered alignment and generous padding; the top Play navigation label is unchanged.

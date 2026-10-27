@@ -80,12 +80,24 @@ test('Public room: real Workers runtime and real WebSocket clients', { timeout: 
       a = await open({ name: '<Alice>' }); b = await open({ name: 'Bob' });
       assert.equal(a.welcome.snapshot.room, b.welcome.snapshot.room);
       assert.notEqual(a.welcome.selfId, b.welcome.selfId);
+      assert.match(a.welcome.selfId, /^[a-f0-9-]{36}$/);
       const shared = await a.wait((m) => m.type === 'snapshot' && m.snapshot.players.length === 2);
       assert.deepEqual(new Set(shared.snapshot.players.map((p) => p.id)), new Set([a.welcome.selfId, b.welcome.selfId]));
       assert.equal(shared.snapshot.players.find((p) => p.id === a.welcome.selfId).name, 'Alice');
+      assert.equal('guestId' in shared.snapshot.players[0], false);
       assert.equal('resumeToken' in shared.snapshot.players[0], false);
       const [pa, pb] = shared.snapshot.players.map((p) => p.motion.position);
       assert.ok(Math.hypot(pa.x - pb.x, pa.z - pb.z) > 0.8);
+    });
+    await t.test('server validates guest names and rejects client-selected guest/session identifiers', async () => {
+      for (const [name, expected] of [[' <>\u0000 ', 'Player'], ['界'.repeat(30), '界'.repeat(24)]]) {
+        const c = await open({ name, spawn: false });
+        assert.equal(c.welcome.snapshot.players.find((p) => p.id === c.welcome.selfId).name, expected);
+        c.send({ type: 'leave' }); await delay(40);
+      }
+      const c = await open({ join: false });
+      c.send({ type: 'join', name: 'Impostor', guestId: a.welcome.selfId });
+      assert.equal((await c.wait((m) => m.type === 'error')).code, 'invalid_message');
     });
     await t.test('HTTP presence counts menu sessions without creating players or leaking credentials', async () => {
       const c = await open({ spawn: false });
@@ -152,9 +164,10 @@ test('Public room: real Workers runtime and real WebSocket clients', { timeout: 
       const mark = b.messages.length;
       a.ws.close();
       await b.wait((m) => m.type === 'left' && m.id === a.welcome.selfId, mark);
-      const resumed = await open({ resumeToken: a.welcome.resumeToken });
+      const resumed = await open({ resumeToken: a.welcome.resumeToken, name: '  <Renamed Guest>  ' });
       assert.equal(resumed.welcome.resumed, true);
       assert.equal(resumed.welcome.selfId, a.welcome.selfId);
+      assert.equal(resumed.welcome.snapshot.players.find((p) => p.id === resumed.welcome.selfId).name, 'Renamed Guest');
       assert.equal(resumed.welcome.snapshot.players.find((p) => p.id === resumed.welcome.selfId).ack, 12);
       // Replacing a live socket must not let its late close remove the replacement.
       const replacement = await open({ resumeToken: resumed.welcome.resumeToken });

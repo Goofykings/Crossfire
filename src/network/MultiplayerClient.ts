@@ -39,7 +39,7 @@ export class MultiplayerClient {
   private readonly url: string;
   private spawning: { id: string; resolve: (s: Snapshot) => void; reject: (e: Error) => void; timeout: number } | null = null;
 
-  constructor(url: string, private readonly name = 'Player') {
+  constructor(url: string, private readonly name: string | (() => string) = 'Player') {
     const parsed = multiplayerEndpoint(url);
     this.url = parsed.href;
     try {
@@ -80,7 +80,7 @@ export class MultiplayerClient {
     this.deadline = window.setTimeout(() => socket.close(), 5000);
     socket.onopen = () => {
       if (this.socket !== socket) return;
-      this.send({ v: 3, type: 'join', name: this.name, ...(this.token ? { resumeToken: this.token } : {}) });
+      this.send({ v: 3, type: 'join', name: typeof this.name === 'function' ? this.name() : this.name, ...(this.token ? { resumeToken: this.token } : {}) });
     };
     socket.onmessage = (event) => {
       if (this.socket !== socket || typeof event.data !== 'string') return;
