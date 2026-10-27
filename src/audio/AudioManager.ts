@@ -2,6 +2,7 @@ import { assetUrl } from '../core/assets';
 
 export type SoundName =
   | 'rifle_shot'
+  | 'smg_shot'
   | 'shotgun_shot'
   | 'sniper_shot'
   | 'empty'
@@ -33,6 +34,7 @@ export type SoundName =
 
 const FILES: Record<SoundName, string> = {
   rifle_shot: 'rifle_shot.wav',
+  smg_shot: 'smg_shot.wav',
   shotgun_shot: 'shotgun_shot.wav',
   sniper_shot: 'sniper_shot.wav',
   empty: 'empty_click.wav',

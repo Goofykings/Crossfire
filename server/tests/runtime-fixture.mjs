@@ -4,6 +4,12 @@
 import { PublicRoom as ProductionRoom } from '../dist/index.js';
 export { default } from '../dist/index.js';
 export class PublicRoom extends ProductionRoom {
+  async advanceMapForTest() {
+    this.schedule.epoch -= 600000;
+    await this.ctx.storage.put('map-schedule', this.schedule);
+    this.ensureRound();
+    return this.snapshot();
+  }
   async fallForTest(id) {
     const entry = this.players.get(id);
     if (!entry?.session.alive) throw new Error('Test requires a spawned real session');

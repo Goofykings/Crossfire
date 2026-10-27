@@ -1,4 +1,5 @@
 import type { PlayerState, Snapshot } from '../../shared/protocol';
+import { weaponIcon } from './WeaponIcons';
 
 export const scoreOrder = (a: PlayerState, b: PlayerState): number => b.kills - a.kills || a.deaths - b.deaths
   || a.name.localeCompare(b.name) || a.id.localeCompare(b.id);
@@ -32,7 +33,7 @@ export class Scoreboard {
     const end = snapshot?.match.endsAt;
     const seconds = end == null ? null : Math.max(0, Math.ceil((end - serverNow) / 1000));
     this.header.textContent = `${mode === 'teams' ? 'TEAMS' : mode === 'ffa' ? 'FREE FOR ALL' : 'Mode unavailable'} · ${seconds === null ? '--:--' : `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`}`;
-    const signature = JSON.stringify([selfId, snapshot?.match, snapshot?.players.map((p) => [p.id, p.name, p.kills, p.deaths, p.team])]);
+    const signature = JSON.stringify([selfId, snapshot?.match, snapshot?.players.map((p) => [p.id, p.name, p.kills, p.deaths, p.team, p.weapon])]);
     if (signature === this.signature) return;
     this.signature = signature;
     this.body.replaceChildren();
@@ -41,13 +42,15 @@ export class Scoreboard {
       if (group.label) { const heading = document.createElement('h3'); heading.textContent = group.label; this.body.appendChild(heading); }
       const table = document.createElement('table');
       const head = table.createTHead().insertRow();
-      for (const label of ['PLAYER', 'KILLS', 'DEATHS']) { const th = document.createElement('th'); th.textContent = label; head.appendChild(th); }
+      for (const label of ['PLAYER', 'WEAPON', 'KILLS', 'DEATHS']) { const th = document.createElement('th'); th.textContent = label; th.scope = 'col'; head.appendChild(th); }
       const body = table.createTBody();
       for (const p of group.players) {
         const row = body.insertRow();
         row.dataset.playerId = p.id;
         row.classList.toggle('local', p.id === selfId);
-        for (const value of [p.name, p.kills, p.deaths]) row.insertCell().textContent = String(value);
+        row.insertCell().textContent = p.name;
+        row.insertCell().innerHTML = weaponIcon(p.weapon);
+        for (const value of [p.kills, p.deaths]) row.insertCell().textContent = String(value);
       }
       this.body.appendChild(table);
     }

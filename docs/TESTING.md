@@ -1,6 +1,6 @@
 # Testing
 
-Latest Gameplay/UI Stage 1: run `npm.cmd run typecheck`, `npm.cmd test`, `npm.cmd run build`, `npm.cmd run typecheck --prefix server` and `npm.cmd test --prefix server`. The frontend suite includes protocol/loadout/scoreboard presentation; the backend suite uses real workerd/SQLite/WebSockets. Start local servers with [server/README.md](../server/README.md), then run:
+Current UI polish and existing map integration: run `npm.cmd run typecheck`, `npm.cmd test`, `npm.cmd run build`, `npm.cmd run typecheck --prefix server` and `npm.cmd test --prefix server`. The frontend suite includes protocol/loadout/scoreboard presentation; the backend suite uses real workerd/SQLite/WebSockets. Start local servers with [server/README.md](../server/README.md), then run:
 
 ```powershell
 node tools/multiplayer-test.mjs
@@ -8,9 +8,11 @@ node tools/prespawn-test.mjs
 node tools/prespawn-test.mjs --lifecycle-fixture
 ```
 
-The first checks independent real movement/reconnect/failure recovery. The second checks normal Play, HTTP online count (0 -> 1 -> 2 -> 1 -> 0), three real asset previews, the disabled future SMG, pre-spawn/no avatar, approval, weapon lock, settings return, real leaderboard rows/local highlight, release/blur and Leave Match. The optional isolated real Worker fixture adds fall elimination and approved respawn with another loadout; the test-only RPC is not bundled into production. Fixtures for FFA sorting and Teams grouping are unit presentation tests, not evidence of real Teams gameplay. No fake players or public deployment are used.
+The first checks independent real movement/reconnect/failure recovery. The second checks normal Play, HTTP online count (0 -> 1 -> 2 -> 1 -> 0), four real asset previews and selectable SMG, pre-spawn/no avatar, approval, weapon lock, settings return, real leaderboard rows/local highlight, unavailable weapon placeholders, background-only edge fade, release/blur and Leave Match. The optional isolated real Worker fixture adds SMG firing/reload/audio, fall elimination, approved respawn, all four actual server-reported weapon icons and actual three-map transitions for two browsers; the test-only RPC is not bundled into production. Fixtures for FFA sorting and Teams grouping are unit presentation tests, not evidence of real Teams gameplay. Unavailable presence displays 0 Players Online with data-available=false; a confirmed zero keeps data-available=true. No fake players or public deployment are used.
 
-Production `/crossfire/` regressions use `tools/home-test.mjs` (five viewport widths), `tools/browser-test.mjs` (movement/weapons/reloads/headshots/held leaderboard), `tools/maps-test.mjs` and `tools/settings-test.mjs`. Practice tools explicitly use `?practice&autoplay`; normal Play never falls back to practice. The current exact results and remaining match/combat dependencies are in [PROGRESS.md](../PROGRESS.md). Older counts/safe-zone/tactical-overlay descriptions below are historical.
+Production `/crossfire/` regressions use `tools/home-test.mjs` (five viewport widths, zero pre-Play map/weapon/environment requests, eye-level lightweight Town image, reduced-motion/22-second zoom, blue Play/hover, full wordmark, persistent sliding navigation/faint light gradient, full-screen home Settings/left sidebar, Back semantics, opaque LOADING screen), `tools/browser-test.mjs` (movement/weapons/reloads/headshots/held leaderboard), `tools/maps-test.mjs` and `tools/settings-test.mjs`. Practice tools explicitly use `?practice&autoplay`; normal Play never falls back to practice. The current exact results and remaining match/combat dependencies are in [PROGRESS.md](../PROGRESS.md). Older counts/safe-zone/tactical-overlay descriptions below are historical.
+
+To reproduce the home background, start Vite and run `node tools/capture-home-background.mjs --url http://127.0.0.1:5180/`. It screenshots the existing Town well plaza at eye level into `public/assets/ui/town-plaza.webp`; it does not modify map geometry or load a live map on home.
 
 ## Unit tests (`npm test`, Vitest in Node)
 

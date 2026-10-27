@@ -301,7 +301,14 @@ def ui_hover() -> list[float]:
     return apply(tone(lambda t: 2200, 0.03), env(int(0.03 * RATE), 0.001, 30, 2))
 
 
+def smg_shot() -> list[float]:
+    crack = apply(highpass(noise(0.10, 740), 1800), env(int(0.10 * RATE), 0.0005, 42, 1.4))
+    body = apply(tone(lambda t: 210 - 900 * t, 0.10), env(int(0.10 * RATE), 0.001, 35, 1.2))
+    return mix(crack, body, 0, 0.8)
+
+
 def main() -> None:
+    write("smg_shot.wav", smg_shot(), 0.85)
     write("rifle_shot.wav", rifle_shot(), 0.92)
     write("shotgun_shot.wav", shotgun_shot(), 0.95)
     write("sniper_shot.wav", sniper_shot(), 0.95)

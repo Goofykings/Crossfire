@@ -66,7 +66,7 @@ export class Game {
   map: LoadedMap | null = null;
   player: PlayerController | null = null;
   private cameraRig: PlayerCamera | null = null;
-  /** Rifle, shotgun and sniper rifle (slots 1-3); infinite reserve ammunition, limited magazines. */
+  /** Rifle, shotgun, sniper and SMG (slots 1-4); infinite reserve ammunition, limited magazines. */
   readonly loadout = new Loadout(WEAPONS);
   private weaponView: WeaponView | null = null;
   private effects: Effects | null = null;
@@ -93,6 +93,9 @@ export class Game {
   readonly teammates = new TeammateRegistry();
   private network: MultiplayerClient | null = null;
   private networkReady = false;
+  private loadedRound = -1;
+  private roundLoad: Promise<void> | null = null;
+  private gameAssets: Promise<void> | null = null;
   private networkLife = -1;
   private appliedPlayerId = '';
   private tabHeld = false;
@@ -180,32 +183,33 @@ export class Game {
       if (e.code === 'F2' && this.map && this.state === 'playing') void this.map.toggleCollisionDebug();
     });
 
-    await this.materials.load();
     const first = MAPS.some((m) => m.id === this.options.map) ? this.options.map! : DEFAULT_MAP_ID;
     this.ui.show('menu');
     this.presence = new Presence(import.meta.env.VITE_MULTIPLAYER_URL ?? '', (count) => this.ui.setOnline(count),
       () => this.ui.currentScreen === 'menu');
     this.presence.start();
-    this.effects = new Effects(this.ctx.scene);
-    this.effects.onCasingLand = (type, at) => {
-      const d = this.ctx.camera.globalPosition.subtract(at).length();
-      this.sound(type === 'casing_shell' ? 'shell_drop' : 'casing', Math.max(0.05, 0.4 - d * 0.04));
-    };
-    this.weaponView = new WeaponView(this.ctx, this.materials, this.effects);
-    this.weaponView.setVisible(false);
-    const weaponLoad = Promise.all([this.weaponView.load(), this.effects.loadCasings(this.materials)]);
-    this.ui.setWeaponName(this.weapon.stats.name);
-    this.ui.setWeaponSlots(this.loadout.weapons.map((w) => w.stats.name), 0);
     this.ctx.engine.runRenderLoop(() => this.frame(this.ctx.engine.getDeltaTime() / 1000));
-    // start streaming the selected map right away so Play is instant
-    const preload = this.requestMap(first).catch((e) => this.reportLoadError(e));
-    await weaponLoad;
-    void weaponPreviews((id, url) => this.ui.setWeaponPreview(id, url)).catch((e) => console.warn('Weapon previews unavailable', e));
-    if (this.weaponView && this.map) this.excludeViewFromSun(this.map);
-    if (this.options.autoplay) {
-      await preload;
-      await this.play(first);
-    }
+    if (this.options.autoplay) await this.play(first);
+  }
+
+  /** No playable map, environment, weapon GLB or textures are requested by home. */
+  private prepareGameAssets(): Promise<void> {
+    if (this.gameAssets) return this.gameAssets;
+    this.gameAssets = (async () => {
+      await this.materials.load();
+      this.effects = new Effects(this.ctx.scene);
+      this.effects.onCasingLand = (type, at) => {
+        const d = this.ctx.camera.globalPosition.subtract(at).length();
+        this.sound(type === 'casing_shell' ? 'shell_drop' : 'casing', Math.max(0.05, 0.4 - d * 0.04));
+      };
+      this.weaponView = new WeaponView(this.ctx, this.materials, this.effects);
+      this.weaponView.setVisible(false);
+      const weaponLoad = Promise.all([this.weaponView.load(), this.effects.loadCasings(this.materials)]);
+      await weaponLoad;
+      await weaponPreviews((id, url) => this.ui.setWeaponPreview(id, url));
+      this.ui.setWeaponName(this.weapon.stats.name);
+    })();
+    return this.gameAssets;
   }
 
   /**
@@ -237,18 +241,12 @@ export class Game {
     list.push(...add.filter((m) => !bad.includes(m)));
   }
 
-  private reportLoadError(e: unknown): void {
-    console.error(e);
-    this.ui.showError(`Could not load the map: ${(e as Error).message}`);
-  }
-
   private async loadMap(id: string): Promise<LoadedMap> {
     const def = getMap(id);
     // the previous map is disposed by the manager; nothing may touch it while the next one streams in
     this.map = null;
     this.player = null;
     this.cameraRig = null;
-    this.ui.setLoadingTitle(def.name);
     const map = await this.maps.load(def, (f, label) => {
       this.ui.setLoading(f, label);
     });
@@ -278,7 +276,6 @@ export class Game {
     this.audio.unlock();
     if (this.options.multiplayer) {
       this.state = 'loading';
-      this.ui.setLoadingTitle('Connecting to public-main');
       this.ui.setLoading(0, 'Opening multiplayer connection');
       this.ui.show('loading');
       try {
@@ -287,14 +284,22 @@ export class Game {
           this.network.onSnapshot = (snapshot) => this.acceptSnapshot(snapshot);
           this.network.onState = (state, message) => {
             if (state !== 'connected') { this.remotePlayers.clear(); this.ui.scoreboard.setVisible(false); }
+            if (state === 'connected' && !this.networkReady) {
+              void this.prepareNetworkMap().catch((e) => this.connectionError((e as Error).message));
+            }
             if (state === 'reconnecting') this.ui.showToast(message ?? 'Reconnecting…', 'warn', 5);
             if (state === 'error') this.connectionError(message ?? 'Multiplayer connection failed');
           };
         }
-        const welcome = await this.network.connect();
-        id = welcome.snapshot.mapId;
+        await this.network.connect();
+        await this.prepareNetworkMap();
+        if (this.options.autoplay) await this.spawnSelected();
+        return;
       } catch (e) { this.connectionError((e as Error).message); return; }
     }
+    this.state = 'loading';
+    this.ui.show('loading');
+    await this.prepareGameAssets();
     if (!this.map || this.map.def.id !== id || this.loading) {
       this.state = 'loading';
       this.ui.show('loading');
@@ -307,26 +312,55 @@ export class Game {
       }
       if (this.map?.def.id !== id) return; // superseded by another request
     }
-    if (this.options.multiplayer && this.network?.latest) {
-      if (this.map!.revision !== this.network.latest.mapVersion) { this.network.disconnect(); this.connectionError('Map assets differ from the server.'); return; }
-      const self = this.network.latest.players.find((p) => p.id === this.network!.selfId);
-      if (!self) { this.connectionError('Server did not assign a player'); return; }
-      this.networkReady = true;
-      this.acceptSnapshot(this.network.latest);
-      this.ui.setMapTitle(this.map!.def.name, 'public-main');
-      if (self.alive) {
-        if (this.options.autoplay) this.activateWithoutLock();
-        else { this.state = 'paused'; this.ui.show('pause'); }
-        return;
-      }
-    }
     this.showPreSpawn();
     // Automation explicitly requests a spawn; normal Play always stops at the menu.
     if (this.options.autoplay) await this.spawnSelected();
   }
 
+  private prepareNetworkMap(): Promise<void> {
+    if (this.roundLoad) return this.roundLoad;
+    this.roundLoad = (async () => {
+      this.networkReady = false;
+      this.state = 'loading';
+      this.tabHeld = false;
+      this.preSpawnPaused = false;
+      this.input.enabled = false;
+      this.input.clearState();
+      this.input.releaseLock();
+      this.weaponView?.setVisible(false);
+      this.ui.setScope(0);
+      this.remotePlayers.clear();
+      this.ui.show('loading');
+      await this.prepareGameAssets();
+      while (this.network?.state === 'connected' && this.network.latest) {
+        const target = this.network.latest;
+        await this.requestMap(target.mapId);
+        if (!this.network.latest || this.network.state !== 'connected') return;
+        if (target.roundId !== this.network.latest.roundId || target.mapId !== this.network.latest.mapId) continue;
+        if (this.map!.revision !== target.mapVersion) throw new Error('Map assets differ from the server. Rebuild matching client/server assets.');
+        this.loadedRound = target.roundId;
+        this.networkReady = true;
+        this.acceptSnapshot(this.network.latest);
+        this.ui.setMapTitle(this.map!.def.name, target.match.mode === 'teams' ? 'Teams' : target.match.mode === 'ffa' ? 'Free for all' : 'Public match');
+        this.excludeViewFromSun(this.map!);
+        const self = this.network.latest.players.find((p) => p.id === this.network!.selfId);
+        if (!self) throw new Error('Server did not assign a player');
+        if (self.alive) {
+          if (this.options.autoplay) this.activateWithoutLock();
+          else { this.state = 'paused'; this.ui.show('pause'); }
+        } else this.showPreSpawn();
+        return;
+      }
+    })().finally(() => { this.roundLoad = null; });
+    return this.roundLoad;
+  }
+
   private acceptSnapshot(snapshot: Snapshot): void {
     if (!this.networkReady || !this.player || !this.map || this.network?.state !== 'connected') return;
+    if (snapshot.roundId !== this.loadedRound || snapshot.mapId !== this.map.def.id) {
+      void this.prepareNetworkMap().catch((e) => this.connectionError((e as Error).message));
+      return;
+    }
     if (this.map.revision !== snapshot.mapVersion) { this.network.disconnect(); this.connectionError('Map assets differ from the server. Rebuild the matching client and server.'); return; }
     const self = snapshot.players.find((p) => p.id === this.network!.selfId);
     this.remotePlayers.snapshot(snapshot, this.network.selfId);
@@ -401,7 +435,7 @@ export class Game {
     this.ui.setScope(0);
     this.input.enabled = false;
     this.input.releaseLock();
-    this.ui.showConnectionError(message, () => void this.play('european-town'), () => this.quitToMenu());
+    this.ui.showConnectionError(message, () => void this.play(this.wantedMap), () => this.quitToMenu());
   }
 
   private spawn(): void {
@@ -468,6 +502,7 @@ export class Game {
     this.preSpawnPaused = false;
     this.network?.disconnect();
     this.networkReady = false;
+    this.loadedRound = -1;
     this.networkLife = -1;
     this.tabHeld = false;
     this.acc = 0;
@@ -504,6 +539,7 @@ export class Game {
 
   // --- main loop -------------------------------------------------------------------------------
   private frame(rawDt: number): void {
+    if (this.state === 'menu') { this.ui.update(rawDt); this.input.endFrame(); return; }
     const dt = Math.min(MAX_FRAME_DT, Math.max(0, rawDt));
     this.fps.frames++;
     this.fps.time += rawDt;
@@ -514,7 +550,7 @@ export class Game {
     }
     if (this.state === 'playing' && this.player && this.map) {
       this.simulate(dt);
-    } else if (this.map && (this.state === 'menu' || this.state === 'start' || this.state === 'loading')) {
+    } else if (this.map && (this.state === 'start' || this.state === 'loading')) {
       this.menuCamera(dt);
     }
     this.updateScoreboard();
@@ -767,6 +803,8 @@ export class Game {
       networkReconnect: () => this.network?.reconnect(),
       networkLeave: () => this.quitToMenu(),
       state: () => this.state,
+      loadingState: () => ({ round: this.loadedRound, networkReady: this.networkReady, mapLoad: this.loading?.id,
+        roundLoad: !!this.roundLoad, sceneReady: this.ctx.scene.isReady() }),
       teleport: (x: number, y: number, z: number, heading = 0, pitch = 0) => {
         if (this.state === 'paused' && this.options.autoplay) this.state = 'playing';
         this.player?.teleport({ x, y, z }, heading);

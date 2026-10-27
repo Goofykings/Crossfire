@@ -1,8 +1,10 @@
+import { assetUrl } from '../core/assets';
 import type { AudioManager } from '../audio/AudioManager';
 import { SETTING_LIMITS, type Settings, type SettingsStore } from '../config/settings';
 import { SettingsDraft } from '../config/settingsDraft';
 import { Dropdown } from './Dropdown';
 import { Scoreboard } from './Scoreboard';
+import { CROSSFIRE_LOGO } from './WeaponIcons';
 import { validWeapon } from '../../shared/protocol';
 import type { WeaponId } from '../weapons/Weapon';
 
@@ -80,14 +82,14 @@ export class UI {
   private toast!: HTMLElement;
   private toastTimer = 0;
   private lockHint!: HTMLElement;
-  private loadingBar!: HTMLElement;
-  private loadingLabel!: HTMLElement;
   private errorText!: HTMLElement;
   private errorActions!: HTMLElement;
   private weaponName!: HTMLElement;
   private mapTitle!: HTMLElement;
-  private loadingTitle!: HTMLElement;
   private onlineCount!: HTMLElement;
+  private homeHeader!: HTMLElement;
+  private homeTabs: HTMLButtonElement[] = [];
+  private homeIndicator!: HTMLElement;
   private selectedName!: HTMLElement;
   private selectedPreview!: HTMLImageElement;
   private spawnButton!: HTMLButtonElement;
@@ -95,7 +97,7 @@ export class UI {
   private pendingWeapon: WeaponId = 'rifle';
   private readonly previews = new Map<WeaponId, string>();
   private readonly weaponCards = new Map<WeaponId, HTMLButtonElement>();
-  private readonly labels: Record<WeaponId, string> = { rifle: 'Assault Rifle', shotgun: 'Shotgun', sniper: 'Sniper Rifle' };
+  private readonly labels: Record<WeaponId, string> = { smg: 'SMG', rifle: 'Assault Rifle', shotgun: 'Shotgun', sniper: 'Sniper Rifle' };
   currentScreen: Screen = 'menu';
   readonly scoreboard: Scoreboard;
 
@@ -115,9 +117,6 @@ export class UI {
     this.buildSettings();
     this.buildError();
     this.scoreboard = new Scoreboard(root);
-    root.addEventListener('mouseover', (e) => {
-      if ((e.target as HTMLElement).closest?.('.btn, .tab')) this.audio.play('ui_hover', { volume: 0.5 });
-    });
   }
 
   private screen(id: Screen, cls = ''): HTMLElement {
@@ -142,38 +141,60 @@ export class UI {
   private buildMenu(): void {
     const s = this.screen('menu');
     s.setAttribute('aria-label', 'Crossfire home');
-    const col = el('div', 'menu-col');
-    col.appendChild(el('h1', 'logo', 'CROSSFIRE'));
-    const buttons = el('div', 'menu-buttons');
-    buttons.appendChild(this.button('Play', '', 'primary', () => this.onPlay()));
-    buttons.appendChild(this.button('Settings', '', '', () => this.openSettings('menu')));
-    col.appendChild(buttons);
-    this.onlineCount = el('div', 'online-count', 'Offline');
-    col.appendChild(this.onlineCount);
-    s.appendChild(col);
+    const background = el('img', 'home-backdrop');
+    background.src = assetUrl('assets/ui/town-plaza.webp');
+    background.alt = '';
+    background.setAttribute('aria-hidden', 'true');
+    const backdropFrame = el('div', 'home-backdrop-frame');
+    backdropFrame.appendChild(background);
+    const header = el('header', 'home-header');
+    this.homeHeader = header;
+    const logo = el('h1', 'logo', CROSSFIRE_LOGO);
+    logo.setAttribute('aria-label', 'CROSSFIRE');
+    header.appendChild(logo);
+    const nav = el('nav', 'home-nav');
+    nav.setAttribute('aria-label', 'Main navigation');
+    this.homeTabs = [
+      this.button('Play', '', 'nav-button', () => { if (this.currentScreen === 'settings') this.closeSettings(); }),
+      this.button('Settings', '', 'nav-button', () => { if (this.currentScreen !== 'settings') this.openSettings('menu'); }),
+    ];
+    const indicator = el('span', 'nav-indicator');
+    this.homeIndicator = indicator;
+    indicator.setAttribute('aria-hidden', 'true');
+    const hoverIndicator = el('span', 'nav-hover-indicator');
+    hoverIndicator.setAttribute('aria-hidden', 'true');
+    nav.append(...this.homeTabs, hoverIndicator, indicator);
+    header.appendChild(nav);
+    const actions = el('div', 'home-actions');
+    actions.appendChild(this.button('Play', '', 'primary', () => this.onPlay()));
+    this.onlineCount = el('div', 'online-count', '0 Players Online');
+    this.onlineCount.dataset.available = 'false';
+    actions.appendChild(this.onlineCount);
+    s.append(backdropFrame, actions);
+    this.root.appendChild(header);
+    const labels = new ResizeObserver(() => this.updateHomeIndicator());
+    for (const tab of this.homeTabs) labels.observe(tab.firstElementChild!);
+  }
+
+  private updateHomeIndicator(): void {
+    this.homeTabs.forEach((tab, index) => {
+      const text = tab.firstElementChild as HTMLElement;
+      if (text.offsetWidth) this.homeIndicator.parentElement!.style.setProperty(index === 0 ? '--play-underline-width' : '--settings-underline-width', `${text.offsetWidth + 24}px`);
+    });
+    const label = this.homeTabs.find((tab) => tab.hasAttribute('aria-current'))?.firstElementChild as HTMLElement | undefined;
+    // Use layout width so hover scaling never changes the underline's target size.
+    if (label?.offsetWidth) this.homeIndicator.style.setProperty('--underline-width', `${label.offsetWidth + 24}px`);
   }
 
   private buildLoading(): void {
     const s = this.screen('loading');
-    const card = el('div', 'card');
-    this.loadingTitle = el('h2', '', 'Loading');
-    card.appendChild(this.loadingTitle);
-    this.loadingLabel = el('p', '', 'Preparing...');
-    card.appendChild(this.loadingLabel);
-    const prog = el('div', 'progress');
-    this.loadingBar = el('div');
-    prog.appendChild(this.loadingBar);
-    card.appendChild(prog);
-    s.appendChild(card);
+    s.setAttribute('role', 'status');
+    s.setAttribute('aria-live', 'polite');
+    s.appendChild(el('div', 'loading-word', 'LOADING'));
   }
 
-  setLoadingTitle(mapName: string): void {
-    this.loadingTitle.textContent = `Entering ${mapName}`;
-  }
-
-  setLoading(fraction: number, label: string): void {
-    this.loadingBar.style.width = `${Math.round(fraction * 100)}%`;
-    this.loadingLabel.textContent = label;
+  setLoading(fraction: number, _label: string): void {
+    this.screens.get('loading')!.setAttribute('aria-busy', String(fraction < 1));
   }
 
   private buildStart(): void {
@@ -196,8 +217,10 @@ export class UI {
   private buildWeapons(): void {
     const s = this.screen('weapons');
     s.setAttribute('aria-label', 'Select weapon');
+    const head = el('div', 'weapon-select-head');
+    head.append(el('h2', '', 'Loadout'), this.button('Back', '', 'weapon-back', () => this.show('start')));
     const grid = el('div', 'weapon-grid');
-    for (const id of ['rifle', 'shotgun', 'sniper'] as const) {
+    for (const id of ['smg', 'rifle', 'sniper', 'shotgun'] as const) {
       const card = this.button(this.labels[id], '', 'weapon-card', () => {
         this.pendingWeapon = id;
         try { localStorage.setItem('crossfire.pending-weapon', id); } catch { /* Optional preference. */ }
@@ -208,11 +231,8 @@ export class UI {
       this.weaponCards.set(id, card);
       grid.appendChild(card);
     }
-    const smg = this.button('SMG', 'Stage 2', 'weapon-card unavailable', () => {});
-    smg.disabled = true;
-    smg.setAttribute('aria-label', 'SMG unavailable until Stage 2');
-    grid.appendChild(smg);
-    s.append(grid, this.button('Back', '', 'weapon-back', () => this.show('start')));
+    s.append(head, grid);
+    this.refreshSelection();
   }
 
   get selectedWeapon(): WeaponId { return this.pendingWeapon; }
@@ -223,7 +243,10 @@ export class UI {
     const url = this.previews.get(this.pendingWeapon);
     this.selectedPreview.hidden = !url;
     if (url) this.selectedPreview.src = url;
-    for (const [id, card] of this.weaponCards) card.classList.toggle('selected', id === this.pendingWeapon);
+    for (const [id, card] of this.weaponCards) {
+      card.classList.toggle('selected', id === this.pendingWeapon);
+      card.setAttribute('aria-pressed', String(id === this.pendingWeapon));
+    }
   }
 
   setWeaponPreview(id: WeaponId, url: string): void {
@@ -242,7 +265,10 @@ export class UI {
   }
 
   setOnline(count: number | null): void {
-    this.onlineCount.textContent = count === null ? 'Offline' : `${count} ${count === 1 ? 'Player' : 'Players'} Online`;
+    const available = count !== null && Number.isSafeInteger(count) && count >= 0 && count <= 16;
+    this.onlineCount.dataset.available = String(available);
+    const display = available ? count : 0;
+    this.onlineCount.textContent = `${display} ${display === 1 ? 'Player' : 'Players'} Online`;
   }
 
   private buildHud(): void {
@@ -601,9 +627,23 @@ export class UI {
   // ---------------------------------------------------------------------------------------------
   show(screen: Screen, overlayHud = false): void {
     this.currentScreen = screen;
+    document.body.dataset.screen = screen;
+    const homeSettings = screen === 'settings' && this.settingsReturn === 'menu';
+    const home = screen === 'menu' || homeSettings;
+    document.body.dataset.homePage = homeSettings ? 'settings' : home ? 'play' : '';
+    this.homeHeader.hidden = !home;
+    this.homeHeader.dataset.page = homeSettings ? 'settings' : 'play';
+    this.homeTabs.forEach((tab, i) => {
+      if (i === (homeSettings ? 1 : 0)) tab.setAttribute('aria-current', 'page');
+      else tab.removeAttribute('aria-current');
+    });
+    if (home) this.updateHomeIndicator();
+    this.screens.get('settings')!.classList.toggle('home-settings', homeSettings);
+    this.screens.get('menu')!.inert = homeSettings;
+    this.screens.get('menu')!.setAttribute('aria-hidden', String(homeSettings || !home));
     this.scoreboard?.setVisible(false);
     for (const [id, s] of this.screens) {
-      s.classList.toggle('visible', id === screen || (overlayHud && id === 'hud'));
+      s.classList.toggle('visible', id === screen || (overlayHud && id === 'hud') || (homeSettings && id === 'menu'));
     }
     if (screen === 'settings') this.syncSettings();
   }

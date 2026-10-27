@@ -428,4 +428,39 @@ def casings():
     return {"casing_rifle": rifle_c, "casing_sniper": sniper_c, "casing_shell": shell}
 
 
-WEAPONS = {"rifle": rifle, "shotgun": shotgun, "sniper": sniper}
+def smg():
+    """Original compact blowback design; same anchor convention as existing guns."""
+    body, mag = MeshData(), MeshData()
+    solid(body, [(0.06, 0.02), (0.06, 0.10), (-0.26, 0.10), (-0.29, 0.075), (-0.29, 0.025)],
+          -0.027, 0.027, 'gun_black', 0.004)
+    solid(body, [(0.03, 0.025), (-0.015, 0.025), (0.005, -0.10), (0.045, -0.10), (0.06, -0.075)],
+          -0.014, 0.014, 'gun_polymer', 0.004)
+    box(body, -0.006, -0.025, -0.075, 0.006, -0.019, -0.018, 'gun_steel')
+    box(body, -0.004, -0.019, -0.048, 0.004, 0.014, -0.041, 'gun_steel')
+    solid(body, [(-0.13, 0.025), (-0.27, 0.025), (-0.27, -0.012), (-0.14, -0.012)],
+          -0.031, 0.031, 'gun_polymer', 0.004)
+    for k in range(5):
+        z = -0.155 - k * 0.022
+        for sx in (-1, 1):
+            side_detail(body, sx * 0.031, 0.0, 0.018, z, z - 0.009, 'gun_steel')
+    ztube(body, -0.29, -0.39, 0.065, 0.012, 'gun_steel', sides=16)
+    ztube(body, -0.39, -0.418, 0.065, 0.016, 'gun_black', sides=12)
+    # Skeleton stock, compact irons and charging handle.
+    for y in (0.035, 0.083):
+        box(body, -0.009, y, 0.06, 0.009, y + 0.009, 0.23, 'gun_steel')
+    box(body, -0.018, -0.045, 0.225, 0.018, 0.096, 0.24, 'gun_rubber')
+    for z in (0.025, -0.265):
+        for sx in (-1, 1):
+            box(body, sx * 0.008, 0.10, z - 0.008, sx * 0.013, 0.134, z + 0.008, 'gun_black')
+    box(body, -0.002, 0.10, -0.27, 0.002, 0.125, -0.26, 'sight_dot')
+    box(body, 0.027, 0.072, -0.10, 0.053, 0.082, -0.085, 'gun_steel')
+    solid(mag, [(-0.08, 0.025), (-0.12, 0.025), (-0.14, -0.18), (-0.095, -0.18)],
+          -0.012, 0.012, 'gun_steel', 0.002)
+    box(mag, -0.014, -0.185, -0.142, 0.014, -0.174, -0.092, 'gun_polymer')
+    return {'body': body, 'mag': mag}, {
+        'muzzle': (0, 0.065, -0.42), 'sight': (0, 0.125, 0.026), 'eject': (0.029, 0.078, -0.08),
+        'grip_r': (0, -0.04, 0.02), 'grip_l': (0, -0.005, -0.21), 'mag_grip': (0, -0.09, -0.11),
+    }
+
+
+WEAPONS = {"rifle": rifle, "shotgun": shotgun, "sniper": sniper, "smg": smg}

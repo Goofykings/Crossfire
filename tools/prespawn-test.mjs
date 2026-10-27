@@ -54,12 +54,14 @@ async function home() {
   }, fixtureUrl);
   page.on('pageerror', (e) => errors.push(String(e)));
   await page.goto(`${base}?quality=low&shadows=low`, { waitUntil: 'domcontentloaded' });
-  await page.waitForFunction(() => window.__crossfire?.stats().mapId && document.querySelector('#menu.visible'), { timeout: 240000 });
+  await page.waitForFunction(() => window.__crossfire && document.querySelector('#menu.visible'), { timeout: 240000 });
+  check(await page.evaluate(() => window.__crossfire.stats().mapId == null), 'home opens without a playable map');
   return page;
 }
 async function count(page, expected) {
   await page.bringToFront();
-  await page.waitForFunction((n) => document.querySelector('.online-count')?.textContent === `${n} ${n === 1 ? 'Player' : 'Players'} Online`, { timeout: 10000 }, expected);
+  await page.waitForFunction((n) => document.querySelector('.online-count')?.dataset.available === 'true'
+    && document.querySelector('.online-count')?.textContent === `${n} ${n === 1 ? 'Player' : 'Players'} Online`, { timeout: 10000 }, expected);
 }
 async function join(page) {
   await page.bringToFront();
@@ -81,13 +83,18 @@ try {
   check((await state(observer)).state === 'idle', 'repeated count polling never creates a third session');
   await a.bringToFront();
   await a.click('#start .btn:first-child');
-  await a.waitForFunction(() => document.querySelectorAll('#weapons .weapon-card img').length === 3, { timeout: 60000 });
-  check(await a.$$eval('#weapons .weapon-card img', (images) => images.every((img) => img.complete && img.naturalWidth === 960)), 'three previews are rendered from the actual weapon assets');
-  check(await a.$eval('#weapons .unavailable', (b) => b.disabled && b.textContent.includes('SMG')), 'SMG is honestly unavailable until its authorized model/gameplay stage');
+  await a.waitForFunction(() => document.querySelectorAll('#weapons .weapon-card img').length === 4, { timeout: 60000 });
+  check(await a.$$eval('#weapons .weapon-card img', (images) => images.every((img) => img.complete && img.naturalWidth === 960)), 'four previews are rendered from the actual weapon assets');
+  check(await a.$$eval('#weapons .weapon-card', (cards) => cards.map((c) => c.dataset.weapon).join(',') === 'smg,rifle,sniper,shotgun' && cards.every((c) => !c.disabled)), 'four selectable classes appear in the requested order');
+  check(await a.$$eval('#weapons .weapon-card', (cards) => cards.every((c) => Math.abs(c.getBoundingClientRect().top - cards[0].getBoundingClientRect().top) < 2)), 'desktop classes form one horizontal row');
   await a.screenshot({ path: 'test-results/prespawn/weapons.png' });
-  await a.click('[data-weapon="shotgun"]');
-  check(await a.$eval('#start.visible .selected-name', (e) => e.textContent === 'Shotgun'), 'selection returns immediately and saves pending loadout');
-  check(await a.evaluate(() => localStorage.getItem('crossfire.pending-weapon') === 'shotgun'), 'pending loadout preference persists');
+  await a.setViewport({ width: 390, height: 844 });
+  check(await a.$eval('.weapon-grid', (e) => e.scrollWidth > e.clientWidth && e.getBoundingClientRect().right <= innerWidth), 'narrow picker keeps cards horizontal inside a contained scroller');
+  await a.screenshot({ path: 'test-results/prespawn/weapons-narrow.png' });
+  await a.setViewport({ width: 1280, height: 720 });
+  await a.click('[data-weapon="smg"]');
+  check(await a.$eval('#start.visible .selected-name', (e) => e.textContent === 'SMG'), 'selection returns immediately and saves pending loadout');
+  check(await a.evaluate(() => localStorage.getItem('crossfire.pending-weapon') === 'smg'), 'pending loadout preference persists');
   await a.click('#start .btn:nth-of-type(2)');
   await a.waitForSelector('#settings.visible');
   const fov = await a.evaluate(() => window.__crossfire.settings().fov);
@@ -104,8 +111,10 @@ try {
   await a.waitForFunction(() => window.__crossfire.scoreboard().visible);
   check(await a.$$eval('.scoreboard tbody tr', (rows) => rows.length === 2), 'leaderboard contains exactly two real connected players, including pre-spawn');
   check(await a.$$eval('.scoreboard tr.local', (rows) => rows.length === 1), 'leaderboard highlights the actual local session');
+  check(await a.$$eval('.scoreboard tbody tr .weapon-unknown', (icons) => icons.length === 2), 'unspawned server weapon selections show neutral placeholders');
+  check(await a.$eval('.scoreboard', (e) => getComputedStyle(e, '::before').backgroundImage.includes('linear-gradient') && getComputedStyle(e).maskImage === 'none'), 'only the scoreboard background fades at the horizontal edges');
   check(await a.evaluate((f) => document.activeElement?.tagName === f, focus), 'held Tab preserves browser focus');
-  check(await a.$eval('.scoreboard-header', (e) => e.textContent.includes('--:--') && e.textContent.includes('unavailable')), 'missing match clock/mode is never fabricated');
+  check(await a.$eval('.scoreboard-header', (e) => !e.textContent.includes('--:--') && e.textContent.includes('unavailable')), 'server rotation clock is real and unimplemented combat mode remains unavailable');
   await a.screenshot({ path: 'test-results/prespawn/leaderboard.png' });
   await a.keyboard.up('Tab');
   check(await a.evaluate(() => !window.__crossfire.scoreboard().visible), 'Tab release hides leaderboard immediately');
@@ -116,14 +125,30 @@ try {
   await a.keyboard.up('Tab');
   await a.click('#start .primary');
   await a.waitForFunction(() => window.__crossfire.ready(), { timeout: 10000 });
-  check((await self(a)).alive && (await self(a)).weapon === 'shotgun' && (await self(a)).life === 1, 'Spawn enters only after server approval with the selected weapon');
+  check((await self(a)).alive && (await self(a)).weapon === 'smg' && (await self(a)).life === 1, 'Spawn enters only after server approval with the selected weapon');
   await b.waitForFunction(() => window.__crossfire.network().rendered.length === 1);
+  await b.keyboard.down('Tab');
+  await b.waitForFunction(() => document.querySelector('.scoreboard svg[data-weapon="smg"]'));
+  check(await b.$eval('.scoreboard svg[data-weapon="smg"]', (e) => e.getAttribute('aria-label') === 'SMG'), 'remote leaderboard reads actual server-approved SMG instead of local pending selection');
+  await b.keyboard.up('Tab');
   check(!(await self(b)).alive, 'other menu session stays unspawned while seeing the real spawned avatar');
   for (const key of ['Digit1', 'Digit3', 'KeyQ']) await a.keyboard.press(key);
   await a.mouse.wheel({ deltaY: 120 });
   await a.evaluate(() => window.__crossfire.selectWeapon(0));
   await delay(250);
-  check(await a.evaluate(() => window.__crossfire.weapon().id === 'shotgun') && (await self(a)).weapon === 'shotgun', 'number keys, Q, wheel and direct selection cannot change the life loadout');
+  check(await a.evaluate(() => window.__crossfire.weapon().id === 'smg') && (await self(a)).weapon === 'smg', 'number keys, Q, wheel and direct selection cannot change the life loadout');
+  await a.click('#game');
+  await delay(200);
+  const shots = await a.evaluate(() => window.__crossfire.stats().shots);
+  await a.evaluate(() => window.__crossfire.hold('fire', true));
+  await a.waitForFunction((n) => window.__crossfire.stats().shots >= n + 3, { timeout: 5000 }, shots);
+  await a.evaluate(() => window.__crossfire.hold('fire', false));
+  check(await a.evaluate(() => window.__crossfire.weapon().ammo < 32 && window.__crossfire.weapon().reserve === 'infinite'
+    && window.__crossfire.sounds().includes('smg_shot')), 'SMG fires with its own sound and a finite magazine/infinite reserve');
+  await a.evaluate(() => window.__crossfire.hold('reload', true)); await delay(60);
+  await a.evaluate(() => window.__crossfire.hold('reload', false));
+  await a.waitForFunction(() => window.__crossfire.weapon().ammo === 32 && window.__crossfire.weapon().action === 'idle', { timeout: 5000 });
+  check(await a.evaluate(() => window.__crossfire.weapon().viewMeshes.every((n) => !/hand|forearm/i.test(n))), 'SMG reload fills the magazine without visible arms');
   if (fixture) {
     const ns = await fixture.getDurableObjectNamespace('ROOM');
     const stub = ns.get(ns.idFromName('public-main'));
@@ -148,6 +173,57 @@ try {
     check(await a.$$eval('.weapon-slots > span', (slots) => slots.length === 1 && /sniper/i.test(slots[0].textContent)),
       'respawn HUD shows only the newly approved weapon');
     await b.waitForFunction(() => window.__crossfire.network().rendered.length === 1);
+    await a.bringToFront();
+    await a.keyboard.down('Tab');
+    await a.waitForFunction(() => document.querySelector('.scoreboard tr.local svg')?.dataset.weapon === 'sniper');
+    check(await a.$('.scoreboard tr.local svg[data-weapon="sniper"]'), 'server-reported respawn weapon updates the existing leaderboard row');
+    for (const weapon of ['rifle', 'shotgun']) {
+      await a.keyboard.up('Tab');
+      await b.bringToFront();
+      await b.click('#start .btn:first-child');
+      await b.click(`[data-weapon="${weapon}"]`);
+      await b.click('#start .primary');
+      await b.waitForFunction(() => window.__crossfire.ready());
+      await a.bringToFront();
+      await a.keyboard.down('Tab');
+      await a.waitForFunction((id) => document.querySelector(`.scoreboard tr:not(.local) svg[data-weapon="${id}"]`), {}, weapon);
+      check((await self(b)).weapon === weapon, `remote ${weapon} silhouette matches actual server-approved selection`);
+      await a.screenshot({ path: `test-results/prespawn/leaderboard-${weapon}.png` });
+      if (weapon === 'rifle') {
+        const ns = await fixture.getDurableObjectNamespace('ROOM'); const stub = ns.get(ns.idFromName('public-main'));
+        try { await stub.fallForTest((await state(b)).selfId); } finally { stub[Symbol.dispose]?.(); }
+        await b.waitForSelector('#start.visible');
+      }
+    }
+    await a.keyboard.up('Tab');
+  }
+  if (fixture) {
+    const ns = await fixture.getDurableObjectNamespace('ROOM');
+    const stub = ns.get(ns.idFromName('public-main'));
+    const maps = new Set([(await state(a)).snapshot.mapId]);
+    try {
+      for (let round = 0; round < 2; round++) {
+        const next = await stub.advanceMapForTest();
+        console.log('Requested shared rotation', next.roundId, next.mapId);
+        if (round === 0) await a.evaluate(() => window.__crossfire.networkReconnect());
+        for (const page of [a, b]) {
+          await page.waitForFunction((s) => window.__crossfire.state() === 'start' && window.__crossfire.stats().mapId === s.mapId
+            && window.__crossfire.network().snapshot.roundId === s.roundId, { timeout: 60000 }, { mapId: next.mapId, roundId: next.roundId });
+        }
+        maps.add(next.mapId);
+        check((await state(a)).snapshot.mapId === (await state(b)).snapshot.mapId, `both real clients load server rotation map ${next.mapId}`);
+        check(!(await self(a)).alive && !(await self(b)).alive, 'rotation returns connected players to pre-spawn');
+        await a.bringToFront();
+        await a.click('#start .primary');
+        await a.waitForFunction(() => window.__crossfire.ready());
+        await a.waitForFunction(() => window.__crossfire.network().snapshot.players.find((p) => p.id === window.__crossfire.network().selfId)?.motion.grounded);
+        const me = await self(a);
+        const valid = await a.evaluate((p) => window.__crossfire.mapInfo().spawns.some((s) => Math.hypot(s.pos[0] - p.x, s.pos[2] - p.z) < 0.5), me.motion.position);
+        check(valid, `${next.mapId}: actual server spawn uses the existing map's spawn data`);
+        await b.waitForFunction(() => window.__crossfire.network().rendered.length === 1);
+      }
+      check(maps.size === 3, 'actual shared match rotation visits all three maps');
+    } finally { stub[Symbol.dispose]?.(); }
   }
   // A real transport reconnect preserves a connected spectator, its identity and count.
   const bId = (await state(b)).selfId;
@@ -176,9 +252,17 @@ try {
   await count(observer, 0);
   check(await b.$('#menu.visible'), 'a pre-spawn client can leave cleanly through Escape/Leave Match');
   await observer.setOfflineMode(true);
-  await observer.waitForFunction(() => document.querySelector('.online-count')?.textContent === 'Offline', { timeout: 10000 });
-  check((await state(observer)).state === 'idle', 'unreachable presence shows Offline without opening a player session');
+  await observer.waitForFunction(() => document.querySelector('.online-count')?.dataset.available === 'false' && document.querySelector('.online-count')?.textContent === '0 Players Online', { timeout: 10000 });
+  check((await state(observer)).state === 'idle', 'unavailable presence displays zero but retains unavailable state without opening a player session');
   await observer.setOfflineMode(false);
   await count(observer, 0);
   check(errors.length === 0, `no uncaught browser errors: ${errors.join('; ')}`);
+} catch (error) {
+  for (const page of await browser.pages()) {
+    try { console.log('Browser loading diagnostic', await page.evaluate(() => ({ state: window.__crossfire?.state(),
+      loading: window.__crossfire?.loadingState(), map: window.__crossfire?.stats().mapId,
+      network: window.__crossfire?.network().state, round: window.__crossfire?.network().snapshot?.roundId,
+      desiredMap: window.__crossfire?.network().snapshot?.mapId, error: document.querySelector('#error.visible p')?.textContent }))); } catch {}
+  }
+  throw error;
 } finally { await browser.close(); await fixture?.dispose(); }

@@ -66,12 +66,12 @@ const luminance = (rgb) => {
 try {
   // ---------------------------------------------------------------- main menu entry
   let page = await open();
-  await page.waitForFunction(() => window.__crossfire?.stats().mapId, { timeout: 180000, polling: 500 });
+  await page.waitForFunction(() => window.__crossfire && document.querySelector('#menu.visible'), { timeout: 180000, polling: 500 });
   const start = await applied(page);
   check(start.fov === 90 && start.masterVolume === 0.7 && start.shadowQuality === 'medium', `defaults loaded (fov ${start.fov}, volume ${start.masterVolume}, shadows ${start.shadowQuality})`);
   check((await stored(page)) === null, 'nothing is saved just by starting the game');
 
-  const buttons = await page.$$('#menu .menu-buttons > .btn');
+  const buttons = await page.$$('.home-header .home-nav .btn');
   await buttons[buttons.length - 1].click(); // Settings
   await wait(250);
   check(await screenVisible(page, 'settings'), 'Settings opens from the main menu');
@@ -147,7 +147,7 @@ try {
   const afterBack = await applied(page);
   check(afterBack.fov === 90 && afterBack.masterVolume === 0.7 && afterBack.shadowQuality === 'medium', 'Back: nothing was applied');
   check((await stored(page)) === null, 'Back: nothing was saved');
-  await (await page.$$('#menu .menu-buttons > .btn')).at(-1).click();
+  await (await page.$$('.home-header .home-nav .btn')).at(-1).click();
   await wait(200);
   check(
     (await sliderValue(page, '#set-fov')) === 90 && !(await applyEnabled(page)) && !(await pillVisible(page)),
@@ -222,8 +222,8 @@ try {
   page = await open();
   const reloaded = await applied(page);
   check(reloaded.fov === 95 && reloaded.masterVolume === 0.3 && reloaded.shadowQuality === 'low', 'after a refresh the saved settings are restored');
-  await page.waitForFunction(() => window.__crossfire?.stats().mapId, { timeout: 180000, polling: 500 });
-  await (await page.$$('#menu .menu-buttons > .btn')).at(-1).click();
+  await page.waitForFunction(() => window.__crossfire && document.querySelector('#menu.visible'), { timeout: 180000, polling: 500 });
+  await (await page.$$('.home-header .home-nav .btn')).at(-1).click();
   await wait(200);
   check((await sliderValue(page, '#set-fov')) === 95 && !(await applyEnabled(page)), 'the menu shows the restored values');
   await page.close();

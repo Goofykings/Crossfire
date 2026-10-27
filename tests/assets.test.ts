@@ -19,7 +19,7 @@ const MAP_IDS = readdirSync('src/maps', { withFileTypes: true })
   .map((d) => d.name);
 
 
-const WEAPON_FILES = ['rifle', 'shotgun', 'sniper', 'hands', 'casings'].map((n) => `public/assets/models/shared/weapons/${n}.glb`);
+const WEAPON_FILES = ['rifle', 'shotgun', 'sniper', 'smg', 'hands', 'casings'].map((n) => `public/assets/models/shared/weapons/${n}.glb`);
 describe.each(MAP_IDS)('map %s assets', (id) => {
   const dir = `public/assets/models/${id}`;
   const idx = JSON.parse(readFileSync(`${dir}/map-assets.json`, 'utf8')) as { models: string[]; collision: string; collisionDebug?: string };
@@ -78,6 +78,7 @@ describe('generated assets', () => {
   it('exports each weapon with its moving parts and the anchors the view-model animates between', () => {
     const need: Record<string, string[]> = {
       rifle: ['muzzle', 'sight', 'eject', 'grip_r', 'grip_l', 'mag_grip', 'mag'],
+      smg: ['muzzle', 'sight', 'eject', 'grip_r', 'grip_l', 'mag_grip', 'mag'],
       shotgun: ['muzzle', 'sight', 'eject', 'grip_r', 'grip_l', 'port', 'pump', 'shell'],
       sniper: ['muzzle', 'sight', 'eject', 'grip_r', 'grip_l', 'mag_grip', 'bolt_grip', 'bolt', 'mag'],
     };

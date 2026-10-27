@@ -6,7 +6,7 @@
  * empty. Timed cues inside each action (magazine out, bolt back...) drive both the sounds and the hand animation.
  */
 
-export type WeaponId = 'rifle' | 'shotgun' | 'sniper';
+export type WeaponId = 'rifle' | 'shotgun' | 'sniper' | 'smg';
 export type FireMode = 'auto' | 'semi' | 'pump' | 'bolt';
 
 /** A named moment inside an action, at a fraction (0..1) of its duration. */
@@ -195,7 +195,13 @@ export const SNIPER: WeaponStats = {
   holsterTime: 0.3,
 };
 
-export const WEAPONS: readonly WeaponStats[] = [RIFLE, SHOTGUN, SNIPER];
+export const SMG: WeaponStats = {
+  ...RIFLE, id: 'smg', name: 'SMG', slot: 4, magazine: 32, rpm: 960, damage: 11,
+  range: 140, falloff: { start: 15, end: 55, minScale: 0.55 },
+  reload: { ...(RIFLE.reload as MagazineReload), time: 1.65, emptyTime: 2.05 },
+  spreadHip: 1.7, spreadAds: 0.16, recoilPitch: 0.34, recoilYaw: 0.18, viewKick: 5,
+};
+export const WEAPONS: readonly WeaponStats[] = [RIFLE, SHOTGUN, SNIPER, SMG];
 
 export type WeaponEvent =
   | { type: 'fire'; spread: number }

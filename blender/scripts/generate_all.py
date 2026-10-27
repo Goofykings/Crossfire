@@ -10,7 +10,7 @@ Stages (default: all except previews)
     industrial the same outputs for the Industrial Complex (models/industrial-complex/, industrial-complex.blend)
     city       the same outputs for the Modern City (models/modern-city/, modern-city.blend)
     props      models/shared/props/*.glb, blender/source/props.blend
-    weapon     models/shared/weapons/{rifle,shotgun,sniper,hands,casings}.glb, blender/source/weapon.blend
+    weapon     models/shared/weapons/{rifle,shotgun,sniper,smg,hands,casings}.glb, blender/source/weapon.blend
     library    models/shared/buildings/*.glb (8 building types x 2 variants), building_library.blend
     kit        models/shared/kit/*.glb, blender/source/modular_kit.blend
     previews   docs/previews/*.png (EEVEE renders; with a map stage, that map's views)
@@ -324,7 +324,7 @@ def stage_props():
 
 
 def stage_weapon():
-    """First-person weapons (rifle, shotgun, sniper), hands and ejected cases."""
+    """First-person weapons (rifle, shotgun, sniper, SMG), hands and ejected cases."""
     exporter.reset_scene()
     col = exporter.collection("Weapons")
     for wid, build in weapon_lib.WEAPONS.items():
@@ -367,7 +367,7 @@ def stage_weapon():
     record(path, "weapon", "Ejected cases: casing_rifle, casing_sniper, casing_shell", objs)
     setup_world()
     exporter.save_blend(SOURCE / "weapon.blend")
-    record(SOURCE / "weapon.blend", "blend", "Editable source: rifle, shotgun, sniper, hands, casings")
+    record(SOURCE / "weapon.blend", "blend", "Editable source: rifle, shotgun, sniper, SMG, hands, casings")
     log("weapons ok")
 
 

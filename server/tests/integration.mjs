@@ -32,7 +32,7 @@ test('Public room: real Workers runtime and real WebSocket clients', { timeout: 
     ws.on('error', () => {});
     const client = {
       ws, messages, welcome: null,
-      send: (m) => ws.send(JSON.stringify({ v: 2, ...m })),
+      send: (m) => ws.send(JSON.stringify({ v: 3, ...(['spawn', 'input'].includes(m.type) ? { roundId: client.welcome?.snapshot.roundId ?? 0 } : {}), ...m })),
       async wait(predicate, from = 0) {
         const until = Date.now() + 5000;
         while (Date.now() < until) {
@@ -51,7 +51,7 @@ test('Public room: real Workers runtime and real WebSocket clients', { timeout: 
       client.send({ type: 'join', name, ...(resumeToken ? { resumeToken } : {}) });
       client.welcome = await client.wait((m) => m.type === 'welcome' || m.type === 'error');
       if (spawn && client.welcome.type === 'welcome' && !client.welcome.snapshot.players.find((p) => p.id === client.welcome.selfId).alive) {
-        client.send({ type: 'spawn', mapVersion: client.welcome.snapshot.mapVersion, weapon: 'rifle', requestId: crypto.randomUUID() });
+        client.send({ type: 'spawn', roundId: 0, mapVersion: client.welcome.snapshot.mapVersion, weapon: 'rifle', requestId: crypto.randomUUID() });
         const approved = await client.wait((m) => m.type === 'spawned' || m.type === 'error');
         assert.equal(approved.type, 'spawned', approved.message);
         client.welcome = { ...client.welcome, snapshot: approved.snapshot };
@@ -59,7 +59,7 @@ test('Public room: real Workers runtime and real WebSocket clients', { timeout: 
     }
     return client;
   }
-  const frame = (seq, yaw = 0) => ({ seq, yaw, pitch: 0.25,
+  const frame = (seq, yaw = 0) => ({ seq, yaw: Math.atan2(Math.sin(yaw), Math.cos(yaw)), pitch: 0.25,
     intent: { x: 0, z: 1, sprint: false, crouch: false, aim: false, jumpPressed: false } });
   let a, b, resumable;
   try {
@@ -100,7 +100,7 @@ test('Public room: real Workers runtime and real WebSocket clients', { timeout: 
       }
       assert.equal((await fetch(new URL('/presence', base), { headers: { Origin: 'https://untrusted.example' } })).status, 403);
       const mark = c.messages.length;
-      c.send({ type: 'input', mapVersion: c.welcome.snapshot.mapVersion, frames: [frame(1)] });
+      c.send({ type: 'input', roundId: 0, mapVersion: c.welcome.snapshot.mapVersion, frames: [frame(1)] });
       assert.equal((await c.wait((m) => m.type === 'error', mark)).code, 'not_spawned');
       c.send({ type: 'leave' }); await delay(100);
       assert.equal((await (await fetch(new URL('/presence', base))).json()).online, 2);
@@ -108,13 +108,13 @@ test('Public room: real Workers runtime and real WebSocket clients', { timeout: 
     await t.test('spawn waits for approval and locks the server-owned weapon for this life', async () => {
       const c = await open({ spawn: false });
       const mark = c.messages.length;
-      c.send({ type: 'spawn', mapVersion: c.welcome.snapshot.mapVersion, weapon: 'sniper', requestId: 'first-life' });
+      c.send({ type: 'spawn', roundId: 0, mapVersion: c.welcome.snapshot.mapVersion, weapon: 'sniper', requestId: 'first-life' });
       const approved = await c.wait((m) => m.type === 'spawned', mark);
       const self = approved.snapshot.players.find((p) => p.id === c.welcome.selfId);
       assert.equal(approved.requestId, 'first-life'); assert.equal(self.alive, true);
       assert.equal(self.weapon, 'sniper'); assert.equal(self.life, 1);
       const m2 = c.messages.length;
-      c.send({ type: 'spawn', mapVersion: c.welcome.snapshot.mapVersion, weapon: 'shotgun', requestId: 'cheat' });
+      c.send({ type: 'spawn', roundId: 0, mapVersion: c.welcome.snapshot.mapVersion, weapon: 'shotgun', requestId: 'cheat' });
       assert.equal((await c.wait((m) => m.type === 'error', m2)).code, 'already_spawned');
       c.ws.close(); await delay(100);
       const resumed = await open({ resumeToken: c.welcome.resumeToken, spawn: false });
@@ -124,26 +124,26 @@ test('Public room: real Workers runtime and real WebSocket clients', { timeout: 
       resumed.send({ type: 'leave' }); await delay(100);
     });
     await t.test('invalid loadouts, score injection and wrong map revisions cannot spawn', async () => {
-      for (const payload of [{ weapon: 'smg' }, { weapon: 'rifle', kills: 99 }, { weapon: 'rifle', mapVersion: 'wrong' }]) {
+      for (const payload of [{ weapon: 'invalid' }, { weapon: 'rifle', kills: 99 }, { weapon: 'rifle', mapVersion: 'wrong' }]) {
         const c = await open({ spawn: false });
-        c.send({ type: 'spawn', mapVersion: c.welcome.snapshot.mapVersion, requestId: 'bad', ...payload });
+        c.send({ type: 'spawn', roundId: 0, mapVersion: c.welcome.snapshot.mapVersion, requestId: 'bad', ...payload });
         const error = await c.wait((m) => m.type === 'error');
         assert.equal(error.code, payload.mapVersion ? 'map_mismatch' : 'invalid_message');
       }
     });
     await t.test('server simulates bounded movement and synchronizes orientation', async () => {
       const start = a.welcome.snapshot.players.find((p) => p.id === a.welcome.selfId).motion;
-      a.send({ type: 'input', mapVersion: a.welcome.snapshot.mapVersion, frames: Array.from({ length: 12 }, (_, i) => frame(i + 1, start.yaw)) });
+      a.send({ type: 'input', roundId: 0, mapVersion: a.welcome.snapshot.mapVersion, frames: Array.from({ length: 12 }, (_, i) => frame(i + 1, start.yaw)) });
       const result = await b.wait((m) => m.type === 'snapshot' && m.snapshot.players.some((p) => p.id === a.welcome.selfId && p.ack === 12));
       const p = result.snapshot.players.find((p) => p.id === a.welcome.selfId);
       const d = Math.hypot(p.motion.position.x - start.position.x, p.motion.position.z - start.position.z);
       assert.ok(d > 0.1 && d < 0.6, `real movement ${d}m in 12 physics steps`);
-      assert.equal(p.motion.yaw, start.yaw);
+      assert.ok(Math.abs(Math.atan2(Math.sin(p.motion.yaw - start.yaw), Math.cos(p.motion.yaw - start.yaw))) < 1e-8);
       assert.equal(p.motion.pitch, 0.25);
     });
     await t.test('replayed input is rejected without granting extra simulation', async () => {
       const mark = a.messages.length;
-      a.send({ type: 'input', mapVersion: a.welcome.snapshot.mapVersion, frames: [frame(1)] });
+      a.send({ type: 'input', roundId: 0, mapVersion: a.welcome.snapshot.mapVersion, frames: [frame(1)] });
       assert.equal((await a.wait((m) => m.type === 'error', mark)).code, 'stale_input');
       const snapshot = await a.wait((m) => m.type === 'snapshot' && m.snapshot.players.some((p) => p.id === a.welcome.selfId && p.ack === 12), mark);
       assert.equal(snapshot.snapshot.players.find((p) => p.id === a.welcome.selfId).ack, 12);
@@ -166,7 +166,7 @@ test('Public room: real Workers runtime and real WebSocket clients', { timeout: 
     await t.test('forged coordinates and out-of-range input are rejected', async () => {
       for (const bad of [{ ...frame(1), position: { x: 9999, y: 0, z: 0 } }, { ...frame(1), intent: { ...frame(1).intent, x: 999 } }]) {
         const c = await open();
-        c.send({ type: 'input', mapVersion: c.welcome.snapshot.mapVersion, frames: [bad] });
+        c.send({ type: 'input', roundId: 0, mapVersion: c.welcome.snapshot.mapVersion, frames: [bad] });
         assert.equal((await c.wait((m) => m.type === 'error')).code, 'invalid_message');
       }
     });
@@ -182,7 +182,7 @@ test('Public room: real Workers runtime and real WebSocket clients', { timeout: 
     });
     await t.test('burst input cannot create extra time; the bounded queue rejects flooding', async () => {
       const c = await open();
-      for (let j = 0; j < 5; j++) if (c.ws.readyState === WebSocket.OPEN) c.send({ type: 'input', mapVersion: c.welcome.snapshot.mapVersion,
+      for (let j = 0; j < 5; j++) if (c.ws.readyState === WebSocket.OPEN) c.send({ type: 'input', roundId: 0, mapVersion: c.welcome.snapshot.mapVersion,
         frames: Array.from({ length: 12 }, (_, i) => frame(j * 12 + i + 1)) });
       assert.equal((await c.wait((m) => m.type === 'error')).code, 'input_overflow');
     });
@@ -243,6 +243,57 @@ test('Public room: real Workers runtime and real WebSocket clients', { timeout: 
       assert.equal(alive.alive, true); assert.equal(alive.life, 2); assert.equal(alive.weapon, 'shotgun');
       assert.equal(alive.deaths, 1); assert.equal(alive.kills, 0);
       c.send({ type: 'leave' }); await delay(100);
+    });
+    await t.test('both real clients rotate through every map, approve all loadouts, reject old-round input and resume the current map', async () => {
+      const c = await open({ spawn: false });
+      const d = await open({ spawn: false });
+      const ns = await mf.getDurableObjectNamespace('ROOM');
+      const stub = ns.get(ns.idFromName('public-main'));
+      const seen = new Set();
+      let current = c.welcome.snapshot;
+      try {
+        for (let i = 0; i < 3; i++) {
+          if (i) {
+            const before = current;
+            current = await stub.advanceMapForTest();
+            for (const client of [c, d]) {
+              const state = await client.wait((m) => m.type === 'snapshot' && m.snapshot.roundId === current.roundId);
+              assert.equal(state.snapshot.mapId, current.mapId);
+              assert.equal(state.snapshot.mapVersion, current.mapVersion);
+              assert.equal(state.snapshot.match.endsAt, current.match.endsAt);
+              assert.ok(state.snapshot.players.every((p) => !p.alive));
+              client.welcome.snapshot = state.snapshot;
+            }
+            const mark = c.messages.length;
+            c.send({ type: 'input', roundId: before.roundId, mapVersion: before.mapVersion, frames: [frame(1)] });
+            assert.equal((await c.wait((m) => m.type === 'error', mark)).code, 'round_changed');
+          }
+          seen.add(current.mapId);
+          assert.ok(current.match.endsAt > current.serverTime);
+          for (const [client, weapon] of [[c, i === 0 ? 'smg' : 'sniper'], [d, i === 0 ? 'rifle' : 'shotgun']]) {
+            const requestId = crypto.randomUUID();
+            client.send({ type: 'spawn', roundId: current.roundId, mapVersion: current.mapVersion, weapon, requestId });
+            const approved = await client.wait((m) => m.type === 'spawned' && m.requestId === requestId);
+            const me = approved.snapshot.players.find((p) => p.id === client.welcome.selfId);
+            assert.equal(me.weapon, weapon); assert.equal(me.alive, true);
+            assert.equal(approved.snapshot.mapId, current.mapId);
+          }
+          const me = (await c.wait((m) => m.type === 'spawned' && m.snapshot.roundId === current.roundId)).snapshot.players.find((p) => p.id === c.welcome.selfId);
+          const last = me.ack + 12;
+          c.send({ type: 'input', roundId: current.roundId, mapVersion: current.mapVersion,
+            frames: Array.from({ length: 12 }, (_, k) => frame(me.ack + k + 1, me.motion.yaw)) });
+          const moved = await d.wait((m) => m.type === 'snapshot' && m.snapshot.roundId === current.roundId && m.snapshot.players.some((p) => p.id === me.id && p.ack === last));
+          assert.equal(moved.snapshot.players.find((p) => p.id === me.id).motion.pitch, 0.25);
+        }
+        assert.deepEqual(seen, new Set(['european-town', 'industrial-complex', 'modern-city']));
+      } finally { stub[Symbol.dispose]?.(); }
+      const saved = { ...current };
+      c.ws.close(); d.ws.close(); await delay(150);
+      await mf.dispose(); mf = new Miniflare(options); base = (await mf.ready).href;
+      const resumed = await open({ resumeToken: c.welcome.resumeToken, spawn: false });
+      assert.equal(resumed.welcome.snapshot.roundId, saved.roundId);
+      assert.equal(resumed.welcome.snapshot.mapId, saved.mapId);
+      assert.equal(resumed.welcome.snapshot.match.endsAt, saved.match.endsAt);
     });
   } finally {
     for (const c of clients) c.ws.terminate();

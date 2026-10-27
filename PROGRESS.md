@@ -1,3 +1,196 @@
+# Current task: larger main PLAY text
+
+Updated: 2026-10-26. Increased only the main home PLAY button text from 23-30px to 34-42px responsively. Kept its desktop 88px button height, centered alignment and generous padding; the top Play navigation label is unchanged.
+
+Files: `src/styles.css`, `PROGRESS.md`. Production build/TypeScript and existing focused browser checks passed at five viewport sizes (1920 through 320px), with no clipping or browser errors. Visually inspected the updated desktop screenshot. Logs: ignored `test-results/play-text-build.log`, `test-results/play-text-home.log`. No commit, push or deployment; stop here.
+
+---
+
+# Current task: faster tab switching and hover underline
+
+Updated: 2026-10-26. Completed the requested navigation refinement.
+
+- Selected-tab movement and underline/fade width animation now take 140 ms (previously 190 ms), retaining smooth easing and reduced-motion support.
+- Added a faint white hover underline at the same height/thickness and word-width-plus-24px sizing as the corresponding selected underline. Hover previews do not change the selected page; the active solid white underline remains visible. Hover remains silent.
+- Files: `src/ui/UI.ts`, `src/styles.css`, `tools/home-test.mjs`, `PROGRESS.md`.
+- Validation: production build/TypeScript passed. Focused production browser checks passed at five viewport sizes, including faster timing, preview sizing/opacity, selected-page preservation, removal on pointer leave, retained click audio/no hover sounds, Back/draft behavior and no console errors. Visually inspected `test-results/home/tab-hover.png`. Logs: ignored `test-results/fast-tabs-build.log`, `test-results/fast-tabs-home.log`. Existing bundle warning remains; `git diff --check` passed.
+
+No commit, push or deployment. Stop here.
+
+---
+
+# Current task: word-sized tab underline and silent hovering
+
+Updated: 2026-10-26. Completed the requested focused follow-up.
+
+- The floating selected-tab underline now follows the actual word width with 12 pixels of overhang on each side. Its matching upward white fade resizes with it. Retained smooth movement/width animation; ResizeObserver keeps the width correct across responsive text sizes without reacting to hover scaling.
+- Removed the UI's delegated hover-sound listener for all buttons/settings tabs. Existing click sounds and game audio are preserved; no audio assets or weapon logic were changed.
+- Files changed: `src/ui/UI.ts`, `src/styles.css`, `tools/home-test.mjs`, `PROGRESS.md`. Added `--appearance-only` to the existing home browser check for focused UI verification without joining/loading a map.
+- Validation: production build with TypeScript passed; focused production browser checks passed at five viewport sizes, including word-sized Play/Settings underline, matching fade, no hover audio requests, retained click audio, navigation/Back behavior and no browser errors. Visually inspected the updated Settings screenshot. `git diff --check` passed. Logs: ignored `test-results/underline-hover-build.log` and `test-results/underline-hover-home.log`. Existing bundle-size warning remains.
+
+No commit, push or deployment. Follow-up complete; stop here.
+
+---
+
+# Current task: blue controls and text-only home tabs
+
+Updated: 2026-10-26. Completed the requested follow-up UI styling changes.
+
+- Replaced the remaining orange UI accent/control colors with blue, including primary Apply/Spawn/Respawn buttons, selected settings categories, weapon cards, sliders, switches and associated focus/selection styling. Primary action text is white.
+- Removed filled backgrounds and rounded button containers from the top Play/Settings navigation, including selected and hover states. Kept accessible buttons and keyboard focus behavior behind the text-only appearance.
+- Added a full-width dark backdrop behind the home title and navigation that fades to transparent below the tabs.
+- The floating white underline retains its shared 190 ms slide. Its white upward fade is strongest immediately above the line and becomes fully transparent upward.
+- Changes are limited to `src/styles.css`, updated visual assertions in `tools/home-test.mjs`, and this progress record. Existing uncommitted project work was preserved.
+
+Validation: production build (including TypeScript check) passed. Production browser checks passed at five viewport sizes (1920 through 320px), including transparent tabs, dark fading header, white animated underline/fade, blue Apply/category styling, draft cancellation/navigation, real local join/pre-spawn, presence failure/recovery and no unexpected browser errors. Visually inspected the new desktop home and full-screen Settings screenshots. `git diff --check` passed. Existing Babylon bundle-size warning remains. Logs: ignored `test-results/blue-tabs-build.log` and `test-results/blue-tabs-home.log`; screenshots: `test-results/home/`.
+
+No commit, push or deployment. Follow-up complete; stop here.
+
+---
+
+# Current task: home, Settings, logo and leaderboard polish
+
+Updated: 2026-10-26. Completed the latest attached **Home Screen, Settings, Animations, Logo, and Leaderboard Polish** UI-only request. Read the brief, CLAUDE.md, this record and affected code; baseline TypeScript and 136 unit tests passed. No AGENTS.md was found. The prior focused UI/map/SMG/network work was already uncommitted at the start and was preserved, including the user's existing Pages Origin edit in `server/wrangler.jsonc`.
+
+## Completed
+
+- Main Play is rich blue with white, padded text and a restrained hover color. Major menu buttons now enlarge around their original center with smooth easing instead of translating. Keyboard focus remains visible.
+- Persistent top Play/Settings navigation keeps its position between pages. The short white underline and faint upward white fade share one indicator, which moves with 190 ms easing. Current tab shading and quick content fades are included.
+- Home Settings fills the viewport with Gameplay, Sound and Graphics in a left sidebar, including on narrow screens. It reuses the existing controls, SettingsDraft and Apply/Back handlers. Pause/pre-spawn Settings keeps its compact layout. Navigation back to Play discards unapplied edits just like Back.
+- Home has an original CROSS / crossed fictional rifles / FIRE wordmark in bold condensed italic type, with a matching SVG favicon. The entire accessible CROSSFIRE title fits at all tested widths. Artwork is lightweight original SVG, with no copied game assets or external font dependency.
+- Replaced the overhead thumbnail with an optimized 1600x900 WebP screenshot of the **actual Town well plaza**, taken at eye level. Asset size is 204,098 bytes (about 199 KiB). `tools/capture-home-background.mjs` reproduces it from the existing map. Home still requests no playable map, weapon geometry, environment or material textures. Blur/dimming remain; a transform-only 3% zoom cycle takes 22 seconds and respects reduced-motion preferences. A clipped backdrop frame contains the transform without horizontal overflow.
+- Missing/unavailable presence displays **0 Players Online**. Presence still sends null on failure, and the UI retains `data-available=false`; a confirmed zero uses `data-available=true`. Real valid counts still display normally. No connection-status panels or invented roster/count data were added.
+- The held-Tab leaderboard has a background-only horizontal transparency gradient, keeping names/statistics opaque. Four original small SVG silhouettes use each row's existing server-reported `weapon` value; null/unknown data shows a neutral placeholder. Weapon changes are part of the row-update signature, so respawn refreshes icons. No protocol or backend changes were needed. Sorting, local highlighting, FFA/Teams presentation and actual timer/data remain intact.
+
+## Verification
+
+- Frontend TypeScript, all **136 unit tests**, and final production build pass. The pre-existing large Babylon bundle warning remains. `git diff --check` passes.
+- Backend typecheck and Wrangler **dry-run** build pass, confirming compatibility; backend code/config/protocol were not changed by this task. No deployment was run.
+- Production home browser test passes at 1920x1080, 1280x720, 1024x600, 390x844 and 320x568: full logo, blue padded Play, no clipping, lightweight-only requests, centered hover scaling, persistent navigation/moving white indicator/fade, full-screen Settings/left sidebar, Back/navigation draft cancellation, reduced-motion handling, real local Play/loading/pre-spawn, and unavailable/confirmed presence recovery. Normal browser checks reported no console errors; deliberate offline requests were separately checked for recovery and no uncaught JavaScript errors.
+- Production Settings browser regression passes mouse/keyboard dropdowns, sliders/switches, category draft retention, Defaults as a draft, Apply/Back/Escape, local persistence, corrupted-value sanitization and live pause Settings. No console errors.
+- Two independent production browser clients plus an HTTP-only observer were tested against the real local Worker/SQLite/WebSocket fixture. Verified actual counts, pre-spawn and placeholder icons, all four server-approved weapon icons (including remote selection and updated sniper after respawn), real fall death, spawn/loadout lock, SMG firing/reload/audio/no arms, held Tab/release/blur, background-only fading, reconnect, all three map transitions and Leave Match. No fabricated clients, scores or snapshots. No uncaught browser errors.
+- Visually inspected the captured source plaza image, production home at desktop/320px, full-screen desktop/narrow Settings, and real two-player rifle/sniper and shotgun/sniper leaderboard screenshots. Evidence/logs are under ignored `test-results/home/`, `test-results/prespawn/`, `test-results/ui-polish-settings/` and `test-results/ui-polish-*.log`.
+
+## Existing limits / next unfinished work
+
+- Town currently has a **well**, not a fountain. Used its existing recognizable plaza rather than changing map geometry or inventing a fountain image.
+- **Extreme Quality and Max FPS do not exist** in the current settings schema/renderer. Preserved every implemented control (including High quality, shadow quality, resolution scale and Show FPS); did not add cosmetic controls that do nothing. Their implementation remains separate rendering work.
+- Actual Teams assignment/combat mode randomization, player-vs-player combat and match results remain unfinished, as documented previously. Existing Teams/FFA presentation is preserved and unit-tested; real Teams gameplay is not claimed. Public deployment/operation was not tested or changed.
+- This focused UI update is complete. Stop here; remaining gameplay/rendering stages require a new request. No commit, push or deployment was performed.
+
+## Files modified by this UI task
+
+- `src/ui/UI.ts`
+- `src/ui/Scoreboard.ts`
+- `src/ui/WeaponIcons.ts` (new original SVG artwork)
+- `src/styles.css`
+- `public/favicon.svg`
+- `public/assets/ui/town-plaza.webp` (new map screenshot)
+- `tools/capture-home-background.mjs` (new reproducible capture tool)
+- `tools/home-test.mjs`
+- `tools/prespawn-test.mjs`
+- `tools/settings-test.mjs`
+- `tools/multiplayer-test.mjs` (updated home assertion)
+- `README.md`
+- `docs/TESTING.md`
+- `CLAUDE.md`
+- `PROGRESS.md`
+
+The other uncommitted files listed by Git belong to earlier work and were not rewritten by this task. Historical task records follow.
+
+---
+
+# Current task: focused UI redesign and three-map integration
+
+Updated: 2026-10-26. Completed the attached **focused UI redesign and map-integration fix**; this task supersedes the old stage order and disabled-SMG placeholder below. Only this focused scope was implemented. Read the attachment, CLAUDE.md, progress/architecture notes, current Git status and affected UI/loading/registry/network/weapon/Blender code first. No AGENTS.md was found. The existing uncommitted `server/wrangler.jsonc` change adding the Pages Origin was preserved without modification.
+
+## Why only one map appeared
+
+- The frontend registry already contained European Town, Industrial Complex and Modern City. Their generated models, collision, material/prop assets and 16 neutral spawn points per map existed and were loadable through practice. Missing assets, spawn configuration or frontend registry entries were not the cause.
+- `server/src/world.ts` imported only European Town layout/collision. `PublicRoom` always created Town controllers, chose Town spawns and published `mapId: 'european-town'`. The shared snapshot type/parser also accepted only that map. There was **no actual server map rotation** to include Industrial or City. Those earlier files represented completed map assets, not multiplayer integration.
+- Fixed the actual restriction: one server world catalog now includes the three existing map datasets, revisions and spawns; the protocol accepts all three IDs; the canonical room selects the current map; clients load and validate that map. No map layout/collision/texture or existing weapon asset was rebuilt.
+
+## UI and loading changes
+
+- Home now uses the existing 23 KB Town thumbnail as a blurred, dimmed static background. It has the full CROSSFIRE title near the top, Home/Settings navigation and a large bottom-centered Play button with hover/fade polish. Kept the real small online count. No character, map chooser, party/private/join UI or feature/status panels were added.
+- Removed menu map preloading and deferred material, environment, weapon/casing model and preview loading until Play connects. Home never calls `MapManager.load` and skips scene rendering. The engine remains the existing Babylon engine; this is not a replacement app or renderer. Returning home shows the static backdrop and can reuse previously joined assets on a later Play.
+- The opaque dark-gray loading screen contains only centered LOADING. It covers connection and real asset/map readiness, then opens pre-spawn. The existing MapManager shader-readiness/disposal path is reused; serial map requests coalesce to the newest server round. A reconnect during loading resumes that preparation instead of leaving the client stuck.
+- Weapon selection is a full-screen dimmed/blurred overlay with four horizontal cards, in the requested order: SMG, Assault Rifle, Sniper Rifle, Shotgun. All are selectable and show renders of their actual game models. Hover, selected state, spacing/type and responsive horizontal scrolling are implemented. Selection immediately persists and returns to pre-spawn; approved life loadouts remain locked.
+- The supplied attachment contained **only the text brief**; Image A and Image B were not attached. The design follows the written layout/style requirements. No exact visual comparison against those missing images is claimed, and no Deadshot assets/logo were copied.
+
+## Four functional loadouts
+
+- Added the minimum working SMG needed by the four-selectable-card requirement: an original compact Blender model, its separate editable `blender/source/smg.blend`, 37 KB GLB, runtime rig/anchors, configurable stats (960 RPM, 32 rounds, 11 damage, close-range falloff), original short synthesized audio and existing magazine/reload/HUD integration. Infinite reserve and the central 1.5x headshot multiplier are preserved.
+- `blender/scripts/generate_smg.py` exports only this new asset and updates the manifest; it does not regenerate the other guns, hands or maps. The main pipeline can also regenerate SMG from the shared weapon source. Audio is reproducible with the existing procedural sound tool. No replacement arms/hands, sliding or changes to the existing rifle optic/models were made.
+
+## Shared public rotation and connectivity
+
+- `shared/maps.ts` defines the three map IDs and deterministic seeded shuffle. A persisted room epoch and server-generated seed define **600-second map rounds**, with all three maps included once per three-map bag. Shared state derives from elapsed time and survives restarts/hibernation, late joins and empty-room catch-up. Empty rooms do not run a simulation/clock loop. Connected-room deadlines use the existing alarm system.
+- Protocol v3 adds round IDs to movement/spawn requests and snapshots. Map revisions and server collision/spawn data remain shared with the browser. Old-round requests are rejected without accepting stale input or dropping the connection. Transitions clear live bodies/queued movement, reset round stats and return real connected sessions to pre-spawn. There is no client-selected public map or duplicate room/transport system.
+- Kept session credentials, heartbeat/removal, resume grace, replacement-generation protection, input validation/prediction, real player counts, interpolation and Leave Match. Both client and Worker must use v3 when eventually deployed. Vite config and Pages workflow are unchanged; no cloud resources, deployment, commit or push were performed.
+
+## Validation
+
+- Baseline frontend TypeScript and all 132 existing unit tests passed before changes. Current frontend TypeScript and production build pass; **136 unit tests in 12 files** pass. New tests cover complete random bags, exact deadline/restart/empty catch-up behavior, clear grounded spawns on every map, and SMG state behavior. The existing asset tests now validate SMG materials/anchors too.
+- Backend runtime typecheck and dry-run bundle pass (about 287 KiB uncompressed / 36 KiB gzip). **18 real workerd/Miniflare checks pass**, including two real WebSocket clients on every rotated map, all four approved loadouts, movement, stale-round rejection, spawn validation, elimination/respawn, heartbeat/disconnect/resume/replacement, active-socket hibernation and full runtime recovery with the current map/deadline retained. Network test inputs normalize headings to the same canonical yaw range as the actual frontend, including 270-degree map spawns.
+- Production `/crossfire/` home check passes at 1920, 1280, 1024, 390 and 320 pixels: full unclipped title, upper navigation, bottom-centered Play, real blurred image, no selector, and **zero map/weapon/environment/material-texture requests before Play**. Held actual asset requests to inspect the loading screen: only LOADING, with an opaque gray background; then the real connected pre-spawn screen appears.
+- Production browser fixture passes four real model previews, requested card order, a horizontal desktop row and contained narrow scroller, saved selection, Settings/Back/Escape, actual SMG spawn, firing/audio/magazine/reload without arms, per-life lock, real fall death/respawn/score update, both browsers loading all three server maps, map-correct actual spawns, reconnect during map loading, removal/Leave Match and Offline presence recovery. It uses actual Worker sockets and authoritative snapshots; only the isolated test room's epoch/fall position is advanced through a test-only RPC. No fake connections, player roster, score awards or public deployment are used.
+- Ordinary local Wrangler production integration also passes with two independent Chrome clients: authoritative movement/interpolation/orientation, authenticated reconnect without duplication, Leave Match, real Offline Retry/Back and recovery. Full production settings regression passes mouse/keyboard controls, draft/Apply/Back, persistence/corrupt storage, and pause entry with no browser errors.
+- Production all-map practice regression passes material resolution, grounded neutral spawns, walking, held leaderboard and headshot damage on Town/Industrial/City, plus repeated-switch scene-object counts and retained settings with no browser errors.
+- Final production gameplay regression passes original movement/stairs/collision, rifle/shotgun/sniper firing and 1.5x headshots, pump/bolt/scope, magazine limits/infinite reserves, weapon-only reload motion/audio, and held leaderboard behavior with no browser errors. SMG firing/reload/audio and locked loadouts were separately verified in the real-network browser fixture.
+- Asset verification passes: 183 manifest entries, 213 existing materials and all three map asset sets. Screenshot outputs under ignored `test-results/home/` and `test-results/prespawn/` were visually inspected. Existing large Babylon bundle warning remains.
+
+## Remaining limits
+
+- Existing player-vs-player combat, team assignment/mode randomization and match results are still unfinished and outside this focused task. The public map clock is now real; mode remains explicitly unavailable instead of inventing FFA/Teams state. This rotation is the minimum 600-second map lifecycle, not the older plan's results/transition system.
+- No cloud deployment/public endpoint test was performed here. The updated v3 frontend/Worker need matched deployment before public use; local multi-client evidence does not establish live public operation.
+- Exact matching to Image A/B cannot be verified because the images were not included. No other requested focused feature remains intentionally disabled.
+
+## Files changed by this task
+
+- `CLAUDE.md`
+- `PROGRESS.md`
+- `README.md`
+- `blender/scripts/generate_all.py`
+- `blender/scripts/generate_smg.py`
+- `blender/scripts/lib/weapon.py`
+- `blender/source/smg.blend`
+- `docs/ASSET_MANIFEST.md`
+- `docs/MULTIPLAYER_ARCHITECTURE.md`
+- `docs/TESTING.md`
+- `public/assets/asset-manifest.json`
+- `public/assets/audio/smg_shot.wav`
+- `public/assets/models/shared/weapons/smg.glb`
+- `server/README.md`
+- `server/src/index.ts`
+- `server/src/world.ts`
+- `server/tests/integration.mjs`
+- `server/tests/runtime-fixture.mjs`
+- `shared/maps.ts`
+- `shared/protocol.ts`
+- `src/audio/AudioManager.ts`
+- `src/game/Game.ts`
+- `src/network/MultiplayerClient.ts`
+- `src/styles.css`
+- `src/ui/UI.ts`
+- `src/ui/WeaponPreviews.ts`
+- `src/weapons/Weapon.ts`
+- `src/weapons/WeaponView.ts`
+- `tests/assets.test.ts`
+- `tests/network.test.ts`
+- `tests/prespawn.test.ts`
+- `tests/rotation.test.ts`
+- `tests/weapon.test.ts`
+- `tools/home-test.mjs`
+- `tools/make_audio.py`
+- `tools/multiplayer-test.mjs`
+- `tools/prespawn-test.mjs`
+- `tools/settings-test.mjs`
+
+The pre-existing `server/wrangler.jsonc` Origin edit is not part of this task's modifications. Generated Python bytecode was restored/removed after asset generation. Full historical records follow. **Stop after this focused task; do not automatically start sliding, map expansion/target removal, Teams/combat or Extreme/FPS work.**
+
+---
+
 # Current task: Gameplay/UI update - Stage 1
 
 Updated: 2026-10-25. The latest attached **Gameplay, UI, Weapons, and Extreme Graphics Update** defines a new four-stage sequence and authorizes **Stage 1 only**. This section supersedes the stage order and menu restrictions in the historical record below. Inspected the attachment, CLAUDE.md, this record, multiplayer architecture, existing networking/game/UI/weapon/asset code and Git status before editing. No AGENTS.md was found. The tracked working tree was clean at the start; the prior Cloudflare foundation was already present.

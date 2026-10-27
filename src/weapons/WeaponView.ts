@@ -41,6 +41,11 @@ interface RigConfig {
 }
 
 export const RIG_CONFIGS: Record<WeaponId, RigConfig> = {
+  smg: {
+    id: 'smg', file: 'assets/models/shared/weapons/smg.glb',
+    hip: [0.20, -0.235, -0.4], hipRot: [0.03, 0.09, -0.06],
+    eye: 0.20, casing: 'casing_rifle', flash: 0.75, kick: 0.7,
+  },
   rifle: {
     id: 'rifle',
     file: 'assets/models/shared/weapons/rifle.glb',

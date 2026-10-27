@@ -35,6 +35,7 @@ export class MultiplayerClient {
   private lastYaw = NaN;
   private lastPitch = NaN;
   private life = -1;
+  private round = -1;
   private readonly url: string;
   private spawning: { id: string; resolve: (s: Snapshot) => void; reject: (e: Error) => void; timeout: number } | null = null;
 
@@ -79,7 +80,7 @@ export class MultiplayerClient {
     this.deadline = window.setTimeout(() => socket.close(), 5000);
     socket.onopen = () => {
       if (this.socket !== socket) return;
-      this.send({ v: 2, type: 'join', name: this.name, ...(this.token ? { resumeToken: this.token } : {}) });
+      this.send({ v: 3, type: 'join', name: this.name, ...(this.token ? { resumeToken: this.token } : {}) });
     };
     socket.onmessage = (event) => {
       if (this.socket !== socket || typeof event.data !== 'string') return;
@@ -98,6 +99,7 @@ export class MultiplayerClient {
         this.token = m.resumeToken;
         this.saveToken();
         this.sequence = m.snapshot.players.find((p) => p.id === m.selfId)?.ack ?? 0;
+        this.round = m.snapshot.roundId;
         this.life = m.snapshot.players.find((p) => p.id === m.selfId)?.life ?? -1;
         this.pending = [];
         this.unsent = [];
@@ -110,13 +112,15 @@ export class MultiplayerClient {
         this.resolve = this.reject = null;
         this.onSnapshot(m.snapshot);
       } else if (m.type === 'snapshot' || m.type === 'spawned') {
+        if (m.snapshot.roundId !== this.round) this.cancelSpawn('The map changed. Select a loadout after loading.');
         this.latest = m.snapshot;
         const self = m.snapshot.players.find((p) => p.id === this.selfId);
         const ack = self?.ack ?? 0;
-        if (!self?.alive || self.life !== this.life) {
+        if (!self?.alive || self.life !== this.life || m.snapshot.roundId !== this.round) {
           this.pending = this.unsent = [];
           this.sequence = ack;
           this.life = self?.life ?? -1;
+          this.round = m.snapshot.roundId;
           this.lastYaw = this.lastPitch = NaN;
         } else this.pending = this.pending.filter((f) => f.seq > ack);
         this.onSnapshot(m.snapshot);
@@ -168,10 +172,10 @@ export class MultiplayerClient {
     this.flushTimer = window.setInterval(() => {
       if (Date.now() - this.lastMessage > 8000) { this.socket?.close(); return; }
       if (this.unsent.length && this.latest && (this.socket?.bufferedAmount ?? 0) < 32768) {
-        this.send({ v: 2, type: 'input', mapVersion: this.latest.mapVersion, frames: this.unsent.splice(0, INPUT_BATCH_LIMIT) });
+        this.send({ v: 3, type: 'input', roundId: this.latest.roundId, mapVersion: this.latest.mapVersion, frames: this.unsent.splice(0, INPUT_BATCH_LIMIT) });
       }
     }, 1000 / NETWORK_HZ);
-    this.pingTimer = window.setInterval(() => this.send({ v: 2, type: 'ping', at: Date.now() }), 2000);
+    this.pingTimer = window.setInterval(() => this.send({ v: 3, type: 'ping', at: Date.now() }), 2000);
   }
   private stopTimers(): void {
     for (const t of [this.flushTimer, this.pingTimer]) window.clearInterval(t);
@@ -224,7 +228,7 @@ export class MultiplayerClient {
   disconnect(): void {
     this.cancelSpawn('Left match');
     this.stopped = true;
-    this.send({ v: 2, type: 'leave' });
+    this.send({ v: 3, type: 'leave' });
     this.socket?.close(1000, 'left');
     this.socket = null;
     this.stopTimers();
@@ -244,7 +248,7 @@ export class MultiplayerClient {
     const id = crypto.randomUUID();
     return new Promise((resolve, reject) => {
       this.spawning = { id, resolve, reject, timeout: window.setTimeout(() => this.cancelSpawn('Spawn request timed out. Try again.'), 5000) };
-      this.send({ v: 2, type: 'spawn', requestId: id, weapon, mapVersion: this.latest!.mapVersion });
+      this.send({ v: 3, type: 'spawn', requestId: id, weapon, roundId: this.latest!.roundId, mapVersion: this.latest!.mapVersion });
     });
   }
 

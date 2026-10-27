@@ -13,6 +13,7 @@ export async function weaponPreviews(onPreview: (id: WeaponId, url: string) => v
   const scene = new Scene(engine);
   scene.useRightHandedSystem = true;
   scene.clearColor = new Color4(0, 0, 0, 0);
+  scene.imageProcessingConfiguration.exposure = 1.2;
   const camera = new ArcRotateCamera('preview-camera', 0.22, 1.28, 2, Vector3.Zero(), scene);
   camera.fov = 0.55;
   camera.minZ = 0.01;
@@ -34,7 +35,7 @@ export async function weaponPreviews(onPreview: (id: WeaponId, url: string) => v
       const bounds = container.rootNodes[0].getHierarchyBoundingVectors(true);
       const size = bounds.max.subtract(bounds.min);
       camera.setTarget(bounds.min.add(bounds.max).scale(0.5));
-      camera.radius = Math.max(size.y, size.z / engine.getAspectRatio(camera), size.x / engine.getAspectRatio(camera)) / (2 * Math.tan(camera.fov / 2)) * 1.6;
+      camera.radius = Math.max(size.y, size.z / engine.getAspectRatio(camera), size.x / engine.getAspectRatio(camera)) / (2 * Math.tan(camera.fov / 2)) * 1.3;
       await scene.whenReadyAsync();
       scene.render();
       onPreview(cfg.id, canvas.toDataURL('image/png'));

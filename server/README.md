@@ -2,9 +2,11 @@
 
 Separate TypeScript Cloudflare Worker, SQLite-backed Durable Object and WebSocket backend. No deployment or account is needed for local development. The existing Vite configuration and GitHub Pages workflow are unchanged.
 
-The multiplayer foundation now supports the latest gameplay/UI **Stage 1**: HTTP presence, connected pre-spawn sessions, server-approved spawns, per-life weapon locking, real kills/deaths fields, and a held-Tab leaderboard. Normal Play connects to `public-main`; explicit `?practice` retains local development gameplay and all three maps.
+The existing Worker/Durable Object/WebSocket transport now integrates **all three existing maps** into the canonical `public-main` room. The backend previously imported only European Town collision/layout and published a Town-only snapshot; the frontend registry/assets were already complete. `server/src/world.ts` now supplies matching collision/revisions/spawns for Town, Industrial and City.
 
-The existing backend still runs a fixed European Town scene. **Rounds, randomized maps, Teams assignments and player-vs-player combat are not implemented.** Match mode/deadline are explicitly null; the scoreboard displays `Mode unavailable · --:--`. Kills start at zero and no local target hits award multiplayer points. Server-detected falls increment deaths and return the player to pre-spawn. This is not a complete public match. The fourth SMG slot is disabled pending the user's next stage.
+A persisted epoch and server-generated seed define 600-second map rounds. Every randomized three-map bag includes all three maps. The room derives its current round/deadline from wall-clock time on requests, movement ticks and alarms, so hibernation/restarts and empty-room time do not reset it. There is no busy empty-room clock loop. Connected players receive the same round/map, return to pre-spawn at transitions and load the selected map before requesting a spawn. Existing alive/loadout/session/resume behavior is retained. The SMG is now an implemented fourth legal loadout.
+
+**This is not completed player combat or Teams gameplay.** Mode/team totals remain explicitly null; the scoreboard now has a real server deadline while reporting unavailable mode. Kills remain zero until combat exists. No cloud deployment or public end-to-end verification was performed in this task.
 
 ## Start locally in two PowerShell terminals
 
@@ -32,7 +34,7 @@ $env:VITE_MULTIPLAYER_URL = 'ws://127.0.0.1:8787/ws'
 npm.cmd run dev -- --host 127.0.0.1 --port 5180 --strictPort
 ```
 
-Open `http://127.0.0.1:5180/` and press Play. This connects and loads the server map, then stops at the pre-spawn menu. Select a weapon and press Spawn. Escape opens the pause/Leave Match menu, including before spawning. Use independent browser profiles/incognito contexts for independent players. `?multiplayer` remains compatible; `?autoplay` explicitly requests a spawn for automation. Use `?practice&autoplay` for the original local weapon/map regression tools. Failed multiplayer never falls back to practice.
+Open `http://127.0.0.1:5180/` and press Play. This connects and loads the current server-selected map, then stops at the pre-spawn menu. Select a weapon and press Spawn. Escape opens the pause/Leave Match menu, including before spawning. Use independent browser profiles/incognito contexts for independent players. `?multiplayer` remains compatible; `?autoplay` explicitly requests a spawn for automation. Use `?practice&autoplay` for the original local weapon/map regression tools. Failed multiplayer never falls back to practice.
 
 Check the HTTP health endpoint:
 
@@ -62,14 +64,14 @@ The server build is `wrangler deploy --dry-run --outdir dist`: it bundles locall
 
 ## Protocol and authority
 
-- `shared/protocol.ts` defines versioned messages and runtime validators. Protocol v2 accepts join, spawn (legal weapon + matching map revision + request ID), input batches, ping and leave. Client and server must be updated together. Joining creates a connected menu session with `alive=false`, no weapon and no avatar. Only approved Spawn increments the life and fixes the weapon; repeated spawn/loadout changes while alive are rejected. Snapshots carry server-owned life, weapon, kills/deaths and match metadata. Movement input before spawn is rejected. It never accepts client-assigned positions, teams, health, hits or scores. Each movement frame contains a sequence number, bounded movement intent and finite yaw/pitch; no client time delta is trusted.
+- `shared/protocol.ts` defines versioned messages and runtime validators. Protocol v3 accepts join, spawn (legal weapon + matching map revision + round ID + request ID), input batches, ping and leave. Client and server must be updated together; the old v2 frontend cannot consume three-map rotation. Joining creates a connected menu session with `alive=false`, no weapon and no avatar. Only approved Spawn increments the life and fixes the weapon; repeated spawn/loadout changes while alive are rejected. Snapshots carry map ID/revision, round ID/deadline, server-owned life/weapon and kills/deaths. Old-round movement/spawn requests are rejected without dropping the connection; clients wait for the current map before spawning. Movement input before spawn is rejected. It never accepts client-assigned positions, teams, health, hits or scores. Each movement frame contains a sequence number, bounded movement intent and finite yaw/pitch; no client time delta is trusted.
 - `shared/world.ts` builds the same generated map and rotated prop collision boxes for the Worker and browser. A map revision fingerprint rejects mismatched assets. The network scene omits practice targets consistently on both sides.
 - The existing `PlayerController` runs at 120 Hz on the server, bounded by elapsed server time. Input is batched at 20 Hz and queued within a bounded budget; floods and replays are rejected. The client predicts locally, restores authoritative controller snapshots and replays unacknowledged inputs. No network schedule is tied to rendering FPS.
 - Only spawned players get remote bodies; connected menu players remain in presence/scoreboard. Remote bodies interpolate approximately 100 ms behind server time, including yaw and look pitch. Ordinary idle frames are not repeatedly transmitted. Physics timers stop when movement settles or the room empties; heartbeat/session deadlines use an alarm. A sleeping object's session attachments reconstruct its live state without resetting liveness deadlines.
 - Server-issued player IDs and opaque resume credentials identify sessions. Only the joining player receives their credential, which is stored per browser tab in `sessionStorage`, scoped to the endpoint. A lost connection can resume for 15 seconds. Explicit leave invalidates it. Generation/socket checks prevent an old socket's delayed close from removing its replacement.
 - Client retries are bounded with exponential backoff. Missing responses trigger reconnect. After retries fail, the game shows Retry/Back, clears stale remote bodies and stops local movement. Disconnected/expired players disappear from server snapshots and the renderer; there are no manufactured opponents.
 
-Initial room/session capacity is 16 with a bounded pending-handshake limit. Only two concurrent clients have been validated; this is not a production load-capacity claim.
+Initial room/session capacity is 16 with a bounded pending-handshake limit. Two independent player clients plus a read-only home observer have been validated; this is not a production load-capacity claim.
 
 ## Configuration
 
@@ -77,8 +79,14 @@ Initial room/session capacity is 16 with a bounded pending-handshake limit. Only
 
 The public frontend variable is `VITE_MULTIPLAYER_URL` (root `.env.example`). Set it before Vite starts or builds: local loopback `ws://`, public `wss://`. A missing URL shows Offline on home and a configuration error on Play. Explicit practice remains available.
 
-The next stage in the latest user brief is Stage 2: sliding, SMG and weapon models. It requires a new instruction. The original architecture's public round schedule/Teams/combat are still prerequisites for a complete match, not features claimed by this UI stage.
+This focused task does not authorize sliding, changes to the existing rifle/shotgun/sniper models, map expansion, target removal or Extreme/FPS work. Teams, combat and results require separate work.
 
 ## Public configuration (no deployment performed)
 
 Keep GitHub Pages serving only `dist/`. Before a separately approved backend deployment, set the Worker `ALLOWED_ORIGINS` to the exact Pages origin (no repository path), retain only intended development origins, deploy the existing Worker/SQLite Durable Object configuration, and verify `/health`, `/presence` and two real browsers against `/ws`. Set the repository Actions variable `VITE_MULTIPLAYER_URL` to the deployed `wss://<worker-host>/ws` and rebuild the Pages frontend; the existing workflow already reads it. Never put Cloudflare credentials in frontend configuration. No public endpoint has been established or tested here. A missing URL yields Offline on home and a real configuration error on Play.
+
+## Rotation validation and runtime references
+
+`tests/rotation.test.ts` covers complete random bags, deadline boundaries, reproducibility, empty-room catch-up and collision-clear grounded spawns on every map. The Worker integration suite runs two actual WebSocket clients through all maps, all four approved weapons, stale-round input and runtime restart. The production browser fixture uses real sockets and server snapshots, advancing only the isolated test room's persisted epoch through a test-only RPC; it verifies both browsers load each map and that reconnecting during map loading recovers. No test controls are bundled by `server/wrangler.jsonc`.
+
+Clock reconciliation is idempotent because Cloudflare [alarms can execute more than once](https://developers.cloudflare.com/durable-objects/api/alarms/). Session reconstruction continues to use the existing [hibernatable WebSocket attachments](https://developers.cloudflare.com/durable-objects/best-practices/websockets/). No Cron Trigger or additional backend service was added.

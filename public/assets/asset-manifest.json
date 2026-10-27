@@ -1,7 +1,7 @@
 {
  "generator": "blender/scripts/generate_all.py",
  "blender": "5.2.3 LTS",
- "generated": "2026-10-25 19:18:32",
+ "generated": "2026-10-26 18:07:17",
  "assets": [
   {
    "path": "assets/materials.json",
@@ -1380,6 +1380,14 @@
    "triangles": 790
   },
   {
+   "path": "assets/models/shared/weapons/smg.glb",
+   "kind": "weapon",
+   "bytes": 37240,
+   "description": "Original compact SMG with detachable magazine and first-person anchors",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 396
+  },
+  {
    "path": "assets/models/shared/weapons/sniper.glb",
    "kind": "weapon",
    "bytes": 162660,
@@ -1427,6 +1435,13 @@
    "kind": "blend",
    "bytes": 655310,
    "description": "Editable source: all street props",
+   "script": "blender/scripts/generate_all.py"
+  },
+  {
+   "path": "blender/source/smg.blend",
+   "kind": "blend",
+   "bytes": 110361,
+   "description": "Editable source: original SMG",
    "script": "blender/scripts/generate_all.py"
   },
   {
