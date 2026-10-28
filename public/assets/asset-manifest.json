@@ -1,12 +1,12 @@
 {
  "generator": "blender/scripts/generate_all.py",
  "blender": "5.2.3 LTS",
- "generated": "2026-10-26 18:07:17",
+ "generated": "2026-10-27 06:54:38",
  "assets": [
   {
    "path": "assets/materials.json",
    "kind": "materials",
-   "bytes": 54061,
+   "bytes": 54109,
    "description": "Material table (names, texture sets, tiling, tint, PBR factors)",
    "script": "blender/scripts/lib/materials.py"
   },
@@ -1047,7 +1047,7 @@
   {
    "path": "assets/models/shared/props/market_stall.glb",
    "kind": "prop",
-   "bytes": 44020,
+   "bytes": 44040,
    "description": "market_stall (2.6 x 2.6 x 1.6 m)",
    "script": "blender/scripts/generate_all.py",
    "triangles": 723
@@ -1334,10 +1334,10 @@
   {
    "path": "assets/models/shared/props/well.glb",
    "kind": "prop",
-   "bytes": 47732,
+   "bytes": 49048,
    "description": "well (2.2 x 2.6 x 2.2 m)",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 744
+   "triangles": 776
   },
   {
    "path": "assets/models/shared/props/workbench.glb",
@@ -1433,7 +1433,7 @@
   {
    "path": "blender/source/props.blend",
    "kind": "blend",
-   "bytes": 655310,
+   "bytes": 655806,
    "description": "Editable source: all street props",
    "script": "blender/scripts/generate_all.py"
   },

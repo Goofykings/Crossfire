@@ -10,7 +10,7 @@ export type HitZone = 'head' | 'body';
 /** Every weapon's headshot damage is this multiple of its body damage at the same range. */
 export const HEADSHOT_MULTIPLIER = 1.5;
 
-/** Anything that can take damage: players (future), practice targets, destructibles. */
+/** Anything that can take damage: authoritative players or local practice targets. */
 export interface Damageable {
   readonly id: string;
   /** Body centre. */
@@ -43,7 +43,8 @@ export function zoneDamage(bodyDamage: number, zone: HitZone): number {
 
 /**
  * Central authority for damage. All damage goes through `tryApply`, which applies the headshot rule, so no weapon can
- * bypass it. The maps are free-for-all: there are no safe zones and anyone can damage anyone.
+ * bypass it. Multiplayer eligibility, world obstruction and friendly-fire checks
+ * are enforced by the Worker before this shared damage rule; practice is local FFA.
  */
 export class DamageSystem {
   tryApply(attacker: Attacker, target: Damageable, hit: { bodyDamage: number; point: Point3; zone: HitZone; weapon: string }): DamageResult {

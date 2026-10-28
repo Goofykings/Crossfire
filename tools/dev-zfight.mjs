@@ -28,7 +28,10 @@ const browser = await puppeteer.launch({
   protocolTimeout: 600000,
 });
 const page = await browser.newPage();
-await page.goto(`${URL}?autoplay&nohud`, { waitUntil: 'domcontentloaded' });
+const target = new globalThis.URL(URL);
+for (const key of ['practice', 'autoplay', 'nohud']) target.searchParams.set(key, '');
+target.searchParams.set('map', arg('map', 'european-town'));
+await page.goto(target.href, { waitUntil: 'domcontentloaded' });
 await completeGuestProfile(page);
 await page.waitForFunction(() => window.__crossfire && window.__crossfire.ready(), { timeout: 240000, polling: 500 });
 batches = await page.evaluate(() => window.__crossfire.dumpBatches());

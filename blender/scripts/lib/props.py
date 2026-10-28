@@ -192,15 +192,14 @@ def market_stall(seed=0) -> MeshData:
     ov = 0.25
     md.face([(-w / 2 - 0.1, y_front, -d / 2 - ov), (-w / 2 - 0.1, y_back, d / 2 + 0.05), (w / 2 + 0.1, y_back, d / 2 + 0.05),
              (w / 2 + 0.1, y_front, -d / 2 - ov)], canvas)
-    md.face([(w / 2 + 0.1, y_front, -d / 2 - ov), (w / 2 + 0.1, y_back, d / 2 + 0.05), (-w / 2 - 0.1, y_back, d / 2 + 0.05),
-             (-w / 2 - 0.1, y_front, -d / 2 - ov)], canvas)
+    # A single sheet with a double-sided fabric material. Coincident reversed faces
+    # are collapsed unpredictably by the shared vertex-welding/export step.
     n = 9
     for i in range(n):
         a = -w / 2 - 0.1 + i * (w + 0.2) / n
         b = a + (w + 0.2) / n
         z = -d / 2 - ov
         md.face([(b, y_front, z), (a, y_front, z), ((a + b) / 2, y_front - 0.22, z)], canvas)
-        md.face([(a, y_front, z), (b, y_front, z), ((a + b) / 2, y_front - 0.22, z)], canvas)
     return md
 
 
@@ -291,7 +290,11 @@ def well() -> MeshData:
                  (cb * r_in, h, -sb * r_in)], "stone_stacked", col=(0.55, 0.55, 0.55, 1.0))
         # coping
         md.face([(co * (r_in - 0.04), h + 0.1, -so * (r_in - 0.04)), (co * (r_out + 0.06), h + 0.1, -so * (r_out + 0.06)),
-                 (cb * (r_out + 0.06), h + 0.1, -sb * (r_out + 0.06)), (cb * (r_in - 0.04), h + 0.1, -sb * (r_in - 0.04))][::-1],
+                 (cb * (r_out + 0.06), h + 0.1, -sb * (r_out + 0.06)), (cb * (r_in - 0.04), h + 0.1, -sb * (r_in - 0.04))],
+                "stone_trim")
+        # Close the underside of the coping overhang, at its actual lower height.
+        md.face([(co * (r_in - 0.04), h, -so * (r_in - 0.04)), (co * (r_out + 0.06), h, -so * (r_out + 0.06)),
+                 (cb * (r_out + 0.06), h, -sb * (r_out + 0.06)), (cb * (r_in - 0.04), h, -sb * (r_in - 0.04))][::-1],
                 "stone_trim")
         md.face([(co * (r_out + 0.06), h, -so * (r_out + 0.06)), (cb * (r_out + 0.06), h, -sb * (r_out + 0.06)),
                  (cb * (r_out + 0.06), h + 0.1, -sb * (r_out + 0.06)), (co * (r_out + 0.06), h + 0.1, -so * (r_out + 0.06))],
@@ -299,10 +302,13 @@ def well() -> MeshData:
         md.face([(cb * (r_in - 0.04), h, -sb * (r_in - 0.04)), (co * (r_in - 0.04), h, -so * (r_in - 0.04)),
                  (co * (r_in - 0.04), h + 0.1, -so * (r_in - 0.04)), (cb * (r_in - 0.04), h + 0.1, -sb * (r_in - 0.04))],
                 "stone_trim")
-    md.cylinder((0, 0.2, 0), r_in, 0.0, "water", segments=seg, caps=(False, True))
+    md.face([(math.cos(2 * math.pi * i / seg) * r_in, 0.2, -math.sin(2 * math.pi * i / seg) * r_in)
+             for i in range(seg)], "water")
     # posts, roof and windlass
     for x in (-0.95, 0.95):
-        md.box(x - 0.08, h, -0.08, x + 0.08, 2.35, 0.08, "wood_dark")
+        # The post feet are embedded in the coping: an internal bottom face would
+        # coincide with its underside and add a hidden z-fight.
+        md.box(x - 0.08, h, -0.08, x + 0.08, 2.35, 0.08, "wood_dark", skip=("ny",))
     md.box(-1.05, 2.3, -0.1, 1.05, 2.42, 0.1, "wood_dark")
     md.tube((-0.95, 1.55, 0), (0.95, 1.55, 0), 0.07, "wood_dark", segments=8)
     md.tube((0.95, 1.55, 0), (1.15, 1.55, 0), 0.02, "iron", segments=5)

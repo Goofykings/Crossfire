@@ -8,9 +8,8 @@ export type Action =
   | 'back'
   | 'left'
   | 'right'
-  | 'sprint'
+  | 'slide'
   | 'jump'
-  | 'crouch'
   | 'reload'
   | 'fire'
   | 'aim'
@@ -33,12 +32,9 @@ const KEY_BINDINGS: Record<string, Action> = {
   ArrowLeft: 'left',
   KeyD: 'right',
   ArrowRight: 'right',
-  ShiftLeft: 'sprint',
-  ShiftRight: 'sprint',
+  ShiftLeft: 'slide',
+  ShiftRight: 'slide',
   Space: 'jump',
-  ControlLeft: 'crouch',
-  ControlRight: 'crouch',
-  KeyC: 'crouch',
   KeyR: 'reload',
   Digit1: 'weapon1',
   Digit2: 'weapon2',

@@ -1,9 +1,11 @@
 import { FIXED_DT } from '../config/constants';
 import type { MoveIntent, PlayerController } from '../player/PlayerController';
-import type { WeaponId } from '../weapons/Weapon';
+import type { Weapon, WeaponId } from '../weapons/Weapon';
+import { MOVEMENT } from '../config/constants';
+import { NO_COMBAT, type CombatIntent } from '../../shared/combat';
 import { multiplayerEndpoint } from './endpoint';
 import { INPUT_BATCH_LIMIT, NETWORK_HZ, parseServerMessage, type ClientMessage, type InputFrame,
-  type ServerMessage, type Snapshot } from '../../shared/protocol';
+  type ServerMessage, type Snapshot, type ShotResult, type Elimination } from '../../shared/protocol';
 
 type Welcome = Extract<ServerMessage, { type: 'welcome' }>;
 export type ConnectionState = 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'error' | 'closed';
@@ -15,6 +17,8 @@ export class MultiplayerClient {
   latest: Snapshot | null = null;
   clockOffset = 0;
   onSnapshot: (snapshot: Snapshot) => void = () => {};
+  onShot: (shot: ShotResult) => void = () => {};
+  onElimination: (event: Elimination) => void = () => {};
   onState: (state: ConnectionState, message?: string) => void = () => {};
   private socket: WebSocket | null = null;
   private token = '';
@@ -34,6 +38,9 @@ export class MultiplayerClient {
   private fatal = false;
   private lastYaw = NaN;
   private lastPitch = NaN;
+  private lastSlide = false;
+  private lastAim = false;
+  private lastCombat: CombatIntent = { ...NO_COMBAT };
   private life = -1;
   private round = -1;
   private readonly url: string;
@@ -75,12 +82,15 @@ export class MultiplayerClient {
     this.pending = [];
     this.unsent = [];
     this.lastYaw = this.lastPitch = NaN;
+    this.lastSlide = false;
+    this.lastAim = false;
+    this.lastCombat = { ...NO_COMBAT };
     const socket = new WebSocket(this.url);
     this.socket = socket;
     this.deadline = window.setTimeout(() => socket.close(), 5000);
     socket.onopen = () => {
       if (this.socket !== socket) return;
-      this.send({ v: 3, type: 'join', name: typeof this.name === 'function' ? this.name() : this.name, ...(this.token ? { resumeToken: this.token } : {}) });
+      this.send({ v: 5, type: 'join', name: typeof this.name === 'function' ? this.name() : this.name, ...(this.token ? { resumeToken: this.token } : {}) });
     };
     socket.onmessage = (event) => {
       if (this.socket !== socket || typeof event.data !== 'string') return;
@@ -130,6 +140,13 @@ export class MultiplayerClient {
           window.clearTimeout(pending.timeout);
           pending.resolve(m.snapshot);
         }
+      } else if (m.type === 'shot') {
+        if (m.shot.roundId === this.latest?.roundId) this.onShot(m.shot);
+      } else if (m.type === 'elimination') {
+        if (m.elimination.roundId !== this.latest?.roundId) return;
+        this.latest = { ...this.latest, players: this.latest.players.map((p) => p.id === m.elimination.victimId ? { ...p, health: 0, alive: false } : p) };
+        this.onSnapshot(this.latest);
+        this.onElimination(m.elimination);
       } else if (m.type === 'left' && this.latest) {
         this.latest = { ...this.latest, players: this.latest.players.filter((p) => p.id !== m.id) };
         this.onSnapshot(this.latest);
@@ -172,10 +189,10 @@ export class MultiplayerClient {
     this.flushTimer = window.setInterval(() => {
       if (Date.now() - this.lastMessage > 8000) { this.socket?.close(); return; }
       if (this.unsent.length && this.latest && (this.socket?.bufferedAmount ?? 0) < 32768) {
-        this.send({ v: 3, type: 'input', roundId: this.latest.roundId, mapVersion: this.latest.mapVersion, frames: this.unsent.splice(0, INPUT_BATCH_LIMIT) });
+        this.send({ v: 5, type: 'input', roundId: this.latest.roundId, mapVersion: this.latest.mapVersion, frames: this.unsent.splice(0, INPUT_BATCH_LIMIT) });
       }
     }, 1000 / NETWORK_HZ);
-    this.pingTimer = window.setInterval(() => this.send({ v: 3, type: 'ping', at: Date.now() }), 2000);
+    this.pingTimer = window.setInterval(() => this.send({ v: 5, type: 'ping', at: Date.now() }), 2000);
   }
   private stopTimers(): void {
     for (const t of [this.flushTimer, this.pingTimer]) window.clearInterval(t);
@@ -186,32 +203,43 @@ export class MultiplayerClient {
     if (this.socket?.readyState === WebSocket.OPEN) this.socket.send(JSON.stringify(message));
   }
 
-  fixedInput(player: PlayerController, intent: MoveIntent): void {
+  fixedInput(player: PlayerController, intent: MoveIntent, combat: CombatIntent = NO_COMBAT): void {
     if (this.state !== 'connected' || !this.latest?.players.find((p) => p.id === this.selfId)?.alive) return;
     const yaw = Math.atan2(Math.sin(player.yaw), Math.cos(player.yaw));
     // No need to stream 120 identical standing frames per second. The room's
     // neutral input still settles gravity/friction, and heartbeats maintain liveness.
     if (player.grounded && Math.hypot(player.velocity.x, player.velocity.y, player.velocity.z) < 0.001
-      && player.crouch === 0 && !intent.crouch && !intent.jumpPressed && intent.x === 0 && intent.z === 0
+      && player.crouch === 0 && !player.sliding && player.slideCooldown === 0 && !this.lastSlide && !intent.slide && !intent.jumpPressed && intent.x === 0 && intent.z === 0
+      && !intent.aim && !this.lastAim && !combat.trigger && !combat.reload && !this.lastCombat.trigger && !this.lastCombat.reload
       && yaw === this.lastYaw && player.pitch === this.lastPitch) return;
     if (this.pending.length >= 120) { this.reconnect(); return; }
     this.lastYaw = yaw;
     this.lastPitch = player.pitch;
-    const frame: InputFrame = { seq: ++this.sequence, yaw, pitch: player.pitch, intent: { ...intent } };
+    // An idle Shift release must reach the server before another press can be an edge.
+    this.lastSlide = intent.slide;
+    this.lastAim = intent.aim;
+    this.lastCombat = { ...combat };
+    const frame: InputFrame = { seq: ++this.sequence, yaw, pitch: player.pitch, intent: { ...intent }, combat: { ...combat } };
     this.pending.push(frame);
     this.unsent.push(frame);
   }
 
-  reconcile(player: PlayerController, snapshot: Snapshot): void {
+  reconcile(player: PlayerController, snapshot: Snapshot, gun?: Weapon): void {
     const self = snapshot.players.find((p) => p.id === this.selfId);
     if (!self?.alive) return;
     const yaw = player.yaw, pitch = player.pitch;
     player.restore(self.motion);
+    if (gun && self.combat.gun) gun.restore(self.combat.gun);
+    let trigger = self.combat.triggerHeld, reload = self.combat.reloadHeld;
     for (const frame of this.pending) {
       if (frame.seq <= self.ack) continue;
       player.yaw = frame.yaw;
       player.pitch = frame.pitch;
       player.fixedUpdate(FIXED_DT, frame.intent);
+      gun?.update(FIXED_DT, { trigger: frame.combat.trigger, triggerPressed: frame.combat.trigger && !trigger,
+        reloadPressed: frame.combat.reload && !reload, aim: frame.intent.aim,
+        moveFactor: player.horizontalSpeed / MOVEMENT.weaponMoveReference, airborne: !player.grounded, sprinting: false });
+      trigger = frame.combat.trigger; reload = frame.combat.reload;
     }
     // Snapshots must not overwrite mouse look that has not reached a fixed tick yet.
     player.yaw = yaw;
@@ -228,7 +256,7 @@ export class MultiplayerClient {
   disconnect(): void {
     this.cancelSpawn('Left match');
     this.stopped = true;
-    this.send({ v: 3, type: 'leave' });
+    this.send({ v: 5, type: 'leave' });
     this.socket?.close(1000, 'left');
     this.socket = null;
     this.stopTimers();
@@ -248,7 +276,7 @@ export class MultiplayerClient {
     const id = crypto.randomUUID();
     return new Promise((resolve, reject) => {
       this.spawning = { id, resolve, reject, timeout: window.setTimeout(() => this.cancelSpawn('Spawn request timed out. Try again.'), 5000) };
-      this.send({ v: 3, type: 'spawn', requestId: id, weapon, roundId: this.latest!.roundId, mapVersion: this.latest!.mapVersion });
+      this.send({ v: 5, type: 'spawn', requestId: id, weapon, roundId: this.latest!.roundId, mapVersion: this.latest!.mapVersion });
     });
   }
 

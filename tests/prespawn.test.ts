@@ -8,14 +8,15 @@ import { presenceEndpoint } from '../src/network/endpoint';
 
 const motion = new PlayerController(new CollisionWorld()).capture();
 const player = (id: string, kills: number, deaths: number, team: PlayerState['team'] = null): PlayerState => ({
-  id, name: id, kills, deaths, team, motion, ack: 0, alive: false, life: 0, weapon: null,
+  id, name: id, kills, deaths, team, motion, ack: 0, alive: false, health: 0,
+  combat: { gun: null, triggerHeld: false, reloadHeld: false, aimHeld: false }, life: 0, weapon: null,
 });
 const snapshot = (players: PlayerState[]): Snapshot => ({ room: 'public-main', mapId: 'european-town', roundId: 0, mapVersion: 'test',
   serverTime: 1000, players, match: { mode: null, endsAt: null, teamScores: null } });
 
 describe('pre-spawn protocol and loadout', () => {
   it('accepts only implemented loadouts and never client scores, positions or live state', () => {
-    const request = { v: 3, type: 'spawn', roundId: 0, mapVersion: 'test', requestId: 'life-1', weapon: 'shotgun' };
+    const request = { v: 5, type: 'spawn', roundId: 0, mapVersion: 'test', requestId: 'life-1', weapon: 'shotgun' };
     expect(parseClientMessage(JSON.stringify(request))).toEqual(request);
     for (const fields of [{ weapon: 'invalid' }, { alive: true }, { kills: 8 }, { position: { x: 100, y: 0, z: 0 } }, { requestId: '' }]) {
       expect(parseClientMessage(JSON.stringify({ ...request, ...fields }))).toBeNull();
@@ -23,7 +24,7 @@ describe('pre-spawn protocol and loadout', () => {
   });
   it('validates authoritative life and score fields instead of accepting malformed snapshots', () => {
     const s = snapshot([player('Connected menu player', 0, 0)]);
-    const message = { v: 3, type: 'snapshot', snapshot: s };
+    const message = { v: 5, type: 'snapshot', snapshot: s };
     expect(parseServerMessage(JSON.stringify(message))).toEqual(message);
     for (const fields of [{ kills: -1 }, { deaths: 1.5 }, { alive: true, weapon: null }, { life: -1 }, { team: 'fake' }]) {
       expect(parseServerMessage(JSON.stringify({ ...message, snapshot: { ...s, players: [{ ...s.players[0], ...fields }] } }))).toBeNull();

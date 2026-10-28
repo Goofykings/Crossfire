@@ -1,5 +1,14 @@
 # Multiplayer architecture and migration plan
 
+Current combat/visibility update (2026-10-27): **protocol v5** adds server-owned shared weapon simulation,
+health, blocked player hits, eliminations, scoring/respawn and actual FFA/Teams relationships. Existing
+Workers/DO/room, guest IDs vs resume credentials, fixed-step prediction and round/map rotation remain.
+See [current implementation and deployment boundary](MULTIPLAYER_COMBAT.md). Character export is still
+pending; a shared loading interface and honest capsule fallback are supplied. Older v3/v4 notes below
+describe earlier stages rather than current combat status.
+
+Stage A update (2026-10-27): protocol v4 replaces sprint/manual crouch input with held slide intent and authoritative slide timers/direction/press state in snapshots. The same fixed-step controller runs in Workers and client prediction/replay. Idle releases are transmitted; missing packets preserve the server's press latch. Client speed/timer injection remains rejected. Existing room, map-round schedule, identity/resume and hosting architecture are retained. Stage B Extreme Quality is not authorized yet. Current results are at the top of PROGRESS.md; earlier v3 statements below describe the prior implementation.
+
 Stage 1 design, 2026-10-25. **Stage 2 is implemented and tested locally; later stages remain a plan.** Stage numbers follow Part 15 of the user's full Crossfire brief. The current implementation/runbook is in [server/README.md](../server/README.md); verified status is in [PROGRESS.md](../PROGRESS.md). The original audit and future-stage design below remain useful migration context; they are not all current implementation claims.
 
 The current focused UI/map task (2026-10-26) now integrates all three maps into the existing room: protocol v3, persisted 600-second server-seeded map rounds, correct asset revisions/spawns, stale-round validation and client loading/return-to-pre-spawn. Empty rooms derive their next state from elapsed time. This is the minimum map-rotation integration, without the older plan's five-second results phase, mode randomization, Teams or player combat. Home uses an existing static thumbnail and lazily loads gameplay on Play; all four loadouts including the new minimal SMG are selectable. PROGRESS.md and server/README.md contain current evidence. The migration sections below are historical plans, not blanket implementation claims.

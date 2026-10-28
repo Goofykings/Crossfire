@@ -12,7 +12,11 @@ export interface MovementConfig {
   standEye: number;
   crouchEye: number;
   walkSpeed: number;
-  sprintSpeed: number;
+  slideSpeed: number;
+  slideDuration: number;
+  slideCooldown: number;
+  slideSteerRate: number;
+  weaponMoveReference: number;
   crouchSpeed: number;
   aimSpeed: number;
   groundAccel: number;
@@ -36,7 +40,12 @@ export const MOVEMENT: MovementConfig = {
   standEye: 1.64,
   crouchEye: 1.02,
   walkSpeed: 4.7,
-  sprintSpeed: 7.1,
+  slideSpeed: 7.8,
+  slideDuration: 1,
+  slideCooldown: 1,
+  slideSteerRate: 0.65,
+  // Keep existing weapon spread normalization independent of the new slide speed.
+  weaponMoveReference: 7.1,
   crouchSpeed: 2.4,
   aimSpeed: 3.0,
   groundAccel: 42,

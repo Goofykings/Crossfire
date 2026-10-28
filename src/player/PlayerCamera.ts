@@ -76,7 +76,7 @@ export class PlayerCamera {
     this.dip += this.dipVel * dt;
     // head bob while walking on the ground
     const speed = p.horizontalSpeed;
-    const moving = p.grounded && speed > 0.5;
+    const moving = p.grounded && !p.sliding && speed > 0.5;
     this.bobWeight += ((moving ? Math.min(1, speed / 6) : 0) - this.bobWeight) * Math.min(1, dt * 8);
     this.bobPhase += speed * dt * 1.85;
     const adsDamp = 1 - (1 - zoom) * 3;
@@ -89,7 +89,8 @@ export class PlayerCamera {
     this.kickYaw *= Math.exp(-dt * 12);
 
     const cam = this.ctx.camera;
-    const eye = p.eyeHeight + this.stepOffset + this.bobY + this.dip * 0.1;
+    const heightBlend = p.prevCrouch + (p.crouch - p.prevCrouch) * alpha;
+    const eye = p.cfg.standEye + (p.cfg.crouchEye - p.cfg.standEye) * heightBlend + this.stepOffset + this.bobY + this.dip * 0.1;
     cam.position.set(pos.x + this.bobX * Math.cos(p.yaw), pos.y + eye, pos.z - this.bobX * Math.sin(p.yaw));
     const roll = this.bobX * 0.35;
     cam.rotationQuaternion ??= Quaternion.Identity();

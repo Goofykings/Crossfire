@@ -32,7 +32,7 @@ test('Public room: real Workers runtime and real WebSocket clients', { timeout: 
     ws.on('error', () => {});
     const client = {
       ws, messages, welcome: null,
-      send: (m) => ws.send(JSON.stringify({ v: 3, ...(['spawn', 'input'].includes(m.type) ? { roundId: client.welcome?.snapshot.roundId ?? 0 } : {}), ...m })),
+      send: (m) => ws.send(JSON.stringify({ v: 5, ...(['spawn', 'input'].includes(m.type) ? { roundId: client.welcome?.snapshot.roundId ?? 0 } : {}), ...m })),
       async wait(predicate, from = 0) {
         const until = Date.now() + 5000;
         while (Date.now() < until) {
@@ -60,7 +60,7 @@ test('Public room: real Workers runtime and real WebSocket clients', { timeout: 
     return client;
   }
   const frame = (seq, yaw = 0) => ({ seq, yaw: Math.atan2(Math.sin(yaw), Math.cos(yaw)), pitch: 0.25,
-    intent: { x: 0, z: 1, sprint: false, crouch: false, aim: false, jumpPressed: false } });
+    intent: { x: 0, z: 1, slide: false, aim: false, jumpPressed: false }, combat: { trigger: false, reload: false } });
   let a, b, resumable;
   try {
     await t.test('health, route and origin validation', async () => {
@@ -153,6 +153,40 @@ test('Public room: real Workers runtime and real WebSocket clients', { timeout: 
       assert.ok(Math.abs(Math.atan2(Math.sin(p.motion.yaw - start.yaw), Math.cos(p.motion.yaw - start.yaw))) < 1e-8);
       assert.equal(p.motion.pitch, 0.25);
     });
+    await t.test('real clients observe bounded slides, post-slide cooldown and no held-key restarts', async () => {
+      const c = await open();
+      const id = c.welcome.selfId;
+      const yaw = c.welcome.snapshot.players.find((p) => p.id === id).motion.yaw;
+      let seq = 0;
+      const sendHeld = () => c.send({ type: 'input', mapVersion: c.welcome.snapshot.mapVersion,
+        frames: Array.from({ length: 12 }, () => ({ ...frame(++seq, yaw), intent: { ...frame(seq).intent, slide: true } })) });
+      let mark = b.messages.length;
+      sendHeld();
+      const active = await b.wait((m) => m.type === 'snapshot' && m.snapshot.players.some((p) => p.id === id && p.motion.slideRemaining > 0), mark);
+      const slide = active.snapshot.players.find((p) => p.id === id).motion;
+      assert.ok(slide.slideHeld && slide.crouch > 0);
+      assert.ok(Math.hypot(slide.velocity.x, slide.velocity.z) <= 7.801);
+      // Missing input must not act as a Shift release and manufacture another edge.
+      await delay(200);
+      const timer = setInterval(sendHeld, 100);
+      try {
+        const cooling = await b.wait((m) => m.type === 'snapshot' && m.snapshot.players.some((p) => p.id === id
+          && p.motion.slideRemaining === 0 && p.motion.slideCooldown > .8), mark);
+        assert.ok(cooling.snapshot.players.find((p) => p.id === id).motion.slideHeld);
+        await delay(1300);
+        const later = b.messages.slice(mark).filter((m) => m.type === 'snapshot').map((m) => m.snapshot.players.find((p) => p.id === id)).filter(Boolean);
+        const firstCooldown = later.findIndex((p) => p.motion.slideCooldown > 0);
+        assert.ok(firstCooldown >= 0);
+        assert.ok(later.slice(firstCooldown).every((p) => p.motion.slideRemaining === 0), 'holding cannot restart even after cooldown');
+        assert.ok(later.every((p) => Math.hypot(p.motion.velocity.x, p.motion.velocity.z) <= 7.801));
+      } finally { clearInterval(timer); }
+      const invalidMark = c.messages.length;
+      c.send({ type: 'input', mapVersion: c.welcome.snapshot.mapVersion,
+        frames: [{ ...frame(++seq, yaw), intent: { ...frame(seq).intent, slide: true, speed: 100 } }] });
+      assert.equal((await c.wait((m) => m.type === 'error', invalidMark)).code, 'invalid_message');
+      if (c.ws.readyState === WebSocket.OPEN) c.send({ type: 'leave' });
+      await delay(100);
+    });
     await t.test('replayed input is rejected without granting extra simulation', async () => {
       const mark = a.messages.length;
       a.send({ type: 'input', roundId: 0, mapVersion: a.welcome.snapshot.mapVersion, frames: [frame(1)] });
@@ -195,7 +229,9 @@ test('Public room: real Workers runtime and real WebSocket clients', { timeout: 
     });
     await t.test('burst input cannot create extra time; the bounded queue rejects flooding', async () => {
       const c = await open();
-      for (let j = 0; j < 5; j++) if (c.ws.readyState === WebSocket.OPEN) c.send({ type: 'input', roundId: 0, mapVersion: c.welcome.snapshot.mapVersion,
+      // Five batches can straddle one timer tick and legitimately fit the queue.
+      // A sustained burst must overflow even when a tick runs between messages.
+      for (let j = 0; j < 20; j++) if (c.ws.readyState === WebSocket.OPEN) c.send({ type: 'input', roundId: 0, mapVersion: c.welcome.snapshot.mapVersion,
         frames: Array.from({ length: 12 }, (_, i) => frame(j * 12 + i + 1)) });
       assert.equal((await c.wait((m) => m.type === 'error')).code, 'input_overflow');
     });

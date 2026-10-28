@@ -743,8 +743,9 @@ MANUAL_PROPS = [
     ("crate_stack", (-20.2, 0, -4.2), 90),
     # raised court: stall, bench, fenced herb garden
     ("market_stall", (25.0, 0.54, -31.15), 180),
-    # against the garden wall north of its gate (the gate and its stairs are at z -30..-28)
-    ("bench", (22.45, 0.54, -31.1), 90),
+    # Full bench length plus clearance from the north facade trim and the gate stairs
+    # at z -30..-28; keep the back slats clear of the garden wall as well.
+    ("bench", (22.65, 0.54, -31.0), 90),
     ("fence", (29.0, 0.54, -30.0), 0),
     ("fence_gate", (28.0, 0.54, -31.0), 270),
     ("flower_pot_large", (29.1, 0.54, -31.2), 0),

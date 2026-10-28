@@ -23,7 +23,11 @@ export class Scoreboard {
     this.root.setAttribute('aria-label', 'Leaderboard');
     this.root.hidden = true;
     this.header.className = 'scoreboard-header';
-    this.root.append(this.header, this.body);
+    // Keep scrolling content separate so the decorative feather can extend outward.
+    const content = document.createElement('div');
+    content.className = 'scoreboard-content';
+    content.append(this.header, this.body);
+    this.root.append(content);
     parent.appendChild(this.root);
   }
   get visible(): boolean { return !this.root.hidden; }

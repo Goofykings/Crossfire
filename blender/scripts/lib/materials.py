@@ -74,8 +74,9 @@ MATERIALS: dict[str, dict] = {
     "lantern_glass": {"tint": [1.0, 0.82, 0.55], "roughness": 0.2, "metallic": 0.0, "emissive": [1.4, 0.95, 0.5]},
     "water": {"tint": [0.03, 0.05, 0.05], "roughness": 0.02, "metallic": 0.0},
     # --- fabric / misc ---------------------------------------------------------------------------
-    "canvas_red": {"albedo": PROC_DIR + "canvas_stripes_red.jpg", "tex": "plaster", "tile": 1.6, "roughness": 0.95},
-    "canvas_green": {"albedo": PROC_DIR + "canvas_stripes_green.jpg", "tex": "plaster", "tile": 1.6,
+    "canvas_red": {"albedo": PROC_DIR + "canvas_stripes_red.jpg", "tex": "plaster", "tile": 1.6, "roughness": 0.95,
+                   "double_sided": True},
+    "canvas_green": {"albedo": PROC_DIR + "canvas_stripes_green.jpg", "tex": "plaster", "tile": 1.6, "double_sided": True,
                      "roughness": 0.95},
     "canvas_cream": {"tex": "plaster", "tile": 1.0, "tint": [0.92, 0.86, 0.72], "roughness": 0.95},
     "terracotta": {"tex": "plaster", "tile": 0.7, "tint": [0.66, 0.34, 0.2], "roughness": 0.85},

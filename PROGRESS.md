@@ -1,3 +1,59 @@
+# Current task: multiplayer damage and visibility - in progress
+
+Updated: 2026-10-27. Latest attachment authorizes damage first, then character integration/interface fallback, outlines, name tags and deployment preparation. Prior Stage A work remains intact. No commit/push/deploy is authorized.
+
+Stage 1 root cause: frontend fireShot only raycast local map/practice targets; the shared protocol and Worker had no combat control, health or player hit detection. Implemented protocol v5 combat intent with server-owned shared weapon simulation, world-blocked player rays, existing weapon damage/falloff/1.5x headshots, health, elimination notifications, kills/deaths/respawn and authoritative FFA/Teams relationships. Frontend health and weapon prediction/replay use server snapshots; multiplayer hit markers require server results. Server-seeded modes and balanced team assignment extend the existing single-room/round architecture.
+
+Stage 1 verified: 161 frontend unit tests; 39 actual workerd/SQLite/TCP WebSocket tests across FFA/Teams including all four weapons, health on both clients, headshots/sniper elimination, scores, respawn, health on authenticated resume, friendly fire, real map walls, forged data, fire rate/ammo/reload timing/replayed input; backend build passes. Current logs: ignored test-results/combat-unit.log and combat-server.log.
+
+Character inspection: blender/characters currently contains only char_geometry.py, no GLB, skeleton export or animation clips. Added a reusable shared loader/instancer interface with explicit missing state; no fake asset or clips. Remaining stages and real browser visibility/health tests are underway. Full completion report will replace this entry.
+
+---
+
+# Current task: sliding/rendering/leaderboard update - Stage A complete
+
+Updated: 2026-10-27. Inspected the existing shared movement/Worker/prediction, procedural props, all three layouts and scoreboard before implementation. Baseline frontend typecheck, 144 unit tests and production build passed. Sprint/manual crouch still existed; the well coping was wound downward, canopy reverse faces could collapse during Blender welding, and court benches had insufficient facade/trim clearance. Worked on Stage A only.
+
+## Completed
+
+- Shift initiates a roughly one-second slide, with a smooth lower/return camera and collision height, 7.8 m/s initial speed decaying toward the existing 4.7 m/s walk speed, captured travel direction and limited steering (0.65 rad/s). Sprint and Ctrl/C manual crouch bindings are removed. A one-second cooldown starts at the end; holding Shift never repeats, early presses do not queue a later slide, and speed cannot stack. Normal walking resumes. A stationary player needs movement intent before sliding.
+- Existing fixed 120 Hz cylinder/box collision is retained. Walls block slides, open stairs remain climbable, stairs under insufficient ceiling clearance block ascent, and the body stays lowered beneath cover until there is room to stand. PlayerCamera interpolates the height between physics ticks and suppresses walking bob during slides. Existing weapon models, damage, ammunition, reload timing/audio and movement-spread normalization remain unchanged.
+- The same controller runs in the Worker and client prediction/replay. Protocol **v4** carries held slide intent and authoritative direction/timers/press state; arbitrary client speeds, timers, positions and old sprint/crouch packets are rejected. Missing frames preserve the server's held-key latch; idle releases are explicitly sent. Quick physical release/repress events survive between fixed ticks. Remote avatars interpolate the actual lower height. Real reconnection keeps the server session. Incompatible stored controller records safely return to pre-spawn; same-round scores/life are preserved.
+- Fixed the well's coping top winding, closed its actual underside and removed the coincident internal post-bottom faces found by the overlap audit. Replaced the zero-height water cylinder with its single surface. Corrected the procedural source and regenerated the existing well asset without changing its appearance or disabling stone culling/transparency globally.
+- Market fabric is one sheet with an explicit double-sided, two-sided-lit material, preserving stripe textures/UVs. Removed reversed duplicate roof/valance faces that Blender welding could discard. Both red/green source variants and all four placed stands use the fix. Regenerated editable props, GLBs, materials and manifests through the existing Blender pipeline.
+- Audited all eight benches in the three layouts: four in Town, four in City, none in Industrial. Moved the two mirrored court benches in each affected map away from facade trim/stair edges; plaza benches remain in place. Updated both the canonical layout coordinates and placement scripts. Client and server colliders derive from those same placements; no separate collision offset was added. Map revisions reflect the layout edits.
+- Leaderboard decoration now feathers farther outward over a wider, gently stepped gradient. Its content width, names, icons, scores and server behavior are retained at full opacity. A small content wrapper preserves scrolling while allowing the background to extend beyond the content bounds. Menus/settings were not redesigned.
+
+## Validation and evidence
+
+- Frontend TypeScript, **154 unit tests in 15 files**, production Vite build and asset verification pass. Movement tests cover duration, cooldown, held/early presses, captured direction/steering, snapshot replay, 30/144 FPS driving, walls, thin-wall tunnelling, ordinary/slide stairs and low ceilings. New prop tests check editable normals, nonduplicate fabric sheets, generated double-sided definitions, supported bench feet and clearance from stairs/solids/other props across all three layouts.
+- Backend TypeScript, Wrangler dry-run bundle and **20 Node runtime tests** pass against actual workerd/SQLite/WebSockets. Added a real-client slide/cooldown/held-key/gap/illegal-speed case. The existing flood test now sends a sustained burst: five batches could straddle a legitimate timer tick and fit the bounded queue. Time/queue limits remain unchanged. Existing identities, join/leave, movement validation, reconnect, eviction/restart, fall/respawn, round transitions and all three maps pass.
+- Production `tools/stage-a-test.mjs` passes with two independent Chrome contexts and an isolated actual production Worker. Real keyboard Shift lowers/returns the camera, lasts about one second, respects the speed bound/cooldown/held latch, lowers the other browser's avatar, supports idle release/quick repress, removes Ctrl crouch, retains real leaderboard names and reconnects the same session. No synthetic connections, roster, scores or snapshots; no uncaught browser errors.
+- Visually inspected production screenshots from eight directions around the well plus an elevated rim view, all four canopy undersides, all eight benches and the two-real-player leaderboard. Repeated rendering capture after the final internal-face fix and inspected the regenerated well again. All three maps load with no missing materials. Evidence: ignored `test-results/stage-a/`, including `slide-samples.json`, plus `stage-a-browser.log` and `stage-a-render-final.log`.
+- Existing production practice gameplay regression passes movement/stairs/walls, original weapons, firing/headshots, scopes/pump/bolt, limited magazines/infinite reserve, weapon-only reloads and held leaderboard, with no console errors. Loading-cancellation regression passes delayed actual joins/assets/map/round loads, Back/leave, stale-result suppression and successful retry/spawn against a real isolated Worker. Settings Apply/Back/persistence regression and home appearance checks at five viewport sizes pass.
+- Final 2 mm live-batch geometry audit reports **no well/canopy overlap family**. It still reports about **0.7 m2 across 22 small overlap families in unchanged building/terrain/fence/bench-joint geometry**. These existing candidates are outside this focused stage; this is not a claim that the whole game has zero overlapping triangles. The newly introduced internal well-post overlap was removed at its source before completion.
+- Logs: ignored `test-results/stage-a-{unit,build,server,server-typecheck,assets,browser,gameplay,loading,settings,home,zfight,render-final}.log`; final audit JSON/dump and Blender generation logs are alongside them. Existing large Babylon bundle warning remains. `git diff --check` passes.
+
+## Files modified
+
+Movement/network: `src/config/constants.ts`, `src/core/Input.ts`, `src/player/PlayerController.ts`, `src/player/PlayerCamera.ts`, `src/game/Game.ts`, `src/game/RemotePlayers.ts`, `src/network/MultiplayerClient.ts`, `shared/protocol.ts`, `server/src/index.ts`.
+
+Leaderboard: `src/styles.css`, `src/ui/Scoreboard.ts`.
+
+Props/layouts: `blender/scripts/lib/props.py`, `blender/scripts/lib/materials.py`, `blender/source/props.blend`, `public/assets/models/shared/props/well.glb`, `public/assets/models/shared/props/market_stall.glb`, `public/assets/materials.json`, `public/assets/asset-manifest.json`, `docs/ASSET_MANIFEST.md`, `src/maps/european-town/layout.json`, `src/maps/modern-city/layout.json`, `tools/layout_design.py`, `tools/layout_city.py`.
+
+Tests/tools: `tests/movement.test.ts`, `tests/network.test.ts`, `tests/prespawn.test.ts`, `tests/guestProfile.test.ts` (protocol envelope only), new `tests/stageAProps.test.ts`, `server/tests/integration.mjs`, new `tools/stage-a-test.mjs`, new `tools/check-stage-a-props.py`, `tools/dev-zfight.mjs` (explicit practice/map URL for reproducible audits).
+
+Docs: `README.md`, `server/README.md`, `docs/MULTIPLAYER_ARCHITECTURE.md`, `docs/TESTING.md`, `CLAUDE.md`, `PROGRESS.md`. Generated Python cache changes were discarded; unrelated asset/weapon models and placement data were preserved.
+
+## Remaining limits / next stage
+
+Rebuild frontend and Worker together for **protocol v4**; old v3 clients/backends are incompatible, and Town/City placement revisions changed. GitHub Pages/Vite/Cloudflare configuration is preserved. Multiplayer was verified locally with multiple real clients; public deployment/operation was not tested. Existing combat/Teams/results limitations remain unchanged.
+
+**Stage A complete. STOP.** Stage B is Extreme Quality/advanced material/reflection/shadow effects and settings/FPS behavior; it requires explicit authorization and was not started. No commit, push or deployment was performed.
+
+---
+
 # Current task: cancellable match loading and spinner
 
 Updated: 2026-10-26. Completed the requested loading-screen Back button and activity animation.

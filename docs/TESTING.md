@@ -1,5 +1,40 @@
 # Testing
 
+Current combat/visibility task: frontend TypeScript and unit tests, backend TypeScript, actual Worker
+runtime combat/integration tests and the production Vite/Worker dry-run builds are required.
+`node tools/combat-visibility-test.mjs --url http://127.0.0.1:4176/crossfire/` starts isolated real Workers
+and independent browser/WebSocket clients in FFA and Teams. It checks real health/HUD changes, scores,
+respawn, relative red/blue colors, clear/occluded/partly exposed/distant player visibility, teammate
+labels through walls, no duplicate/dead/disconnected bodies and the explicit missing-character state.
+It uses actual map geometry and server-spawned sessions; fixture RPC only positions those sessions.
+See [combat runbook](MULTIPLAYER_COMBAT.md) and PROGRESS.md for final counts/evidence/limits.
+
+Stage A (2026-10-27): build matching protocol v4 frontend and Worker, then run:
+
+```powershell
+npm.cmd run typecheck
+npm.cmd test
+npm.cmd run typecheck --prefix server
+npm.cmd test --prefix server
+$env:VITE_MULTIPLAYER_URL = 'ws://127.0.0.1:8787/ws'
+npm.cmd run build
+node tools/serve-dist.mjs --port 4176 --base /crossfire/
+# In another terminal, while the production server runs:
+node tools/stage-a-test.mjs --url http://127.0.0.1:4176/crossfire/
+node tools/browser-test.mjs --url http://127.0.0.1:4176/crossfire/
+node tools/dev-zfight.mjs --url http://127.0.0.1:4176/crossfire/ --map european-town --eps 0.002
+```
+
+The Stage A tool starts an isolated actual production Worker and two independent browsers; it checks
+physical Shift/camera timing, speed bounds, limited lowered remote bodies, cooldown/held presses,
+idle release/quick repress, Ctrl removal, leaderboard and authenticated reconnection. Rendering captures
+cover eight directions around the well plus its rim, all four canopy undersides and all eight benches
+across the three maps (Industrial has none). Inspect these captures before claiming visual verification.
+`--render-only` skips the multiplayer portion for targeted screenshot work. The z-fight audit now uses
+explicit practice with an optional map rather than implicitly joining a random public map.
+`tests/stageAProps.test.ts` checks procedural winding/single-sheet fabric, generated double-sided
+materials, supported bench feet and solid/prop/stair clearance. Final current counts/results are in PROGRESS.md.
+
 Current UI polish and existing map integration: run `npm.cmd run typecheck`, `npm.cmd test`, `npm.cmd run build`, `npm.cmd run typecheck --prefix server` and `npm.cmd test --prefix server`. The frontend suite includes protocol/loadout/scoreboard presentation; the backend suite uses real workerd/SQLite/WebSockets. Start local servers with [server/README.md](../server/README.md), then run:
 
 ```powershell
@@ -42,7 +77,7 @@ The profile browser test starts an isolated real Worker runtime and uses actual 
 
 | File | Covers |
 |---|---|
-| `tests/movement.test.ts` | settling, acceleration/friction, sprint, jump height, no double jump or auto-hop, frame-rate independence (30 vs 144 fps), wall stop and slide, no tunnelling at absurd speed, stairs up/down, ledge needs a jump, crouch under low ceilings, rotated-box raycasts |
+| `tests/movement.test.ts` | settling, acceleration/friction, timed slides/cooldown/press handling/steering/replay, jump height, no double jump or auto-hop, frame-rate independence (30 vs 144 fps), wall stop and slide, no tunnelling at absurd speed, stairs up/down, ledge needs a jump, safe slide height under low ceilings, rotated-box raycasts |
 | `tests/map.test.ts` | layout structure (all 8 building types, both safe zones at opposite edges), safe-zone entrances (on the zone edge, standable ground outside, protection starts exactly at the barrier plane, no old sign props), spawns inside their zone and on clear ground, every passage open, ≥ 98% of walkable cells reachable for a player-sized body on the real `collision.json` |
 | `tests/safezones.test.ts` | damage allowed outside zones, blocked for attacker or target inside, boundary straddling counts as inside, zone height, dead targets |
 | `tests/weapon.test.ts` | fire rate, reload accounting, auto-reload, empty clicks, ADS blend and spread, no fire while sprinting, spread cone |
@@ -51,7 +86,7 @@ The profile browser test starts an isolated real Worker runtime and uses actual 
 | `tests/geometry.test.ts` | z-fighting: loads every exported town GLB (shells, kit instances, terrain), finds same-facing triangle pairs within 2 mm of one plane that overlap, and bounds them (sills, shutters, terrain, door surrounds: 0; total < 1 m²). Re-breaking the sill fix measured 104 m² and failed it |
 | `tests/assets.test.ts` | every map model exists and is non-trivial, GLB materials exist in `materials.json`, weapon `muzzle`/`sight` and target `plate` nodes, prop models for every layout prop, all textures on disk, all 16 catalogue buildings |
 
-Current result: 62 tests passing.
+Stage A result: 154 tests passing in 15 files (see PROGRESS.md for final browser/server evidence).
 
 ## Asset verification (`npm run assets:verify`)
 

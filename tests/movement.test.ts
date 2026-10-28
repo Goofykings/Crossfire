@@ -39,14 +39,80 @@ describe('PlayerController basics', () => {
     expect(p.horizontalSpeed).toBe(0);
   });
 
-  it('sprints only when moving forward', () => {
+  it('slides for one second, decelerates, and holding Shift never repeats', () => {
     const p = new PlayerController(flatWorld());
     p.teleport({ x: 0, y: 0, z: 0 }, 90);
-    run(p, 1, { z: 1, sprint: true });
-    expect(p.horizontalSpeed).toBeCloseTo(MOVEMENT.sprintSpeed, 3);
-    expect(p.position.x).toBeGreaterThan(5); // heading 90 = east
-    run(p, 1, { z: -1, sprint: true });
-    expect(p.horizontalSpeed).toBeCloseTo(MOVEMENT.walkSpeed, 3);
+    run(p, 0.25, { z: 1 });
+    p.fixedUpdate(FIXED_DT, { ...NO_INTENT, z: 1, slide: true });
+    expect(p.sliding).toBe(true);
+    expect(p.horizontalSpeed).toBeCloseTo(MOVEMENT.slideSpeed);
+    expect(p.crouch).toBeGreaterThan(0);
+    expect(p.crouch).toBeLessThan(0.1);
+    run(p, 0.5, { z: 1, slide: true });
+    expect(p.height).toBeCloseTo(MOVEMENT.crouchHeight);
+    expect(p.horizontalSpeed).toBeLessThan(MOVEMENT.slideSpeed);
+    expect(p.horizontalSpeed).toBeGreaterThan(MOVEMENT.walkSpeed);
+    run(p, 59 / 120, { z: 1, slide: true });
+    expect(p.sliding).toBe(false);
+    expect(p.slideCooldown).toBe(1);
+    expect(p.crouch).toBe(1);
+    run(p, 0.05, { z: 1, slide: true });
+    expect(p.crouch).toBeGreaterThan(0);
+    expect(p.crouch).toBeLessThan(1);
+    run(p, 3, { z: 1, slide: true });
+    expect(p.sliding).toBe(false);
+    expect(p.height).toBe(MOVEMENT.standHeight);
+    expect(p.horizontalSpeed).toBe(MOVEMENT.walkSpeed);
+    run(p, FIXED_DT, { z: 1 });
+    run(p, FIXED_DT, { z: 1, slide: true });
+    expect(p.sliding).toBe(true);
+  });
+
+  it('requires a fresh press after the full post-slide cooldown, without stacking speed', () => {
+    const p = new PlayerController(flatWorld());
+    p.teleport({ x: 0, y: 0, z: 0 });
+    run(p, 1, { z: 1, slide: true });
+    expect(p.slideCooldown).toBe(1);
+    run(p, 0.95, { z: 1 });
+    run(p, FIXED_DT, { z: 1, slide: true });
+    expect(p.sliding).toBe(false);
+    run(p, 0.2, { z: 1, slide: true });
+    expect(p.sliding).toBe(false); // failed early press is not buffered
+    run(p, FIXED_DT, { z: 1 });
+    run(p, 0.3, { z: 1, slide: true });
+    expect(p.sliding).toBe(true);
+    expect(p.horizontalSpeed).toBeLessThanOrEqual(MOVEMENT.slideSpeed);
+  });
+
+  it('captures momentum, allows limited steering, and restores deterministic slide snapshots', () => {
+    const p = new PlayerController(flatWorld());
+    p.teleport({ x: 0, y: 0, z: 0 });
+    run(p, 0.3, { z: 1 });
+    p.yaw = -Math.PI / 2;
+    run(p, FIXED_DT, { slide: true });
+    expect(p.velocity.z).toBeLessThan(-7);
+    expect(Math.abs(p.velocity.x)).toBeLessThan(0.01);
+    run(p, 0.25, { z: 1, slide: true });
+    expect(p.velocity.x).toBeGreaterThan(0.5);
+    expect(p.velocity.x).toBeLessThan(2);
+    const clone = new PlayerController(flatWorld());
+    clone.restore(p.capture());
+    for (let i = 0; i < 360; i++) {
+      const intent = { ...NO_INTENT, z: 1, slide: i < 300 };
+      p.fixedUpdate(FIXED_DT, intent);
+      clone.fixedUpdate(FIXED_DT, intent);
+      expect(clone.capture()).toEqual(p.capture());
+    }
+  });
+
+  it('does not initiate a slide at rest or in the air', () => {
+    const p = new PlayerController(flatWorld());
+    p.teleport({ x: 0, y: 0, z: 0 });
+    run(p, 0.2, { slide: true });
+    expect(p.sliding).toBe(false);
+    run(p, FIXED_DT, { jumpPressed: true });
+    run(p, FIXED_DT, { z: 1, slide: true });
+    expect(p.sliding).toBe(false);
   });
 
   it('jumps to a sensible height and cannot double jump', () => {
@@ -93,7 +159,7 @@ describe('PlayerController basics', () => {
       for (let t = 0; t < 2; t += frame) {
         acc += frame;
         while (acc >= FIXED_DT) {
-          p.fixedUpdate(FIXED_DT, { ...NO_INTENT, z: 1, x: 0.3 });
+          p.fixedUpdate(FIXED_DT, { ...NO_INTENT, z: 1, x: 0.3, slide: true });
           acc -= FIXED_DT;
         }
       }
@@ -111,7 +177,7 @@ describe('collision', () => {
     w.add({ c: [0, 1.5, -5], h: [10, 1.5, 0.15], tag: 'wall' }); // thin wall across -z
     const p = new PlayerController(w);
     p.teleport({ x: 0, y: 0, z: 0 }, 0);
-    run(p, 3, { z: 1, sprint: true });
+    run(p, 3, { z: 1, slide: true });
     expect(p.position.z).toBeGreaterThan(-5 + 0.15 + MOVEMENT.radius - 0.01);
     expect(p.position.z).toBeLessThan(-5 + 0.15 + MOVEMENT.radius + 0.02);
     // diagonal into the wall: keeps sliding sideways
@@ -126,20 +192,21 @@ describe('collision', () => {
     const p = new PlayerController(w);
     p.teleport({ x: 0, y: 0, z: 0 }, 0);
     p.velocity.z = -60; // absurd speed
-    for (let i = 0; i < 30; i++) p.fixedUpdate(FIXED_DT, { ...NO_INTENT, z: 1, sprint: true });
+    for (let i = 0; i < 30; i++) p.fixedUpdate(FIXED_DT, { ...NO_INTENT, z: 1 });
     expect(p.position.z).toBeGreaterThan(-3);
   });
 
-  it('walks up stairs and steps without getting stuck', () => {
+  it.each([false, true])('climbs stairs and steps without getting stuck (slide %s)', (slide) => {
     const w = flatWorld();
     // 4 steps of 0.18 m then a 0.72 m terrace
     for (let k = 1; k <= 4; k++) {
       w.add({ c: [0, (0.18 * k - 1) / 2, -2 - 0.32 * (k - 0.5)], h: [2, (0.18 * k + 1) / 2, 0.16], tag: 'step' });
     }
-    w.add({ c: [0, (0.72 - 1) / 2, -8], h: [2, (0.72 + 1) / 2, 4.72], tag: 'terrace' });
+    // Long enough for the faster slide route to remain on the terrace at the assertion.
+    w.add({ c: [0, (0.72 - 1) / 2, -10], h: [2, (0.72 + 1) / 2, 6.72], tag: 'terrace' });
     const p = new PlayerController(w);
     p.teleport({ x: 0, y: 0, z: 0 }, 0);
-    run(p, 2.5, { z: 1 });
+    run(p, 2.5, { z: 1, slide });
     expect(p.position.y).toBeCloseTo(0.72, 3);
     expect(p.position.z).toBeLessThan(-6);
     // and back down
@@ -161,21 +228,32 @@ describe('collision', () => {
     expect(p.position.y).toBeCloseTo(0.72, 3);
   });
 
-  it('bumps its head on ceilings and stays crouched under low cover', () => {
+  it('stays lowered after sliding under cover, then stands only when clear', () => {
     const w = flatWorld();
-    w.add({ c: [0, 1.4 + 1, 0], h: [3, 1, 3], tag: 'low-ceiling' }); // underside at 1.4 m
+    w.add({ c: [0, 2.4, 0], h: [3, 1, 3], tag: 'low-ceiling' });
     const p = new PlayerController(w);
-    p.teleport({ x: 5, y: 0, z: 0 }, 90 + 180); // facing west, outside the cover
-    run(p, 0.5, { crouch: true });
-    expect(p.height).toBeCloseTo(MOVEMENT.crouchHeight, 3);
-    run(p, 2.0, { crouch: true, z: 1 });
-    expect(p.position.x).toBeLessThan(1);
-    run(p, 0.5, { crouch: false }); // released crouch, but no head room
+    p.teleport({ x: 5, y: 0, z: 0 }, 270);
+    run(p, 0.25, { z: 1 });
+    run(p, 1, { z: 1, slide: true });
+    expect(p.position.x).toBeLessThan(0);
+    expect(p.position.x).toBeGreaterThan(-3);
+    run(p, 0.25);
     expect(p.height).toBeLessThan(1.4);
-    run(p, 2, { crouch: false, z: 1 });
+    run(p, 2, { z: 1 });
     expect(p.position.x).toBeLessThan(-3.5);
     run(p, 0.5);
     expect(p.height).toBeCloseTo(MOVEMENT.standHeight, 3);
+  });
+
+  it('cannot step upward into a ceiling while sliding', () => {
+    const w = flatWorld();
+    w.add({ c: [0, 1.65, -3], h: [2, 0.25, 1], tag: 'ceiling' });
+    w.add({ c: [0, 0.15, -3], h: [2, 0.15, 1], tag: 'step' });
+    const p = new PlayerController(w);
+    p.teleport({ x: 0, y: 0, z: 0 });
+    run(p, 1, { z: 1, slide: true });
+    expect(p.position.z).toBeGreaterThan(-2);
+    expect(p.position.y).toBe(0);
   });
 
   it('raycasts against rotated boxes with correct normals', () => {

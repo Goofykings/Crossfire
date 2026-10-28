@@ -117,7 +117,7 @@ export class Game {
     this.ui = new UI(uiRoot, this.settings, this.audio, this.guestProfile);
     this.materials = new MaterialLibrary(this.ctx.scene);
     this.maps = new MapManager(this.ctx, this.materials, () => GRAPHICS_PRESETS[this.settings.value.graphicsQuality].batchCell, !options.multiplayer);
-    this.remotePlayers = new RemotePlayers(this.ctx.scene);
+    this.remotePlayers = new RemotePlayers(this.ctx.scene, uiRoot);
     this.postfx = new PostFX(this.ctx.scene, this.ctx.camera);
     this.instrumentation = new SceneInstrumentation(this.ctx.scene);
     this.instrumentation.captureFrameTime = true;
@@ -163,7 +163,7 @@ export class Game {
       if (this.state === 'playing' && !this.input.pointerLocked && !this.options.autoplay) void this.input.requestLock();
     });
     window.addEventListener('beforeunload', (e) => {
-      // Ctrl+W (crouch + forward) closes tabs in some browsers: ask before leaving mid-game
+      // Ask before leaving mid-game through a browser shortcut
       if (this.state === 'playing' || this.state === 'paused') {
         e.preventDefault();
         e.returnValue = '';
@@ -215,7 +215,7 @@ export class Game {
       view = new WeaponView(this.ctx, this.materials, effects);
       this.weaponView = view;
       view.setVisible(false);
-      await Promise.all([view.load(signal), effects.loadCasings(this.materials, signal)]);
+      await Promise.all([view.load(signal), effects.loadCasings(this.materials, signal), this.remotePlayers.prepare(signal)]);
       signal?.throwIfAborted();
       await weaponPreviews((id, url) => this.ui.setWeaponPreview(id, url), signal);
       signal?.throwIfAborted();
@@ -266,6 +266,7 @@ export class Game {
 
   private async loadMap(id: string, signal?: AbortSignal): Promise<LoadedMap> {
     const def = getMap(id);
+    this.remotePlayers.releaseVisibility();
     // the previous map is disposed by the manager; nothing may touch it while the next one streams in
     this.map = null;
     this.player = null;
@@ -275,6 +276,7 @@ export class Game {
     }, signal);
     signal?.throwIfAborted();
     this.map = map;
+    if (this.options.multiplayer) this.remotePlayers.prepareVisibility();
     this.player = new PlayerController(map.world);
     this.cameraRig = new PlayerCamera(this.ctx, this.player);
     const s = this.settings.value;
@@ -318,6 +320,21 @@ export class Game {
       if (this.options.multiplayer) {
         const network = new MultiplayerClient(import.meta.env.VITE_MULTIPLAYER_URL ?? '', () => this.guestProfile.value.username);
         this.network = network;
+        network.onShot = (shot) => {
+          if (signal.aborted || this.network !== network || shot.shooterId !== network.selfId || !shot.hits.length) return;
+          const head = shot.hits.some((h) => h.head);
+          this.stats.hits++;
+          if (head) this.stats.headshots++;
+          this.ui.hitMarker(head);
+          this.sound(head ? 'hit_head' : 'hit', .65);
+          this.lastShot = { weapon: shot.weapon, pellets: WEAPONS.find((w) => w.id === shot.weapon)!.pellets,
+            hits: shot.hits.length, damage: shot.hits.reduce((n, h) => n + h.amount, 0), head, target: shot.hits[0].id };
+        };
+        network.onElimination = (event) => {
+          if (signal.aborted || this.network !== network) return;
+          this.ui.showToast(event.killerName ? `${event.killerName} eliminated ${event.victimName}${event.head ? ' (headshot)' : ''}`
+            : `${event.victimName} was eliminated`, event.victimId === network.selfId ? 'warn' : '', 2.5);
+        };
         network.onSnapshot = (snapshot) => { if (!signal.aborted && this.network === network) this.acceptSnapshot(snapshot); };
         network.onState = (state, message) => {
           if (signal.aborted || this.network !== network) return;
@@ -402,6 +419,8 @@ export class Game {
     const self = snapshot.players.find((p) => p.id === this.network!.selfId);
     this.remotePlayers.snapshot(snapshot, this.network.selfId);
     if (!self) return;
+    this.health = self.health;
+    this.ui.setHealth(self.health, PLAYER_MAX_HEALTH);
     if (self.alive) {
       if ((self.life !== this.networkLife || self.id !== this.appliedPlayerId) && self.weapon) {
         this.networkLife = self.life;
@@ -410,10 +429,10 @@ export class Game {
         this.loadout.reset(WEAPONS.findIndex((w) => w.id === self.weapon), true);
         this.weaponView?.select(self.weapon);
         this.ui.setWeaponName(this.weapon.stats.name);
-        this.health = PLAYER_MAX_HEALTH;
+        if (self.combat.gun) this.weapon.restore(self.combat.gun);
         this.acc = 0;
         this.cameraRig?.snapFov(this.settings.value.fov);
-      } else this.network.reconcile(this.player, snapshot);
+      } else this.network.reconcile(this.player, snapshot, this.weapon);
     } else if (this.state === 'playing' || (this.state === 'paused' && !this.preSpawnPaused)) this.showPreSpawn();
   }
 
@@ -425,13 +444,13 @@ export class Game {
     this.input.releaseLock();
     this.weaponView?.setVisible(false);
     this.ui.setScope(0);
-    this.ui.setSpawnState((this.network?.latest?.players.find((p) => p.id === this.network?.selfId)?.deaths ?? 0) > 0);
+    this.ui.setSpawnState((this.network?.latest?.players.find((p) => p.id === this.network?.selfId)?.life ?? 0) > 0);
     this.ui.show('start');
   }
 
   private async spawnSelected(): Promise<void> {
     if (this.state !== 'start' || this.ui.currentScreen !== 'start') return;
-    const respawn = (this.network?.latest?.players.find((p) => p.id === this.network?.selfId)?.deaths ?? 0) > 0;
+    const respawn = (this.network?.latest?.players.find((p) => p.id === this.network?.selfId)?.life ?? 0) > 0;
     this.ui.setSpawnState(respawn, true);
     try {
       if (this.options.multiplayer) {
@@ -545,6 +564,7 @@ export class Game {
     this.roundLoad = null;
     if (this.loading?.signal?.aborted) this.loading = null;
     if (wasLoading) {
+      this.remotePlayers.releaseVisibility();
       this.maps.unload();
       this.map = null;
       this.player = null;
@@ -606,7 +626,8 @@ export class Game {
       this.menuCamera(dt);
     }
     this.updateScoreboard();
-    if (this.network?.state === 'connected') this.remotePlayers.update(Date.now() + this.network.clockOffset - 100);
+    this.remotePlayers.setPresentationVisible(this.ui.currentScreen === 'hud');
+    if (this.network?.state === 'connected') this.remotePlayers.update(Date.now() + this.network.clockOffset - 100, dt);
     this.effects?.update(dt);
     this.ui.update(dt);
     this.updateHudMeta();
@@ -634,6 +655,7 @@ export class Game {
   }
 
   private intent: MoveIntent = { ...NO_INTENT };
+  private slideReleasePending = false;
 
   /** The weapon in hand. */
   get weapon(): Weapon {
@@ -665,8 +687,10 @@ export class Game {
     const it = this.intent;
     it.x = (input.isDown('right') ? 1 : 0) - (input.isDown('left') ? 1 : 0);
     it.z = (input.isDown('forward') ? 1 : 0) - (input.isDown('back') ? 1 : 0);
-    it.sprint = input.isDown('sprint');
-    it.crouch = input.isDown('crouch');
+    it.slide = input.isDown('slide');
+    // Preserve a quick physical release/repress even when both events fall between
+    // fixed ticks. Send a neutral release tick before the new held press.
+    if (input.wasPressed('slide') && player.slideHeld) this.slideReleasePending = true;
     it.aim = input.isDown('aim');
     let jumpEdge = input.wasPressed('jump');
     let fireEdge = input.wasPressed('fire');
@@ -675,14 +699,15 @@ export class Game {
     for (const e of events) this.onWeaponEvent(e);
     this.acc += dt;
     while (this.acc >= FIXED_DT) {
+      it.slide = input.isDown('slide') && !this.slideReleasePending;
+      this.slideReleasePending = false;
       it.jumpPressed = jumpEdge;
       const wasGrounded = player.grounded;
       player.fixedUpdate(FIXED_DT, it);
-      this.network?.fixedInput(player, it);
+      this.network?.fixedInput(player, it, { trigger: input.isDown('fire'), reload: input.isDown('reload') });
       rig.onTick();
       if (jumpEdge && wasGrounded && !player.grounded && player.velocity.y > 0) this.sound('jump', 0.35);
       if (player.landedSpeed > 4) this.sound('land', Math.min(0.8, player.landedSpeed * 0.07));
-      const sprinting = it.sprint && it.z > 0.3 && player.grounded && player.horizontalSpeed > MOVEMENT.walkSpeed + 0.3;
       events.length = 0;
       this.loadout.update(
         FIXED_DT,
@@ -691,9 +716,9 @@ export class Game {
           triggerPressed: fireEdge,
           reloadPressed: reloadEdge,
           aim: it.aim,
-          moveFactor: player.horizontalSpeed / MOVEMENT.sprintSpeed,
+          moveFactor: player.horizontalSpeed / MOVEMENT.weaponMoveReference,
           airborne: !player.grounded,
-          sprinting,
+          sprinting: false,
         },
         events,
       );
@@ -709,18 +734,17 @@ export class Game {
     // sniper scope: the overlay fades in over the last part of the aim and replaces the weapon in view
     this.scope = w.stats.scope ? Math.max(0, Math.min(1, (w.ads - 0.72) / 0.22)) : 0;
     rig.update(dt, alpha, s.fov, zoom, this.scope);
-    const sprinting = it.sprint && it.z > 0.3 && player.grounded && player.horizontalSpeed > MOVEMENT.walkSpeed + 0.3;
     const shown = this.viewOverride ? ({ ...this.viewOverride, stats: w.stats } as unknown as Weapon) : w;
-    this.weaponView?.update(dt, shown, { sprinting, bobX: rig.bobX, bobY: rig.bobY, crouch: player.crouch });
+    this.weaponView?.update(dt, shown, { sprinting: false, bobX: rig.bobX, bobY: rig.bobY, crouch: player.crouch });
     this.weaponView?.setHidden(this.scope > 0.98);
     this.ui.setScope(this.scope);
 
     // HUD
-    const aimDeg = w.spread({ moveFactor: player.horizontalSpeed / MOVEMENT.sprintSpeed, airborne: !player.grounded });
+    const aimDeg = w.spread({ moveFactor: player.horizontalSpeed / MOVEMENT.weaponMoveReference, airborne: !player.grounded });
     const spreadDeg = aimDeg + w.stats.pelletSpread;
     const px = (Math.tan((spreadDeg * Math.PI) / 180) / Math.tan(this.ctx.camera.fov / 2)) * (this.ctx.engine.getRenderWidth() / 2);
-    // render pixels -> CSS pixels; hidden while aimed (the sight has its own reticle), sprinting or switching
-    const crosshair = w.ads < 0.6 && !sprinting && (w.action === 'idle' || w.action === 'cycle' || w.reloading);
+    // render pixels -> CSS pixels; hidden while aimed (the sight has its own reticle) or switching
+    const crosshair = w.ads < 0.6 && (w.action === 'idle' || w.action === 'cycle' || w.reloading);
     this.ui.setCrosshairSpread(px * this.ctx.engine.getHardwareScalingLevel(), crosshair);
     this.ui.setAmmo(w.ammo, w.reserve, w.stats.magazine, w.reloading, w.reloadProgress);
     this.ui.setWeaponSlots(this.options.multiplayer ? [w.stats.name] : this.loadout.weapons.map((x) => x.stats.name), this.options.multiplayer ? 0 : this.loadout.switchingTo ?? this.loadout.currentIndex);
@@ -770,6 +794,8 @@ export class Game {
     // self-loading rifle: the case flies out with every shot (pump and bolt guns eject when worked)
     if (st.cycleTime === 0) this.ejectCase();
     cam.computeWorldMatrix();
+    // Environment impacts are cosmetic prediction. Only server shot results may
+    // produce multiplayer player damage, scores or hit markers.
     const origin = cam.globalPosition.clone();
     const fwd = cam.getDirection(new Vector3(0, 0, -1)).normalize();
     const aim = applySpread({ x: fwd.x, y: fwd.y, z: fwd.z }, spreadDeg);
@@ -780,6 +806,10 @@ export class Game {
       if (!hit) continue;
       const end = new Vector3(hit.point.x, hit.point.y, hit.point.z);
       const normal = new Vector3(hit.normal.x, hit.normal.y, hit.normal.z);
+      if (this.options.multiplayer) {
+        this.effects?.impact(end, normal, k % 2 === 0 || st.pellets === 1);
+        continue;
+      }
       const t = map.targets.find(hit.collider);
       if (t) {
         const zone: HitZone = t.zone;
@@ -819,6 +849,7 @@ export class Game {
       return;
     }
     this.stepDistance += speed * dt;
+    if (p.sliding) return;
     const stride = speed > MOVEMENT.walkSpeed + 0.5 ? 2.6 : p.crouch > 0.5 ? 1.6 : 2.1;
     if (this.stepDistance >= stride) {
       this.stepDistance = 0;
@@ -908,6 +939,11 @@ export class Game {
         cam.rotationQuaternion = Quaternion.RotationYawPitchRoll((-heading * Math.PI) / 180, (pitch * Math.PI) / 180, 0);
       },
       player: () => (this.player ? { ...this.player.position, grounded: this.player.grounded } : null),
+      motion: () => (this.player ? { ...this.player.capture(), height: this.player.height,
+        eyeHeight: this.player.eyeHeight, cameraY: this.ctx.camera.position.y } : null),
+      characterAsset: () => this.remotePlayers.characters.inspect(),
+      visibilityStats: () => this.remotePlayers.visibilityStats(),
+      remoteOutlines: (enabled: boolean) => this.remotePlayers.setOutlinesEnabled(enabled),
       stats: () => ({
         fps: this.fps.value,
         frameMs: this.instrumentation.frameTimeCounter.lastSecAverage,

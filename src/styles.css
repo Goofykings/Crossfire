@@ -147,9 +147,14 @@ button:disabled { cursor: default; opacity: 0.45; }
 #weapons .weapon-card.selected { border-color: var(--accent); box-shadow: inset 0 3px var(--accent), 0 10px 36px #0004; background: linear-gradient(150deg, #294f8099, #18212dee); }
 #weapons .weapon-card:hover, #weapons .weapon-card:focus-visible { border-color: var(--accent-2); transform: scale(1.035); box-shadow: 0 18px 48px #0006; }
 #weapons .weapon-back { width: 110px; justify-content: center; margin: 0; }
-.scoreboard { position: absolute; isolation: isolate; z-index: 50; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(820px, calc(100vw - 24px)); max-height: 85vh; overflow: auto; padding: 28px clamp(22px, 4vw, 52px); pointer-events: none; }
+.remote-player-labels { position: absolute; inset: 0; z-index: 10; overflow: hidden; pointer-events: none; }
+.remote-player-labels[hidden], .remote-player-label[hidden] { display: none; }
+.remote-player-label { position: absolute; transform: translate(-50%, -100%); max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; line-height: 1.3; color: #ff6660; text-shadow: 0 1px 3px #000, 0 0 5px #000; }
+.remote-player-label[data-relationship="teammate"] { color: #72adff; }
+.scoreboard { position: absolute; isolation: isolate; z-index: 50; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(820px, calc(100vw - 24px)); max-height: 85vh; padding: 28px clamp(22px, 4vw, 52px); pointer-events: none; }
+.scoreboard-content { max-height: calc(85vh - 56px); overflow: auto; }
 /* Fade the background, never the names, numbers or icons. */
-.scoreboard::before { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, #0c121900, #0c1219f5 7%, #0c1219f5 93%, #0c121900); }
+.scoreboard::before { content: ''; position: absolute; inset: 0 max(-48px, -2vw); z-index: -1; background: linear-gradient(90deg, #0c121900 0%, #0c121919 1.6%, #0c121955 3.2%, #0c1219aa 4.8%, #0c1219dc 6.4%, #0c1219f5 8%, #0c1219f5 92%, #0c1219dc 93.6%, #0c1219aa 95.2%, #0c121955 96.8%, #0c121919 98.4%, #0c121900 100%); }
 .scoreboard[hidden] { display: none; }
 .scoreboard-header { color: #dce5f2; margin-bottom: 20px; font-size: 0.85em; letter-spacing: 0.06em; }
 .scoreboard table { width: 100%; border-collapse: collapse; table-layout: fixed; }
@@ -162,6 +167,7 @@ button:disabled { cursor: default; opacity: 0.45; }
 .scoreboard tr.local { background: #4e8dff16; color: #cfe0ff; }
 .scoreboard h3 { margin-top: 20px; font-size: 0.8em; }
 @media (max-width: 480px) { .weapon-grid { gap: 8px; } .weapon-card span { font-size: 0.75em; } .scoreboard { padding: 12px; } }
+@media (max-width: 480px) { .scoreboard-content { max-height: calc(85vh - 24px); } }
 @media (max-width: 760px) { .weapon-grid { grid-template-columns: repeat(4, minmax(210px, 1fr)); overflow-x: auto; scroll-snap-type: x mandatory; } .weapon-card { scroll-snap-align: center; } #weapons { align-items: stretch; } }
 #loading { background: #292c31; align-items: center; justify-content: center; z-index: 60; }
 .loading-word { font-weight: 800; font-size: clamp(20px, 3vw, 34px); letter-spacing: 0.2em; color: #edf0f3; }

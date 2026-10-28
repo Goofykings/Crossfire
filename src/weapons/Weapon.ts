@@ -247,6 +247,13 @@ export function damageAt(s: WeaponStats, distance: number): number {
   return s.damage * (1 + (minScale - 1) * t);
 }
 
+/** Trusted server snapshots only; clients never submit this state. */
+export interface WeaponState {
+  ammo: number; ads: number; action: WeaponAction; progress: number;
+  time: number; duration: number; cues: Cue[]; cooldown: number; bloom: number;
+  emptyClickCooldown: number; stopLoading: boolean; fromEmpty: boolean;
+}
+
 export class Weapon {
   ammo: number;
   /** Spare ammunition: infinite (the magazine is the limit). */
@@ -269,6 +276,20 @@ export class Weapon {
 
   constructor(readonly stats: WeaponStats) {
     this.ammo = stats.magazine;
+  }
+
+  capture(): WeaponState {
+    return { ammo: this.ammo, ads: this.ads, action: this.action, progress: this.progress,
+      time: this.time, duration: this.duration, cues: this.cues.map((c) => ({ ...c })), cooldown: this.cooldown,
+      bloom: this.bloom, emptyClickCooldown: this.emptyClickCooldown, stopLoading: this.stopLoading, fromEmpty: this.fromEmpty };
+  }
+
+  restore(s: WeaponState): void {
+    Object.assign(this, { ...s, cues: s.cues.map((c) => ({ ...c })) });
+  }
+
+  get simulating(): boolean {
+    return this.action !== 'idle' || this.cooldown > 0 || this.bloom > 0 || this.ads > 0;
   }
 
   get fireInterval(): number {

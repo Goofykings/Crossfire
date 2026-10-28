@@ -365,7 +365,8 @@
    "albedo": "assets/textures/european-town/canvas_stripes_red.jpg",
    "normal": "assets/textures/shared/plaster_normal.jpg",
    "orm": "assets/textures/shared/plaster_orm.jpg",
-   "roughness": 0.95
+   "roughness": 0.95,
+   "double_sided": true
   },
   "canvas_green": {
    "tile": 1.6,
@@ -377,7 +378,8 @@
    "albedo": "assets/textures/european-town/canvas_stripes_green.jpg",
    "normal": "assets/textures/shared/plaster_normal.jpg",
    "orm": "assets/textures/shared/plaster_orm.jpg",
-   "roughness": 0.95
+   "roughness": 0.95,
+   "double_sided": true
   },
   "canvas_cream": {
    "tile": 1.0,

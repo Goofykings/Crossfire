@@ -7,14 +7,14 @@ export interface MoveIntent {
   x: number;
   /** Forward, -1 (back) .. 1 (forward). */
   z: number;
-  sprint: boolean;
-  crouch: boolean;
+  /** Held Shift; the shared simulation requires a release before another slide. */
+  slide: boolean;
   aim: boolean;
   /** True on the tick the jump key went down (edge, not level). */
   jumpPressed: boolean;
 }
 
-export const NO_INTENT: MoveIntent = { x: 0, z: 0, sprint: false, crouch: false, aim: false, jumpPressed: false };
+export const NO_INTENT: MoveIntent = { x: 0, z: 0, slide: false, aim: false, jumpPressed: false };
 
 export interface Vec3 {
   x: number;
@@ -30,6 +30,10 @@ export interface ControllerState {
   pitch: number;
   grounded: boolean;
   crouch: number;
+  slideRemaining: number;
+  slideCooldown: number;
+  slideHeld: boolean;
+  slideYaw: number;
   airTime: number;
   jumpBufferTimer: number;
   jumpedThisAirborne: boolean;
@@ -55,6 +59,13 @@ export class PlayerController {
   grounded = false;
   /** 0 = standing, 1 = fully crouched. */
   crouch = 0;
+  prevCrouch = 0;
+  slideRemaining = 0;
+  slideCooldown = 0;
+  slideHeld = false;
+  private slideYaw = 0;
+
+  get sliding(): boolean { return this.slideRemaining > 0; }
   /** Seconds since the player last stood on ground (for coyote time). */
   private airTime = 0;
   private jumpBufferTimer = 0;
@@ -85,6 +96,7 @@ export class PlayerController {
   capture(): ControllerState {
     return { position: { ...this.position }, velocity: { ...this.velocity }, yaw: this.yaw, pitch: this.pitch,
       grounded: this.grounded, crouch: this.crouch, airTime: this.airTime, jumpBufferTimer: this.jumpBufferTimer,
+      slideRemaining: this.slideRemaining, slideCooldown: this.slideCooldown, slideHeld: this.slideHeld, slideYaw: this.slideYaw,
       jumpedThisAirborne: this.jumpedThisAirborne };
   }
 
@@ -96,6 +108,11 @@ export class PlayerController {
     this.pitch = s.pitch;
     this.grounded = s.grounded;
     this.crouch = s.crouch;
+    this.prevCrouch = s.crouch;
+    this.slideRemaining = s.slideRemaining;
+    this.slideCooldown = s.slideCooldown;
+    this.slideHeld = s.slideHeld;
+    this.slideYaw = s.slideYaw;
     this.airTime = s.airTime;
     this.jumpBufferTimer = s.jumpBufferTimer;
     this.jumpedThisAirborne = s.jumpedThisAirborne;
@@ -115,6 +132,10 @@ export class PlayerController {
     if (headingDeg !== undefined) this.yaw = PlayerController.headingToYaw(headingDeg);
     this.pitch = 0;
     this.crouch = 0;
+    this.prevCrouch = 0;
+    this.slideRemaining = this.slideCooldown = this.slideYaw = 0;
+    this.slideHeld = false;
+    this.jumpedThisAirborne = false;
     this.grounded = false;
     this.airTime = 0;
     this.jumpBufferTimer = 0;
@@ -150,9 +171,22 @@ export class PlayerController {
     this.prevPosition.z = p.z;
     this.stepUpDelta = 0;
     this.landedSpeed = 0;
+    this.prevCrouch = this.crouch;
 
-    // --- crouch -------------------------------------------------------------------------------
-    let crouchTarget = intent.crouch ? 1 : 0;
+    if (!this.sliding) this.slideCooldown = Math.max(0, this.slideCooldown - dt);
+    const pressed = intent.slide && !this.slideHeld;
+    this.slideHeld = intent.slide;
+    if (pressed && this.grounded && !this.sliding && this.slideCooldown === 0
+      && (this.horizontalSpeed > 0.5 || Math.hypot(intent.x, intent.z) > 0.01)) {
+      // Momentum chooses the starting direction, even if the view turns during this press.
+      const f = this.forward();
+      this.slideYaw = this.horizontalSpeed > 0.5 ? Math.atan2(v.z, v.x)
+        : Math.atan2(f.z * intent.z + f.x * intent.x, f.x * intent.z - f.z * intent.x);
+      this.slideRemaining = c.slideDuration;
+    }
+
+    // The lowered body remains blocked under cover after a slide; no separate crouch action.
+    let crouchTarget = this.sliding ? 1 : 0;
     if (crouchTarget < this.crouch) {
       // only stand up if there is head room for the taller body
       const standTop = p.y + c.standHeight;
@@ -178,11 +212,19 @@ export class PlayerController {
     let maxSpeed = c.walkSpeed;
     if (this.crouch > 0.5) maxSpeed = c.crouchSpeed;
     else if (intent.aim) maxSpeed = c.aimSpeed;
-    else if (intent.sprint && intent.z > 0.3) maxSpeed = c.sprintSpeed;
     const targetX = wishX * maxSpeed;
     const targetZ = wishZ * maxSpeed;
 
-    if (this.grounded) {
+    if (this.sliding) {
+      if (len > 0.01) {
+        const targetYaw = Math.atan2(wishZ, wishX);
+        const turn = Math.atan2(Math.sin(targetYaw - this.slideYaw), Math.cos(targetYaw - this.slideYaw));
+        this.slideYaw += Math.max(-c.slideSteerRate * dt, Math.min(c.slideSteerRate * dt, turn));
+      }
+      const speed = c.walkSpeed + (c.slideSpeed - c.walkSpeed) * this.slideRemaining / c.slideDuration;
+      v.x = Math.cos(this.slideYaw) * speed;
+      v.z = Math.sin(this.slideYaw) * speed;
+    } else if (this.grounded) {
       const hasInput = len > 0.01;
       const rate = (hasInput ? c.groundAccel : c.groundDecel) * dt;
       const dx = targetX - v.x;
@@ -212,7 +254,7 @@ export class PlayerController {
     if (intent.jumpPressed) this.jumpBufferTimer = c.jumpBuffer;
     else this.jumpBufferTimer = Math.max(0, this.jumpBufferTimer - dt);
     const canJump = (this.grounded || this.airTime < c.coyoteTime) && !this.jumpedThisAirborne;
-    if (this.jumpBufferTimer > 0 && canJump && this.crouch < 0.5) {
+    if (this.jumpBufferTimer > 0 && canJump && this.crouch < 0.5 && !this.sliding) {
       v.y = c.jumpSpeed;
       this.grounded = false;
       this.jumpedThisAirborne = true;
@@ -228,6 +270,14 @@ export class PlayerController {
     const sdt = dt / steps;
     const wasGrounded = this.grounded;
     for (let i = 0; i < steps; i++) this.substep(sdt, wasGrounded);
+
+    if (this.sliding) {
+      this.slideRemaining = Math.max(0, this.slideRemaining - dt);
+      if (this.slideRemaining < 1e-8) {
+        this.slideRemaining = 0;
+        this.slideCooldown = c.slideCooldown;
+      }
+    }
 
     if (this.grounded) {
       this.airTime = 0;
@@ -247,6 +297,7 @@ export class PlayerController {
     const p = this.position;
     const v = this.velocity;
     const h = this.height;
+    const oldX = p.x, oldZ = p.z;
 
     // horizontal move + wall resolution
     p.x += v.x * dt;
@@ -261,6 +312,14 @@ export class PlayerController {
         v.x -= ct.nx * into;
         v.z -= ct.nz * into;
       }
+    }
+
+    // A climbable stair can still be too close to a ceiling for the current body.
+    const nextGround = this.world.groundHeight(p.x, p.z, c.radius * 0.7, p.y + c.stepHeight);
+    const ceiling = this.world.ceilingHeight(p.x, p.z, c.radius * 0.95, p.y + c.stepHeight + 0.01);
+    if (nextGround > p.y + 0.0005 && nextGround + h > ceiling + 0.0005) {
+      p.x = oldX; p.z = oldZ;
+      v.x = v.z = 0;
     }
 
     // vertical move

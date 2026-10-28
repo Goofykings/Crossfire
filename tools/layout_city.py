@@ -96,8 +96,9 @@ MANUAL_PROPS = [
     ("ac_condenser", (-31.6, 0, -15.6), 0),
     ("dumpster_blue", (14.0, 0, -30.4), 0),
     ("pallet_stack", (2.0, 0, -30.3), 0),
-    # the court has shop doors on three sides: bench on the blank west wall, north of the gate
-    ("bench_modern", (24.3, 0, -30.05), 90),
+    # Leave room for facade trim behind the back slats and beyond the north end;
+    # keep the bench on the blank west wall, north of the gate and out of the route.
+    ("bench_modern", (24.65, 0, -29.85), 90),
     ("bike_rack", (-18.0, 0, 3.4), 0),
     ("planter", (-14.8, 0, -5.4), 90),
 ]
