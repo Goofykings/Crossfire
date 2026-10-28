@@ -38,7 +38,10 @@ for (const a of manifest.assets) {
       if (!j.meshes?.length) problems.push(`no meshes: ${a.path}`);
       for (const m of j.materials ?? []) {
         const name = m.name.replace(/\.\d{3}$/, '');
-        if (!(name in materials)) problems.push(`${a.path}: material "${m.name}" not in materials.json`);
+        if (!a.embeddedMaterials && !(name in materials)) problems.push(`${a.path}: material "${m.name}" not in materials.json`);
+      }
+      if (a.embeddedMaterials && (!j.images?.length || j.images.some((image) => image.uri || image.bufferView === undefined))) {
+        problems.push(`${a.path}: standalone character textures must be embedded`);
       }
     } catch (e) {
       problems.push(`${a.path}: ${e.message}`);

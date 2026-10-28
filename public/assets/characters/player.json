@@ -1,0 +1,92 @@
+{
+  "file": "assets/characters/player.glb",
+  "height": 1.798,
+  "groundY": 0.0001,
+  "yawCorrection": 0,
+  "clips": {
+    "IDLE": "IDLE",
+    "RUN": "RUN",
+    "JUMP_START": "JUMP_START",
+    "JUMP_LOOP": "JUMP_LOOP",
+    "JUMP_LAND": "JUMP_LAND",
+    "SLIDE": "SLIDE"
+  },
+  "durations": {
+    "IDLE": 2.4,
+    "RUN": 0.8,
+    "JUMP_START": 0.2,
+    "JUMP_LOOP": 0.8,
+    "JUMP_LAND": 0.3,
+    "SLIDE": 1.0
+  },
+  "bones": [
+    "root",
+    "pelvis",
+    "spine",
+    "chest",
+    "neck",
+    "head",
+    "upper_arm_l",
+    "forearm_l",
+    "hand_l",
+    "upper_arm_r",
+    "forearm_r",
+    "hand_r",
+    "thigh_l",
+    "shin_l",
+    "foot_l",
+    "thigh_r",
+    "shin_r",
+    "foot_r"
+  ],
+  "triangles": 9248,
+  "materials": [
+    "player_skin",
+    "player_fabric",
+    "player_gear"
+  ],
+  "poseBoundsY": {
+    "IDLE": [
+      -0.0,
+      1.7965
+    ],
+    "RUN": [
+      -0.0,
+      1.7886
+    ],
+    "JUMP_START": [
+      -0.0,
+      1.7979
+    ],
+    "JUMP_LOOP": [
+      0.0129,
+      1.727
+    ],
+    "JUMP_LAND": [
+      -0.0,
+      1.7979
+    ],
+    "SLIDE": [
+      0.0,
+      1.1431
+    ]
+  },
+  "bounds": {
+    "min": [
+      -0.4839555299282074,
+      -0.06000005403126124,
+      -1.063365993499756
+    ],
+    "max": [
+      0.4683021283149719,
+      1.8578861331939698,
+      0.7576935863494874
+    ]
+  },
+  "forward": [
+    0,
+    0,
+    -1
+  ],
+  "sourceReference": "references_images/Player.png"
+}

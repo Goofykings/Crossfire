@@ -1,6 +1,6 @@
 # Multiplayer combat and remote visibility
 
-Updated 2026-10-27. This extends the existing single Cloudflare Worker / Durable Object room; it does not replace the transport, movement prediction, guest identity, map rotation or Pages hosting.
+Updated 2026-10-28. This extends the existing single Cloudflare Worker / Durable Object room; it does not replace the transport, movement prediction, guest identity, map rotation or Pages hosting.
 
 ## Cause and authoritative combat
 
@@ -16,20 +16,13 @@ Hit validation currently uses server poses when processing the input; historical
 
 ## Character asset boundary
 
-The supplied workspace currently has `blender/characters/char_geometry.py` but **no exported character GLB**, skeleton or animation clips. The existing capsule bodies remain explicitly identifiable as placeholders; no model, skeleton or clips were fabricated.
+The actual Blender character is now generated/exported to `public/assets/characters/player.glb`, with an editable `blender/characters/player.blend`, one 18-joint rig and six in-place clips. The supplied reference is `references_images/Player.png`; existing analytic geometry is reused. The actual exported bytes are audited before the measured metadata enables the asset.
 
-`src/game/CharacterAsset.ts` provides the reusable shared loader/instancer interface. `CHARACTER_ASSET` stays null until the actual export is inspected. It loads with Pages-compatible asset paths and cancellation, validates that configured clips actually exist and that one exported rig drives the meshes, shares geometry/materials and clones the same rig layout for independent player poses. Failure leaves working multiplayer intact. The debug `characterAsset()` result reports missing/error/ready and actual exported clip names/bone counts, never invented clips.
-
-Remaining character integration:
-
-1. Finish and export the GLB to a public asset path; inspect its actual animation names, joints/skin, metres, ground height and forward direction.
-2. Fill the explicit CharacterAssetDefinition with verified measurements/correction and actual clip mappings. Do not guess them from expected names.
-3. Bind IDLE/RUN/JUMP_START/JUMP_LOOP/JUMP_LAND/SLIDE state transitions to those actual animation groups, blend on changes and retain independent instances of the same rig. Playback/state integration is pending the asset.
-4. Verify feet, heading, slide/jump poses, blending, disposal and outlined skinned geometry with several real clients. Animation must never move the authoritative collider/root.
+`src/game/CharacterAsset.ts` loads through existing cancellable Pages-compatible paths, shares geometry/materials and clones independent instances of the same rig. `PlayerAnimation.ts` selects and blends IDLE/RUN/JUMP_START/JUMP_LOOP/JUMP_LAND/SLIDE from interpolated server movement, without moving authoritative roots or squashing the humanoid. Actual animated bone positions drive marker anchors and visibility. A download failure retains the existing fallback with an explicit diagnostic state. See the [character pipeline and verification](CHARACTER_PIPELINE.md) and the newest PROGRESS.md entry for asset budgets, regeneration, runtime evidence and limits.
 
 ## Outlines and names
 
-Outlines use Babylon's mesh outline pass, with its normal depth test and bone binding; they follow rendered body geometry rather than a bounding box. One engine component handles the shared scene, without a separate whole-scene render per player. The actual model's animated outline still needs verification once its GLB exists. The implementation was checked against the installed engine's [outline renderer source](https://github.com/BabylonJS/Babylon.js/blob/master/packages/dev/core/src/Rendering/outlineRenderer.ts).
+Outlines use Babylon's mesh outline pass, with its normal depth test and bone binding; they follow rendered body geometry rather than a bounding box. One engine component handles the shared scene, without a separate whole-scene render per player. The humanoid uses a thinner hull appropriate for its cap, cuffs and fingers. The implementation was checked against the installed engine's [outline renderer source](https://github.com/BabylonJS/Babylon.js/blob/master/packages/dev/core/src/Rendering/outlineRenderer.ts); current skinned-model browser verification is recorded in PROGRESS.md.
 
 Relative opponents are red and teammates are blue, including Red Team players viewing Red Team teammates. Outlines are disabled for completely occluded bodies and depth-tested for visible body portions. There is no local-player outline. A static triangle spatial index is built once per map from existing opaque rendered batches; short rays to interior head/torso/side/foot probes preserve openings without repeatedly scanning the full scene. It is presentation data, not another physics or multiplayer system. Alpha-cutout sheets are conservatively treated as occluders; very small exposed body portions can be missed by the visibility probes.
 
@@ -42,8 +35,10 @@ Use two PowerShell terminals from the repository root:
 ```powershell
 # Terminal 1
 Set-Location C:\Users\Public\Crossfire
+New-Item -ItemType Directory -Force test-results | Out-Null
 $env:WRANGLER_SEND_METRICS = 'false'
 $env:WRANGLER_LOG_PATH = "$PWD\test-results\local-worker.log"
+$env:WRANGLER_REGISTRY_PATH = "$PWD\server\.wrangler\registry"
 npm.cmd run dev --prefix server
 ```
 
@@ -55,6 +50,8 @@ npm.cmd run dev -- --host 127.0.0.1 --port 5180 --strictPort
 ```
 
 Visit `http://127.0.0.1:5180/` in independent browser profiles. Tests use actual local Worker runtimes and real WebSockets; the test-only RPC only positions already-spawned real sessions on valid map sightlines. It never applies damage or assigns scores/teams. It is not in the production Wrangler entry.
+
+The automated browser firing check dispatches mouse events through the game's actual canvas/window input handlers because native headless CDP mouse delivery was unreliable across isolated contexts. Hits, health, scores and rosters still come from real Worker connections; this does not verify physical mouse hardware.
 
 ```powershell
 npm.cmd run typecheck

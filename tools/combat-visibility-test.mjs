@@ -11,7 +11,8 @@ import { completeGuestProfile } from './guest-profile-helper.mjs';
 
 const index = process.argv.indexOf('--url');
 const base = index < 0 ? 'http://127.0.0.1:4176/crossfire/' : process.argv[index + 1];
-const out = 'test-results/combat-visibility';
+const outAt = process.argv.indexOf('--out');
+const out = outAt < 0 ? 'test-results/combat-visibility' : process.argv[outAt + 1];
 fs.mkdirSync(out, { recursive: true });
 const executablePath = [process.env.CHROME_PATH, 'C:/Program Files/Google/Chrome/Application/chrome.exe',
   'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'].filter(Boolean).find((p) => fs.existsSync(p));
@@ -21,6 +22,7 @@ const browser = await puppeteer.launch({ executablePath, headless: true, pipe: t
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 const check = (ok, message) => { assert.ok(ok, message); console.log(`PASS ${message}`); };
 const errors = [];
+console.log('Browser launched; starting real multiplayer visibility verification');
 const state = (page) => page.evaluate(() => window.__crossfire.network());
 async function until(predicate, message, ms = 10000) {
   const end = Date.now() + ms;
@@ -54,6 +56,7 @@ try {
       bindings: { ALLOWED_ORIGINS: new URL(base).origin, MATCH_MODE: mode }, log: new Log(LogLevel.ERROR),
     }));
     const backend = (await fixture.ready).href, sockets = [], contexts = [];
+    console.log(`${mode}: local Worker ready`);
     const ns = await fixture.getDurableObjectNamespace('ROOM');
     const stub = ns.get(ns.idFromName('public-main'));
     let round = await stub.advanceMapForTest();
@@ -68,7 +71,7 @@ try {
       const welcome = await until(() => c.messages.find((m) => m.type === 'welcome'), 'Node join');
       c.id = welcome.selfId;
       c.timer = setInterval(() => { if (ws.readyState === WebSocket.OPEN) c.send({ type: 'ping', at: Date.now() }); }, 500);
-      ws.once('close', () => clearInterval(c.timer));
+      ws.once('close', (code, reason) => { clearInterval(c.timer); console.log(`${mode}: ${name} socket closed ${code} ${reason}`); });
       if (spawn) {
         c.send({ type: 'spawn', roundId: c.snapshot.roundId, mapVersion: c.snapshot.mapVersion, weapon: 'sniper', requestId: 'test-life' });
         await until(() => c.messages.find((m) => m.type === 'spawned'), 'Node spawn');
@@ -78,23 +81,48 @@ try {
     async function openBrowser(name) {
       const context = await browser.createBrowserContext(); contexts.push(context);
       const page = await context.newPage();
-      await page.evaluateOnNewDocument((backend) => {
+      await page.evaluateOnNewDocument((backend, dropAck) => {
         // Exercise a real saved loadout preference; bolt timing makes one physical
         // mouse press deterministic even when the test machine pauses a frame.
         localStorage.setItem('crossfire.pending-weapon', 'sniper');
         const Socket = window.WebSocket;
+        let drop = dropAck;
         window.WebSocket = class extends Socket { constructor(url, protocols) {
           super(new URL(String(url)).pathname === '/ws' ? new URL('/ws', backend).href.replace('http:', 'ws:') : url, protocols);
+          // Fault-inject a lost actual acknowledgement, never invented server data.
+          this.addEventListener('message', (event) => {
+            if (drop && JSON.parse(event.data).type === 'spawned') {
+              drop = false; window.__droppedSpawnAck = true; event.stopImmediatePropagation();
+            }
+          });
         } };
         const fetchActual = window.fetch;
         window.fetch = (input, init) => fetchActual(new URL(String(input), location.href).pathname === '/presence'
           ? new URL('/presence', backend) : input, init);
-      }, backend);
+      }, backend, name === 'Actual viewer');
       page.on('pageerror', (e) => errors.push(String(e)));
+      page.on('response', (response) => {
+        if (response.status() >= 400 && new URL(response.url()).pathname.includes('/assets/')) errors.push(`${response.status()} ${response.url()}`);
+      });
       await page.goto(`${base}?multiplayer&autoplay&quality=medium&shadows=low`, { waitUntil: 'domcontentloaded' });
+      console.log(`${mode}: ${name} page loaded`);
       await completeGuestProfile(page, name);
-      await page.waitForFunction(() => window.__crossfire.ready() || document.querySelector('#error.visible'), { timeout: 240000 });
+      console.log(`${mode}: ${name} guest profile ready`);
+      await page.waitForFunction(() => window.__crossfire.ready() || document.querySelector('#error.visible')
+        || document.querySelector('#start.visible .btn.primary:not(:disabled)'), { timeout: 240000 });
       assert.equal(await page.$eval('#error', (e) => e.classList.contains('visible') ? e.innerText : null), null);
+      // A reconnect while the headless context loads may leave the honest pre-spawn
+      // UI open. Use its actual Spawn button, rather than assuming debug autoplay.
+      await delay(120);
+      if (!await page.evaluate(() => window.__crossfire.ready()) && await page.$('#start.visible .btn.primary:not(:disabled)')) {
+        await page.click('#start .btn.primary');
+      }
+      await page.waitForFunction(() => window.__crossfire.ready() || (document.querySelector('#start.visible .btn.primary:not(:disabled)')
+        && window.__crossfire.network().snapshot?.players.find((p) => p.id === window.__crossfire.network().selfId)?.alive), { timeout: 30000 });
+      if (!await page.evaluate(() => window.__crossfire.ready())) await page.click('#start .btn.primary');
+      await page.waitForFunction(() => window.__crossfire.ready(), { timeout: 15000 });
+      if (name === 'Actual viewer') check(await page.evaluate(() => window.__droppedSpawnAck),
+        'Retry enters the actual server-approved life after a lost spawn acknowledgement');
       page.id = (await state(page)).selfId;
       return page;
     }
@@ -115,10 +143,19 @@ try {
       const p = c.position, q = target.position, dy = (q[1] + (head ? 1.6 : .9)) - p[1] - 1.64;
       const yaw = Math.atan2(-(q[0] - p[0]), -(q[2] - p[2]));
       const pitch = Math.atan2(dy, Math.hypot(q[0] - p[0], q[2] - p[2]));
-      const send = (trigger) => c.send({ type: 'input', roundId: c.snapshot.roundId, mapVersion: c.snapshot.mapVersion,
-        frames: Array.from({ length: 6 }, (_, i) => ({ seq: ++c.seq, yaw, pitch,
-          intent: { x: 0, z: 0, slide: false, aim: true, jumpPressed: false }, combat: { trigger: trigger && i === 0, reload: false } })) });
+      const send = (trigger) => {
+        if (c.seq - c.snapshot.players.find((p) => p.id === c.id).ack > 12) return false;
+        c.send({ type: 'input', roundId: c.snapshot.roundId, mapVersion: c.snapshot.mapVersion,
+          frames: Array.from({ length: 6 }, (_, i) => ({ seq: ++c.seq, yaw, pitch,
+            intent: { x: 0, z: 0, slide: false, aim: true, jumpPressed: false }, combat: { trigger: trigger && i === 0, reload: false } })) });
+        return true;
+      };
       for (let k = 0; k < 12; k++) { send(false); await delay(50); }
+      await until(async () => {
+        const self = c.snapshot.players.find((p) => p.id === c.id);
+        if (self.combat.gun?.action === 'idle' && self.combat.gun.ads > .95 && c.seq - self.ack <= 6) return true;
+        send(false); await delay(50); return false;
+      }, 'actual server weapon ready');
       const mark = c.messages.length; send(true);
       return until(() => c.messages.slice(mark).find((m) => m.type === 'shot'), 'real Node shot');
     }
@@ -143,11 +180,18 @@ try {
       check(labels.some((e) => e.name === 'Actual shooter' && e.relationship === 'opponent' && e.color === 'rgb(255, 102, 96)'), 'actual opponent name is red');
       check(labels.some((e) => e.name === 'Second actual browser' && e.color === (mode === 'teams' ? 'rgb(114, 173, 255)' : 'rgb(255, 102, 96)')), 'actual second browser name uses the correct relative color');
       const asset = await b.evaluate(() => window.__crossfire.characterAsset());
-      check(asset.state === 'missing' && asset.clips.length === 0 && (await state(b)).rendered.every((p) => p.source === 'placeholder'), 'unfinished character export remains an honest placeholder, with no invented clips');
+      check(asset.state === 'ready' && asset.bones === 18 && asset.loads === 1
+        && ['IDLE', 'RUN', 'JUMP_START', 'JUMP_LOOP', 'JUMP_LAND', 'SLIDE'].every((clip) => asset.clips.includes(clip))
+        && (await state(b)).rendered.every((p) => p.source === 'glb'), 'actual exported humanoid rig and all six clips load once, without placeholder bodies');
+      const sharedA = (await avatar(b, a.id)).animation, sharedD = (await avatar(b, d.id)).animation;
+      check(JSON.stringify(sharedA.geometry) === JSON.stringify(sharedD.geometry)
+        && JSON.stringify(sharedA.materials) === JSON.stringify(sharedD.materials) && sharedA.rig !== sharedD.rig,
+        'multiple characters share geometry/materials and have independent copies of the same rig');
       check((await state(b)).rendered.filter((p) => p.id === a.id).length === 1, 'no duplicate remote bodies');
       const hideLabels = await b.addStyleTag({ content: '.remote-player-labels { visibility: hidden !important; }' });
       await b.evaluate(() => window.__crossfire.remoteOutlines(false)); await delay(80);
       const off = await pixels(b);
+      await b.screenshot({ path: `${out}/${mode}-unoutlined.png` });
       const allyOff = mode === 'teams' ? await pixels(b, { x: 800, y: 160, width: 360, height: 400 }) : null;
       await b.evaluate(() => window.__crossfire.remoteOutlines(true)); await delay(100);
       const on = await pixels(b);
@@ -163,6 +207,84 @@ try {
       const outlineFps = await b.evaluate(() => window.__crossfire.stats().fps);
       check(outlineFps >= plainFps * .7, `${mode}: local outline on/off comparison ${outlineFps.toFixed(1)}/${plainFps.toFixed(1)} FPS`);
       await b.screenshot({ path: `${out}/${mode}-visible.png` });
+      // Drive real, bounded WebSocket controller inputs and inspect actual groups/bones.
+      // Fixture RPC only resets the real actor to a clear start between movements.
+      async function drive(intent, ms, during) {
+        await delay(80);
+        const yaw = a.snapshot.players.find((p) => p.id === a.id).motion.yaw;
+        let first = true;
+        const send = () => {
+          const self = a.snapshot.players.find((p) => p.id === a.id);
+          // Keep at most a few unacknowledged frames on this co-hosted GPU/Worker
+          // test machine. The production real-time queue limits stay unchanged.
+          if (a.seq - self.ack > 8) return;
+          a.send({ type: 'input', roundId: a.snapshot.roundId, mapVersion: a.snapshot.mapVersion,
+            frames: Array.from({ length: 4 }, () => ({ seq: ++a.seq, yaw, pitch: 0,
+              intent: { x: 0, z: 0, aim: false, slide: false, ...intent,
+                jumpPressed: first ? (first = false, !!intent.jumpPressed) : false }, combat: { trigger: false, reload: false } })) });
+        };
+        send(); const timer = setInterval(send, 75);
+        try { await Promise.all([delay(ms), during?.()]); }
+        finally { clearInterval(timer); }
+      }
+      await arrange(b, a, [[-3, 0, -2], [-3, 0, 2]]);
+      const idle = await avatar(b, a.id);
+      await delay(180);
+      check((await avatar(b, a.id)).animation.starts === idle.animation.starts, 'idle animation is not restarted each frame');
+      await drive({ z: -1 }, 650, async () => {
+        await until(async () => (await avatar(b, a.id))?.animation.clip === 'RUN', 'actual remote run animation');
+        const run = (await avatar(b, a.id)).animation;
+        check((await avatar(b, d.id)).animation.clip === 'IDLE', 'running one player never drives another rig');
+        await delay(100);
+        check((await avatar(b, a.id)).animation.frame !== run.frame, 'run group advances actual animation frames');
+        await b.screenshot({ path: `${out}/${mode}-run.png` });
+      });
+      await drive({}, 250);
+      await arrange(b, a, [[-3, 0, -2], [-3, 0, 2]]);
+      const jumpMessages = a.messages.length;
+      await drive({ jumpPressed: true }, 1200, async () => {
+        await until(async () => (await avatar(b, a.id))?.animation.history.includes('JUMP_START'), 'real jump start');
+        await until(async () => (await avatar(b, a.id))?.animation.clip === 'JUMP_LOOP', 'real airborne loop');
+        check(a.messages.slice(jumpMessages).some((m) => m.snapshot?.players.some((p) => p.id === a.id && !p.motion.grounded && p.motion.position.y > .2)),
+          'jump height comes from actual authoritative snapshots');
+        await delay(120);
+        await b.screenshot({ path: `${out}/${mode}-jump.png` });
+        await until(async () => {
+          const h = (await avatar(b, a.id))?.animation.history ?? [];
+          return h.lastIndexOf('JUMP_LAND') > h.lastIndexOf('JUMP_START');
+        }, 'real landing recovery');
+      });
+      const history = (await avatar(b, a.id)).animation.history;
+      check(['JUMP_START', 'JUMP_LOOP', 'JUMP_LAND'].every((clip) => history.includes(clip)), 'real server jump plays start, airborne and landing clips');
+      await arrange(b, a, [[-3, 0, -2], [-3, 0, 6]], .8);
+      await drive({ z: 1, slide: true }, 600, async () => {
+        await until(async () => (await avatar(b, a.id))?.animation.clip === 'SLIDE', 'actual remote slide animation');
+        await delay(150);
+        const actor = await avatar(b, a.id);
+        check(actor.animation.joints.head[1] - actor.y < 1.15, 'actual skinned slide lowers the head without compressing the model or moving the root');
+        check(actor.outline, 'animated sliding silhouette keeps its depth-tested outline');
+        await b.screenshot({ path: `${out}/${mode}-slide.png` });
+      });
+      await drive({}, 650);
+      await until(async () => (await avatar(b, a.id))?.animation.clip === 'IDLE', 'slide returns to idle');
+      // Verify normal frontend keyboard/network flow as well as deterministic
+      // WebSocket controls, including the acknowledgement-based sending window.
+      await place(a.id, [-1.4, 0, -1.7], [-3, 0, 2]);
+      await arrange(b, d, [[-3, 0, -2], [-3, 0, 2]]);
+      await d.evaluate(() => window.__crossfire.look(0, 0));
+      const keyboardStarts = (await avatar(b, d.id)).animation.starts;
+      await d.bringToFront();
+      await d.keyboard.down('w');
+      try { await delay(350); } finally { await d.keyboard.up('w'); }
+      await until(async () => {
+        const actor = await avatar(b, d.id);
+        return actor?.animation.starts > keyboardStarts && actor.animation.history.includes('RUN');
+      }, 'actual browser keyboard drives a remote run');
+      check(await d.evaluate(() => window.__crossfire.network().state === 'connected' && !document.querySelector('#error.visible')),
+        'real browser movement stays connected with the bounded sending window');
+      await b.bringToFront();
+      await arrange(b, a, [[-3, 0, -2], [-3, 0, 2]]);
+      await place(d.id, [-1.4, 0, -1.7], [-3, 0, 2]);
       const wall = await stub.wallArenaForTest();
       await arrange(b, a, wall.pair);
       await place(d.id, wall.pair[0].map((v, k) => k === 0 ? v + .5 : v), wall.pair[1]);
@@ -231,9 +353,24 @@ try {
       await b.click('#start .btn.primary');
       await b.waitForFunction(() => window.__crossfire.ready() && window.__crossfire.network().snapshot.players.find((p) => p.id === window.__crossfire.network().selfId)?.life === 2);
       check(await b.$eval('.health .value', (e) => e.textContent === '100'), 'approved respawn restores 100 health');
+      const beforeDispose = await b.evaluate(() => window.__crossfire.memory());
+      const remainingBefore = (await avatar(b, a.id)).animation;
+      const poseTextures = (await avatar(b, d.id)).animation.poseTextures;
       await d.evaluate(() => window.__crossfire.networkLeave());
       await until(async () => !(await state(b)).rendered.some((p) => p.id === d.id), 'disconnected tag/body removal');
       check(true, 'disconnected players leave no name tag or duplicate body');
+      check((await state(b)).rendered.length === 1 && (await avatar(b, a.id)).source === 'glb', 'disconnection disposes one rig and preserves the remaining character');
+      const afterDispose = await b.evaluate(() => window.__crossfire.memory());
+      const remainingAfter = (await avatar(b, a.id)).animation;
+      const textureIds = await b.evaluate(() => window.__crossfire.sceneTextureIds());
+      console.log(`${mode} rig disposal`, { skeletons: [beforeDispose.skeletons, afterDispose.skeletons],
+        groups: [beforeDispose.animationGroups, afterDispose.animationGroups], privatePoseTextures: poseTextures.length });
+      check(afterDispose.skeletons === beforeDispose.skeletons - 1 && afterDispose.animationGroups === beforeDispose.animationGroups - 6
+        && poseTextures.every((id) => !textureIds.includes(id))
+        && JSON.stringify(remainingBefore.geometry) === JSON.stringify(remainingAfter.geometry)
+        && JSON.stringify(remainingBefore.materials) === JSON.stringify(remainingAfter.materials)
+        && JSON.stringify(remainingBefore.textures) === JSON.stringify(remainingAfter.textures)
+        && remainingAfter.textures.every((t) => t.ready), 'disconnection frees the actual rig/groups/private GPU pose textures and preserves shared assets');
       console.log(`${mode} browser render stats`, await b.evaluate(() => {
         const s = window.__crossfire.stats(); return { fps: s.fps, frameMs: s.frameMs, drawCalls: s.drawCalls,
           visibility: window.__crossfire.visibilityStats() };
@@ -245,14 +382,16 @@ try {
           console.log('Browser failure diagnostic', await page.evaluate(() => {
             const n = window.__crossfire.network();
             return { self: n.selfId, player: window.__crossfire.motion(), weapon: window.__crossfire.weapon(), lastShot: window.__crossfire.lastShot(),
+              state: window.__crossfire.state(), loading: window.__crossfire.loadingState(), spawn: document.querySelector('#start .btn.primary')?.textContent,
               roster: n.snapshot?.players.map((p) => ({ id: p.id, name: p.name, alive: p.alive, health: p.health, ammo: p.combat.gun?.ammo, trigger: p.combat.triggerHeld })),
+              rendered: n.rendered.map((p) => ({ id: p.id, z: p.z, animation: p.animation?.clip, history: p.animation?.history })),
               mouseEvents: window.testMouseEvents,
               mouseTarget: document.elementFromPoint(640, 360)?.outerHTML.slice(0, 180) };
           }));
           await page.screenshot({ path: `${out}/${mode}-failure-${page.id}.png` });
         } catch {}
       }
-      for (const c of sockets) console.log('Actual server shot diagnostics', c.messages.filter((m) => m.type === 'shot').slice(-6));
+      for (const c of sockets) console.log('Actual server shot/error diagnostics', c.messages.filter((m) => m.type === 'shot' || m.type === 'error').slice(-6));
       throw error;
     } finally {
       for (const c of sockets) { clearInterval(c.timer); c.ws.terminate(); }

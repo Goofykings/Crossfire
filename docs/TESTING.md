@@ -5,9 +5,17 @@ runtime combat/integration tests and the production Vite/Worker dry-run builds a
 `node tools/combat-visibility-test.mjs --url http://127.0.0.1:4176/crossfire/` starts isolated real Workers
 and independent browser/WebSocket clients in FFA and Teams. It checks real health/HUD changes, scores,
 respawn, relative red/blue colors, clear/occluded/partly exposed/distant player visibility, teammate
-labels through walls, no duplicate/dead/disconnected bodies and the explicit missing-character state.
+labels through walls, actual exported humanoids/all six clips, independent shared-asset rigs,
+lost-spawn-ack recovery and disposal of dead/disconnected instances.
 It uses actual map geometry and server-spawned sessions; fixture RPC only positions those sessions.
 See [combat runbook](MULTIPLAYER_COMBAT.md) and PROGRESS.md for final counts/evidence/limits.
+Character regeneration and GLB byte auditing: `npm.cmd run assets:player`,
+`node tools/inspect-character.mjs`, `npm.cmd run assets:verify`. See [character pipeline](CHARACTER_PIPELINE.md).
+Run the browser and backend runtime suites sequentially on constrained local machines: the connection
+fixtures deliberately use short heartbeat/grace periods, and concurrent GPU/runtime load can cause
+timeouts without a production protocol failure. Keep the real local Worker running for the practice
+regression's existing HTTP presence requests. Current final counts and browser/asset evidence are
+recorded in PROGRESS.md; older Stage A and combat entries below describe earlier validation runs.
 
 Stage A (2026-10-27): build matching protocol v4 frontend and Worker, then run:
 

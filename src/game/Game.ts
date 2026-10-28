@@ -454,8 +454,13 @@ export class Game {
     this.ui.setSpawnState(respawn, true);
     try {
       if (this.options.multiplayer) {
-        const snapshot = await this.network!.spawn(this.ui.selectedWeapon);
-        if (!this.networkReady || this.network?.state !== 'connected' || this.state !== 'start') return;
+        const network = this.network!;
+        // Slow startup can time out the request before its authoritative approval
+        // arrives. Retry must enter that already-approved life, not request another
+        // spawn or change its server-locked weapon.
+        const approved = network.latest?.players.find((p) => p.id === network.selfId)?.alive;
+        const snapshot = approved ? network.latest! : await network.spawn(this.ui.selectedWeapon);
+        if (this.network !== network || !this.networkReady || network.state !== 'connected' || this.state !== 'start') return;
         this.acceptSnapshot(snapshot);
       } else {
         this.spawn();
@@ -942,6 +947,7 @@ export class Game {
       motion: () => (this.player ? { ...this.player.capture(), height: this.player.height,
         eyeHeight: this.player.eyeHeight, cameraY: this.ctx.camera.position.y } : null),
       characterAsset: () => this.remotePlayers.characters.inspect(),
+      sceneTextureIds: () => this.ctx.scene.textures.map((t) => t.uniqueId),
       visibilityStats: () => this.remotePlayers.visibilityStats(),
       remoteOutlines: (enabled: boolean) => this.remotePlayers.setOutlinesEnabled(enabled),
       stats: () => ({
@@ -1060,6 +1066,8 @@ export class Game {
         const scene = this.ctx.scene;
         return {
           meshes: scene.meshes.length,
+          skeletons: scene.skeletons.length,
+          animationGroups: scene.animationGroups.length,
           materials: scene.materials.length,
           textures: scene.textures.length,
           geometries: scene.geometries.length,

@@ -1,10 +1,10 @@
 # Multiplayer architecture and migration plan
 
-Current combat/visibility update (2026-10-27): **protocol v5** adds server-owned shared weapon simulation,
+Current combat/visibility update (2026-10-28): **protocol v5** adds server-owned shared weapon simulation,
 health, blocked player hits, eliminations, scoring/respawn and actual FFA/Teams relationships. Existing
 Workers/DO/room, guest IDs vs resume credentials, fixed-step prediction and round/map rotation remain.
-See [current implementation and deployment boundary](MULTIPLAYER_COMBAT.md). Character export is still
-pending; a shared loading interface and honest capsule fallback are supplied. Older v3/v4 notes below
+See [current implementation and deployment boundary](MULTIPLAYER_COMBAT.md). The actual Blender
+character/rig/six-clip export now uses the existing frontend interface; see [character pipeline](CHARACTER_PIPELINE.md). Older v3/v4 notes below
 describe earlier stages rather than current combat status.
 
 Stage A update (2026-10-27): protocol v4 replaces sprint/manual crouch input with held slide intent and authoritative slide timers/direction/press state in snapshots. The same fixed-step controller runs in Workers and client prediction/replay. Idle releases are transmitted; missing packets preserve the server's press latch. Client speed/timer injection remains rejected. Existing room, map-round schedule, identity/resume and hosting architecture are retained. Stage B Extreme Quality is not authorized yet. Current results are at the top of PROGRESS.md; earlier v3 statements below describe the prior implementation.

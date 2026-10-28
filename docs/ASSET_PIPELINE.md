@@ -18,6 +18,7 @@ npm run assets                                 # textures + audio + all Blender 
 npm run assets -- --only town                  # stages: materials, props, weapon, library, kit, town
 npm run assets -- --only town --previews       # also EEVEE previews in docs/previews/
 npm run assets:verify                          # sanity-check every output
+npm run assets:player                          # independent rigged multiplayer character only
 ```
 
 Manual (Windows):
@@ -28,6 +29,11 @@ Manual (Windows):
 
 Developed and tested with Blender 5.2.3 LTS. The scripts use only stable `bpy`/`bmesh` APIs and the
 built-in glTF exporter; Blender 4.2+ should work.
+
+The skinned multiplayer character uses its own generator, embedded atlas materials and six in-place
+actions. See [character pipeline](CHARACTER_PIPELINE.md) for exported measurements, regeneration,
+runtime instancing/animation and real multiplayer browser verification. Character generation is
+tested with Blender 5.2.3; it does not run the map/weapon stages.
 
 ## Script layout
 

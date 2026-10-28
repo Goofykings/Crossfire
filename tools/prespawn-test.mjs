@@ -116,7 +116,9 @@ try {
   check(await a.$$eval('.scoreboard tbody tr .weapon-unknown', (icons) => icons.length === 2), 'unspawned server weapon selections show neutral placeholders');
   check(await a.$eval('.scoreboard', (e) => getComputedStyle(e, '::before').backgroundImage.includes('linear-gradient') && getComputedStyle(e).maskImage === 'none'), 'only the scoreboard background fades at the horizontal edges');
   check(await a.evaluate((f) => document.activeElement?.tagName === f, focus), 'held Tab preserves browser focus');
-  check(await a.$eval('.scoreboard-header', (e) => !e.textContent.includes('--:--') && e.textContent.includes('unavailable')), 'server rotation clock is real and unimplemented combat mode remains unavailable');
+  const expectedMode = (await state(a)).snapshot.match.mode === 'teams' ? 'TEAMS' : 'FREE FOR ALL';
+  check(await a.$eval('.scoreboard-header', (e, mode) => !e.textContent.includes('--:--') && e.textContent.includes(mode), expectedMode),
+    'leaderboard shows the actual server-selected mode and rotation clock');
   await a.screenshot({ path: 'test-results/prespawn/leaderboard.png' });
   await a.keyboard.up('Tab');
   check(await a.evaluate(() => !window.__crossfire.scoreboard().visible), 'Tab release hides leaderboard immediately');

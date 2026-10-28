@@ -41,6 +41,11 @@ if (!blender) {
 }
 const args = process.argv.slice(2);
 console.log(`Using ${blender}`);
+if (args.includes('--player')) {
+  const result = spawnSync(blender, ['-b', '--factory-startup', '--python-exit-code', '1', '-P', 'blender/characters/generate_player.py'],
+    { cwd: root, stdio: 'inherit' });
+  process.exit(result.status ?? 1);
+}
 // procedural textures + audio are plain Python and feed the Blender materials
 const py = process.platform === 'win32' ? 'python' : 'python3';
 for (const script of ['tools/make_procedural_textures.py', 'tools/make_audio.py']) {

@@ -24,6 +24,7 @@ export class MultiplayerClient {
   private token = '';
   private attempts = 0;
   private sequence = 0;
+  private sentSequence = 0;
   private stopped = false;
   private pending: InputFrame[] = [];
   private unsent: InputFrame[] = [];
@@ -109,6 +110,7 @@ export class MultiplayerClient {
         this.token = m.resumeToken;
         this.saveToken();
         this.sequence = m.snapshot.players.find((p) => p.id === m.selfId)?.ack ?? 0;
+        this.sentSequence = this.sequence;
         this.round = m.snapshot.roundId;
         this.life = m.snapshot.players.find((p) => p.id === m.selfId)?.life ?? -1;
         this.pending = [];
@@ -127,8 +129,10 @@ export class MultiplayerClient {
         const self = m.snapshot.players.find((p) => p.id === this.selfId);
         const ack = self?.ack ?? 0;
         if (!self?.alive || self.life !== this.life || m.snapshot.roundId !== this.round) {
-          this.pending = this.unsent = [];
+          this.pending = [];
+          this.unsent = [];
           this.sequence = ack;
+          this.sentSequence = ack;
           this.life = self?.life ?? -1;
           this.round = m.snapshot.roundId;
           this.lastYaw = this.lastPitch = NaN;
@@ -160,7 +164,8 @@ export class MultiplayerClient {
       this.stopTimers();
       this.cancelSpawn('Connection interrupted. Try spawning again after reconnection.');
       this.socket = null;
-      this.pending = this.unsent = [];
+      this.pending = [];
+      this.unsent = [];
       if (this.stopped || this.fatal) return;
       if (event.code === 4001) {
         // Duplicated tabs may copy sessionStorage. Do not fight the replacement
@@ -189,7 +194,15 @@ export class MultiplayerClient {
     this.flushTimer = window.setInterval(() => {
       if (Date.now() - this.lastMessage > 8000) { this.socket?.close(); return; }
       if (this.unsent.length && this.latest && (this.socket?.bufferedAmount ?? 0) < 32768) {
-        this.send({ v: 5, type: 'input', roundId: this.latest.roundId, mapVersion: this.latest.mapVersion, frames: this.unsent.splice(0, INPUT_BATCH_LIMIT) });
+        const ack = this.latest.players.find((p) => p.id === this.selfId)?.ack ?? 0;
+        // Leave half of the existing server queue for timer/network jitter. A slow
+        // receiver must acknowledge work before another render backlog is sent.
+        const count = Math.min(INPUT_BATCH_LIMIT, Math.max(0, 24 - (this.sentSequence - ack)));
+        if (count) {
+          const frames = this.unsent.splice(0, count);
+          this.send({ v: 5, type: 'input', roundId: this.latest.roundId, mapVersion: this.latest.mapVersion, frames });
+          this.sentSequence = frames[frames.length - 1].seq;
+        }
       }
     }, 1000 / NETWORK_HZ);
     this.pingTimer = window.setInterval(() => this.send({ v: 5, type: 'ping', at: Date.now() }), 2000);
@@ -263,7 +276,8 @@ export class MultiplayerClient {
     this.token = '';
     this.saveToken();
     this.latest = null;
-    this.pending = this.unsent = [];
+    this.pending = [];
+    this.unsent = [];
     this.reject?.(new Error('Connection cancelled'));
     this.reject = this.resolve = null;
     this.ready = null;

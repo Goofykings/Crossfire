@@ -67,6 +67,7 @@ try {
     const count = (counts.get(url) ?? 0) + 1; counts.set(url, count);
     const weapon = /\/assets\/models\/shared\/weapons\/.*\.glb/.test(url);
     if ((phase === 'materials' && url.endsWith('/assets/materials.json')) || (phase === 'weapons' && weapon)
+      || (phase === 'character' && url.endsWith('/assets/characters/player.glb'))
       || (phase === 'preview' && weapon && count >= 2)
       || (phase === 'map' && /\/assets\/models\/(european-town|industrial-complex|modern-city)\/.*\.glb/.test(url))
       || (phase === 'rotation' && /\/assets\/models\/(european-town|industrial-complex|modern-city)\/map-assets.json/.test(url))) held.push(request);
@@ -92,7 +93,7 @@ try {
   check(await page.$eval('.loading-spinner', (e) => getComputedStyle(e).animationName === 'none'), 'spinner respects reduced-motion preference');
   await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'no-preference' }]);
   await cancel('Waiting for the real join response');
-  for (const stage of ['materials', 'weapons', 'preview', 'map']) {
+  for (const stage of ['materials', 'character', 'weapons', 'preview', 'map']) {
     phase = stage; counts.clear();
     await page.click('#menu .primary'); await page.waitForSelector('#loading.visible');
     const deadline = Date.now() + 240000;
@@ -102,6 +103,7 @@ try {
   }
   await page.click('#menu .primary'); await page.waitForSelector('#start.visible', { timeout: 240000 });
   check(await page.evaluate(() => window.__crossfire.network().state === 'connected' && window.__crossfire.stats().missingMaterials.length === 0), 'retry after repeated cancellation joins the real match with valid materials');
+  check(await page.evaluate(() => window.__crossfire.characterAsset().state === 'ready'), 'cancelled character transfer retries and loads the actual rig successfully');
   check(await page.$$eval('.weapon-card', (cards) => cards.every((card) => card.querySelectorAll('img').length === 1)), 'retry does not duplicate weapon preview images');
   phase = 'rotation'; counts.clear();
   const ns = await worker.getDurableObjectNamespace('ROOM'); const stub = ns.get(ns.idFromName('public-main'));

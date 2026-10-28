@@ -10,7 +10,7 @@ blended weights, so no gap can open in any pose. Every vertex gets its bone weig
 position, which keeps skinning deterministic and lets rigid gear (pouches, pads, buckle) follow a single transform.
 
 Each face is assigned an atlas cell (see CELLS); texture coordinates are a per-part planar projection fitted inside
-that cell, so the whole character renders with one material and one texture pair.
+that cell. The generator shares one texture pair across the skin, fabric and gear materials.
 """
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ Vec = tuple[float, float, float]
 Weights = dict[str, float]
 
 # ----------------------------------------------------------------------------------------------- atlas cells
-# 4 x 4 grid; index = row_from_bottom * 4 + column. char_textures.py paints the same table.
+# 4 x 4 grid; index = row_from_bottom * 4 + column. generate_player.py paints the same table.
 CELLS = ["skin", "shirt", "pants", "vest", "pouch", "strap", "glove", "boot",
          "sole", "cap", "hair", "eye", "metal", "belt", "lip", "pad"]
 CELL = {name: i for i, name in enumerate(CELLS)}

@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "assets": "node tools/run-blender.mjs",
+    "assets:player": "node tools/run-blender.mjs --player",
     "assets:verify": "node tools/verify-assets.mjs",
     "layout:plan": "python -I tools/layout_design.py && python -I tools/plan_overlay.py"
   },

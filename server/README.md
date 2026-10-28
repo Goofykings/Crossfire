@@ -2,7 +2,7 @@
 
 Separate TypeScript Cloudflare Worker, SQLite-backed Durable Object and WebSocket backend. No deployment or account is needed for local development. The existing Vite configuration and GitHub Pages workflow are unchanged.
 
-The 2026-10-27 combat update uses **protocol v5**. The Worker now simulates existing weapons from control input, validates player hits against its map world, synchronizes health and owns eliminations, kills/deaths, team totals and respawn eligibility. Actual FFA/Teams modes derive from the persisted server schedule, with balanced team assignment and no friendly fire. Health/gun state survive valid resumes. `GET /health` reports `protocol: 5`. **Redeploy the Worker and publish a matching frontend when authorized; neither is automatically deployed by this task.** See [combat/visibility implementation, tests, limits and commands](../docs/MULTIPLAYER_COMBAT.md). Character animation integration remains pending its real GLB.
+The 2026-10-28 combat update uses **protocol v5**. The Worker now simulates existing weapons from control input, validates player hits against its map world, synchronizes health and owns eliminations, kills/deaths, team totals and respawn eligibility. Actual FFA/Teams modes derive from the persisted server schedule, with balanced team assignment and no friendly fire. Health/gun state survive valid resumes. `GET /health` reports `protocol: 5`. **Redeploy the Worker and publish a matching frontend when authorized; neither is automatically deployed by this task.** See [combat/visibility implementation, tests, limits and commands](../docs/MULTIPLAYER_COMBAT.md). The [actual character model and animation](../docs/CHARACTER_PIPELINE.md) use existing v5 state without another backend change.
 
 The previous Stage A (2026-10-27) used protocol v4; this paragraph is migration history. Rebuild the frontend and Worker together: old v3 movement packets are intentionally rejected. Input supplies held slide intent, never speed, position, direction overrides or cooldown timers. The shared 120 Hz controller owns slide duration/speed/steering/cooldown and snapshots carry all replay/press state. Missing input preserves the held Shift latch, so network gaps cannot manufacture presses. The frontend sends idle releases and preserves quick release/repress events across fixed ticks. Legacy stored movement records return to pre-spawn rather than restoring an incompatible controller state. Four bench placement adjustments also change the affected map revisions. No deployment was performed.
 
@@ -10,7 +10,7 @@ The existing Worker/Durable Object/WebSocket transport now integrates **all thre
 
 A persisted epoch and server-generated seed define 600-second map rounds. Every randomized three-map bag includes all three maps. The room derives its current round/deadline from wall-clock time on requests, movement ticks and alarms, so hibernation/restarts and empty-room time do not reset it. There is no busy empty-room clock loop. Connected players receive the same round/map, return to pre-spawn at transitions and load the selected map before requesting a spawn. Existing alive/loadout/session/resume behavior is retained. The SMG is now an implemented fourth legal loadout.
 
-Player combat and Teams are now implemented locally as described above. The character model/animation export and public deployment verification remain pending. The older stage descriptions below are historical where they describe missing combat.
+Player combat and Teams are implemented locally as described above. The character model/animations are generated frontend assets; public deployment verification remains pending. The older stage descriptions below are historical where they describe missing combat.
 
 ## Start locally in two PowerShell terminals
 
@@ -83,7 +83,7 @@ Initial room/session capacity is 16 with a bounded pending-handshake limit. Two 
 
 The public frontend variable is `VITE_MULTIPLAYER_URL` (root `.env.example`). Set it before Vite starts or builds: local loopback `ws://`, public `wss://`. A missing URL shows Offline on home and a configuration error on Play. Explicit practice remains available.
 
-This focused task does not authorize sliding, changes to the existing rifle/shotgun/sniper models, map expansion, target removal or Extreme/FPS work. Teams, combat and results require separate work.
+That earlier focused task excluded sliding, weapon-model changes, map expansion, target removal and Extreme/FPS work. Subsequent authorized updates implemented sliding, Teams and combat; a dedicated match-results phase and Extreme Quality remain future work. Existing weapon models are preserved.
 
 ## Public configuration (no deployment performed)
 

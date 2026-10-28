@@ -4,6 +4,36 @@
  "generated": "2026-10-27 06:54:38",
  "assets": [
   {
+   "path": "assets/characters/player-albedo.png",
+   "kind": "character-texture",
+   "bytes": 57899,
+   "description": "Original 256px skin/fabric/gear atlas, embedded in player.glb",
+   "script": "blender/characters/generate_player.py"
+  },
+  {
+   "path": "assets/characters/player-orm.png",
+   "kind": "character-texture",
+   "bytes": 680,
+   "description": "Shared 256px roughness/metallic atlas, embedded in player.glb",
+   "script": "blender/characters/generate_player.py"
+  },
+  {
+   "path": "assets/characters/player.glb",
+   "kind": "player-character",
+   "bytes": 456152,
+   "description": "Skinned multiplayer humanoid; six clips, embedded shared PBR atlas pair",
+   "script": "blender/characters/generate_player.py",
+   "triangles": 9248,
+   "embeddedMaterials": true
+  },
+  {
+   "path": "assets/characters/player.json",
+   "kind": "character-metadata",
+   "bytes": 1511,
+   "description": "Measured export scale, pose bounds, clip names/durations and rig",
+   "script": "blender/characters/generate_player.py"
+  },
+  {
    "path": "assets/materials.json",
    "kind": "materials",
    "bytes": 54109,
@@ -1394,6 +1424,13 @@
    "description": "sniper first-person model: moving parts (bolt, mag) and anchors (muzzle, sight, eject, grip_r, grip_l, mag_grip, bolt_grip)",
    "script": "blender/scripts/generate_all.py",
    "triangles": 1936
+  },
+  {
+   "path": "blender/characters/player.blend",
+   "kind": "character-source",
+   "bytes": 420869,
+   "description": "Editable humanoid mesh, 18-joint rig and six in-place actions",
+   "script": "blender/characters/generate_player.py"
   },
   {
    "path": "blender/source/building_library.blend",
