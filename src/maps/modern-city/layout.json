@@ -1,711 +1,387 @@
 {
  "id": "modern-city",
  "name": "Modern City",
- "version": 1,
+ "version": 2,
  "style": "modern",
  "units": "metres; +x east, +z south, +y up (glTF / Babylon right-handed). Rects are [x0, z0, x1, z1].",
  "playArea": [
-  -34,
-  -34,
-  34,
-  34
+  -27,
+  -27,
+  27,
+  27
  ],
- "outerLimit": 44,
+ "outerLimit": 36,
  "ground": {
   "baseHeight": 0.0,
   "zones": [
    {
-    "id": "spawn_blue",
-    "kind": "yard",
-    "rect": [
-     -33,
-     -6,
-     -25,
-     6
-    ],
-    "height": 0.0,
-    "material": "pavers"
-   },
-   {
-    "id": "spawn_bluer",
-    "kind": "yard",
-    "rect": [
-     25,
-     -6,
-     33,
-     6
-    ],
-    "height": 0.0,
-    "material": "pavers"
-   },
-   {
-    "id": "blue_exit_n",
-    "kind": "alley",
-    "rect": [
-     -33,
-     -12,
-     -29,
-     -6
-    ],
-    "height": 0.0,
-    "material": "concrete_floor"
-   },
-   {
-    "id": "blue_exit_nr",
-    "kind": "alley",
-    "rect": [
-     29,
-     6,
-     33,
-     12
-    ],
-    "height": 0.0,
-    "material": "concrete_floor"
-   },
-   {
-    "id": "blue_court",
-    "kind": "court",
-    "rect": [
-     -21,
-     -6,
-     -14,
-     4
-    ],
-    "height": 0.0,
-    "material": "pavers"
-   },
-   {
-    "id": "blue_courtr",
-    "kind": "court",
-    "rect": [
-     14,
-     -4,
-     21,
-     6
-    ],
-    "height": 0.0,
-    "material": "pavers"
-   },
-   {
-    "id": "court_n",
-    "kind": "alley",
-    "rect": [
-     -19,
-     -12,
-     -16,
-     -6
-    ],
-    "height": 0.0,
-    "material": "concrete_floor"
-   },
-   {
-    "id": "court_nr",
-    "kind": "alley",
-    "rect": [
-     16,
-     6,
-     19,
-     12
-    ],
-    "height": 0.0,
-    "material": "concrete_floor"
-   },
-   {
-    "id": "w_alley",
-    "kind": "alley",
-    "rect": [
-     -33,
-     -16,
-     -16,
-     -12
-    ],
-    "height": 0.0,
-    "material": "concrete_floor"
-   },
-   {
-    "id": "w_alleyr",
-    "kind": "alley",
-    "rect": [
-     16,
-     12,
-     33,
-     16
-    ],
-    "height": 0.0,
-    "material": "concrete_floor"
-   },
-   {
-    "id": "nw_link",
-    "kind": "alley",
-    "rect": [
-     -26,
-     -20,
-     -23,
-     -16
-    ],
-    "height": 0.0,
-    "material": "concrete_floor"
-   },
-   {
-    "id": "nw_linkr",
-    "kind": "alley",
-    "rect": [
-     23,
-     16,
-     26,
-     20
-    ],
-    "height": 0.0,
-    "material": "concrete_floor"
-   },
-   {
-    "id": "n_road",
-    "kind": "street",
-    "rect": [
-     -26,
-     -28,
-     -6,
-     -20
-    ],
-    "height": 0.0,
-    "material": "asphalt_fine"
-   },
-   {
-    "id": "n_roadr",
-    "kind": "street",
-    "rect": [
-     6,
-     20,
-     26,
-     28
-    ],
-    "height": 0.0,
-    "material": "asphalt_fine"
-   },
-   {
-    "id": "w_link",
-    "kind": "alley",
-    "rect": [
-     -16,
-     -20,
-     -13,
-     -12
-    ],
-    "height": 0.0,
-    "material": "concrete_floor"
-   },
-   {
-    "id": "w_linkr",
-    "kind": "alley",
-    "rect": [
-     13,
-     12,
-     16,
-     20
-    ],
-    "height": 0.0,
-    "material": "concrete_floor"
-   },
-   {
-    "id": "c_road",
-    "kind": "street",
-    "rect": [
-     -6,
-     -31,
-     0,
-     -15
-    ],
-    "height": 0.0,
-    "material": "asphalt_fine"
-   },
-   {
-    "id": "c_roadr",
-    "kind": "street",
-    "rect": [
-     0,
-     15,
-     6,
-     31
-    ],
-    "height": 0.0,
-    "material": "asphalt_fine"
-   },
-   {
-    "id": "plaza_n",
-    "kind": "alley",
-    "rect": [
-     0,
-     -12,
-     4,
-     -7
-    ],
-    "height": 0.0,
-    "material": "concrete_floor"
-   },
-   {
-    "id": "plaza_nr",
-    "kind": "alley",
-    "rect": [
-     -4,
-     7,
-     0,
-     12
-    ],
-    "height": 0.0,
-    "material": "concrete_floor"
-   },
-   {
-    "id": "n_alley",
-    "kind": "alley",
-    "rect": [
-     0,
-     -31,
-     18,
-     -28
-    ],
-    "height": 0.0,
-    "material": "concrete_floor"
-   },
-   {
-    "id": "n_alleyr",
-    "kind": "alley",
-    "rect": [
-     -18,
-     28,
-     0,
-     31
-    ],
-    "height": 0.0,
-    "material": "concrete_floor"
-   },
-   {
-    "id": "ne_road",
-    "kind": "street",
-    "rect": [
-     0,
-     -20,
-     18,
-     -12
-    ],
-    "height": 0.0,
-    "material": "asphalt_fine"
-   },
-   {
-    "id": "ne_roadr",
-    "kind": "street",
-    "rect": [
-     -18,
-     12,
-     0,
-     20
-    ],
-    "height": 0.0,
-    "material": "asphalt_fine"
-   },
-   {
-    "id": "ne_link",
-    "kind": "alley",
-    "rect": [
-     18,
-     -28,
-     21,
-     -12
-    ],
-    "height": 0.0,
-    "material": "concrete_floor"
-   },
-   {
-    "id": "ne_linkr",
-    "kind": "alley",
-    "rect": [
-     -21,
-     12,
-     -18,
-     28
-    ],
-    "height": 0.0,
-    "material": "concrete_floor"
-   },
-   {
-    "id": "ne_jog",
-    "kind": "alley",
-    "rect": [
-     21,
-     -23,
-     24,
-     -20
-    ],
-    "height": 0.0,
-    "material": "concrete_floor"
-   },
-   {
-    "id": "ne_jogr",
-    "kind": "alley",
-    "rect": [
-     -24,
-     20,
-     -21,
-     23
-    ],
-    "height": 0.0,
-    "material": "concrete_floor"
-   },
-   {
-    "id": "ne_court",
-    "kind": "court",
-    "rect": [
-     24,
-     -31,
-     31,
-     -26
-    ],
-    "height": 0.0,
-    "material": "pavers"
-   },
-   {
-    "id": "ne_courtr",
-    "kind": "court",
-    "rect": [
-     -31,
-     26,
-     -24,
-     31
-    ],
-    "height": 0.0,
-    "material": "pavers"
-   },
-   {
-    "id": "e_road",
-    "kind": "street",
-    "rect": [
-     24,
-     -23,
-     30,
-     -11
-    ],
-    "height": 0.0,
-    "material": "asphalt_fine"
-   },
-   {
-    "id": "e_roadr",
-    "kind": "street",
-    "rect": [
-     -30,
-     11,
-     -24,
-     23
-    ],
-    "height": 0.0,
-    "material": "asphalt_fine"
-   },
-   {
-    "id": "red_exit_n",
-    "kind": "alley",
-    "rect": [
-     25,
-     -11,
-     29,
-     -6
-    ],
-    "height": 0.0,
-    "material": "concrete_floor"
-   },
-   {
-    "id": "red_exit_nr",
-    "kind": "alley",
-    "rect": [
-     -29,
-     6,
-     -25,
-     11
-    ],
-    "height": 0.0,
-    "material": "concrete_floor"
-   },
-   {
     "id": "plaza",
     "kind": "plaza",
     "rect": [
-     -7,
-     -7,
-     7,
-     7
+     -6,
+     -6,
+     6,
+     6
     ],
     "height": 0.0,
     "material": "granite"
    },
    {
-    "id": "c_west",
+    "id": "north_road",
     "kind": "street",
     "rect": [
-     -14,
-     0,
-     -7,
+     -25,
+     -25,
+     2,
+     -17
+    ],
+    "height": 0.0,
+    "material": "asphalt_fine"
+   },
+   {
+    "id": "north_east",
+    "kind": "street",
+    "rect": [
+     2,
+     -23,
+     25,
+     -17
+    ],
+    "height": 0.0,
+    "material": "asphalt_fine"
+   },
+   {
+    "id": "west_road",
+    "kind": "street",
+    "rect": [
+     -25,
+     -17,
+     -19,
      5
     ],
     "height": 0.0,
     "material": "asphalt_fine"
    },
    {
-    "id": "c_westr",
+    "id": "west_jog",
     "kind": "street",
     "rect": [
-     7,
-     -5,
-     14,
-     0
+     -25,
+     5,
+     -17,
+     11
     ],
     "height": 0.0,
     "material": "asphalt_fine"
    },
    {
-    "id": "n_road_swn0",
-    "kind": "sidewalk",
-    "rect": [
-     -26,
-     -28,
-     -6,
-     -26.4
-    ],
-    "height": 0.15,
-    "material": "pavers"
-   },
-   {
-    "id": "n_road_sws0",
-    "kind": "sidewalk",
+    "id": "south_west",
+    "kind": "street",
     "rect": [
      -23,
-     -21.6,
-     -16,
-     -20
+     11,
+     -17,
+     24
     ],
-    "height": 0.15,
-    "material": "pavers"
+    "height": 0.0,
+    "material": "asphalt_fine"
    },
    {
-    "id": "n_road_sws1",
-    "kind": "sidewalk",
+    "id": "south_road",
+    "kind": "street",
+    "rect": [
+     -17,
+     18,
+     25,
+     25
+    ],
+    "height": 0.0,
+    "material": "asphalt_fine"
+   },
+   {
+    "id": "east_road",
+    "kind": "street",
+    "rect": [
+     19,
+     -17,
+     25,
+     18
+    ],
+    "height": 0.0,
+    "material": "asphalt_fine"
+   },
+   {
+    "id": "west_plaza",
+    "kind": "street",
+    "rect": [
+     -19,
+     -2,
+     -6,
+     4
+    ],
+    "height": 0.0,
+    "material": "asphalt_fine"
+   },
+   {
+    "id": "east_plaza",
+    "kind": "street",
+    "rect": [
+     6,
+     0,
+     19,
+     6
+    ],
+    "height": 0.0,
+    "material": "asphalt_fine"
+   },
+   {
+    "id": "north_plaza",
+    "kind": "alley",
+    "rect": [
+     -2,
+     -17,
+     2,
+     -6
+    ],
+    "height": 0.0,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "south_plaza",
+    "kind": "alley",
+    "rect": [
+     -3,
+     6,
+     1,
+     18
+    ],
+    "height": 0.0,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "diner_north",
+    "kind": "alley",
     "rect": [
      -13,
-     -21.6,
-     -6,
-     -20
+     -17,
+     -9,
+     -16
     ],
-    "height": 0.15,
-    "material": "pavers"
+    "height": 0.0,
+    "material": "concrete_floor"
    },
    {
-    "id": "n_roadr_sws0",
-    "kind": "sidewalk",
+    "id": "diner_west",
+    "kind": "alley",
     "rect": [
-     6,
-     26.4,
-     26,
-     28
+     -19,
+     -13,
+     -15,
+     -9
     ],
-    "height": 0.15,
-    "material": "pavers"
+    "height": 0.0,
+    "material": "concrete_floor"
    },
    {
-    "id": "n_roadr_swn0",
-    "kind": "sidewalk",
+    "id": "diner_south",
+    "kind": "alley",
     "rect": [
-     6,
-     20,
-     13,
-     21.6
+     -11,
+     -10,
+     -7,
+     -2
     ],
-    "height": 0.15,
+    "height": 0.0,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "north_court",
+    "kind": "court",
+    "rect": [
+     7,
+     -15,
+     16,
+     -7
+    ],
+    "height": 0.0,
     "material": "pavers"
    },
    {
-    "id": "n_roadr_swn1",
-    "kind": "sidewalk",
+    "id": "court_east",
+    "kind": "alley",
     "rect": [
      16,
-     20,
-     23,
-     21.6
+     -12,
+     19,
+     -8
     ],
-    "height": 0.15,
-    "material": "pavers"
+    "height": 0.0,
+    "material": "concrete_floor"
    },
    {
-    "id": "c_road_sww0",
-    "kind": "sidewalk",
+    "id": "court_west",
+    "kind": "alley",
     "rect": [
-     -6,
-     -31,
-     -4.4,
-     -28
+     2,
+     -12,
+     7,
+     -9
     ],
-    "height": 0.15,
-    "material": "pavers"
+    "height": 0.0,
+    "material": "concrete_floor"
    },
    {
-    "id": "c_road_sww1",
-    "kind": "sidewalk",
+    "id": "service_lane",
+    "kind": "alley",
     "rect": [
-     -6,
-     -20,
-     -4.4,
-     -18
-    ],
-    "height": 0.15,
-    "material": "pavers"
-   },
-   {
-    "id": "c_roadr_swe0",
-    "kind": "sidewalk",
-    "rect": [
-     4.4,
-     18,
-     6,
-     20
-    ],
-    "height": 0.15,
-    "material": "pavers"
-   },
-   {
-    "id": "c_roadr_swe1",
-    "kind": "sidewalk",
-    "rect": [
-     4.4,
-     28,
-     6,
-     31
-    ],
-    "height": 0.15,
-    "material": "pavers"
-   },
-   {
-    "id": "ne_road_swn0",
-    "kind": "sidewalk",
-    "rect": [
-     0,
-     -20,
-     18,
-     -18.4
-    ],
-    "height": 0.15,
-    "material": "pavers"
-   },
-   {
-    "id": "ne_road_sws0",
-    "kind": "sidewalk",
-    "rect": [
-     10,
-     -13.6,
-     18,
-     -12
-    ],
-    "height": 0.15,
-    "material": "pavers"
-   },
-   {
-    "id": "ne_roadr_sws0",
-    "kind": "sidewalk",
-    "rect": [
-     -18,
-     18.4,
-     0,
-     20
-    ],
-    "height": 0.15,
-    "material": "pavers"
-   },
-   {
-    "id": "ne_roadr_swn0",
-    "kind": "sidewalk",
-    "rect": [
-     -18,
-     12,
-     -10,
-     13.6
-    ],
-    "height": 0.15,
-    "material": "pavers"
-   },
-   {
-    "id": "e_road_swe0",
-    "kind": "sidewalk",
-    "rect": [
-     28.4,
-     -23,
-     30,
-     -11
-    ],
-    "height": 0.15,
-    "material": "pavers"
-   },
-   {
-    "id": "e_roadr_sww0",
-    "kind": "sidewalk",
-    "rect": [
-     -30,
-     11,
-     -28.4,
+     -15,
+     4,
+     -9,
      23
     ],
+    "height": 0.0,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "garden_court",
+    "kind": "court",
+    "rect": [
+     -9,
+     9,
+     -3,
+     16
+    ],
+    "height": 0.0,
+    "material": "pavers"
+   },
+   {
+    "id": "shop_north",
+    "kind": "alley",
+    "rect": [
+     8,
+     6,
+     12,
+     9
+    ],
+    "height": 0.0,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "shop_east",
+    "kind": "alley",
+    "rect": [
+     14,
+     12,
+     19,
+     16
+    ],
+    "height": 0.0,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "north_road_swn0",
+    "kind": "sidewalk",
+    "rect": [
+     -25,
+     -25,
+     2,
+     -23.4
+    ],
     "height": 0.15,
     "material": "pavers"
    },
    {
-    "id": "chamfer_-16_-44",
+    "id": "north_road_sws0",
+    "kind": "sidewalk",
+    "rect": [
+     -19,
+     -18.6,
+     -13,
+     -17
+    ],
+    "height": 0.15,
+    "material": "pavers"
+   },
+   {
+    "id": "north_road_sws1",
     "kind": "sidewalk",
     "rect": [
      -9,
-     -31,
-     -6,
-     -28
+     -18.6,
+     -2,
+     -17
     ],
     "height": 0.15,
     "material": "pavers"
    },
    {
-    "id": "chamfer_0_-28",
+    "id": "north_east_swn0",
     "kind": "sidewalk",
     "rect": [
-     0,
-     -28,
-     3,
-     -25
+     2,
+     -23,
+     25,
+     -21.4
     ],
     "height": 0.15,
     "material": "pavers"
    },
    {
-    "id": "chamfer_-6_-15",
+    "id": "west_road_sww0",
     "kind": "sidewalk",
     "rect": [
-     -3,
-     -15,
-     0,
-     -12
+     -25,
+     -17,
+     -23.4,
+     5
     ],
     "height": 0.15,
     "material": "pavers"
    },
    {
-    "id": "chamfer_-44_6",
+    "id": "west_jog_sws0",
     "kind": "sidewalk",
     "rect": [
-     -32,
-     8,
-     -29,
+     -25,
+     9.4,
+     -23,
      11
     ],
     "height": 0.15,
     "material": "pavers"
    },
    {
-    "id": "chamfer_6_28",
+    "id": "south_west_sww0",
     "kind": "sidewalk",
     "rect": [
-     6,
-     28,
-     9,
-     31
+     -23,
+     11,
+     -21.4,
+     24
+    ],
+    "height": 0.15,
+    "material": "pavers"
+   },
+   {
+    "id": "east_road_swe0",
+    "kind": "sidewalk",
+    "rect": [
+     23.4,
+     -17,
+     25,
+     18
+    ],
+    "height": 0.15,
+    "material": "pavers"
+   },
+   {
+    "id": "west_plaza_sws1",
+    "kind": "sidewalk",
+    "rect": [
+     -9,
+     2.4,
+     -6,
+     4
     ],
     "height": 0.15,
     "material": "pavers"
@@ -716,419 +392,231 @@
     "id": "diner",
     "kind": "interior",
     "rect": [
-     -12.7,
-     -18,
-     -6.3,
-     -12
+     -14.7,
+     -15.7,
+     -6,
+     -10.3
     ]
    },
    {
     "id": "diner_door0",
     "kind": "doorway",
     "rect": [
-     -6.3,
-     -17.4,
-     -6,
-     -15.6
+     -11.9,
+     -16,
+     -10.1,
+     -15.7
     ]
    },
    {
     "id": "diner_door1",
     "kind": "doorway",
     "rect": [
-     -13,
-     -15.9,
-     -12.7,
-     -14.1
+     -9.9,
+     -10.3,
+     -8.1,
+     -10
     ]
    },
    {
-    "id": "shop_n",
+    "id": "diner_door2",
+    "kind": "doorway",
+    "rect": [
+     -15,
+     -12.4,
+     -14.7,
+     -10.6
+    ]
+   },
+   {
+    "id": "court_south",
     "kind": "interior",
     "rect": [
-     4.3,
-     -11.7,
-     10,
-     -7.3
-    ]
-   },
-   {
-    "id": "shop_n_door0",
-    "kind": "doorway",
-    "rect": [
-     6.1,
-     -12,
-     7.9,
-     -11.7
-    ]
-   },
-   {
-    "id": "shop_n_door1",
-    "kind": "doorway",
-    "rect": [
-     4.6,
-     -7.3,
-     6.4,
-     -7
-    ]
-   },
-   {
-    "id": "shop_n_door2",
-    "kind": "doorway",
-    "rect": [
-     4,
-     -10.4,
-     4.3,
-     -8.6
-    ]
-   },
-   {
-    "id": "shop_nr",
-    "kind": "interior",
-    "rect": [
-     -10,
-     7.3,
-     -4.3,
-     11.7
-    ]
-   },
-   {
-    "id": "shop_nr_door0",
-    "kind": "doorway",
-    "rect": [
-     -6.4,
      7,
-     -4.6,
-     7.3
-    ]
-   },
-   {
-    "id": "shop_nr_door1",
-    "kind": "doorway",
-    "rect": [
-     -4.3,
-     8.6,
-     -4,
-     10.4
-    ]
-   },
-   {
-    "id": "shop_nr_door2",
-    "kind": "doorway",
-    "rect": [
-     -7.9,
-     11.7,
-     -6.1,
-     12
-    ]
-   },
-   {
-    "id": "dinerr",
-    "kind": "interior",
-    "rect": [
-     6.3,
+     -6.7,
      12,
-     12.7,
-     18
+     -0.3
     ]
    },
    {
-    "id": "dinerr_door0",
+    "id": "court_south_door0",
     "kind": "doorway",
     "rect": [
-     12.7,
-     14.1,
-     13,
-     15.9
+     8.6,
+     -7,
+     10.4,
+     -6.7
     ]
    },
    {
-    "id": "dinerr_door1",
+    "id": "court_south_door1",
     "kind": "doorway",
     "rect": [
-     6,
-     15.6,
-     6.3,
-     17.4
-    ]
-   },
-   {
-    "id": "blue_lobby",
-    "kind": "passage",
-    "rect": [
-     -25,
-     -3,
-     -21,
+     8.6,
+     -0.3,
+     10.4,
      0
     ]
    },
    {
-    "id": "blue_lobbyr",
+    "id": "south_shop",
+    "kind": "interior",
+    "rect": [
+     6.3,
+     9.3,
+     13.7,
+     17.7
+    ]
+   },
+   {
+    "id": "south_shop_door0",
+    "kind": "doorway",
+    "rect": [
+     9.1,
+     9,
+     10.9,
+     9.3
+    ]
+   },
+   {
+    "id": "south_shop_door1",
+    "kind": "doorway",
+    "rect": [
+     13.7,
+     13.1,
+     14,
+     14.9
+    ]
+   },
+   {
+    "id": "south_shop_door2",
+    "kind": "doorway",
+    "rect": [
+     9.1,
+     17.7,
+     10.9,
+     18
+    ]
+   },
+   {
+    "id": "court_north",
     "kind": "passage",
     "rect": [
-     21,
+     10,
+     -17,
+     14,
+     -15
+    ]
+   },
+   {
+    "id": "shop_west",
+    "kind": "passage",
+    "rect": [
+     1,
+     11,
+     6,
+     14
+    ]
+   },
+   {
+    "id": "west_lobby",
+    "kind": "passage",
+    "rect": [
+     -18,
+     -2,
+     -15,
+     4
+    ]
+   },
+   {
+    "id": "east_lobby",
+    "kind": "passage",
+    "rect": [
+     14,
      0,
-     25,
-     3
+     17,
+     6
     ]
    },
    {
-    "id": "ne_gate",
+    "id": "south_lobby",
     "kind": "passage",
     "rect": [
-     21,
-     -29,
-     24,
-     -26
-    ]
-   },
-   {
-    "id": "ne_gater",
-    "kind": "passage",
-    "rect": [
-     -24,
-     26,
-     -21,
-     29
+     2,
+     18,
+     6,
+     25
     ]
    }
   ]
  },
  "terraces": [
   {
-   "id": "n_road_swn0",
+   "id": "north_road_swn0",
    "rect": [
-    -26,
-    -28,
-    -6,
-    -26.4
+    -25,
+    -25,
+    2,
+    -23.4
    ],
    "height": 0.15,
    "stairs": [],
    "style": "sidewalk"
   },
   {
-   "id": "n_road_sws0",
+   "id": "north_road_sws0",
    "rect": [
-    -23,
-    -21.6,
-    -16,
-    -20
-   ],
-   "height": 0.15,
-   "stairs": [],
-   "style": "sidewalk"
-  },
-  {
-   "id": "n_road_sws1",
-   "rect": [
+    -19,
+    -18.6,
     -13,
-    -21.6,
-    -6,
-    -20
+    -17
    ],
    "height": 0.15,
    "stairs": [],
    "style": "sidewalk"
   },
   {
-   "id": "n_roadr_sws0",
-   "rect": [
-    6,
-    26.4,
-    26,
-    28
-   ],
-   "height": 0.15,
-   "stairs": [],
-   "style": "sidewalk"
-  },
-  {
-   "id": "n_roadr_swn0",
-   "rect": [
-    6,
-    20,
-    13,
-    21.6
-   ],
-   "height": 0.15,
-   "stairs": [],
-   "style": "sidewalk"
-  },
-  {
-   "id": "n_roadr_swn1",
-   "rect": [
-    16,
-    20,
-    23,
-    21.6
-   ],
-   "height": 0.15,
-   "stairs": [],
-   "style": "sidewalk"
-  },
-  {
-   "id": "c_road_sww0",
-   "rect": [
-    -6,
-    -31,
-    -4.4,
-    -28
-   ],
-   "height": 0.15,
-   "stairs": [],
-   "style": "sidewalk"
-  },
-  {
-   "id": "c_road_sww1",
-   "rect": [
-    -6,
-    -20,
-    -4.4,
-    -18
-   ],
-   "height": 0.15,
-   "stairs": [],
-   "style": "sidewalk"
-  },
-  {
-   "id": "c_roadr_swe0",
-   "rect": [
-    4.4,
-    18,
-    6,
-    20
-   ],
-   "height": 0.15,
-   "stairs": [],
-   "style": "sidewalk"
-  },
-  {
-   "id": "c_roadr_swe1",
-   "rect": [
-    4.4,
-    28,
-    6,
-    31
-   ],
-   "height": 0.15,
-   "stairs": [],
-   "style": "sidewalk"
-  },
-  {
-   "id": "ne_road_swn0",
-   "rect": [
-    0,
-    -20,
-    18,
-    -18.4
-   ],
-   "height": 0.15,
-   "stairs": [],
-   "style": "sidewalk"
-  },
-  {
-   "id": "ne_road_sws0",
-   "rect": [
-    10,
-    -13.6,
-    18,
-    -12
-   ],
-   "height": 0.15,
-   "stairs": [],
-   "style": "sidewalk"
-  },
-  {
-   "id": "ne_roadr_sws0",
-   "rect": [
-    -18,
-    18.4,
-    0,
-    20
-   ],
-   "height": 0.15,
-   "stairs": [],
-   "style": "sidewalk"
-  },
-  {
-   "id": "ne_roadr_swn0",
-   "rect": [
-    -18,
-    12,
-    -10,
-    13.6
-   ],
-   "height": 0.15,
-   "stairs": [],
-   "style": "sidewalk"
-  },
-  {
-   "id": "e_road_swe0",
-   "rect": [
-    28.4,
-    -23,
-    30,
-    -11
-   ],
-   "height": 0.15,
-   "stairs": [],
-   "style": "sidewalk"
-  },
-  {
-   "id": "e_roadr_sww0",
-   "rect": [
-    -30,
-    11,
-    -28.4,
-    23
-   ],
-   "height": 0.15,
-   "stairs": [],
-   "style": "sidewalk"
-  },
-  {
-   "id": "chamfer_-16_-44",
+   "id": "north_road_sws1",
    "rect": [
     -9,
-    -31,
-    -6,
-    -28
+    -18.6,
+    -2,
+    -17
    ],
    "height": 0.15,
    "stairs": [],
    "style": "sidewalk"
   },
   {
-   "id": "chamfer_0_-28",
+   "id": "north_east_swn0",
    "rect": [
-    0,
-    -28,
-    3,
-    -25
+    2,
+    -23,
+    25,
+    -21.4
    ],
    "height": 0.15,
    "stairs": [],
    "style": "sidewalk"
   },
   {
-   "id": "chamfer_-6_-15",
+   "id": "west_road_sww0",
    "rect": [
-    -3,
-    -15,
-    0,
-    -12
+    -25,
+    -17,
+    -23.4,
+    5
    ],
    "height": 0.15,
    "stairs": [],
    "style": "sidewalk"
   },
   {
-   "id": "chamfer_-44_6",
+   "id": "west_jog_sws0",
    "rect": [
-    -32,
-    8,
-    -29,
+    -25,
+    9.4,
+    -23,
     11
    ],
    "height": 0.15,
@@ -1136,12 +624,36 @@
    "style": "sidewalk"
   },
   {
-   "id": "chamfer_6_28",
+   "id": "south_west_sww0",
    "rect": [
-    6,
-    28,
-    9,
-    31
+    -23,
+    11,
+    -21.4,
+    24
+   ],
+   "height": 0.15,
+   "stairs": [],
+   "style": "sidewalk"
+  },
+  {
+   "id": "east_road_swe0",
+   "rect": [
+    23.4,
+    -17,
+    25,
+    18
+   ],
+   "height": 0.15,
+   "stairs": [],
+   "style": "sidewalk"
+  },
+  {
+   "id": "west_plaza_sws1",
+   "rect": [
+    -9,
+    2.4,
+    -6,
+    4
    ],
    "height": 0.15,
    "stairs": [],
@@ -1153,15 +665,15 @@
    "id": "C01",
    "type": "backdrop",
    "rect": [
-    -44,
-    -44,
-    -34,
-    -36
+    -36,
+    -36,
+    -25,
+    -25
    ],
-   "height": 32.4,
-   "floors": 10,
-   "palette": "brick_pale",
-   "seed": 8263,
+   "height": 29.3,
+   "floors": 9,
+   "palette": "brick_brown",
+   "seed": 2705,
    "roof": {
     "type": "flat"
    },
@@ -1170,17 +682,17 @@
   },
   {
    "id": "C02",
-   "type": "commercial",
+   "type": "apartment",
    "rect": [
-    -6,
-    -44,
-    3,
-    -31
+    -25,
+    -36,
+    -15,
+    -25
    ],
-   "height": 13.8,
-   "floors": 4,
-   "palette": "clad_white",
-   "seed": 5344,
+   "height": 16.9,
+   "floors": 5,
+   "palette": "brick_pale",
+   "seed": 5260,
    "roof": {
     "type": "flat"
    },
@@ -1188,7 +700,7 @@
    "doors": [
     {
      "side": "s",
-     "at": 4.5,
+     "at": 5.0,
      "width": 3.8,
      "kind": "store"
     }
@@ -1198,157 +710,15 @@
    "id": "C03",
    "type": "apartment",
    "rect": [
-    3,
-    -44,
-    12,
-    -31
-   ],
-   "height": 10.7,
-   "floors": 3,
-   "palette": "brick_orange",
-   "seed": 7108,
-   "roof": {
-    "type": "flat"
-   },
-   "front": "s",
-   "doors": [
-    {
-     "side": "s",
-     "at": 4.5,
-     "width": 1.0,
-     "kind": "door"
-    }
-   ]
-  },
-  {
-   "id": "C04",
-   "type": "apartment",
-   "rect": [
-    12,
-    -44,
-    21,
-    -31
+    -15,
+    -36,
+    -5,
+    -25
    ],
    "height": 16.9,
    "floors": 5,
    "palette": "brick_brown",
-   "seed": 5942,
-   "roof": {
-    "type": "flat"
-   },
-   "front": "s",
-   "doors": [
-    {
-     "side": "s",
-     "at": 3.0,
-     "width": 1.0,
-     "kind": "door"
-    }
-   ]
-  },
-  {
-   "id": "C05",
-   "type": "commercial",
-   "rect": [
-    24,
-    -44,
-    31,
-    -31
-   ],
-   "height": 13.8,
-   "floors": 4,
-   "palette": "tiles",
-   "seed": 1410,
-   "roof": {
-    "type": "flat"
-   },
-   "front": "s",
-   "doors": [
-    {
-     "side": "s",
-     "at": 3.5,
-     "width": 3.8,
-     "kind": "store"
-    }
-   ]
-  },
-  {
-   "id": "C06",
-   "type": "backdrop",
-   "rect": [
-    31,
-    -44,
-    44,
-    -34
-   ],
-   "height": 32.4,
-   "floors": 10,
-   "palette": "clad_slate",
-   "seed": 316,
-   "roof": {
-    "type": "flat"
-   },
-   "front": "w",
-   "doors": []
-  },
-  {
-   "id": "C07",
-   "type": "commercial",
-   "rect": [
-    -34,
-    -44,
-    -25,
-    -28
-   ],
-   "height": 13.8,
-   "floors": 4,
-   "palette": "concrete_warm",
-   "seed": 3089,
-   "roof": {
-    "type": "flat"
-   },
-   "front": "s",
-   "doors": []
-  },
-  {
-   "id": "C08",
-   "type": "commercial",
-   "rect": [
-    -25,
-    -44,
-    -16,
-    -28
-   ],
-   "height": 13.8,
-   "floors": 4,
-   "palette": "concrete",
-   "seed": 3259,
-   "roof": {
-    "type": "flat"
-   },
-   "front": "s",
-   "doors": [
-    {
-     "side": "s",
-     "at": 4.5,
-     "width": 3.8,
-     "kind": "store"
-    }
-   ]
-  },
-  {
-   "id": "C09",
-   "type": "corner",
-   "rect": [
-    -16,
-    -44,
-    -6,
-    -28
-   ],
-   "height": 10.7,
-   "floors": 3,
-   "palette": "brick_red",
-   "seed": 1836,
+   "seed": 5101,
    "roof": {
     "type": "flat"
    },
@@ -1360,56 +730,47 @@
      "width": 3.8,
      "kind": "store"
     }
-   ],
-   "chamfer": {
-    "corner": "se",
-    "size": 3.0
-   }
+   ]
   },
   {
-   "id": "C10",
+   "id": "C04",
    "type": "apartment",
    "rect": [
-    21,
-    -44,
-    24,
-    -23
+    -5,
+    -36,
+    5,
+    -25
    ],
    "height": 10.7,
    "floors": 3,
-   "palette": "brick_orange",
-   "seed": 9598,
+   "palette": "brick_pale",
+   "seed": 7456,
    "roof": {
     "type": "flat"
    },
-   "front": "e",
-   "doors": [],
-   "passages": [
+   "front": "s",
+   "doors": [
     {
-     "rect": [
-      21,
-      -29,
-      24,
-      -26
-     ],
-     "style": "portal",
-     "clear": 3.4
+     "side": "s",
+     "at": 3.5,
+     "width": 3.8,
+     "kind": "store"
     }
    ]
   },
   {
-   "id": "C11",
+   "id": "C05",
    "type": "backdrop",
    "rect": [
-    -44,
+    5,
     -36,
-    -34,
-    -28
+    14,
+    -25
    ],
-   "height": 20.0,
-   "floors": 6,
-   "palette": "brick_brown",
-   "seed": 3128,
+   "height": 32.4,
+   "floors": 10,
+   "palette": "tiles",
+   "seed": 760,
    "roof": {
     "type": "flat"
    },
@@ -1417,18 +778,108 @@
    "doors": []
   },
   {
-   "id": "C12",
+   "id": "C06",
+   "type": "backdrop",
+   "rect": [
+    14,
+    -36,
+    25,
+    -25
+   ],
+   "height": 20.0,
+   "floors": 6,
+   "palette": "tiles",
+   "seed": 7493,
+   "roof": {
+    "type": "flat"
+   },
+   "front": "w",
+   "doors": []
+  },
+  {
+   "id": "C07",
+   "type": "backdrop",
+   "rect": [
+    25,
+    -36,
+    36,
+    -25
+   ],
+   "height": 29.3,
+   "floors": 9,
+   "palette": "brick_brown",
+   "seed": 7724,
+   "roof": {
+    "type": "flat"
+   },
+   "front": "w",
+   "doors": []
+  },
+  {
+   "id": "C08",
+   "type": "commercial",
+   "rect": [
+    -36,
+    -25,
+    -25,
+    -14
+   ],
+   "height": 13.8,
+   "floors": 4,
+   "palette": "clad_slate",
+   "seed": 2339,
+   "roof": {
+    "type": "flat"
+   },
+   "front": "e",
+   "doors": [
+    {
+     "side": "e",
+     "at": 5.5,
+     "width": 3.8,
+     "kind": "store"
+    }
+   ]
+  },
+  {
+   "id": "C09",
    "type": "apartment",
    "rect": [
-    18,
-    -31,
-    21,
-    -28
+    25,
+    -25,
+    36,
+    -15
+   ],
+   "height": 13.8,
+   "floors": 4,
+   "palette": "brick_orange",
+   "seed": 5308,
+   "roof": {
+    "type": "flat"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "w",
+     "at": 6.0,
+     "width": 3.8,
+     "kind": "store"
+    }
+   ]
+  },
+  {
+   "id": "C10",
+   "type": "storefront",
+   "rect": [
+    -19,
+    -17,
+    -15,
+    -13
    ],
    "height": 10.7,
    "floors": 3,
-   "palette": "brick_pale",
-   "seed": 1230,
+   "palette": "brick_orange",
+   "seed": 557,
    "roof": {
     "type": "flat"
    },
@@ -1436,12 +887,111 @@
    "doors": [
     {
      "side": "s",
-     "at": 1.5,
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    }
+   ]
+  },
+  {
+   "id": "C11",
+   "type": "storefront",
+   "rect": [
+    -15,
+    -16,
+    -2,
+    -10
+   ],
+   "height": 10.7,
+   "floors": 3,
+   "palette": "stucco_peach",
+   "seed": 4722,
+   "roof": {
+    "type": "flat"
+   },
+   "front": "e",
+   "doors": [
+    {
+     "side": "e",
+     "at": 3.0,
+     "width": 1.0,
+     "kind": "door"
+    }
+   ],
+   "interiors": [
+    {
+     "id": "diner",
+     "rect": [
+      -14.7,
+      -15.7,
+      -6,
+      -10.3
+     ],
+     "clear": 3.3,
+     "doors": [
+      {
+       "side": "n",
+       "rect": [
+        -11.9,
+        -16,
+        -10.1,
+        -15.7
+       ],
+       "height": 2.6,
+       "kind": "doorway"
+      },
+      {
+       "side": "s",
+       "rect": [
+        -9.9,
+        -10.3,
+        -8.1,
+        -10
+       ],
+       "height": 2.6,
+       "kind": "doorway"
+      },
+      {
+       "side": "w",
+       "rect": [
+        -15,
+        -12.4,
+        -14.7,
+        -10.6
+       ],
+       "height": 2.6,
+       "kind": "doorway"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "C12",
+   "type": "storefront",
+   "rect": [
+    2,
+    -17,
+    5,
+    -12
+   ],
+   "height": 10.7,
+   "floors": 3,
+   "palette": "stucco_cream",
+   "seed": 2908,
+   "roof": {
+    "type": "flat"
+   },
+   "front": "n",
+   "doors": [
+    {
+     "side": "w",
+     "at": 2.5,
      "width": 1.0,
      "kind": "door"
     },
     {
-     "side": "w",
+     "side": "s",
      "at": 1.5,
      "width": 1.0,
      "kind": "door"
@@ -1450,57 +1000,51 @@
   },
   {
    "id": "C13",
-   "type": "commercial",
+   "type": "storefront",
    "rect": [
-    31,
-    -34,
-    44,
-    -23
+    16,
+    -15,
+    19,
+    -12
    ],
-   "height": 13.8,
-   "floors": 4,
-   "palette": "concrete_warm",
-   "seed": 3350,
+   "height": 10.7,
+   "floors": 3,
+   "palette": "stucco_olive",
+   "seed": 926,
    "roof": {
     "type": "flat"
    },
    "front": "w",
    "doors": [
     {
-     "side": "w",
-     "at": 5.5,
-     "width": 3.8,
-     "kind": "store"
+     "side": "s",
+     "at": 1.5,
+     "width": 1.0,
+     "kind": "door"
     }
    ]
   },
   {
    "id": "C14",
-   "type": "storefront",
+   "type": "apartment",
    "rect": [
-    24,
-    -26,
-    31,
-    -23
+    -36,
+    -14,
+    -25,
+    -4
    ],
-   "height": 7.6,
-   "floors": 2,
-   "palette": "brick_orange",
-   "seed": 1008,
+   "height": 13.8,
+   "floors": 4,
+   "palette": "brick_red",
+   "seed": 8522,
    "roof": {
     "type": "flat"
    },
-   "front": "n",
+   "front": "e",
    "doors": [
     {
-     "side": "n",
-     "at": 3.5,
-     "width": 3.8,
-     "kind": "store"
-    },
-    {
-     "side": "s",
-     "at": 3.0,
+     "side": "e",
+     "at": 5.0,
      "width": 3.8,
      "kind": "store"
     }
@@ -1510,177 +1054,15 @@
    "id": "C15",
    "type": "apartment",
    "rect": [
-    -44,
-    -28,
-    -26,
-    -16
+    25,
+    -15,
+    36,
+    -6
    ],
-   "height": 13.8,
-   "floors": 4,
-   "palette": "brick_pale",
-   "seed": 1377,
-   "roof": {
-    "type": "flat"
-   },
-   "front": "e",
-   "doors": [
-    {
-     "side": "e",
-     "at": 3.0,
-     "width": 3.8,
-     "kind": "store"
-    },
-    {
-     "side": "e",
-     "at": 9.0,
-     "width": 3.8,
-     "kind": "store"
-    },
-    {
-     "side": "s",
-     "at": 14.5,
-     "width": 1.0,
-     "kind": "door"
-    }
-   ]
-  },
-  {
-   "id": "C16",
-   "type": "corner",
-   "rect": [
-    0,
-    -28,
-    10,
-    -20
-   ],
-   "height": 10.7,
-   "floors": 3,
-   "palette": "stucco_peach",
-   "seed": 9375,
-   "roof": {
-    "type": "flat"
-   },
-   "front": "s",
-   "doors": [
-    {
-     "side": "n",
-     "at": 5.0,
-     "width": 1.0,
-     "kind": "door"
-    },
-    {
-     "side": "s",
-     "at": 5.0,
-     "width": 3.8,
-     "kind": "store"
-    },
-    {
-     "side": "w",
-     "at": 4.0,
-     "width": 3.8,
-     "kind": "store"
-    }
-   ],
-   "chamfer": {
-    "corner": "nw",
-    "size": 3.0
-   }
-  },
-  {
-   "id": "C17",
-   "type": "commercial",
-   "rect": [
-    10,
-    -28,
-    18,
-    -20
-   ],
-   "height": 13.8,
-   "floors": 4,
-   "palette": "tiles",
-   "seed": 1890,
-   "roof": {
-    "type": "flat"
-   },
-   "front": "s",
-   "doors": [
-    {
-     "side": "n",
-     "at": 4.0,
-     "width": 1.0,
-     "kind": "door"
-    },
-    {
-     "side": "e",
-     "at": 4.0,
-     "width": 1.0,
-     "kind": "door"
-    },
-    {
-     "side": "s",
-     "at": 4.0,
-     "width": 3.8,
-     "kind": "store"
-    }
-   ]
-  },
-  {
-   "id": "C18",
-   "type": "storefront",
-   "rect": [
-    -23,
-    -20,
-    -16,
-    -16
-   ],
-   "height": 7.6,
-   "floors": 2,
-   "palette": "stucco_cream",
-   "seed": 507,
-   "roof": {
-    "type": "flat"
-   },
-   "front": "n",
-   "doors": [
-    {
-     "side": "n",
-     "at": 3.5,
-     "width": 3.8,
-     "kind": "store"
-    },
-    {
-     "side": "s",
-     "at": 3.5,
-     "width": 1.0,
-     "kind": "door"
-    },
-    {
-     "side": "e",
-     "at": 2.0,
-     "width": 1.0,
-     "kind": "door"
-    },
-    {
-     "side": "w",
-     "at": 2.0,
-     "width": 1.0,
-     "kind": "door"
-    }
-   ]
-  },
-  {
-   "id": "C19",
-   "type": "commercial",
-   "rect": [
-    30,
-    -23,
-    44,
-    -11
-   ],
-   "height": 13.8,
-   "floors": 4,
-   "palette": "clad_slate",
-   "seed": 7209,
+   "height": 16.9,
+   "floors": 5,
+   "palette": "brick_red",
+   "seed": 1480,
    "roof": {
     "type": "flat"
    },
@@ -1688,72 +1070,187 @@
    "doors": [
     {
      "side": "w",
-     "at": 3.0,
-     "width": 3.8,
-     "kind": "store"
+     "at": 4.5,
+     "width": 1.8,
+     "kind": "entrance"
+    }
+   ]
+  },
+  {
+   "id": "C16",
+   "type": "storefront",
+   "rect": [
+    -15,
+    -10,
+    -11,
+    -2
+   ],
+   "height": 7.6,
+   "floors": 2,
+   "palette": "stucco_sky",
+   "seed": 432,
+   "roof": {
+    "type": "flat"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "e",
+     "at": 4.0,
+     "width": 1.0,
+     "kind": "door"
+    }
+   ]
+  },
+  {
+   "id": "C17",
+   "type": "storefront",
+   "rect": [
+    -7,
+    -10,
+    -2,
+    -6
+   ],
+   "height": 10.7,
+   "floors": 3,
+   "palette": "stucco_sky",
+   "seed": 5720,
+   "roof": {
+    "type": "flat"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "e",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
     },
     {
      "side": "w",
-     "at": 9.0,
-     "width": 3.8,
-     "kind": "store"
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    }
+   ]
+  },
+  {
+   "id": "C18",
+   "type": "storefront",
+   "rect": [
+    2,
+    -9,
+    6,
+    -6
+   ],
+   "height": 7.6,
+   "floors": 2,
+   "palette": "stucco_cream",
+   "seed": 1145,
+   "roof": {
+    "type": "flat"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "n",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    },
+    {
+     "side": "w",
+     "at": 1.5,
+     "width": 1.0,
+     "kind": "door"
+    }
+   ]
+  },
+  {
+   "id": "C19",
+   "type": "apartment",
+   "rect": [
+    -18,
+    -7,
+    -15,
+    5
+   ],
+   "height": 16.9,
+   "floors": 5,
+   "palette": "brick_dark",
+   "seed": 8297,
+   "roof": {
+    "type": "flat"
+   },
+   "front": "e",
+   "doors": [],
+   "passages": [
+    {
+     "rect": [
+      -18,
+      -2,
+      -15,
+      4
+     ],
+     "style": "portal",
+     "clear": 3.4
     }
    ]
   },
   {
    "id": "C20",
-   "type": "commercial",
+   "type": "storefront",
    "rect": [
-    -13,
-    -20,
-    -6,
-    -7
+    6,
+    -7,
+    17,
+    0
    ],
    "height": 10.7,
    "floors": 3,
-   "palette": "clad_white",
-   "seed": 9562,
+   "palette": "brick_orange",
+   "seed": 1910,
    "roof": {
     "type": "flat"
    },
    "front": "n",
    "doors": [
     {
-     "side": "n",
-     "at": 3.5,
+     "side": "w",
+     "at": 4.0,
      "width": 3.8,
      "kind": "store"
     }
    ],
    "interiors": [
     {
-     "id": "diner",
+     "id": "court_south",
      "rect": [
-      -12.7,
-      -18,
-      -6.3,
-      -12
+      7,
+      -6.7,
+      12,
+      -0.3
      ],
      "clear": 3.3,
      "doors": [
       {
-       "side": "e",
+       "side": "n",
        "rect": [
-        -6.3,
-        -17.4,
-        -6,
-        -15.6
+        8.6,
+        -7,
+        10.4,
+        -6.7
        ],
        "height": 2.6,
        "kind": "doorway"
       },
       {
-       "side": "w",
+       "side": "s",
        "rect": [
-        -13,
-        -15.9,
-        -12.7,
-        -14.1
+        8.6,
+        -0.3,
+        10.4,
+        0
        ],
        "height": 2.6,
        "kind": "doorway"
@@ -1764,39 +1261,27 @@
   },
   {
    "id": "C21",
-   "type": "storefront",
+   "type": "apartment",
    "rect": [
-    21,
-    -20,
-    24,
-    -12
+    25,
+    -6,
+    36,
+    4
    ],
-   "height": 10.7,
-   "floors": 3,
-   "palette": "stucco_cream",
-   "seed": 4093,
+   "height": 13.8,
+   "floors": 4,
+   "palette": "brick_dark",
+   "seed": 2818,
    "roof": {
     "type": "flat"
    },
-   "front": "e",
+   "front": "w",
    "doors": [
     {
-     "side": "e",
-     "at": 4.0,
+     "side": "w",
+     "at": 5.0,
      "width": 3.8,
      "kind": "store"
-    },
-    {
-     "side": "w",
-     "at": 4.0,
-     "width": 1.0,
-     "kind": "door"
-    },
-    {
-     "side": "n",
-     "at": 1.5,
-     "width": 1.0,
-     "kind": "door"
     }
    ]
   },
@@ -1804,15 +1289,15 @@
    "id": "C22",
    "type": "apartment",
    "rect": [
-    -44,
-    -16,
-    -33,
-    -4
+    -36,
+    -4,
+    -25,
+    6
    ],
    "height": 13.8,
    "floors": 4,
-   "palette": "brick_brown",
-   "seed": 756,
+   "palette": "brick_red",
+   "seed": 7926,
    "roof": {
     "type": "flat"
    },
@@ -1820,13 +1305,7 @@
    "doors": [
     {
      "side": "e",
-     "at": 3.0,
-     "width": 3.8,
-     "kind": "store"
-    },
-    {
-     "side": "e",
-     "at": 9.0,
+     "at": 5.0,
      "width": 3.8,
      "kind": "store"
     }
@@ -1834,45 +1313,39 @@
   },
   {
    "id": "C23",
-   "type": "garage",
+   "type": "storefront",
    "rect": [
-    -29,
-    -12,
-    -19,
-    -8
+    -9,
+    6,
+    -3,
+    9
    ],
-   "height": 4.2,
-   "floors": 1,
-   "palette": "concrete",
-   "seed": 5246,
+   "height": 7.6,
+   "floors": 2,
+   "palette": "stucco_olive",
+   "seed": 4087,
    "roof": {
     "type": "flat"
    },
-   "front": "n",
+   "front": "s",
    "doors": [
     {
-     "side": "n",
+     "side": "s",
      "at": 3.0,
-     "width": 2.8,
-     "kind": "garage"
-    },
-    {
-     "side": "n",
-     "at": 7.0,
-     "width": 2.8,
-     "kind": "garage"
+     "width": 3.8,
+     "kind": "store"
     },
     {
      "side": "e",
-     "at": 2.0,
-     "width": 2.8,
-     "kind": "garage"
+     "at": 1.5,
+     "width": 1.0,
+     "kind": "door"
     },
     {
      "side": "w",
-     "at": 2.0,
-     "width": 2.8,
-     "kind": "garage"
+     "at": 1.5,
+     "width": 1.0,
+     "kind": "door"
     }
    ]
   },
@@ -1880,459 +1353,129 @@
    "id": "C24",
    "type": "apartment",
    "rect": [
-    -16,
-    -12,
-    -13,
-    -7
+    14,
+    0,
+    17,
+    11
    ],
-   "height": 10.7,
-   "floors": 3,
-   "palette": "brick_brown",
-   "seed": 3568,
+   "height": 13.8,
+   "floors": 4,
+   "palette": "stucco_cream",
+   "seed": 2914,
    "roof": {
     "type": "flat"
    },
    "front": "w",
-   "doors": [
+   "doors": [],
+   "passages": [
     {
-     "side": "w",
-     "at": 2.5,
-     "width": 1.0,
-     "kind": "door"
-    },
-    {
-     "side": "n",
-     "at": 1.5,
-     "width": 1.0,
-     "kind": "door"
+     "rect": [
+      14,
+      0,
+      17,
+      6
+     ],
+     "style": "portal",
+     "clear": 3.4
     }
    ]
   },
   {
    "id": "C25",
-   "type": "corner",
+   "type": "apartment",
    "rect": [
-    -6,
-    -15,
-    0,
-    -7
+    -36,
+    6,
+    -25,
+    16
    ],
    "height": 13.8,
    "floors": 4,
-   "palette": "brick_red",
-   "seed": 443,
+   "palette": "brick_pale",
+   "seed": 3953,
    "roof": {
     "type": "flat"
    },
-   "front": "s",
+   "front": "e",
    "doors": [
     {
      "side": "e",
-     "at": 4.0,
-     "width": 3.8,
-     "kind": "store"
-    },
-    {
-     "side": "n",
-     "at": 3.0,
-     "width": 3.8,
-     "kind": "store"
-    },
-    {
-     "side": "s",
-     "at": 3.0,
+     "at": 2.5,
      "width": 3.8,
      "kind": "store"
     }
-   ],
-   "chamfer": {
-    "corner": "ne",
-    "size": 3.0
-   }
+   ]
   },
   {
    "id": "C26",
-   "type": "storefront",
+   "type": "commercial",
    "rect": [
+    25,
     4,
-    -12,
-    15,
-    -7
+    36,
+    15
    ],
-   "height": 10.7,
-   "floors": 3,
-   "palette": "stucco_olive",
-   "seed": 6763,
+   "height": 13.8,
+   "floors": 4,
+   "palette": "clad_sage",
+   "seed": 420,
    "roof": {
     "type": "flat"
    },
-   "front": "n",
-   "doors": [],
-   "interiors": [
+   "front": "w",
+   "doors": [
     {
-     "id": "shop_n",
-     "rect": [
-      4.3,
-      -11.7,
-      10,
-      -7.3
-     ],
-     "clear": 3.3,
-     "doors": [
-      {
-       "side": "n",
-       "rect": [
-        6.1,
-        -12,
-        7.9,
-        -11.7
-       ],
-       "height": 2.6,
-       "kind": "doorway"
-      },
-      {
-       "side": "s",
-       "rect": [
-        4.6,
-        -7.3,
-        6.4,
-        -7
-       ],
-       "height": 2.6,
-       "kind": "doorway"
-      },
-      {
-       "side": "w",
-       "rect": [
-        4,
-        -10.4,
-        4.3,
-        -8.6
-       ],
-       "height": 2.6,
-       "kind": "doorway"
-      }
-     ]
+     "side": "w",
+     "at": 5.5,
+     "width": 3.8,
+     "kind": "store"
     }
    ]
   },
   {
    "id": "C27",
-   "type": "commercial",
+   "type": "apartment",
    "rect": [
-    15,
-    -12,
-    24,
-    -5
+    1,
+    6,
+    6,
+    18
    ],
-   "height": 13.8,
-   "floors": 4,
-   "palette": "clad_slate",
-   "seed": 7925,
+   "height": 10.7,
+   "floors": 3,
+   "palette": "brick_red",
+   "seed": 3660,
    "roof": {
     "type": "flat"
    },
    "front": "n",
-   "doors": [
+   "doors": [],
+   "passages": [
     {
-     "side": "n",
-     "at": 3.0,
-     "width": 3.8,
-     "kind": "store"
+     "rect": [
+      1,
+      11,
+      6,
+      14
+     ],
+     "style": "portal",
+     "clear": 3.4
     }
    ]
   },
   {
    "id": "C28",
-   "type": "apartment",
-   "rect": [
-    29,
-    -11,
-    44,
-    -6
-   ],
-   "height": 13.8,
-   "floors": 4,
-   "palette": "brick_pale",
-   "seed": 9109,
-   "roof": {
-    "type": "flat"
-   },
-   "front": "s",
-   "doors": [
-    {
-     "side": "w",
-     "at": 2.5,
-     "width": 1.0,
-     "kind": "door"
-    },
-    {
-     "side": "s",
-     "at": 2.0,
-     "width": 1.8,
-     "kind": "entrance"
-    }
-   ]
-  },
-  {
-   "id": "C29",
-   "type": "apartment",
-   "rect": [
-    -25,
-    -8,
-    -21,
-    5
-   ],
-   "height": 10.7,
-   "floors": 3,
-   "palette": "brick_orange",
-   "seed": 3660,
-   "roof": {
-    "type": "flat"
-   },
-   "front": "w",
-   "doors": [],
-   "passages": [
-    {
-     "rect": [
-      -25,
-      -3,
-      -21,
-      0
-     ],
-     "style": "portal",
-     "clear": 3.4
-    }
-   ]
-  },
-  {
-   "id": "C30",
    "type": "storefront",
    "rect": [
-    -14,
-    -7,
-    -7,
-    0
-   ],
-   "height": 10.7,
-   "floors": 3,
-   "palette": "stucco_grey",
-   "seed": 588,
-   "roof": {
-    "type": "flat"
-   },
-   "front": "s",
-   "doors": [
-    {
-     "side": "e",
-     "at": 3.5,
-     "width": 3.8,
-     "kind": "store"
-    },
-    {
-     "side": "s",
-     "at": 3.5,
-     "width": 3.8,
-     "kind": "store"
-    },
-    {
-     "side": "w",
-     "at": 4.0,
-     "width": 3.8,
-     "kind": "store"
-    }
-   ]
-  },
-  {
-   "id": "C31",
-   "type": "commercial",
-   "rect": [
-    33,
-    -6,
-    44,
-    5
-   ],
-   "height": 13.8,
-   "floors": 4,
-   "palette": "tiles",
-   "seed": 6086,
-   "roof": {
-    "type": "flat"
-   },
-   "front": "w",
-   "doors": [
-    {
-     "side": "w",
-     "at": 5.5,
-     "width": 3.8,
-     "kind": "store"
-    }
-   ]
-  },
-  {
-   "id": "C32",
-   "type": "apartment",
-   "rect": [
-    -44,
-    -4,
-    -33,
-    6
-   ],
-   "height": 13.8,
-   "floors": 4,
-   "palette": "brick_orange",
-   "seed": 4942,
-   "roof": {
-    "type": "flat"
-   },
-   "front": "e",
-   "doors": [
-    {
-     "side": "e",
-     "at": 5.0,
-     "width": 3.8,
-     "kind": "store"
-    }
-   ]
-  },
-  {
-   "id": "C33",
-   "type": "storefront",
-   "rect": [
-    7,
-    0,
+    6,
+    9,
     14,
-    7
+    18
    ],
    "height": 7.6,
    "floors": 2,
    "palette": "stucco_grey",
-   "seed": 6789,
-   "roof": {
-    "type": "flat"
-   },
-   "front": "w",
-   "doors": [
-    {
-     "side": "n",
-     "at": 3.5,
-     "width": 3.8,
-     "kind": "store"
-    },
-    {
-     "side": "w",
-     "at": 3.5,
-     "width": 3.8,
-     "kind": "store"
-    },
-    {
-     "side": "e",
-     "at": 3.0,
-     "width": 3.8,
-     "kind": "store"
-    }
-   ]
-  },
-  {
-   "id": "C34",
-   "type": "apartment",
-   "rect": [
-    21,
-    -5,
-    25,
-    8
-   ],
-   "height": 16.9,
-   "floors": 5,
-   "palette": "stucco_cream",
-   "seed": 6926,
-   "roof": {
-    "type": "flat"
-   },
-   "front": "e",
-   "doors": [],
-   "passages": [
-    {
-     "rect": [
-      21,
-      0,
-      25,
-      3
-     ],
-     "style": "portal",
-     "clear": 3.4
-    }
-   ]
-  },
-  {
-   "id": "C35",
-   "type": "corner",
-   "rect": [
-    -44,
-    6,
-    -29,
-    11
-   ],
-   "height": 10.7,
-   "floors": 3,
-   "palette": "stucco_sky",
-   "seed": 7629,
-   "roof": {
-    "type": "flat"
-   },
-   "front": "n",
-   "doors": [
-    {
-     "side": "e",
-     "at": 2.5,
-     "width": 1.0,
-     "kind": "door"
-    }
-   ],
-   "chamfer": {
-    "corner": "se",
-    "size": 3.0
-   }
-  },
-  {
-   "id": "C36",
-   "type": "commercial",
-   "rect": [
-    -24,
-    5,
-    -15,
-    12
-   ],
-   "height": 13.8,
-   "floors": 4,
-   "palette": "clad_sage",
-   "seed": 9354,
-   "roof": {
-    "type": "flat"
-   },
-   "front": "s",
-   "doors": [
-    {
-     "side": "s",
-     "at": 6.0,
-     "width": 3.8,
-     "kind": "store"
-    }
-   ]
-  },
-  {
-   "id": "C37",
-   "type": "storefront",
-   "rect": [
-    -15,
-    7,
-    -4,
-    12
-   ],
-   "height": 10.7,
-   "floors": 3,
-   "palette": "stucco_peach",
-   "seed": 5511,
+   "seed": 251,
    "roof": {
     "type": "flat"
    },
@@ -2340,22 +1483,22 @@
    "doors": [],
    "interiors": [
     {
-     "id": "shop_nr",
+     "id": "south_shop",
      "rect": [
-      -10,
-      7.3,
-      -4.3,
-      11.7
+      6.3,
+      9.3,
+      13.7,
+      17.7
      ],
      "clear": 3.3,
      "doors": [
       {
        "side": "n",
        "rect": [
-        -6.4,
-        7,
-        -4.6,
-        7.3
+        9.1,
+        9,
+        10.9,
+        9.3
        ],
        "height": 2.6,
        "kind": "doorway"
@@ -2363,10 +1506,10 @@
       {
        "side": "e",
        "rect": [
-        -4.3,
-        8.6,
-        -4,
-        10.4
+        13.7,
+        13.1,
+        14,
+        14.9
        ],
        "height": 2.6,
        "kind": "doorway"
@@ -2374,10 +1517,10 @@
       {
        "side": "s",
        "rect": [
-        -7.9,
-        11.7,
-        -6.1,
-        12
+        9.1,
+        17.7,
+        10.9,
+        18
        ],
        "height": 2.6,
        "kind": "doorway"
@@ -2387,132 +1530,18 @@
    ]
   },
   {
-   "id": "C38",
-   "type": "storefront",
-   "rect": [
-    0,
-    7,
-    6,
-    15
-   ],
-   "height": 7.6,
-   "floors": 2,
-   "palette": "stucco_sky",
-   "seed": 9962,
-   "roof": {
-    "type": "flat"
-   },
-   "front": "s",
-   "doors": [
-    {
-     "side": "w",
-     "at": 4.0,
-     "width": 3.8,
-     "kind": "store"
-    },
-    {
-     "side": "n",
-     "at": 3.0,
-     "width": 3.8,
-     "kind": "store"
-    },
-    {
-     "side": "s",
-     "at": 3.0,
-     "width": 3.8,
-     "kind": "store"
-    }
-   ]
-  },
-  {
-   "id": "C39",
-   "type": "apartment",
-   "rect": [
-    13,
-    7,
-    16,
-    12
-   ],
-   "height": 10.7,
-   "floors": 3,
-   "palette": "brick_dark",
-   "seed": 7797,
-   "roof": {
-    "type": "flat"
-   },
-   "front": "e",
-   "doors": [
-    {
-     "side": "e",
-     "at": 2.5,
-     "width": 1.0,
-     "kind": "door"
-    },
-    {
-     "side": "s",
-     "at": 1.5,
-     "width": 1.0,
-     "kind": "door"
-    }
-   ]
-  },
-  {
-   "id": "C40",
-   "type": "garage",
-   "rect": [
-    19,
-    8,
-    29,
-    12
-   ],
-   "height": 4.2,
-   "floors": 1,
-   "palette": "brick_dark",
-   "seed": 6915,
-   "roof": {
-    "type": "flat"
-   },
-   "front": "s",
-   "doors": [
-    {
-     "side": "s",
-     "at": 3.0,
-     "width": 2.8,
-     "kind": "garage"
-    },
-    {
-     "side": "s",
-     "at": 7.0,
-     "width": 2.8,
-     "kind": "garage"
-    },
-    {
-     "side": "e",
-     "at": 2.0,
-     "width": 2.8,
-     "kind": "garage"
-    },
-    {
-     "side": "w",
-     "at": 2.0,
-     "width": 2.8,
-     "kind": "garage"
-    }
-   ]
-  },
-  {
-   "id": "C41",
+   "id": "C29",
    "type": "commercial",
    "rect": [
-    33,
-    5,
-    44,
-    16
+    25,
+    15,
+    36,
+    24
    ],
    "height": 13.8,
    "floors": 4,
-   "palette": "clad_sage",
-   "seed": 5626,
+   "palette": "concrete",
+   "seed": 4398,
    "roof": {
     "type": "flat"
    },
@@ -2520,399 +1549,44 @@
    "doors": [
     {
      "side": "w",
-     "at": 5.5,
+     "at": 4.5,
      "width": 3.8,
      "kind": "store"
     }
    ]
   },
   {
-   "id": "C42",
-   "type": "commercial",
+   "id": "C30",
+   "type": "backdrop",
    "rect": [
-    6,
-    7,
-    13,
-    20
-   ],
-   "height": 10.7,
-   "floors": 3,
-   "palette": "tiles",
-   "seed": 1571,
-   "roof": {
-    "type": "flat"
-   },
-   "front": "s",
-   "doors": [
-    {
-     "side": "s",
-     "at": 3.5,
-     "width": 3.8,
-     "kind": "store"
-    }
-   ],
-   "interiors": [
-    {
-     "id": "dinerr",
-     "rect": [
-      6.3,
-      12,
-      12.7,
-      18
-     ],
-     "clear": 3.3,
-     "doors": [
-      {
-       "side": "e",
-       "rect": [
-        12.7,
-        14.1,
-        13,
-        15.9
-       ],
-       "height": 2.6,
-       "kind": "doorway"
-      },
-      {
-       "side": "w",
-       "rect": [
-        6,
-        15.6,
-        6.3,
-        17.4
-       ],
-       "height": 2.6,
-       "kind": "doorway"
-      }
-     ]
-    }
-   ]
-  },
-  {
-   "id": "C43",
-   "type": "commercial",
-   "rect": [
-    -44,
-    11,
-    -30,
-    23
-   ],
-   "height": 13.8,
-   "floors": 4,
-   "palette": "clad_sage",
-   "seed": 559,
-   "roof": {
-    "type": "flat"
-   },
-   "front": "e",
-   "doors": [
-    {
-     "side": "e",
-     "at": 3.0,
-     "width": 3.8,
-     "kind": "store"
-    },
-    {
-     "side": "e",
-     "at": 9.0,
-     "width": 3.8,
-     "kind": "store"
-    }
-   ]
-  },
-  {
-   "id": "C44",
-   "type": "storefront",
-   "rect": [
-    -24,
-    12,
-    -21,
-    20
-   ],
-   "height": 10.7,
-   "floors": 3,
-   "palette": "stucco_sky",
-   "seed": 3575,
-   "roof": {
-    "type": "flat"
-   },
-   "front": "w",
-   "doors": [
-    {
-     "side": "e",
-     "at": 4.0,
-     "width": 1.0,
-     "kind": "door"
-    },
-    {
-     "side": "w",
-     "at": 4.0,
-     "width": 3.8,
-     "kind": "store"
-    },
-    {
-     "side": "s",
-     "at": 1.5,
-     "width": 1.0,
-     "kind": "door"
-    }
-   ]
-  },
-  {
-   "id": "C45",
-   "type": "storefront",
-   "rect": [
+    -36,
     16,
-    16,
-    23,
-    20
-   ],
-   "height": 7.6,
-   "floors": 2,
-   "palette": "stucco_olive",
-   "seed": 6848,
-   "roof": {
-    "type": "flat"
-   },
-   "front": "s",
-   "doors": [
-    {
-     "side": "n",
-     "at": 3.5,
-     "width": 1.0,
-     "kind": "door"
-    },
-    {
-     "side": "s",
-     "at": 3.5,
-     "width": 3.8,
-     "kind": "store"
-    },
-    {
-     "side": "e",
-     "at": 2.0,
-     "width": 1.0,
-     "kind": "door"
-    },
-    {
-     "side": "w",
-     "at": 2.0,
-     "width": 1.0,
-     "kind": "door"
-    }
-   ]
-  },
-  {
-   "id": "C46",
-   "type": "apartment",
-   "rect": [
-    26,
-    16,
-    44,
-    28
-   ],
-   "height": 16.9,
-   "floors": 5,
-   "palette": "brick_orange",
-   "seed": 430,
-   "roof": {
-    "type": "flat"
-   },
-   "front": "w",
-   "doors": [
-    {
-     "side": "w",
-     "at": 3.0,
-     "width": 3.8,
-     "kind": "store"
-    },
-    {
-     "side": "w",
-     "at": 9.0,
-     "width": 3.8,
-     "kind": "store"
-    },
-    {
-     "side": "n",
-     "at": 3.5,
-     "width": 1.0,
-     "kind": "door"
-    }
-   ]
-  },
-  {
-   "id": "C47",
-   "type": "apartment",
-   "rect": [
-    -44,
-    23,
-    -31,
-    32
-   ],
-   "height": 16.9,
-   "floors": 5,
-   "palette": "brick_dark",
-   "seed": 4868,
-   "roof": {
-    "type": "flat"
-   },
-   "front": "e",
-   "doors": [
-    {
-     "side": "e",
-     "at": 5.5,
-     "width": 1.8,
-     "kind": "entrance"
-    }
-   ]
-  },
-  {
-   "id": "C48",
-   "type": "storefront",
-   "rect": [
-    -31,
-    23,
-    -24,
+    -25,
     26
    ],
-   "height": 7.6,
-   "floors": 2,
-   "palette": "stucco_sky",
-   "seed": 7575,
+   "height": 20.0,
+   "floors": 6,
+   "palette": "concrete",
+   "seed": 2445,
    "roof": {
     "type": "flat"
    },
-   "front": "s",
-   "doors": [
-    {
-     "side": "s",
-     "at": 3.5,
-     "width": 3.8,
-     "kind": "store"
-    },
-    {
-     "side": "n",
-     "at": 4.0,
-     "width": 3.8,
-     "kind": "store"
-    }
-   ]
+   "front": "w",
+   "doors": []
   },
   {
-   "id": "C49",
+   "id": "C31",
    "type": "apartment",
    "rect": [
-    -18,
-    20,
-    -8,
-    28
+    2,
+    18,
+    6,
+    36
    ],
-   "height": 16.9,
-   "floors": 5,
-   "palette": "stucco_cream",
-   "seed": 8142,
-   "roof": {
-    "type": "flat"
-   },
-   "front": "n",
-   "doors": [
-    {
-     "side": "n",
-     "at": 5.0,
-     "width": 3.8,
-     "kind": "store"
-    },
-    {
-     "side": "s",
-     "at": 5.0,
-     "width": 1.0,
-     "kind": "door"
-    },
-    {
-     "side": "w",
-     "at": 4.0,
-     "width": 1.0,
-     "kind": "door"
-    }
-   ]
-  },
-  {
-   "id": "C50",
-   "type": "apartment",
-   "rect": [
-    -8,
-    20,
-    0,
-    28
-   ],
-   "height": 16.9,
-   "floors": 5,
-   "palette": "brick_orange",
-   "seed": 3499,
-   "roof": {
-    "type": "flat"
-   },
-   "front": "n",
-   "doors": [
-    {
-     "side": "n",
-     "at": 4.0,
-     "width": 3.8,
-     "kind": "store"
-    },
-    {
-     "side": "s",
-     "at": 4.0,
-     "width": 1.0,
-     "kind": "door"
-    }
-   ]
-  },
-  {
-   "id": "C51",
-   "type": "apartment",
-   "rect": [
-    -21,
-    28,
-    -18,
-    31
-   ],
-   "height": 10.7,
-   "floors": 3,
-   "palette": "stucco_cream",
-   "seed": 7968,
-   "roof": {
-    "type": "flat"
-   },
-   "front": "n",
-   "doors": [
-    {
-     "side": "n",
-     "at": 1.5,
-     "width": 1.0,
-     "kind": "door"
-    },
-    {
-     "side": "e",
-     "at": 1.5,
-     "width": 1.0,
-     "kind": "door"
-    }
-   ]
-  },
-  {
-   "id": "C52",
-   "type": "apartment",
-   "rect": [
-    -24,
-    23,
-    -21,
-    44
-   ],
-   "height": 10.7,
-   "floors": 3,
-   "palette": "brick_brown",
-   "seed": 2586,
+   "height": 13.8,
+   "floors": 4,
+   "palette": "brick_pale",
+   "seed": 8636,
    "roof": {
     "type": "flat"
    },
@@ -2921,10 +1595,10 @@
    "passages": [
     {
      "rect": [
-      -24,
-      26,
-      -21,
-      29
+      2,
+      18,
+      6,
+      25
      ],
      "style": "portal",
      "clear": 3.4
@@ -2932,18 +1606,18 @@
    ]
   },
   {
-   "id": "C53",
+   "id": "C32",
    "type": "backdrop",
    "rect": [
-    35,
-    28,
-    44,
-    37
+    -36,
+    26,
+    -25,
+    36
    ],
    "height": 26.2,
    "floors": 8,
-   "palette": "tiles",
-   "seed": 440,
+   "palette": "brick_pale",
+   "seed": 1653,
    "roof": {
     "type": "flat"
    },
@@ -2951,89 +1625,37 @@
    "doors": []
   },
   {
-   "id": "C54",
-   "type": "backdrop",
-   "rect": [
-    -44,
-    32,
-    -31,
-    44
-   ],
-   "height": 23.1,
-   "floors": 7,
-   "palette": "brick_brown",
-   "seed": 5481,
-   "roof": {
-    "type": "flat"
-   },
-   "front": "w",
-   "doors": []
-  },
-  {
-   "id": "C55",
+   "id": "C33",
    "type": "commercial",
    "rect": [
-    -31,
-    31,
-    -24,
-    44
+    -25,
+    25,
+    -16,
+    36
    ],
    "height": 13.8,
    "floors": 4,
-   "palette": "concrete",
-   "seed": 4058,
+   "palette": "tiles",
+   "seed": 3584,
    "roof": {
     "type": "flat"
    },
    "front": "n",
-   "doors": [
-    {
-     "side": "n",
-     "at": 3.5,
-     "width": 3.8,
-     "kind": "store"
-    }
-   ]
+   "doors": []
   },
   {
-   "id": "C56",
+   "id": "C34",
    "type": "apartment",
    "rect": [
-    -21,
-    31,
-    -11,
-    44
+    -16,
+    25,
+    -8,
+    36
    ],
-   "height": 10.7,
-   "floors": 3,
-   "palette": "brick_dark",
-   "seed": 5316,
-   "roof": {
-    "type": "flat"
-   },
-   "front": "n",
-   "doors": [
-    {
-     "side": "n",
-     "at": 6.5,
-     "width": 1.0,
-     "kind": "door"
-    }
-   ]
-  },
-  {
-   "id": "C57",
-   "type": "apartment",
-   "rect": [
-    -11,
-    31,
-    -3,
-    44
-   ],
-   "height": 10.7,
-   "floors": 3,
-   "palette": "brick_brown",
-   "seed": 7358,
+   "height": 13.8,
+   "floors": 4,
+   "palette": "brick_red",
+   "seed": 3526,
    "roof": {
     "type": "flat"
    },
@@ -3042,80 +1664,24 @@
     {
      "side": "n",
      "at": 4.0,
-     "width": 1.0,
-     "kind": "door"
-    }
-   ]
-  },
-  {
-   "id": "C58",
-   "type": "commercial",
-   "rect": [
-    -3,
-    31,
-    6,
-    44
-   ],
-   "height": 13.8,
-   "floors": 4,
-   "palette": "concrete",
-   "seed": 1721,
-   "roof": {
-    "type": "flat"
-   },
-   "front": "n",
-   "doors": [
-    {
-     "side": "n",
-     "at": 4.5,
      "width": 3.8,
      "kind": "store"
     }
    ]
   },
   {
-   "id": "C59",
-   "type": "corner",
-   "rect": [
-    6,
-    28,
-    15,
-    44
-   ],
-   "height": 13.8,
-   "floors": 4,
-   "palette": "stucco_sky",
-   "seed": 120,
-   "roof": {
-    "type": "flat"
-   },
-   "front": "n",
-   "doors": [
-    {
-     "side": "n",
-     "at": 4.5,
-     "width": 3.8,
-     "kind": "store"
-    }
-   ],
-   "chamfer": {
-    "corner": "nw",
-    "size": 3.0
-   }
-  },
-  {
-   "id": "C60",
+   "id": "C35",
    "type": "apartment",
    "rect": [
-    15,
-    28,
+    -8,
     25,
-    44
+    2,
+    36
    ],
    "height": 13.8,
    "floors": 4,
-   "palette": "brick_dark",
-   "seed": 4441,
+   "palette": "brick_brown",
+   "seed": 6807,
    "roof": {
     "type": "flat"
    },
@@ -3130,37 +1696,70 @@
    ]
   },
   {
-   "id": "C61",
+   "id": "C36",
    "type": "apartment",
    "rect": [
+    6,
     25,
-    28,
-    35,
-    44
+    15,
+    36
    ],
-   "height": 13.8,
-   "floors": 4,
-   "palette": "brick_dark",
-   "seed": 6161,
+   "height": 16.9,
+   "floors": 5,
+   "palette": "brick_brown",
+   "seed": 1901,
    "roof": {
     "type": "flat"
    },
    "front": "n",
-   "doors": []
+   "doors": [
+    {
+     "side": "n",
+     "at": 4.5,
+     "width": 1.8,
+     "kind": "entrance"
+    }
+   ]
   },
   {
-   "id": "C62",
-   "type": "backdrop",
+   "id": "C37",
+   "type": "apartment",
    "rect": [
-    35,
-    37,
-    44,
-    44
+    15,
+    25,
+    25,
+    36
    ],
-   "height": 26.2,
-   "floors": 8,
-   "palette": "clad_slate",
-   "seed": 1663,
+   "height": 13.8,
+   "floors": 4,
+   "palette": "brick_red",
+   "seed": 6280,
+   "roof": {
+    "type": "flat"
+   },
+   "front": "n",
+   "doors": [
+    {
+     "side": "n",
+     "at": 5.0,
+     "width": 3.8,
+     "kind": "store"
+    }
+   ]
+  },
+  {
+   "id": "C38",
+   "type": "apartment",
+   "rect": [
+    25,
+    24,
+    36,
+    36
+   ],
+   "height": 10.7,
+   "floors": 3,
+   "palette": "brick_red",
+   "seed": 5023,
    "roof": {
     "type": "flat"
    },
@@ -3171,10 +1770,10 @@
  "walls": [
   {
    "rect": [
-    -29,
-    -8,
+    2,
     -25,
-    -6
+    25,
+    -23
    ],
    "height": 2.6,
    "style": "brick",
@@ -3183,10 +1782,10 @@
   },
   {
    "rect": [
-    -21,
-    -8,
-    -19,
-    -6
+    -15,
+    -17,
+    -13,
+    -16
    ],
    "height": 2.6,
    "style": "pillar",
@@ -3195,34 +1794,43 @@
   },
   {
    "rect": [
-    -16,
-    -7,
-    -14,
-    -6
+    -9,
+    -17,
+    -2,
+    -16
    ],
    "height": 2.6,
-   "style": "pillar",
+   "style": "brick",
    "gates": [],
    "id": "W03"
   },
   {
    "rect": [
-    7,
-    -7,
-    15,
-    -5
+    5,
+    -17,
+    19,
+    -15
    ],
    "height": 1.4,
    "style": "railing",
-   "gates": [],
+   "gates": [
+    {
+     "rect": [
+      10,
+      -17,
+      14,
+      -15
+     ]
+    }
+   ],
    "id": "W04"
   },
   {
    "rect": [
-    14,
-    -5,
-    21,
-    -4
+    5,
+    -15,
+    7,
+    -12
    ],
    "height": 1.4,
    "style": "railing",
@@ -3231,10 +1839,10 @@
   },
   {
    "rect": [
-    24,
-    -11,
-    25,
-    -5
+    -19,
+    -9,
+    -15,
+    -7
    ],
    "height": 2.6,
    "style": "brick",
@@ -3243,34 +1851,34 @@
   },
   {
    "rect": [
-    -21,
-    4,
-    -14,
-    5
+    -19,
+    -7,
+    -18,
+    -2
    ],
-   "height": 1.4,
-   "style": "railing",
+   "height": 2.6,
+   "style": "brick",
    "gates": [],
    "id": "W07"
   },
   {
    "rect": [
-    -15,
-    5,
-    -7,
-    7
+    6,
+    -9,
+    7,
+    -7
    ],
-   "height": 1.4,
-   "style": "railing",
+   "height": 2.6,
+   "style": "pillar",
    "gates": [],
    "id": "W08"
   },
   {
    "rect": [
-    14,
-    6,
     16,
-    7
+    -8,
+    17,
+    -7
    ],
    "height": 2.6,
    "style": "pillar",
@@ -3279,22 +1887,22 @@
   },
   {
    "rect": [
-    19,
-    6,
-    21,
-    8
+    -7,
+    -6,
+    -6,
+    -2
    ],
-   "height": 2.6,
-   "style": "pillar",
+   "height": 1.4,
+   "style": "railing",
    "gates": [],
    "id": "W10"
   },
   {
    "rect": [
-    25,
-    6,
-    29,
-    8
+    17,
+    -8,
+    19,
+    0
    ],
    "height": 2.6,
    "style": "brick",
@@ -3303,1050 +1911,1579 @@
   },
   {
    "rect": [
-    -25,
-    5,
-    -24,
-    11
+    -19,
+    4,
+    -18,
+    5
+   ],
+   "height": 2.6,
+   "style": "pillar",
+   "gates": [],
+   "id": "W12"
+  },
+  {
+   "rect": [
+    -9,
+    4,
+    -6,
+    6
+   ],
+   "height": 1.4,
+   "style": "railing",
+   "gates": [],
+   "id": "W13"
+  },
+  {
+   "rect": [
+    6,
+    6,
+    8,
+    9
    ],
    "height": 2.6,
    "style": "brick",
    "gates": [],
-   "id": "W12"
+   "id": "W14"
+  },
+  {
+   "rect": [
+    12,
+    6,
+    14,
+    9
+   ],
+   "height": 2.6,
+   "style": "brick",
+   "gates": [],
+   "id": "W15"
+  },
+  {
+   "rect": [
+    -17,
+    5,
+    -15,
+    18
+   ],
+   "height": 2.6,
+   "style": "brick",
+   "gates": [],
+   "id": "W16"
+  },
+  {
+   "rect": [
+    14,
+    11,
+    17,
+    12
+   ],
+   "height": 2.6,
+   "style": "brick",
+   "gates": [],
+   "id": "W17"
+  },
+  {
+   "rect": [
+    17,
+    6,
+    19,
+    12
+   ],
+   "height": 2.6,
+   "style": "brick",
+   "gates": [],
+   "id": "W18"
+  },
+  {
+   "rect": [
+    -25,
+    11,
+    -23,
+    25
+   ],
+   "height": 2.6,
+   "style": "brick",
+   "gates": [],
+   "id": "W19"
+  },
+  {
+   "rect": [
+    -9,
+    16,
+    -3,
+    18
+   ],
+   "height": 1.4,
+   "style": "railing",
+   "gates": [],
+   "id": "W20"
+  },
+  {
+   "rect": [
+    14,
+    16,
+    19,
+    18
+   ],
+   "height": 2.6,
+   "style": "brick",
+   "gates": [],
+   "id": "W21"
+  },
+  {
+   "rect": [
+    -23,
+    24,
+    -17,
+    25
+   ],
+   "height": 2.6,
+   "style": "brick",
+   "gates": [],
+   "id": "W22"
   }
  ],
  "props": [
   {
    "type": "planter_long",
    "pos": [
+    0,
     0.0,
-    0,
-    -4.2
-   ],
-   "heading": 0
-  },
-  {
-   "type": "planter_long",
-   "pos": [
-    -0.0,
-    0,
-    4.2
-   ],
-   "heading": 180
-  },
-  {
-   "type": "bench_modern",
-   "pos": [
-    0.0,
-    0,
-    -3.25
-   ],
-   "heading": 180
-  },
-  {
-   "type": "bench_modern",
-   "pos": [
-    -0.0,
-    0,
-    3.25
+    -4.7
    ],
    "heading": 0
   },
   {
    "type": "cafe_set",
    "pos": [
-    -4.6,
-    0,
-    2.6
+    -4.5,
+    0.0,
+    3.5
    ],
    "heading": 0
   },
   {
-   "type": "cafe_set",
+   "type": "bench_modern",
    "pos": [
-    4.6,
-    0,
-    -2.6
-   ],
-   "heading": 180
-  },
-  {
-   "type": "traffic_light",
-   "pos": [
-    -6.6,
-    0.15,
-    -21.6
-   ],
-   "heading": 135
-  },
-  {
-   "type": "traffic_light",
-   "pos": [
-    6.6,
-    0.15,
-    21.6
-   ],
-   "heading": 315
-  },
-  {
-   "type": "sign_stop",
-   "pos": [
-    -6.4,
-    0.15,
-    -27.4
-   ],
-   "heading": 90
-  },
-  {
-   "type": "sign_stop",
-   "pos": [
-    6.4,
-    0.15,
-    27.4
+    4.8,
+    0.0,
+    3.6
    ],
    "heading": 270
   },
   {
-   "type": "sign_street",
+   "type": "utility_box",
    "pos": [
-    0.5,
-    0.15,
-    -21.4
-   ],
-   "heading": 0
-  },
-  {
-   "type": "sign_street",
-   "pos": [
-    -0.5,
-    0.15,
-    21.4
-   ],
-   "heading": 180
-  },
-  {
-   "type": "dumpster",
-   "pos": [
-    -24.0,
-    0,
-    -13.0
-   ],
-   "heading": 0
-  },
-  {
-   "type": "dumpster",
-   "pos": [
-    24.0,
-    0,
-    13.0
-   ],
-   "heading": 180
-  },
-  {
-   "type": "trash_bags",
-   "pos": [
-    -21.5,
-    0,
-    -13.2
+    8.1,
+    0.0,
+    -13.3
    ],
    "heading": 0
   },
   {
    "type": "trash_bags",
    "pos": [
-    21.5,
-    0,
-    13.2
-   ],
-   "heading": 180
-  },
-  {
-   "type": "ac_condenser",
-   "pos": [
-    -31.6,
-    0,
-    -15.6
-   ],
-   "heading": 0
-  },
-  {
-   "type": "ac_condenser",
-   "pos": [
-    31.6,
-    0,
-    15.6
-   ],
-   "heading": 180
-  },
-  {
-   "type": "dumpster_blue",
-   "pos": [
-    14.0,
-    0,
-    -30.4
-   ],
-   "heading": 0
-  },
-  {
-   "type": "dumpster_blue",
-   "pos": [
-    -14.0,
-    0,
-    30.4
-   ],
-   "heading": 180
-  },
-  {
-   "type": "pallet_stack",
-   "pos": [
-    2.0,
-    0,
-    -30.3
-   ],
-   "heading": 0
-  },
-  {
-   "type": "pallet_stack",
-   "pos": [
-    -2.0,
-    0,
-    30.3
-   ],
-   "heading": 180
-  },
-  {
-   "type": "bench_modern",
-   "pos": [
-    24.65,
-    0,
-    -29.85
-   ],
-   "heading": 90
-  },
-  {
-   "type": "bench_modern",
-   "pos": [
-    -24.65,
-    0,
-    29.85
-   ],
-   "heading": 270
-  },
-  {
-   "type": "bike_rack",
-   "pos": [
-    -18.0,
-    0,
-    3.4
+    15,
+    0.0,
+    -11.5
    ],
    "heading": 0
   },
   {
    "type": "bike_rack",
    "pos": [
-    18.0,
-    0,
-    -3.4
+    8.5,
+    0.0,
+    -8.3
    ],
-   "heading": 180
+   "heading": 0
   },
   {
-   "type": "planter",
+   "type": "trash_bin_grey",
    "pos": [
-    -14.8,
-    0,
-    -5.4
+    -4,
+    0.0,
+    14
+   ],
+   "heading": 0
+  },
+  {
+   "type": "dumpster",
+   "pos": [
+    -20.1,
+    0.0,
+    -6
+   ],
+   "heading": 90
+  },
+  {
+   "type": "utility_box",
+   "pos": [
+    17.4,
+    0.0,
+    13.5
+   ],
+   "heading": 90
+  },
+  {
+   "type": "bench_modern",
+   "pos": [
+    7.4,
+    0.0,
+    16.4
    ],
    "heading": 90
   },
   {
    "type": "planter",
    "pos": [
-    14.8,
-    0,
-    5.4
+    12,
+    0.0,
+    16.6
    ],
-   "heading": 270
+   "heading": 0
+  },
+  {
+   "type": "streetlight",
+   "pos": [
+    -17.05,
+    0.15,
+    -23.75
+   ],
+   "heading": 180
+  },
+  {
+   "type": "streetlight",
+   "pos": [
+    -4.75,
+    0.15,
+    -23.75
+   ],
+   "heading": 180
   },
   {
    "type": "streetlight",
    "pos": [
     -16.0,
     0.15,
-    -26.75
+    -18.25
+   ],
+   "heading": 0
+  },
+  {
+   "type": "newspaper_box",
+   "pos": [
+    -13.801,
+    0.15,
+    -17.35
    ],
    "heading": 180
   },
   {
    "type": "streetlight",
    "pos": [
-    -17.1,
+    -5.5,
     0.15,
-    -21.25
+    -18.25
    ],
    "heading": 0
   },
   {
    "type": "streetlight",
    "pos": [
-    -7.1,
+    7.75,
     0.15,
-    -21.25
-   ],
-   "heading": 0
-  },
-  {
-   "type": "streetlight",
-   "pos": [
-    16.0,
-    0.15,
-    26.75
-   ],
-   "heading": 0
-  },
-  {
-   "type": "streetlight",
-   "pos": [
-    11.9,
-    0.15,
-    21.25
+    -21.75
    ],
    "heading": 180
   },
   {
    "type": "streetlight",
    "pos": [
-    21.9,
+    19.25,
     0.15,
-    21.25
+    -21.75
    ],
    "heading": 180
   },
   {
    "type": "streetlight",
    "pos": [
-    9.0,
+    -23.75,
     0.15,
-    -18.75
+    -11.5
    ],
-   "heading": 180
+   "heading": 90
   },
   {
    "type": "streetlight",
    "pos": [
-    14.0,
+    -23.75,
     0.15,
-    -13.25
+    -1.7
    ],
-   "heading": 0
+   "heading": 90
   },
   {
-   "type": "streetlight",
+   "type": "fire_hydrant",
    "pos": [
-    -9.0,
+    -23.75,
     0.15,
-    18.75
-   ],
-   "heading": 0
-  },
-  {
-   "type": "streetlight",
-   "pos": [
-    -14.0,
-    0.15,
-    13.25
-   ],
-   "heading": 180
-  },
-  {
-   "type": "streetlight",
-   "pos": [
-    28.75,
-    0.15,
-    -17.0
+    -5.851
    ],
    "heading": 270
   },
   {
    "type": "streetlight",
    "pos": [
-    -28.75,
+    -21.75,
     0.15,
-    17.0
+    17.5
    ],
    "heading": 90
   },
   {
-   "type": "car_black",
+   "type": "streetlight",
    "pos": [
-    -22.1,
-    0.0,
-    -25.35
+    23.75,
+    0.15,
+    -12.367
    ],
-   "heading": 90
+   "heading": 270
+  },
+  {
+   "type": "streetlight",
+   "pos": [
+    23.75,
+    0.15,
+    1.7
+   ],
+   "heading": 270
+  },
+  {
+   "type": "streetlight",
+   "pos": [
+    23.75,
+    0.15,
+    12.167
+   ],
+   "heading": 270
   },
   {
    "type": "car_white",
    "pos": [
-    12.4,
+    12.1,
     0.0,
-    25.35
+    -20.35
    ],
-   "heading": 270
-  },
-  {
-   "type": "car_blue",
-   "pos": [
-    3.9,
-    0.0,
-    -17.35
-   ],
-   "heading": 87
-  },
-  {
-   "type": "car_blue",
-   "pos": [
-    10.1,
-    0.0,
-    -17.35
-   ],
-   "heading": 87
-  },
-  {
-   "type": "van_white",
-   "pos": [
-    -14.1,
-    0.0,
-    17.35
-   ],
-   "heading": 270
-  },
-  {
-   "type": "car_black",
-   "pos": [
-    -27.35,
-    0.0,
-    14.9
-   ],
-   "heading": 180
+   "heading": 90
   },
   {
    "type": "utility_pole",
    "pos": [
-    -24.5,
+    -2.75,
     0.0,
-    -15.75
+    9.0
    ],
-   "heading": 0
+   "heading": 90
   },
   {
    "type": "utility_pole",
    "pos": [
-    30.167,
+    -2.75,
+    0.0,
+    15.0
+   ],
+   "heading": 90
+  },
+  {
+   "type": "utility_pole",
+   "pos": [
+    -10.75,
+    0.0,
+    -8.0
+   ],
+   "heading": 90
+  },
+  {
+   "type": "utility_pole",
+   "pos": [
+    -10.75,
+    0.0,
+    -4.0
+   ],
+   "heading": 90
+  },
+  {
+   "type": "utility_pole",
+   "pos": [
+    -14.75,
+    0.0,
+    7.167
+   ],
+   "heading": 90
+  },
+  {
+   "type": "utility_pole",
+   "pos": [
+    -14.75,
+    0.0,
+    13.5
+   ],
+   "heading": 90
+  },
+  {
+   "type": "utility_pole",
+   "pos": [
+    -14.75,
+    0.0,
+    19.833
+   ],
+   "heading": 90
+  },
+  {
+   "type": "dumpster",
+   "pos": [
+    -9.685,
+    0.0,
+    21.566
+   ],
+   "heading": 90
+  },
+  {
+   "type": "utility_pole",
+   "pos": [
+    16.5,
     0.0,
     12.25
    ],
    "heading": 0
-  },
-  {
-   "type": "utility_pole",
-   "pos": [
-    -15.75,
-    0.0,
-    -14.0
-   ],
-   "heading": 90
-  },
-  {
-   "type": "utility_pole",
-   "pos": [
-    13.25,
-    0.0,
-    18.0
-   ],
-   "heading": 90
-  },
-  {
-   "type": "utility_pole",
-   "pos": [
-    9.0,
-    0.0,
-    -30.75
-   ],
-   "heading": 0
-  },
-  {
-   "type": "utility_pole",
-   "pos": [
-    -15.0,
-    0.0,
-    28.25
-   ],
-   "heading": 0
-  },
-  {
-   "type": "utility_pole",
-   "pos": [
-    -9.0,
-    0.0,
-    28.25
-   ],
-   "heading": 0
-  },
-  {
-   "type": "utility_pole",
-   "pos": [
-    18.25,
-    0.0,
-    -20.0
-   ],
-   "heading": 90
-  },
-  {
-   "type": "utility_pole",
-   "pos": [
-    18.25,
-    0.0,
-    -14.667
-   ],
-   "heading": 90
-  },
-  {
-   "type": "utility_pole",
-   "pos": [
-    -20.75,
-    0.0,
-    20.0
-   ],
-   "heading": 90
-  },
-  {
-   "type": "utility_pole",
-   "pos": [
-    -20.75,
-    0.0,
-    25.333
-   ],
-   "heading": 90
-  },
-  {
-   "type": "utility_pole",
-   "pos": [
-    25.25,
-    0.0,
-    -8.5
-   ],
-   "heading": 90
-  },
-  {
-   "type": "trash_bags",
-   "pos": [
-    -25.46,
-    0.0,
-    7.075
-   ],
-   "heading": 90
-  },
-  {
-   "type": "pallet_stack",
-   "pos": [
-    -25.475,
-    0.0,
-    9.011
-   ],
-   "heading": 90
-  },
-  {
-   "type": "cafe_set",
-   "pos": [
-    -7.3,
-    0.0,
-    -13.0
-   ],
-   "heading": 60
-  },
-  {
-   "type": "cafe_set",
-   "pos": [
-    9.0,
-    0.0,
-    -8.3
-   ],
-   "heading": 60
-  },
-  {
-   "type": "cafe_set",
-   "pos": [
-    -9.0,
-    0.0,
-    8.3
-   ],
-   "heading": 60
-  },
-  {
-   "type": "cafe_set",
-   "pos": [
-    7.3,
-    0.0,
-    13.0
-   ],
-   "heading": 60
   }
  ],
  "targets": [
   {
    "id": "T01",
    "pos": [
-    -31.0,
-    0,
-    -14.0
+    0.0,
+    0.0,
+    0.0
    ],
    "heading": 90
   },
   {
    "id": "T02",
    "pos": [
-    31.0,
-    0,
-    14.0
+    -11.5,
+    0.0,
+    -21.0
    ],
-   "heading": 270
+   "heading": 90
   },
   {
    "id": "T03",
    "pos": [
-    -24.5,
-    0,
-    -18.5
+    -21.0,
+    0.0,
+    8.0
    ],
-   "heading": 180
+   "heading": 90
   },
   {
    "id": "T04",
    "pos": [
-    24.5,
-    0,
-    18.5
+    22.0,
+    0.0,
+    0.5
    ],
    "heading": 0
   },
   {
    "id": "T05",
    "pos": [
-    -16.0,
-    0.15,
-    -25.5
+    -12.5,
+    0.0,
+    1.0
    ],
    "heading": 90
   },
   {
    "id": "T06",
    "pos": [
-    16.0,
-    0.15,
-    25.5
-   ],
-   "heading": 270
-  },
-  {
-   "id": "T07",
-   "pos": [
-    -10.0,
-    0,
-    -15.0
+    12.5,
+    0.0,
+    3.0
    ],
    "heading": 90
   },
   {
+   "id": "T07",
+   "pos": [
+    0.0,
+    0.0,
+    -11.5
+   ],
+   "heading": 0
+  },
+  {
    "id": "T08",
    "pos": [
-    10.0,
-    0,
-    15.0
+    -1.0,
+    0.0,
+    12.0
    ],
-   "heading": 270
+   "heading": 0
   },
   {
    "id": "T09",
    "pos": [
-    -3.0,
-    0,
-    -29.5
+    -17.0,
+    0.0,
+    -11.0
    ],
-   "heading": 180
+   "heading": 90
   },
   {
    "id": "T10",
    "pos": [
-    3.0,
-    0,
-    29.5
+    -9.0,
+    0.0,
+    -6.0
    ],
    "heading": 0
   },
   {
    "id": "T11",
    "pos": [
-    6.0,
-    0,
-    -29.5
+    11.5,
+    0.0,
+    -11.0
    ],
-   "heading": 270
+   "heading": 90
   },
   {
    "id": "T12",
    "pos": [
-    -6.0,
-    0,
-    29.5
-   ],
-   "heading": 90
-  },
-  {
-   "id": "T13",
-   "pos": [
-    14.0,
-    0.15,
-    -19.0
-   ],
-   "heading": 270
-  },
-  {
-   "id": "T14",
-   "pos": [
-    -14.0,
-    0.15,
-    19.0
-   ],
-   "heading": 90
-  },
-  {
-   "id": "T15",
-   "pos": [
-    28.0,
-    0,
-    -28.5
-   ],
-   "heading": 270
-  },
-  {
-   "id": "T16",
-   "pos": [
-    -28.0,
-    0,
-    28.5
-   ],
-   "heading": 90
-  },
-  {
-   "id": "T17",
-   "pos": [
-    22.5,
-    0,
-    -21.5
-   ],
-   "heading": 270
-  },
-  {
-   "id": "T18",
-   "pos": [
-    -22.5,
-    0,
-    21.5
-   ],
-   "heading": 90
-  },
-  {
-   "id": "T19",
-   "pos": [
-    7.0,
-    0,
-    -9.0
-   ],
-   "heading": 180
-  },
-  {
-   "id": "T20",
-   "pos": [
-    -7.0,
-    0,
-    9.0
+    17.5,
+    0.0,
+    -10.0
    ],
    "heading": 0
   },
   {
-   "id": "T21",
+   "id": "T13",
    "pos": [
-    -17.5,
-    0,
-    0.5
+    -6.0,
+    0.0,
+    12.5
+   ],
+   "heading": 0
+  },
+  {
+   "id": "T14",
+   "pos": [
+    10.0,
+    0.0,
+    7.5
    ],
    "heading": 90
-  },
-  {
-   "id": "T22",
-   "pos": [
-    17.5,
-    0,
-    -0.5
-   ],
-   "heading": 270
-  },
-  {
-   "id": "T23",
-   "pos": [
-    -4.5,
-    0,
-    -4.5
-   ],
-   "heading": 135
-  },
-  {
-   "id": "T24",
-   "pos": [
-    4.5,
-    0,
-    4.5
-   ],
-   "heading": 315
   }
  ],
  "lights": [],
  "arches": [
   {
-   "id": "cv_w_link",
+   "id": "court_canopy",
    "rect": [
-    -16,
-    -19,
-    -13,
-    -17
-   ],
-   "spring": 3.6,
-   "style": "canopy",
-   "axis": "x"
-  },
-  {
-   "id": "cv_w_linkr",
-   "rect": [
-    13,
-    17,
     16,
-    19
+    -11,
+    19,
+    -10
    ],
    "spring": 3.6,
    "style": "canopy",
    "axis": "x"
   },
   {
-   "id": "cv_n_alley",
+   "id": "court_canopyr",
    "rect": [
-    8,
-    -31,
+    -19,
     10,
-    -28
+    -16,
+    11
    ],
-   "spring": 3.8,
+   "spring": 3.6,
    "style": "canopy",
-   "axis": "z"
-  },
-  {
-   "id": "cv_n_alleyr",
-   "rect": [
-    -10,
-    28,
-    -8,
-    31
-   ],
-   "spring": 3.8,
-   "style": "canopy",
-   "axis": "z"
+   "axis": "x"
   }
  ],
  "obstacles": [],
  "wires": [
   {
    "a": [
-    -15.0,
+    -2.75,
     8.4,
-    28.25
+    9.0
    ],
    "b": [
-    -9.0,
+    -2.75,
     8.4,
-    28.25
+    15.0
    ],
    "sag": 0.5
   },
   {
    "a": [
-    18.25,
+    -10.75,
     8.4,
-    -20.0
+    -8.0
    ],
    "b": [
-    18.25,
+    -10.75,
     8.4,
-    -14.666666666666666
+    -4.0
    ],
    "sag": 0.5
   },
   {
    "a": [
-    -20.75,
+    -14.75,
     8.4,
-    20.0
+    7.166666666666666
    ],
    "b": [
-    -20.75,
+    -14.75,
     8.4,
-    25.333333333333336
+    13.5
+   ],
+   "sag": 0.5
+  },
+  {
+   "a": [
+    -14.75,
+    8.4,
+    13.5
+   ],
+   "b": [
+    -14.75,
+    8.4,
+    19.833333333333336
    ],
    "sag": 0.5
   }
  ],
+ "upperRoutes": [
+  {
+   "id": "second_floor_passage",
+   "rect": [
+    -14,
+    5,
+    -11,
+    22
+   ],
+   "height": 2.8,
+   "style": "sky_passage",
+   "stairs": [
+    {
+     "side": "n",
+     "from": -14,
+     "to": -11,
+     "steps": 16,
+     "rise": 0.175,
+     "run": 0.32
+    },
+    {
+     "side": "s",
+     "from": -14,
+     "to": -11,
+     "steps": 16,
+     "rise": 0.175,
+     "run": 0.32
+    }
+   ]
+  }
+ ],
+ "navigation": {
+  "version": 1,
+  "groundRoutes": [
+   {
+    "id": "plaza",
+    "kind": "plaza",
+    "rect": [
+     -6,
+     -6,
+     6,
+     6
+    ]
+   },
+   {
+    "id": "north_road",
+    "kind": "street",
+    "rect": [
+     -25,
+     -25,
+     2,
+     -17
+    ]
+   },
+   {
+    "id": "north_east",
+    "kind": "street",
+    "rect": [
+     2,
+     -23,
+     25,
+     -17
+    ]
+   },
+   {
+    "id": "west_road",
+    "kind": "street",
+    "rect": [
+     -25,
+     -17,
+     -19,
+     5
+    ]
+   },
+   {
+    "id": "west_jog",
+    "kind": "street",
+    "rect": [
+     -25,
+     5,
+     -17,
+     11
+    ]
+   },
+   {
+    "id": "south_west",
+    "kind": "street",
+    "rect": [
+     -23,
+     11,
+     -17,
+     24
+    ]
+   },
+   {
+    "id": "south_road",
+    "kind": "street",
+    "rect": [
+     -17,
+     18,
+     25,
+     25
+    ]
+   },
+   {
+    "id": "east_road",
+    "kind": "street",
+    "rect": [
+     19,
+     -17,
+     25,
+     18
+    ]
+   },
+   {
+    "id": "west_plaza",
+    "kind": "street",
+    "rect": [
+     -19,
+     -2,
+     -6,
+     4
+    ]
+   },
+   {
+    "id": "east_plaza",
+    "kind": "street",
+    "rect": [
+     6,
+     0,
+     19,
+     6
+    ]
+   },
+   {
+    "id": "north_plaza",
+    "kind": "alley",
+    "rect": [
+     -2,
+     -17,
+     2,
+     -6
+    ]
+   },
+   {
+    "id": "south_plaza",
+    "kind": "alley",
+    "rect": [
+     -3,
+     6,
+     1,
+     18
+    ]
+   },
+   {
+    "id": "diner_north",
+    "kind": "alley",
+    "rect": [
+     -13,
+     -17,
+     -9,
+     -16
+    ]
+   },
+   {
+    "id": "diner_west",
+    "kind": "alley",
+    "rect": [
+     -19,
+     -13,
+     -15,
+     -9
+    ]
+   },
+   {
+    "id": "diner_south",
+    "kind": "alley",
+    "rect": [
+     -11,
+     -10,
+     -7,
+     -2
+    ]
+   },
+   {
+    "id": "north_court",
+    "kind": "court",
+    "rect": [
+     7,
+     -15,
+     16,
+     -7
+    ]
+   },
+   {
+    "id": "court_east",
+    "kind": "alley",
+    "rect": [
+     16,
+     -12,
+     19,
+     -8
+    ]
+   },
+   {
+    "id": "court_west",
+    "kind": "alley",
+    "rect": [
+     2,
+     -12,
+     7,
+     -9
+    ]
+   },
+   {
+    "id": "service_lane",
+    "kind": "alley",
+    "rect": [
+     -15,
+     4,
+     -9,
+     23
+    ]
+   },
+   {
+    "id": "garden_court",
+    "kind": "court",
+    "rect": [
+     -9,
+     9,
+     -3,
+     16
+    ]
+   },
+   {
+    "id": "shop_north",
+    "kind": "alley",
+    "rect": [
+     8,
+     6,
+     12,
+     9
+    ]
+   },
+   {
+    "id": "shop_east",
+    "kind": "alley",
+    "rect": [
+     14,
+     12,
+     19,
+     16
+    ]
+   }
+  ],
+  "coveredRoutes": [
+   {
+    "id": "diner",
+    "kind": "interior",
+    "rect": [
+     -14.7,
+     -15.7,
+     -6,
+     -10.3
+    ]
+   },
+   {
+    "id": "diner_door0",
+    "kind": "doorway",
+    "rect": [
+     -11.9,
+     -16,
+     -10.1,
+     -15.7
+    ]
+   },
+   {
+    "id": "diner_door1",
+    "kind": "doorway",
+    "rect": [
+     -9.9,
+     -10.3,
+     -8.1,
+     -10
+    ]
+   },
+   {
+    "id": "diner_door2",
+    "kind": "doorway",
+    "rect": [
+     -15,
+     -12.4,
+     -14.7,
+     -10.6
+    ]
+   },
+   {
+    "id": "court_south",
+    "kind": "interior",
+    "rect": [
+     7,
+     -6.7,
+     12,
+     -0.3
+    ]
+   },
+   {
+    "id": "court_south_door0",
+    "kind": "doorway",
+    "rect": [
+     8.6,
+     -7,
+     10.4,
+     -6.7
+    ]
+   },
+   {
+    "id": "court_south_door1",
+    "kind": "doorway",
+    "rect": [
+     8.6,
+     -0.3,
+     10.4,
+     0
+    ]
+   },
+   {
+    "id": "south_shop",
+    "kind": "interior",
+    "rect": [
+     6.3,
+     9.3,
+     13.7,
+     17.7
+    ]
+   },
+   {
+    "id": "south_shop_door0",
+    "kind": "doorway",
+    "rect": [
+     9.1,
+     9,
+     10.9,
+     9.3
+    ]
+   },
+   {
+    "id": "south_shop_door1",
+    "kind": "doorway",
+    "rect": [
+     13.7,
+     13.1,
+     14,
+     14.9
+    ]
+   },
+   {
+    "id": "south_shop_door2",
+    "kind": "doorway",
+    "rect": [
+     9.1,
+     17.7,
+     10.9,
+     18
+    ]
+   },
+   {
+    "id": "court_north",
+    "kind": "passage",
+    "rect": [
+     10,
+     -17,
+     14,
+     -15
+    ]
+   },
+   {
+    "id": "shop_west",
+    "kind": "passage",
+    "rect": [
+     1,
+     11,
+     6,
+     14
+    ]
+   },
+   {
+    "id": "west_lobby",
+    "kind": "passage",
+    "rect": [
+     -18,
+     -2,
+     -15,
+     4
+    ]
+   },
+   {
+    "id": "east_lobby",
+    "kind": "passage",
+    "rect": [
+     14,
+     0,
+     17,
+     6
+    ]
+   },
+   {
+    "id": "south_lobby",
+    "kind": "passage",
+    "rect": [
+     2,
+     18,
+     6,
+     25
+    ]
+   }
+  ],
+  "upperRoutes": [
+   {
+    "id": "second_floor_passage",
+    "waypoints": [
+     [
+      -12.5,
+      0,
+      4.35
+     ],
+     [
+      -12.5,
+      2.8,
+      10.620000000000001
+     ],
+     [
+      -12.5,
+      2.8,
+      16.38
+     ],
+     [
+      -12.5,
+      0,
+      22.65
+     ]
+    ]
+   }
+  ],
+  "groundObstacles": [
+   {
+    "id": "second_floor_passage:step",
+    "rect": [
+     -14,
+     5.64,
+     -11,
+     5.96
+    ]
+   },
+   {
+    "id": "second_floor_passage:step",
+    "rect": [
+     -14,
+     5.96,
+     -11,
+     6.28
+    ]
+   },
+   {
+    "id": "second_floor_passage:step",
+    "rect": [
+     -14,
+     6.28,
+     -11,
+     6.6
+    ]
+   },
+   {
+    "id": "second_floor_passage:step",
+    "rect": [
+     -14,
+     6.6,
+     -11,
+     6.92
+    ]
+   },
+   {
+    "id": "second_floor_passage:step",
+    "rect": [
+     -14,
+     6.92,
+     -11,
+     7.24
+    ]
+   },
+   {
+    "id": "second_floor_passage:step",
+    "rect": [
+     -14,
+     7.24,
+     -11,
+     7.5600000000000005
+    ]
+   },
+   {
+    "id": "second_floor_passage:step",
+    "rect": [
+     -14,
+     7.5600000000000005,
+     -11,
+     7.88
+    ]
+   },
+   {
+    "id": "second_floor_passage:step",
+    "rect": [
+     -14,
+     7.88,
+     -11,
+     8.2
+    ]
+   },
+   {
+    "id": "second_floor_passage:step",
+    "rect": [
+     -14,
+     8.2,
+     -11,
+     8.52
+    ]
+   },
+   {
+    "id": "second_floor_passage:step",
+    "rect": [
+     -14,
+     8.52,
+     -11,
+     8.84
+    ]
+   },
+   {
+    "id": "second_floor_passage:step",
+    "rect": [
+     -14,
+     8.84,
+     -11,
+     9.16
+    ]
+   },
+   {
+    "id": "second_floor_passage:step",
+    "rect": [
+     -14,
+     9.16,
+     -11,
+     9.48
+    ]
+   },
+   {
+    "id": "second_floor_passage:step",
+    "rect": [
+     -14,
+     9.48,
+     -11,
+     9.8
+    ]
+   },
+   {
+    "id": "second_floor_passage:step",
+    "rect": [
+     -14,
+     9.8,
+     -11,
+     10.120000000000001
+    ]
+   },
+   {
+    "id": "second_floor_passage:step",
+    "rect": [
+     -14,
+     21.04,
+     -11,
+     21.36
+    ]
+   },
+   {
+    "id": "second_floor_passage:step",
+    "rect": [
+     -14,
+     20.72,
+     -11,
+     21.04
+    ]
+   },
+   {
+    "id": "second_floor_passage:step",
+    "rect": [
+     -14,
+     20.4,
+     -11,
+     20.72
+    ]
+   },
+   {
+    "id": "second_floor_passage:step",
+    "rect": [
+     -14,
+     20.08,
+     -11,
+     20.4
+    ]
+   },
+   {
+    "id": "second_floor_passage:step",
+    "rect": [
+     -14,
+     19.759999999999998,
+     -11,
+     20.08
+    ]
+   },
+   {
+    "id": "second_floor_passage:step",
+    "rect": [
+     -14,
+     19.44,
+     -11,
+     19.759999999999998
+    ]
+   },
+   {
+    "id": "second_floor_passage:step",
+    "rect": [
+     -14,
+     19.12,
+     -11,
+     19.44
+    ]
+   },
+   {
+    "id": "second_floor_passage:step",
+    "rect": [
+     -14,
+     18.8,
+     -11,
+     19.12
+    ]
+   },
+   {
+    "id": "second_floor_passage:step",
+    "rect": [
+     -14,
+     18.48,
+     -11,
+     18.8
+    ]
+   },
+   {
+    "id": "second_floor_passage:step",
+    "rect": [
+     -14,
+     18.16,
+     -11,
+     18.48
+    ]
+   },
+   {
+    "id": "second_floor_passage:step",
+    "rect": [
+     -14,
+     17.84,
+     -11,
+     18.16
+    ]
+   },
+   {
+    "id": "second_floor_passage:step",
+    "rect": [
+     -14,
+     17.52,
+     -11,
+     17.84
+    ]
+   },
+   {
+    "id": "second_floor_passage:step",
+    "rect": [
+     -14,
+     17.2,
+     -11,
+     17.52
+    ]
+   },
+   {
+    "id": "second_floor_passage:step",
+    "rect": [
+     -14,
+     16.88,
+     -11,
+     17.2
+    ]
+   },
+   {
+    "id": "second_floor_passage:post",
+    "rect": [
+     -14.004999999999999,
+     10.135000000000002,
+     -13.825,
+     10.255
+    ]
+   },
+   {
+    "id": "second_floor_passage:post",
+    "rect": [
+     -14.004999999999999,
+     12.338333333333335,
+     -13.825,
+     12.458333333333334
+    ]
+   },
+   {
+    "id": "second_floor_passage:post",
+    "rect": [
+     -14.004999999999999,
+     14.541666666666668,
+     -13.825,
+     14.661666666666667
+    ]
+   },
+   {
+    "id": "second_floor_passage:post",
+    "rect": [
+     -14.004999999999999,
+     16.744999999999997,
+     -13.825,
+     16.865
+    ]
+   },
+   {
+    "id": "second_floor_passage:post",
+    "rect": [
+     -11.174999999999999,
+     10.135000000000002,
+     -10.995,
+     10.255
+    ]
+   },
+   {
+    "id": "second_floor_passage:post",
+    "rect": [
+     -11.174999999999999,
+     12.338333333333335,
+     -10.995,
+     12.458333333333334
+    ]
+   },
+   {
+    "id": "second_floor_passage:post",
+    "rect": [
+     -11.174999999999999,
+     14.541666666666668,
+     -10.995,
+     14.661666666666667
+    ]
+   },
+   {
+    "id": "second_floor_passage:post",
+    "rect": [
+     -11.174999999999999,
+     16.744999999999997,
+     -10.995,
+     16.865
+    ]
+   }
+  ]
+ },
  "spawns": [
   {
    "id": "S01",
    "pos": [
-    -30.0,
+    -22.0,
     0.0,
     0.0
    ],
-   "heading": 75
+   "heading": 90
   },
   {
    "id": "S02",
    "pos": [
-    30.0,
+    24.0,
     0.0,
-    0.0
-   ],
-   "heading": 345
-  },
-  {
-   "id": "S03",
-   "pos": [
-    0.0,
-    0.0,
-    -30.0
-   ],
-   "heading": 255
-  },
-  {
-   "id": "S04",
-   "pos": [
-    0.0,
-    0.0,
-    30.0
+    24.0
    ],
    "heading": 0
   },
   {
+   "id": "S03",
+   "pos": [
+    18.0,
+    0.0,
+    -20.0
+   ],
+   "heading": 150
+  },
+  {
+   "id": "S04",
+   "pos": [
+    -5.5,
+    0.0,
+    24.0
+   ],
+   "heading": 90
+  },
+  {
    "id": "S05",
    "pos": [
-    -30.0,
+    -8.0,
     0.0,
-    30.0
+    -22.0
    ],
-   "heading": 75
+   "heading": 90
   },
   {
    "id": "S06",
    "pos": [
-    30.0,
+    3.5,
     0.0,
-    -30.0
+    0.5
    ],
-   "heading": 255
+   "heading": 270
   },
   {
    "id": "S07",
    "pos": [
+    22.0,
     0.0,
-    0.0,
-    0.0
+    5.0
    ],
-   "heading": 90
+   "heading": 285
   },
   {
    "id": "S08",
    "pos": [
-    -23.5,
+    -20.0,
     0.0,
-    -23.5
+    16.5
    ],
-   "heading": 90
+   "heading": 0
   },
   {
    "id": "S09",
    "pos": [
-    23.5,
+    -24.0,
     0.0,
-    23.5
+    -21.0
    ],
-   "heading": 270
+   "heading": 90
   },
   {
    "id": "S10",
    "pos": [
-    -15.0,
+    9.0,
     0.0,
-    15.0
+    19.0
    ],
-   "heading": 105
+   "heading": 270
   },
   {
    "id": "S11",
    "pos": [
-    15.0,
+    -7.5,
     0.0,
-    -15.0
+    10.0
    ],
-   "heading": 270
+   "heading": 210
   },
   {
    "id": "S12",
    "pos": [
-    -17.0,
+    -9.5,
     0.0,
-    -8.0
+    -8.5
    ],
-   "heading": 165
+   "heading": 180
   },
   {
    "id": "S13",
    "pos": [
-    17.0,
+    5.0,
     0.0,
-    8.0
-   ],
-   "heading": 345
-  },
-  {
-   "id": "S14",
-   "pos": [
-    -4.5,
-    0.0,
-    -16.0
-   ],
-   "heading": 90
-  },
-  {
-   "id": "S15",
-   "pos": [
-    4.5,
-    0.0,
-    16.0
+    -18.0
    ],
    "heading": 270
   },
   {
+   "id": "S14",
+   "pos": [
+    13.5,
+    0.0,
+    -8.0
+   ],
+   "heading": 285
+  },
+  {
+   "id": "S15",
+   "pos": [
+    -20.0,
+    0.0,
+    -11.0
+   ],
+   "heading": 195
+  },
+  {
    "id": "S16",
    "pos": [
-    -16.0,
+    18.5,
     0.0,
-    29.0
+    15.0
    ],
-   "heading": 90
+   "heading": 15
   }
  ]
 }

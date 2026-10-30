@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 /**
@@ -227,11 +227,12 @@ const sum = (pairs: Pair[]) => pairs.reduce((s, p) => s + p.area, 0);
 
 describe('town geometry has no coplanar overlapping surfaces (z-fighting)', () => {
   const pairs = findOverlaps(collect(files));
+  if (process.env.CROSSFIRE_GEOMETRY_REPORT) writeFileSync('test-results/compact-town-overlaps.json',JSON.stringify(pairs));
   const either = (p: Pair, f: (t: Tri) => boolean, g: (t: Tri) => boolean) => (f(p.a) && g(p.b)) || (g(p.a) && f(p.b));
 
   it('keeps the total overlap negligible', () => {
     // a handful of centimetre-sized slivers where roof fascia meets cornice ends is all that is left
-    expect(sum(pairs)).toBeLessThan(1.0);
+    expect(sum(pairs), families(pairs)).toBeLessThan(1.0);
   });
 
   it('window sills do not share a plane with the wall reveals', () => {
@@ -271,6 +272,7 @@ const NEW_MAPS = ['industrial-complex', 'modern-city'].filter((id) => existsSync
 describe.each(NEW_MAPS)('%s geometry has no coplanar overlapping surfaces (z-fighting)', (id) => {
   const idx = JSON.parse(readFileSync(`public/assets/models/${id}/map-assets.json`, 'utf8')) as { models: string[] };
   const pairs = findOverlaps(collect(idx.models.map((f) => `public/assets/models/${id}/${f}`)));
+  if (process.env.CROSSFIRE_GEOMETRY_REPORT) writeFileSync(`test-results/compact-${id}-overlaps.json`,JSON.stringify(pairs));
 
   it('keeps the total overlap negligible', () => {
     expect(sum(pairs), families(pairs)).toBeLessThan(1.0);

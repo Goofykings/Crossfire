@@ -212,6 +212,11 @@ export function deriveTacticalMap(layout: MapLayout, props: PropCatalog | null, 
   }
 
   const obstacles: TacticalMapData['obstacles'] = [];
+  // Ground-level queries must respect the solid stair runs and support posts,
+  // while leaving suspended floors' underpasses open. Exported with collision.
+  for (const part of layout.navigation?.groundObstacles ?? []) {
+    obstacles.push({ type: part.id, poly: rectPoly(part.rect) });
+  }
   if (props) {
     for (const p of [...layout.props, ...layout.obstacles]) {
       const col = props.props[p.type]?.collider;

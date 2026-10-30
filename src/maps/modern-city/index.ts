@@ -15,7 +15,7 @@ export const MODERN_CITY: MapDefinition = {
   assetPath: 'assets/models/modern-city/',
   layout: layout as unknown as MapLayout,
   assetIndex: 'map-assets.json',
-  dimensions: [68, 68],
+  dimensions: [54, 54],
   environment: {
     hdr: 'assets/env/sky_city_1k.hdr',
     skyImage: 'assets/env/sky_city_4k.jpg',
@@ -36,18 +36,12 @@ export const MODERN_CITY: MapDefinition = {
   tactical: {
     landmarks: {
       plaza: 'Plaza',
-      blue_court: 'West Court',
-      blue_courtr: 'East Court',
-      spawn_blue: 'West Yard',
-      spawn_bluer: 'East Yard',
-      ne_court: 'Garden Court',
-      ne_courtr: 'Garden Court',
+      north_court: 'Garden Court',
       diner: 'Diner',
-      dinerr: 'Diner',
-      shop_n: 'Market',
-      shop_nr: 'Market',
-      n_road: 'North St',
-      n_roadr: 'South St',
+      south_shop: 'Corner Shop',
+      service_lane: 'Upper Passage',
+      north_road: 'North Street',
+      south_road: 'South Street',
     },
   },
 };

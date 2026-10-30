@@ -1,5 +1,62 @@
 # CLAUDE.md: notes for future sessions
 
+## Compact maps for 2-6 players (2026-10-30)
+
+See docs/COMPACT_MAPS.md and the newest PROGRESS.md entry. Town is 52 x 52 m;
+Industrial/City are 54 x 54 m. Authored asymmetric routes live in
+tools/compact_layouts.py and feed the existing three layout/style generators.
+upper_routes.py supplies identical parts to visible terrain and collision.
+Preserve two stair ends, standing underpasses and full gallery headroom; do not
+replace suspended floors with solid terraces. compact_dressing.py validates
+placement before asymmetric spawn sampling. City sidewalks must not cover lobbies.
+Industrial fences are explicit useful yard dividers, never automatic thin lots.
+Both sides import regenerated collision/layout/catalog and derive matching hashes.
+shared/spawns.ts prefers screened, distant spawns while retaining occupancy checks.
+Protocol remains v6 and rounds remain 600000 ms. Frontend and Worker both need
+publication when authorized. Local tests pass; no public deployment was validated.
+Direct Blender --only props,town,industrial,city preserves texture/audio outputs.
+The exporter removes only stale numbered map blocks. Diagnostic plan PNGs and
+legacy ground-query metadata do not introduce a tactical overlay into the HUD.
+
+## Directional haze / health regeneration (2026-10-30)
+
+See docs/HEALTH_AND_DAMAGE_FEEDBACK.md and the latest PROGRESS.md entry.
+Protocol remains v6. Haze uses only confirmed current-life hit rays and current
+camera yaw/pitch, with a clear middle and bounded 500ms fading; preserve arrows.
+Worker-only regenAt persists with health/attachments. Every accepted damage hit
+sets eligibility to now+5000ms; first HP at +5100ms, then 1 per complete 100ms.
+Use elapsed server time, never client input volume or per-player intervals.
+New damage resets the cursor; death/round/spawn clears it. Valid resumes consume
+only elapsed unused steps. Keep the previous bounded reconnect fix unchanged.
+
+## Reconnection loop fix (2026-10-30)
+
+See docs/NETWORK_RECONNECTION.md. The old 24-frame in-flight window plus forced
+reconnect at 120 pending frames disconnected healthy sockets under ACK latency.
+Keep latency-aware outstanding input bounded to 48 (the unchanged server queue),
+12-frame/20Hz batches and 120-frame prediction backpressure without socket churn.
+Do not restore queue-triggered reconnects. Actual close owns bounded jittered
+retries; only 30 seconds of stability resets their budget. Leave cancels retries.
+Protocol remains v6; gameplay/heartbeat thresholds/DO persistence are unchanged.
+Console diagnostics require ?networkDebug / Worker NETWORK_DEBUG=true. See the
+newest PROGRESS.md entry for verification and the public-validation boundary.
+
+## Current combat visuals / home preview (2026-10-29)
+
+Protocol is **v6**: accepted hits carry server-derived normalized incoming rays and victim life;
+eliminations also carry unique IDs (null ray for falls). Update Worker and frontend together only
+when authorized. No hit/damage/balance or storage schema changes. Never accept client-assigned damage
+directions. Deduplicate events; deliver elimination before applying its dead snapshot. Remote deaths
+tip along the world ray and fade/dispose in 500ms without delaying respawns. Dispose temporary fade
+materials/texture clones; surviving characters retain shared original materials.
+
+PlayerSilhouettes replaces native per-mesh hulls with one depth-tested union mask and thin inward
+screen contour. Map geometry and foreground weapons occlude it. All body parts use the same relative
+red/blue mask color. Preserve skinned poses and LOS names. DamageFeedback uses real hits for bounded
+500ms CSS edges/chevrons. HomeCharacter uses the same GLB/idle in a disposable scene, never a map;
+one skin currently exists. Abort/dispose when leaving home and respect reduced motion.
+See docs/COMBAT_VISUALS.md and the newest PROGRESS.md entry. No commit, push or deploy automatically.
+
 ## Current character integration (2026-10-28)
 
 The latest character brief authorizes generating and integrating the actual humanoid. The supplied
@@ -18,7 +75,7 @@ Keep native depth-tested relative red/blue outlines thin enough for fingers/cuff
 Dead/disconnected instances dispose meshes, rigs and groups; the source remains cached for respawn.
 
 Slow local startup exposed late spawn-ack recovery: Retry enters an already-approved server life
-with its existing locked weapon. Client input flushing now bounds unacknowledged frames to 24,
+with its existing locked weapon. Client input flushing originally bounded unacknowledged frames to 24,
 retaining the server's original 48-frame queue/real-time authority and the existing reconnect limit.
 Pending and unsent input arrays must be independent on life/round/disconnect resets; aliasing them
 duplicates each new control frame. tests/multiplayerTransport.test.ts guards this and the send window.

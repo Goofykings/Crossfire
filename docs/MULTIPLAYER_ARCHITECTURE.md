@@ -1,9 +1,10 @@
 # Multiplayer architecture and migration plan
 
-Current combat/visibility update (2026-10-28): **protocol v5** adds server-owned shared weapon simulation,
+Current combat/visibility update (2026-10-29): **protocol v6** retains server-owned shared weapon simulation,
 health, blocked player hits, eliminations, scoring/respawn and actual FFA/Teams relationships. Existing
 Workers/DO/room, guest IDs vs resume credentials, fixed-step prediction and round/map rotation remain.
-See [current implementation and deployment boundary](MULTIPLAYER_COMBAT.md). The actual Blender
+It adds validated incoming-ray/life metadata for confirmed directional deaths and damage feedback.
+See [combat visuals / home preview](COMBAT_VISUALS.md) and [deployment boundary](MULTIPLAYER_COMBAT.md). The actual Blender
 character/rig/six-clip export now uses the existing frontend interface; see [character pipeline](CHARACTER_PIPELINE.md). Older v3/v4 notes below
 describe earlier stages rather than current combat status.
 

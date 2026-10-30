@@ -1,5 +1,13 @@
 # Level design
 
+Current layouts (2026-10-30) are compact, asymmetric networks for 2-6 players:
+**Town 52 x 52 m; Industrial and City 54 x 54 m**. Each has a real two-ended
+2.8 m upper route and updated shared collision, navigation and spawn data.
+See [COMPACT_MAPS.md](COMPACT_MAPS.md) and the three `*-compact-plan.png` diagnostics
+for current dimensions, authoring, exports and validation. The descriptions and
+metrics below document the previous larger layout and its original design work.
+The old Tab tactical overlay described below is no longer part of gameplay.
+
 Three maps share one schema (`src/maps/<id>/layout.json`), one set of rules (free-for-all: no safe zones or teams,
 16 spawn points spread over the map, 24 practice targets, 180° rotational symmetry so every part of the map has an
 equivalent counterpart) and one pipeline: a layout tool writes the layout, the Blender stage builds geometry and

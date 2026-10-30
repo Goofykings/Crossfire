@@ -102,6 +102,7 @@ class TerrainBuilder:
         self.ground(md)
         self.terraces(md)
         self.stairs(md)
+        self.upper_routes(md)
         self.walls(md)
         self.arches(md)
         self.gutters(md)
@@ -111,6 +112,12 @@ class TerrainBuilder:
         L = self.lim + 20
         md.face([(-L, -0.06, -L), (-L, -0.06, L), (L, -0.06, L), (L, -0.06, -L)], "cobble", col=(0.5, 0.5, 0.5, 1.0))
         return md
+
+    def upper_routes(self, md):
+        from upper_routes import route_parts
+        for route in self.L.get("upperRoutes", []):
+            for box, mat, _ in route_parts(route):
+                md.box(*box, mat)
 
     def ground(self, md: MeshData):
         lim = self.lim
@@ -230,6 +237,10 @@ class TerrainBuilder:
     def walls(self, md: MeshData):
         for w in self.L["walls"]:
             x0, z0, x1, z1 = w["rect"]
+            # Shared lot planes must not duplicate a neighbouring passage's
+            # inside face. A 1.5 cm masonry joint keeps those surfaces apart;
+            # the collision envelope remains conservatively at the lot edge.
+            x0,z0,x1,z1=x0+.015,z0+.015,x1-.015,z1-.015
             H = w["height"]
             if w["style"] == "pillar":
                 md.box(x0 + 0.1, -0.05, z0 + 0.1, x1 - 0.1, H, z1 - 0.1, "stone_blocks", skip=("ny",))

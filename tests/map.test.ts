@@ -2,8 +2,9 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { MOVEMENT } from '../src/config/constants';
 import type { CollisionFile, MapLayout, PropCatalog } from '../src/maps/types';
-import { CollisionWorld } from '../src/physics/CollisionWorld';
 import { PlayerController } from '../src/player/PlayerController';
+import { createMapWorld } from '../shared/world';
+import { CollisionWorld } from '../src/physics/CollisionWorld';
 
 /** Every map with a layout and generated collision data gets the same gameplay checks. */
 const MAP_IDS = readdirSync('src/maps', { withFileTypes: true })
@@ -90,8 +91,9 @@ describe.each(MAP_IDS)('map %s: free-for-all layout', (id) => {
 
 describe.each(MAP_IDS)('map %s: collision', (id) => {
   const { layout, collision } = loadMap(id);
-  const world = new CollisionWorld();
-  world.addMany(collision.boxes);
+  const world = createMapWorld(collision,layout,catalog);
+  const terrain = new CollisionWorld();
+  terrain.addMany(collision.boxes);
 
   it('spawns players on clear ground', () => {
     for (const s of layout.spawns) {
@@ -115,7 +117,9 @@ describe.each(MAP_IDS)('map %s: collision', (id) => {
       const [x0, z0, x1, z1] = zn.rect;
       for (let x = first(x0); x < x1; x += step) {
         for (let z = first(z0); z < z1; z += step) {
-          const y = world.groundHeight(x, z, r * 0.7, 2.0);
+          // Probe the authored floor, then test the real world including props.
+          // Furniture tops are not additional ground-route cells.
+          const y = terrain.groundHeight(x, z, r * 0.7, 2.0);
           if (y === -Infinity) continue;
           if (world.overlapsCylinder(x, z, r, y + MOVEMENT.stepHeight, y + MOVEMENT.crouchHeight)) continue;
           cells.set(key(x, z), { x, z, y });

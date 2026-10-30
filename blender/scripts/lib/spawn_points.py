@@ -1,8 +1,8 @@
 """Free-for-all spawn points spread over a layout (pure Python, shared by the layout tools).
 
 `ffa_spawns(layout, props)` picks points on open, flat ground with room around them, away from props, practice
-targets, doors and stairs, then spreads them out by farthest-point sampling. Layouts are 180-degree symmetric, so
-points are chosen in rotated pairs and every part of the map gets the same share. Each spawn faces the longest clear
+targets, doors and stairs, then spreads them out by farthest-point sampling without imposing symmetry.
+Each spawn faces the longest clear
 line of sight from its position, so nobody spawns staring at a wall.
 """
 from __future__ import annotations
@@ -55,7 +55,7 @@ def ffa_spawns(layout: dict, props: dict, count: int = 16) -> list[dict]:
     for b in layout["buildings"]:
         for d in b.get("doors", []):
             doors.append(bs.side_point(b, d["side"], d["at"], 0.5))
-    stairs = [r for r, _ in idx.steps]
+    stairs = [r for r, _ in idx.steps] + [r['rect'] for r in layout.get('upperRoutes', [])]
     ring = [(math.cos(a) * r, math.sin(a) * r) for r in (0.5, CLEAR) for a in (k * math.pi / 4 for k in range(8))]
 
     cands = []
@@ -77,23 +77,18 @@ def ffa_spawns(layout: dict, props: dict, count: int = 16) -> list[dict]:
                 cands.append((round(x, 2) + 0.0, round(g, 3) + 0.0, round(z, 2) + 0.0))
             z += STEP
         x += STEP
-    # points are taken in rotated pairs, so both halves of a pair must be valid (props are not all symmetric)
-    keys = {(c[0], c[2]) for c in cands}
-    cands = [c for c in cands if (round(-c[0], 2) + 0.0, round(-c[2], 2) + 0.0) in keys]
     if not cands:
         raise ValueError("no spawn candidates")
 
-    # farthest-point sampling in rotated pairs, starting next to the west edge (where the blue yard used to be)
+    # Farthest-point sampling over the actual asymmetric walkable network.
     chosen = []
     first = min(cands, key=lambda c: math.hypot(c[0] - (p0x + 4), c[2]))
-    chosen += [first, (-first[0] + 0.0, first[1], -first[2] + 0.0)]
+    chosen.append(first)
     dist = [min(math.hypot(c[0] - q[0], c[2] - q[2]) for q in chosen) for c in cands]
     while len(chosen) < count:
         i = max(range(len(cands)), key=lambda k: dist[k])
         c = cands[i]
-        mirror = (-c[0] + 0.0, c[1], -c[2] + 0.0)
-        # a point at the centre is its own mirror: count it once
-        for q in (c,) if math.hypot(c[0], c[2]) < 1.0 else (c, mirror):
+        for q in (c,):
             chosen.append(q)
             for k, d in enumerate(cands):
                 dist[k] = min(dist[k], math.hypot(d[0] - q[0], d[2] - q[2]))

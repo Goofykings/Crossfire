@@ -269,6 +269,15 @@ def stage_map(key: str, previews: bool):
         bpy.data.objects.remove(src)
 
     index_path = out_dir / "map-assets.json"
+    # A compact layout can produce fewer blocks. Remove only this generator's
+    # obsolete block outputs; otherwise Pages would still ship the old outskirts.
+    block_dir=(out_dir / 'buildings').resolve()
+    assert block_dir.is_relative_to(PUBLIC.resolve())
+    expected={(out_dir / f).resolve() for f in block_files}
+    for old in block_dir.glob('block_[0-9][0-9].glb'):
+        assert old.resolve().parent == block_dir
+        if old.resolve() not in expected:
+            old.unlink()
     index_path.write_text(json.dumps({
         "map": layout["id"],
         "models": block_files + ["terrain.glb"],

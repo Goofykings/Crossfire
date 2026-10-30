@@ -9,11 +9,6 @@
   "buildings/block_06.glb",
   "buildings/block_07.glb",
   "buildings/block_08.glb",
-  "buildings/block_09.glb",
-  "buildings/block_10.glb",
-  "buildings/block_11.glb",
-  "buildings/block_12.glb",
-  "buildings/block_13.glb",
   "terrain.glb"
  ],
  "collision": "collision.json",

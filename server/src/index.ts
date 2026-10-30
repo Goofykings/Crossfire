@@ -9,6 +9,8 @@ import { applySpread, damageAt, Weapon, WEAPONS, type WeaponId } from '../../src
 import { DamageSystem } from '../../src/game/Damage';
 import { NO_COMBAT, rayPlayer, roundMode, teammates, type PlayerTeam, type MatchMode } from '../../shared/combat';
 import { normalizeUsername } from '../../shared/username';
+import { regenerate, REGEN_DELAY_MS } from './health';
+import { selectSpawn } from '../../shared/spawns';
 
 interface Bindings {
   ROOM: DurableObjectNamespace<PublicRoom>;
@@ -16,11 +18,13 @@ interface Bindings {
   SESSION_GRACE_MS: string;
   HEARTBEAT_TIMEOUT_MS: string;
   MATCH_MODE?: string;
+  NETWORK_DEBUG?: string;
 }
 interface Session {
   roundId: number;
   alive: boolean;
   health: number;
+  regenAt: number | null;
   team: PlayerTeam;
   combat: CombatState;
   life: number;
@@ -113,6 +117,7 @@ export class PublicRoom extends DurableObject<Bindings> {
         e.socket = socket;
         this.players.set(s.id, e);
       }
+      this.trace('restore', { sockets: ctx.getWebSockets().length, sessions: this.players.size });
       this.prune();
       this.start();
     });
@@ -120,6 +125,9 @@ export class PublicRoom extends DurableObject<Bindings> {
 
   private get grace(): number { return positive(this.env.SESSION_GRACE_MS, SESSION_GRACE_MS); }
   private get timeout(): number { return positive(this.env.HEARTBEAT_TIMEOUT_MS, HEARTBEAT_TIMEOUT_MS); }
+  private trace(event: string, detail: Record<string, unknown> = {}): void {
+    if (this.env.NETWORK_DEBUG === 'true') console.log(JSON.stringify({ service: 'crossfire-network', at: Date.now(), event, ...detail }));
+  }
   private get mode(): MatchMode {
     return this.env.MATCH_MODE === 'ffa' || this.env.MATCH_MODE === 'teams' ? this.env.MATCH_MODE : roundMode(this.schedule.seed, this.round.id);
   }
@@ -137,6 +145,9 @@ export class PublicRoom extends DurableObject<Bindings> {
     session.kills ??= 0;
     session.deaths ??= 0;
     session.health ??= session.alive ? PLAYER_MAX_HEALTH : 0;
+    // Older stored records have no damage timestamp: begin a conservative full
+    // waiting period rather than granting health on migration.
+    if (session.regenAt === undefined) session.regenAt = session.alive && session.health < PLAYER_MAX_HEALTH ? Date.now() + REGEN_DELAY_MS : null;
     session.combat ??= { gun: null, triggerHeld: false, reloadHeld: false, aimHeld: false };
     session.team = this.mode === 'teams' ? session.team ?? this.chooseTeam() : null;
     const controller = new PlayerController(this.activeMap.world);
@@ -145,11 +156,13 @@ export class PublicRoom extends DurableObject<Bindings> {
       session.roundId = this.round.id;
       session.alive = false;
       session.health = 0;
+      session.regenAt = null;
       session.combat = { gun: null, triggerHeld: false, reloadHeld: false, aimHeld: false };
       session.weapon = null;
       if (changedRound) session.kills = session.deaths = 0;
       session.motion = controller.capture();
     } else controller.restore(session.motion);
+    regenerate(session, Date.now());
     const stats = WEAPONS.find((w) => w.id === session.weapon);
     const gun = stats ? new Weapon(stats) : null;
     if (gun && validGun(session.combat.gun)) gun.restore(session.combat.gun);
@@ -166,6 +179,7 @@ export class PublicRoom extends DurableObject<Bindings> {
     const [client, server] = Object.values(pair);
     server.serializeAttachment({ openedAt: Date.now() } satisfies Attachment);
     this.ctx.acceptWebSocket(server);
+    this.trace('open', { sockets: this.ctx.getWebSockets().length });
     this.start();
     return new Response(null, { status: 101, webSocket: client });
   }
@@ -183,6 +197,7 @@ export class PublicRoom extends DurableObject<Bindings> {
     return [...this.players.values()].some((e) => e.socket && e.session.alive && (e.queue.length > 0 || !e.controller.grounded
       || e.controller.sliding || e.controller.slideCooldown > 0
       || e.gun?.simulating
+      || e.session.regenAt !== null
       || Math.hypot(e.controller.velocity.x, e.controller.velocity.y, e.controller.velocity.z) > 0.001));
   }
 
@@ -191,7 +206,8 @@ export class PublicRoom extends DurableObject<Bindings> {
   }
 
   private error(socket: WebSocket, code: string, message: string, fatal = false): void {
-    this.send(socket, { v: 5, type: 'error', code, message, fatal });
+    this.trace('protocol_error', { id: this.current(socket)?.session.id, code, fatal });
+    this.send(socket, { v: 6, type: 'error', code, message, fatal });
     if (fatal) { void this.disconnect(socket); socket.close(1008, code); }
   }
 
@@ -219,29 +235,31 @@ export class PublicRoom extends DurableObject<Bindings> {
     e.lastSeen = now;
     if ((message.type === 'input' || message.type === 'spawn') && message.roundId !== this.round.id) {
       this.error(socket, 'round_changed', 'The map changed. Wait for the new map to load.');
-      this.send(socket, { v: 5, type: 'snapshot', snapshot: this.snapshot() });
+      this.send(socket, { v: 6, type: 'snapshot', snapshot: this.snapshot() });
       return;
     }
     if (message.type === 'leave') {
       await this.disconnect(socket, true);
       socket.close(1000, 'left');
     } else if (message.type === 'ping') {
+      this.trace('heartbeat', { id: e.session.id, sentAt: message.at, receivedAt: now, lastSeen: e.lastSeen });
       this.attach(e);
-      this.send(socket, { v: 5, type: 'pong', at: message.at, serverTime: now });
+      this.send(socket, { v: 6, type: 'pong', at: message.at, serverTime: now });
       this.broadcast();
       await this.scheduleCleanup();
     } else if (message.type === 'spawn') {
       if (message.mapVersion !== this.activeMap.revision) { this.error(socket, 'map_mismatch', 'Client and server map assets differ', true); return; }
       if (e.session.alive) { this.error(socket, 'already_spawned', 'Your weapon is locked until the next life'); return; }
       const occupied = this.connected().filter((p) => p.session.alive);
-      const candidates = this.activeMap.layout.spawns.map((s) => ({ s, gap: occupied.reduce((d, p) => Math.min(d,
-        Math.hypot(p.controller.position.x - s.pos[0], p.controller.position.z - s.pos[2])), Infinity) })).sort((a, b) => b.gap - a.gap);
-      const spawn = candidates.find((c) => c.gap >= MOVEMENT.radius * 2 + 0.1
-        && !this.activeMap.world.overlapsCylinder(c.s.pos[0], c.s.pos[2], MOVEMENT.radius, c.s.pos[1] + MOVEMENT.stepHeight, c.s.pos[1] + MOVEMENT.standHeight));
+      const spawn = selectSpawn(this.activeMap.layout, this.activeMap.world, occupied.map((p) => ({
+        ...p.controller.position, eyeHeight: p.controller.eyeHeight,
+        opponent: !teammates(this.mode, e.session.team, p.session.team),
+      })));
       if (!spawn) { this.error(socket, 'spawn_busy', 'No clear spawn available. Try again.'); return; }
-      e.controller.teleport({ x: spawn.s.pos[0], y: spawn.s.pos[1], z: spawn.s.pos[2] }, spawn.s.heading);
+      e.controller.teleport({ x: spawn.pos[0], y: spawn.pos[1], z: spawn.pos[2] }, spawn.heading);
       e.session.alive = true;
       e.session.health = PLAYER_MAX_HEALTH;
+      e.session.regenAt = null;
       e.gun = new Weapon(WEAPONS.find((w) => w.id === message.weapon)!);
       e.session.combat = { gun: e.gun.capture(), triggerHeld: false, reloadHeld: false, aimHeld: false };
       e.session.life++;
@@ -250,7 +268,7 @@ export class PublicRoom extends DurableObject<Bindings> {
       e.received = e.session.ack;
       this.attach(e);
       await this.persist();
-      this.send(socket, { v: 5, type: 'spawned', requestId: message.requestId, snapshot: this.snapshot() });
+      this.send(socket, { v: 6, type: 'spawned', requestId: message.requestId, snapshot: this.snapshot() });
       this.broadcast();
       this.start();
     } else {
@@ -278,11 +296,12 @@ export class PublicRoom extends DurableObject<Bindings> {
       if (this.players.size >= 16) { this.error(socket, 'room_full', 'Room capacity reached', true); return; }
       const controller = new PlayerController(this.activeMap.world);
       e = this.entry({ id: crypto.randomUUID(), name, token: token(), generation: 0, motion: controller.capture(), ack: 0,
-        roundId: this.round.id, alive: false, health: 0, team: this.chooseTeam(), combat: { gun: null, triggerHeld: false, reloadHeld: false, aimHeld: false },
+        roundId: this.round.id, alive: false, health: 0, regenAt: null, team: this.chooseTeam(), combat: { gun: null, triggerHeld: false, reloadHeld: false, aimHeld: false },
         life: 0, weapon: null, kills: 0, deaths: 0, lastSeen: Date.now(), expiresAt: 0 });
       this.players.set(e.session.id, e);
     }
     // A valid resume credential preserves the session, while display names remain editable.
+    regenerate(e.session, Date.now());
     e.session.name = name;
     const old = e.socket;
     e.socket = socket;
@@ -294,11 +313,13 @@ export class PublicRoom extends DurableObject<Bindings> {
     e.lastSeen = Date.now();
     this.attach(e);
     // Publish the replacement generation before closing the old connection.
+    this.trace('join', { id: e.session.id, resumed, generation: e.session.generation, replaced: !!old && old !== socket });
     if (old && old !== socket) old.close(4001, 'session_replaced');
     await this.persist();
-    this.send(socket, { v: 5, type: 'welcome', selfId: e.session.id, resumeToken: e.session.token, resumed, snapshot: this.snapshot() });
+    this.send(socket, { v: 6, type: 'welcome', selfId: e.session.id, resumeToken: e.session.token, resumed, snapshot: this.snapshot() });
     this.broadcast();
     await this.scheduleCleanup();
+    this.start();
   }
 
   private attach(e: Entry): void {
@@ -330,6 +351,7 @@ export class PublicRoom extends DurableObject<Bindings> {
       e.session.roundId = next.id;
       e.session.alive = false;
       e.session.health = 0;
+      e.session.regenAt = null;
       e.session.combat = { gun: null, triggerHeld: false, reloadHeld: false, aimHeld: false };
       e.gun = null;
       e.session.weapon = null;
@@ -354,7 +376,7 @@ export class PublicRoom extends DurableObject<Bindings> {
   }
 
   private broadcast(): void {
-    const message: ServerMessage = { v: 5, type: 'snapshot', snapshot: this.snapshot() };
+    const message: ServerMessage = { v: 6, type: 'snapshot', snapshot: this.snapshot() };
     for (const e of this.players.values()) if (e.socket) this.send(e.socket, message);
   }
 
@@ -362,10 +384,11 @@ export class PublicRoom extends DurableObject<Bindings> {
     for (const e of this.connected()) this.send(e.socket!, message);
   }
 
-  private eliminate(victim: Entry, killer: Entry | null, head = false): void {
+  private eliminate(victim: Entry, killer: Entry | null, head = false, direction: { x: number; y: number; z: number } | null = null): void {
     if (!victim.session.alive) return;
     victim.session.alive = false;
     victim.session.health = 0;
+    victim.session.regenAt = null;
     victim.session.deaths++;
     victim.queue.length = 0;
     victim.received = victim.session.ack;
@@ -373,7 +396,8 @@ export class PublicRoom extends DurableObject<Bindings> {
       killer.session.kills++;
       if (this.mode === 'teams' && killer.session.team) this.scores[killer.session.team]++;
     }
-    this.publish({ v: 5, type: 'elimination', elimination: { roundId: this.round.id, victimId: victim.session.id,
+    this.publish({ v: 6, type: 'elimination', elimination: { id: crypto.randomUUID(), victimLife: victim.session.life,
+      direction, roundId: this.round.id, victimId: victim.session.id,
       victimName: victim.session.name, killerId: killer?.session.id ?? null, killerName: killer?.session.name ?? null,
       weapon: killer?.session.weapon ?? null, head } });
   }
@@ -402,7 +426,8 @@ export class PublicRoom extends DurableObject<Bindings> {
         id: target.session.id, alive: target.session.alive, position: () => target.controller.position,
         applyDamage: (amount) => {
           target.session.health = Math.max(0, target.session.health - amount);
-          if (target.session.health === 0) this.eliminate(target, e, nearest!.zone === 'head');
+          target.session.regenAt = Date.now() + REGEN_DELAY_MS;
+          if (target.session.health === 0) this.eliminate(target, e, nearest!.zone === 'head', { ...dir });
         },
       }, { bodyDamage: damageAt(gun.stats, nearest.distance), zone: nearest.zone, point, weapon: gun.stats.id });
       const previous = result.hits.find((h) => h.id === target.session.id);
@@ -411,10 +436,10 @@ export class PublicRoom extends DurableObject<Bindings> {
         previous.health = target.session.health;
         previous.head ||= nearest.zone === 'head';
         previous.killed ||= !target.session.alive;
-      } else result.hits.push({ id: target.session.id, amount: before - target.session.health, health: target.session.health,
+      } else result.hits.push({ id: target.session.id, life: target.session.life, direction: { ...dir }, amount: before - target.session.health, health: target.session.health,
         head: nearest.zone === 'head', killed: !target.session.alive });
     }
-    this.publish({ v: 5, type: 'shot', shot: result });
+    this.publish({ v: 6, type: 'shot', shot: result });
     return result.hits.length > 0;
   }
 
@@ -422,6 +447,11 @@ export class PublicRoom extends DurableObject<Bindings> {
     const now = Date.now();
     this.ensureRound();
     let eliminated = false;
+    let regeneratedToFull = false;
+    for (const e of this.players.values()) if (e.socket) {
+      const healed = regenerate(e.session, now);
+      regeneratedToFull ||= healed > 0 && e.session.health === PLAYER_MAX_HEALTH;
+    }
     this.accumulator += Math.min(0.25, Math.max(0, (now - this.lastTick) / 1000));
     this.lastTick = now;
     // Input volume cannot advance this loop: only elapsed server time can.
@@ -458,13 +488,14 @@ export class PublicRoom extends DurableObject<Bindings> {
       const e = this.current(socket);
       const a = socket.deserializeAttachment() as Attachment;
       if (now - (e?.lastSeen ?? a.openedAt) > (e ? this.timeout : 5000)) {
+        this.trace('heartbeat_timeout', { source: 'tick', id: e?.session.id, lastSeen: e?.lastSeen ?? a.openedAt, timeout: e ? this.timeout : 5000 });
         void this.disconnect(socket);
         socket.close(4000, 'heartbeat_timeout');
       }
     }
     for (const e of this.players.values()) if (e.socket) this.attach(e);
     this.broadcast();
-    if (eliminated || now - this.lastSave >= 1000) { this.lastSave = now; void this.persist(); }
+    if (eliminated || regeneratedToFull || now - this.lastSave >= 1000) { this.lastSave = now; void this.persist(); }
     if (!this.simulationNeeded()) {
       if (this.timer) clearInterval(this.timer);
       this.timer = null;
@@ -475,23 +506,26 @@ export class PublicRoom extends DurableObject<Bindings> {
   private async disconnect(socket: WebSocket, forget = false): Promise<void> {
     const e = this.current(socket);
     if (!e) return;
+    this.trace('disconnect', { id: e.session.id, intentional: forget, lastSeen: e.lastSeen });
     this.attach(e);
     e.socket = undefined;
     e.queue.length = 0;
     e.session.expiresAt = Date.now() + this.grace;
     if (forget) this.players.delete(e.session.id);
-    for (const p of this.players.values()) if (p.socket) this.send(p.socket, { v: 5, type: 'left', id: e.session.id });
+    for (const p of this.players.values()) if (p.socket) this.send(p.socket, { v: 6, type: 'left', id: e.session.id });
     await this.persist();
     this.broadcast();
     await this.scheduleCleanup();
   }
 
-  async webSocketClose(socket: WebSocket, code: number): Promise<void> {
+  async webSocketClose(socket: WebSocket, code: number, reason: string, wasClean: boolean): Promise<void> {
+    this.trace('close', { id: (socket.deserializeAttachment() as Attachment)?.session?.id, code, reason, wasClean });
     await this.disconnect(socket);
     // Complete the close handshake explicitly, including in the local runtime.
     socket.close(code === 1005 || code === 1006 ? 1000 : code, 'closed');
   }
   async webSocketError(socket: WebSocket): Promise<void> {
+    this.trace('socket_error', { id: this.current(socket)?.session.id });
     await this.disconnect(socket);
     socket.close(1011, 'socket_error');
   }
@@ -523,6 +557,7 @@ export class PublicRoom extends DurableObject<Bindings> {
       const e = this.current(socket);
       const a = socket.deserializeAttachment() as Attachment;
       if (Date.now() - (e?.lastSeen ?? a.openedAt) >= (e ? this.timeout : 5000)) {
+        this.trace('heartbeat_timeout', { source: 'alarm', id: e?.session.id, lastSeen: e?.lastSeen ?? a.openedAt, timeout: e ? this.timeout : 5000 });
         await this.disconnect(socket);
         socket.close(4000, 'heartbeat_timeout');
       }

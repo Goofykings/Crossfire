@@ -81,7 +81,10 @@ describe.each(MAPS)('tactical map of %s', (id) => {
   const proj = new TacticalProjection(tactical.bounds, 800, 800);
 
   it('moves the marker the way the player walks (forward, back, left, right)', () => {
-    const spawn = layout.spawns[0];
+    // Direction checks need room to finish a 40-tick stride in every direction.
+    // Safe gameplay spawns promise body clearance, not an empty circular arena.
+    const spawn = layout.spawns.find((s) => !world.overlapsCylinder(s.pos[0],s.pos[2],1.8,s.pos[1]+.45,s.pos[1]+1.8))!;
+    expect(spawn).toBeDefined();
     for (const heading of [0, 37, 90, 180, 245, 300]) {
       for (const [ix, iz, turn] of [
         [0, 1, 0],

@@ -1,7 +1,7 @@
 """Modern City layout designer.
 
 Authors the walkable network (narrow roads, sidewalks, back alleys, courtyards, a small plaza, lobby passages and
-walk-through shops) for the north half of the map, rotates it 180 degrees for the other half, decomposes the rest into
+walk-through shops) as asymmetric loops for small matches, decomposes the rest into
 city lots and writes src/maps/modern-city/layout.json (the canonical, hand-editable map data).
 
 Roads are authored full width; sidewalks (raised 0.15 m) are added automatically along the stretches of each road edge
@@ -19,7 +19,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # python -I does not add the script's folder
-from layoutkit import SIDE_OUT, SIDES, Area, LayoutKit, covered_floor, ground_zones, inside, mirror_all  # noqa: E402
+from layoutkit import SIDE_OUT, SIDES, Area, LayoutKit, covered_floor, ground_zones, inside  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 LAYOUT_JSON = ROOT / "src" / "maps" / "modern-city" / "layout.json"
@@ -29,85 +29,41 @@ import building_spec as bs  # noqa: E402
 from catalog import PROPS  # noqa: E402
 from spawn_points import ffa_spawns  # noqa: E402
 
-PLAY = 34
-OUTER = 44
+PLAY = 27
+OUTER = 36
 WALL = 0.3
 SIDEWALK = 1.6
 CURB_H = 0.15
 
 # ---------------------------------------------------------------------------------------------------------------------
-# Walkable network, authored for the north half (z < 0) plus the west part of the centre band and rotated 180 degrees
-# for the other half. Designed from the written brief (the reference sheet in references/modern-city/ was found only
-# later, see docs/LEVEL_DESIGN.md): narrow roads that jog at every
-# junction, back alleys behind the street fronts, two enclosed courtyards, a small central plaza, lobby passages and
-# walk-through shops; three routes between the old spawn yards plus cross-links.
-# ---------------------------------------------------------------------------------------------------------------------
-AREAS: list[Area] = [
-    # blue spawn: a small parking court on the west edge; exits north (alley), east (lobby passage), south (rotated)
-    Area("spawn_blue", "spawn", -33, -6, -25, 6, team="blue"),
-    Area("blue_exit_n", "alley", -33, -12, -29, -6),
-    Area("blue_lobby", "passage", -25, -3, -21, 0),
-    Area("blue_court", "court", -21, -6, -14, 4),
-    Area("court_n", "alley", -19, -12, -16, -6),
-    # west back alley and the north road
-    Area("w_alley", "alley", -33, -16, -16, -12),
-    Area("nw_link", "alley", -26, -20, -23, -16),
-    Area("n_road", "street", -26, -28, -6, -20, extra={"sidewalks": "ns"}),
-    Area("w_link", "alley", -16, -20, -13, -12),
-    # the diner: a walk-through restaurant between the west link alley and the centre road
-    Area("diner", "interior", -13, -18, -6, -12),
-    # centre road down from the north alley; the north-east road leaves it eastward
-    Area("c_road", "street", -6, -31, 0, -15, extra={"sidewalks": "w"}),
-    Area("plaza_n", "alley", 0, -12, 4, -7),
-    # north alley behind the north-east block, and the north-east road
-    Area("n_alley", "alley", 0, -31, 18, -28),
-    Area("ne_road", "street", 0, -20, 18, -12, extra={"sidewalks": "ns"}),
-    Area("ne_link", "alley", 18, -28, 21, -12),
-    # a short jog over to the east road; the courtyard behind is reached through a lobby passage
-    Area("ne_jog", "alley", 21, -23, 24, -20),
-    Area("ne_gate", "passage", 21, -29, 24, -26),
-    Area("ne_court", "court", 24, -31, 31, -26),
-    Area("e_road", "street", 24, -23, 30, -11, extra={"sidewalks": "e"}),
-    Area("red_exit_n", "alley", 25, -11, 29, -6),
-    # walk-through shop from the north-east road into the plaza
-    Area("shop_n", "interior", 4, -12, 10, -7),
-    # plaza (self-symmetric) and the street from the blue courtyard into it
-    Area("plaza", "plaza", -7, -7, 7, 7, center=True),
-    Area("c_west", "street", -14, 0, -7, 5),
-]
+# Compact, asymmetric walkable network (normal metre-scale streets and lots).
+from compact_layouts import city as authored_routes
+
+AREAS = authored_routes(Area)
 
 # overhead canopies across alleys: (id, rect, spring height, style); rotated copies are added
 ARCHES = [
-    ("cv_w_link", (-16, -19, -13, -17), 3.6, "canopy"),
-    ("cv_n_alley", (8, -31, 10, -28), 3.8, "canopy"),
+    ("court_canopy", (16,-11,19,-10),3.6,"canopy"),
 ]
 
-# (type, (x, y, z), heading) for the north half; rotated copies are added
+# (type, (x, y, z), heading) at authored landmarks, without mirroring.
 MANUAL_PROPS = [
-    ("planter_long", (0.0, 0, -4.2), 0),
-    # backed against the long planter, facing the plaza (every frontage around the plaza has a shop door)
-    ("bench_modern", (0.0, 0, -3.25), 180),
-    ("cafe_set", (-4.6, 0, 2.6), 0),
-    ("traffic_light", (-6.6, CURB_H, -21.6), 135),
-    ("sign_stop", (-6.4, CURB_H, -27.4), 90),
-    ("sign_street", (0.5, CURB_H, -21.4), 0),
-    ("dumpster", (-24.0, 0, -13.0), 0),
-    ("trash_bags", (-21.5, 0, -13.2), 0),
-    ("ac_condenser", (-31.6, 0, -15.6), 0),
-    ("dumpster_blue", (14.0, 0, -30.4), 0),
-    ("pallet_stack", (2.0, 0, -30.3), 0),
-    # Leave room for facade trim behind the back slats and beyond the north end;
-    # keep the bench on the blank west wall, north of the gate and out of the route.
-    ("bench_modern", (24.65, 0, -29.85), 90),
-    ("bike_rack", (-18.0, 0, 3.4), 0),
-    ("planter", (-14.8, 0, -5.4), 90),
+    ("planter_long", (0,0,-4.7),0),
+    ("bench_modern", (0,0,-3.65),180),
+    ("cafe_set", (-4.5,0,3.5),0),
+    ("bench_modern", (4.8,0,3.6),270),
+    ("utility_box", (8.1,0,-13.3),0),
+    ("dumpster_blue", (15,0,-13.6),0),
+    ("trash_bags", (15,0,-11.5),0),
+    ("bike_rack", (8.5,0,-8.3),0),
+    ("planter", (-7.5,0,10.5),90),
+    ("trash_bin_grey", (-4,0,14),0),
+    ("dumpster", (-20.1,0,-6),90),
+    ("utility_box", (17.4,0,13.5),90),
+    ("bench_modern", (7.4,0,16.4),90),
+    ("planter", (12,0,16.6),0),
 ]
 
-TARGETS = [
-    ((-31.0, 0, -14.0), 90), ((-24.5, 0, -18.5), 180), ((-16.0, CURB_H, -25.5), 90), ((-10.0, 0, -15.0), 90),
-    ((-3.0, 0, -29.5), 180), ((6.0, 0, -29.5), 270), ((14.0, CURB_H, -19.0), 270), ((28.0, 0, -28.5), 270),
-    ((22.5, 0, -21.5), 270), ((7.0, 0, -9.0), 180), ((-17.5, 0, 0.5), 90), ((-4.5, 0, -4.5), 135),
-]
 
 
 
@@ -145,7 +101,11 @@ def add_sidewalks(areas: list[Area]) -> list[Area]:
                 if hi - lo >= 2:
                     rect = {"n": (lo, a.z0, hi, a.z0 + SIDEWALK), "s": (lo, a.z1 - SIDEWALK, hi, a.z1),
                             "w": (a.x0, lo, a.x0 + SIDEWALK, hi), "e": (a.x1 - SIDEWALK, lo, a.x1, hi)}[side]
-                    out.append(Area(f"{a.id}_sw{side}{k}", "sidewalk", *rect, height=CURB_H, material="pavers"))
+                    # Covered routes take precedence over raised pavement. A strip over a
+                    # lobby used to split its lot and put curbs across the doorway.
+                    covered = [c for c in areas if c.kind in ('passage','interior','room')]
+                    if not any(rect[0]<c.x1 and c.x0<rect[2] and rect[1]<c.z1 and c.z0<rect[3] for c in covered):
+                        out.append(Area(f"{a.id}_sw{side}{k}", "sidewalk", *rect, height=CURB_H, material="pavers"))
                     k += 1
                 i = j
     return areas + out
@@ -341,7 +301,7 @@ def dress(kit: LayoutKit, areas, buildings, terraces):
     def road_free(x, z, rad):
         return all((x - ox) ** 2 + (z - oz) ** 2 >= (rad + orr) ** 2 for ox, oz, orr in on_road)
 
-    def add(ptype, pos, heading, mirror=True):
+    def add(ptype, pos, heading, mirror=False):
         sx, _, sz = PROPS[ptype]["size"]
         props.append({"type": ptype, "pos": [round(pos[0], 3), round(pos[1], 3), round(pos[2], 3)], "heading": heading % 360})
         occupied.append((pos[0], pos[2], max(sx, sz) * 0.55))
@@ -372,7 +332,7 @@ def dress(kit: LayoutKit, areas, buildings, terraces):
             cx, cz = {"n": (mid, z0 - 1.2), "s": (mid, z1 + 1.2), "w": (x0 - 1.2, mid), "e": (x1 + 1.2, mid)}[st["side"]]
             occupied.append((cx, cz, 2.2))
     for ptype, pos, hd in MANUAL_PROPS:
-        add(ptype, pos, hd, mirror=abs(pos[0]) + abs(pos[2]) > 0.1)
+        add(ptype, pos, hd, mirror=False)
         for q in ((pos[0], pos[2]), (-pos[0], -pos[2])):
             on_road.append((q[0], q[1], 1.5))
 
@@ -497,9 +457,6 @@ def dress(kit: LayoutKit, areas, buildings, terraces):
                     break
 
     targets = []
-    for pos, hd in TARGETS:
-        targets.append({"id": f"T{len(targets) + 1:02d}", "pos": list(pos), "heading": hd})
-        targets.append({"id": f"T{len(targets) + 1:02d}", "pos": list(rot_pos(pos)), "heading": rot_heading(hd)})
     lights = []  # free-for-all: no team lights at the old spawn yards
     arches = []
     for aid, (x0, z0, x1, z1), spring, style in ARCHES:
@@ -510,7 +467,7 @@ def dress(kit: LayoutKit, areas, buildings, terraces):
 
 
 def build():
-    areas = add_sidewalks(mirror_all(AREAS))
+    areas = add_sidewalks(list(AREAS))
     kit = LayoutKit(areas, PLAY, OUTER, lot_max=14)
     rects = kit.split_lots(kit.decompose())
     kit.set_lots(rects)
@@ -543,6 +500,10 @@ def build():
         "terraces": terraces, "buildings": buildings, "walls": walls, **dressing,
     }
     # free-for-all spawn points over the whole map (clear of the props and targets placed above)
+    from upper_routes import make_route
+    from compact_dressing import finish_layout
+    layout['upperRoutes'] = [make_route('second_floor_passage', [-14,5,-11,22], 'sky_passage')]
+    finish_layout(layout, PROPS)
     layout["spawns"] = ffa_spawns(layout, PROPS)
     return kit, layout
 

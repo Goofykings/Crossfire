@@ -46,6 +46,11 @@ PALETTES = {
 }
 
 PROPS = {
+    "flower_box": {"size": [1.44,.68,.48], "collider": [1.44,.42,.48]},
+    "market_crate": {"size": [.76,.44,.56], "collider": [.76,.40,.56]},
+    "stone_bollard": {"size": [.46,.96,.46], "collider": [.46,.96,.46]},
+    "pump_skid": {"size": [2,1.24,1.1], "collider": [2,1.24,1.1]},
+    "utility_box": {"size": [.96,1.2,.5], "collider": [.96,1.2,.5]},
     "crate": {"size": [0.8, 0.8, 0.8], "collider": [0.8, 0.8, 0.8]},
     "crate_small": {"size": [0.55, 0.55, 0.55], "collider": [0.55, 0.55, 0.55]},
     "crate_stack": {"size": [1.4, 1.35, 0.9], "collider": [1.4, 1.35, 0.9]},

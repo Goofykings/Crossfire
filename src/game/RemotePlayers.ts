@@ -1,16 +1,18 @@
-import { Color3, Frustum, Matrix, MeshBuilder, StandardMaterial, TransformNode, Vector3, type Scene, type Mesh } from '@babylonjs/core';
-import '@babylonjs/core/Rendering/outlineRenderer';
-import type { PlayerState, Snapshot } from '../../shared/protocol';
+import { Color3, Frustum, Material, Matrix, MeshBuilder, Quaternion, StandardMaterial, TransformNode, Vector3, type Scene, type Mesh, type BaseTexture } from '@babylonjs/core';
+import type { Elimination, PlayerState, Snapshot } from '../../shared/protocol';
 import { teammates } from '../../shared/combat';
 import { CHARACTER_ASSET, CharacterAssetLibrary, type CharacterInstance } from './CharacterAsset';
 import { VisibilityWorld } from '../rendering/VisibilityWorld';
 import { animationVelocity } from './PlayerAnimation';
+import { deathPose } from './CombatPresentation';
+import { PlayerSilhouettes } from '../rendering/PlayerSilhouettes';
 
 interface Sample { at: number; player: PlayerState }
 interface Avatar {
   root: TransformNode; look: TransformNode; samples: Sample[]; seen: number;
   meshes: Mesh[]; label: HTMLDivElement; character: CharacterInstance | null;
   friendly: boolean; visible: boolean; clearFor: number; height: number;
+  life: number; death?: { elapsed: number; started: number; direction: Elimination['direction']; rotation: Quaternion; baseY: number; materials: Material[]; textures: Set<BaseTexture> };
 }
 
 /** Real connected avatars with interpolated poses and relationship-based visibility. */
@@ -22,6 +24,7 @@ export class RemotePlayers {
   private outlinesEnabled = true;
   private visibilityWorld: VisibilityWorld | null = null;
   private dt = 1 / 60;
+  private silhouettes: PlayerSilhouettes | null = null;
   readonly characters: CharacterAssetLibrary;
   constructor(private readonly scene: Scene, uiRoot: HTMLElement) {
     this.characters = new CharacterAssetLibrary(scene);
@@ -32,19 +35,60 @@ export class RemotePlayers {
     this.material.diffuseColor = new Color3(0.65, 0.5, 0.28);
     this.material.emissiveColor = new Color3(0.08, 0.06, 0.03);
     // Read actual animated bone positions after the engine evaluates this frame.
-    scene.onAfterAnimationsObservable.add(() => { for (const a of this.avatars.values()) this.presentation(a, this.dt); });
+    scene.onAfterAnimationsObservable.add(() => {
+      for (const a of this.avatars.values()) this.presentation(a, this.dt);
+      this.silhouettes?.update(this.outlinesEnabled && this.presenting);
+    });
   }
   prepare(signal?: AbortSignal): Promise<void> { return this.characters.load(CHARACTER_ASSET, signal); }
-  prepareVisibility(): void { this.visibilityWorld = VisibilityWorld.fromMeshes(this.scene.meshes); }
-  releaseVisibility(): void { this.visibilityWorld = null; }
+  prepareVisibility(): void {
+    this.visibilityWorld = VisibilityWorld.fromMeshes(this.scene.meshes);
+    this.silhouettes ??= new PlayerSilhouettes(this.scene, this.scene.activeCamera!);
+    this.silhouettes.setWorld(this.scene.meshes);
+  }
+  releaseVisibility(): void { this.visibilityWorld = null; this.silhouettes?.clear(); }
+  silhouetteStats() { return this.silhouettes?.inspect() ?? null; }
+  refreshEffects(): void { this.silhouettes?.keepLast(); }
+  silhouetteInterior() { return this.silhouettes?.interiorPixels() ?? Promise.resolve([]); }
   visibilityStats() { return this.visibilityWorld?.inspect() ?? null; }
   setPresentationVisible(visible: boolean): void { this.presenting = visible; this.labels.hidden = !visible; }
   setOutlinesEnabled(enabled: boolean): void { this.outlinesEnabled = enabled; }
-  private remove(a: Avatar): void { a.character?.dispose(); a.root.dispose(); a.label.remove(); }
+  private remove(a: Avatar): void {
+    this.silhouettes?.remove(a.meshes); a.character?.dispose(); a.root.dispose(); a.label.remove();
+    for (const material of a.death?.materials ?? []) material.dispose(false, false);
+    for (const texture of a.death?.textures ?? []) texture.dispose();
+  }
+  eliminate(event: Elimination): void {
+    const a = this.avatars.get(event.victimId);
+    if (!a || a.life !== event.victimLife || a.death) return;
+    const materials = new Map<Material, Material>();
+    const textures = new Set<BaseTexture>();
+    for (const mesh of a.meshes) if (mesh.material) {
+      const source = mesh.material;
+      let copy = materials.get(source);
+      if (!copy) {
+        copy = source.clone(`death:${event.id}:${source.name}`)!;
+        for (const texture of copy.getActiveTextures()) if (!source.getActiveTextures().includes(texture)) textures.add(texture);
+        copy.transparencyMode = Material.MATERIAL_ALPHABLEND;
+        copy.needDepthPrePass = true;
+        materials.set(source, copy);
+      }
+      mesh.material = copy;
+    }
+    a.death = { elapsed: 0, started: performance.now(), direction: event.direction, baseY: a.root.position.y,
+      rotation: Quaternion.FromEulerAngles(0, a.root.rotation.y, 0), materials: [...materials.values()], textures };
+    a.label.hidden = true;
+    this.silhouettes?.remove(a.meshes);
+  }
   snapshot(s: Snapshot, selfId: string): void {
     const self = s.players.find((p) => p.id === selfId);
     const ids = new Set(s.players.filter((p) => p.id !== selfId && p.alive).map((p) => p.id));
-    for (const [id, avatar] of this.avatars) if (!ids.has(id)) { this.remove(avatar); this.avatars.delete(id); }
+    for (const [id, avatar] of this.avatars) {
+      const current = s.players.find((p) => p.id === id);
+      if ((!ids.has(id) && !(avatar.death && current)) || (current && current.life !== avatar.life)) {
+        this.remove(avatar); this.avatars.delete(id);
+      }
+    }
     for (const player of s.players) {
       if (player.id === selfId || !player.alive) continue;
       let a = this.avatars.get(player.id);
@@ -66,7 +110,7 @@ export class RemotePlayers {
         label.className = 'remote-player-label'; label.dataset.playerId = player.id; label.hidden = true;
         this.labels.append(label);
         a = { root, look, samples: [], seen: performance.now(), label, character,
-          meshes, friendly: false, visible: false, clearFor: 0, height: 1.8 };
+          meshes, friendly: false, visible: false, clearFor: 0, height: 1.8, life: player.life };
         this.avatars.set(player.id, a);
       }
       a.friendly = teammates(s.match.mode, self?.team ?? null, player.team);
@@ -80,6 +124,17 @@ export class RemotePlayers {
   update(serverTime: number, dt = 1 / 60): void {
     this.dt = dt;
     for (const [id, a] of this.avatars) {
+      if (a.death) {
+        const death = a.death;
+        death.elapsed = (performance.now() - death.started) / 1000;
+        const pose = deathPose(death.elapsed, death.direction);
+        if (pose.done) { this.remove(a); this.avatars.delete(id); continue; }
+        // Cross(up, fall) rotates the upright body away from the incoming shot.
+        a.root.rotationQuaternion = Quaternion.RotationAxis(new Vector3(pose.fall.z, 0, -pose.fall.x), pose.tip).multiply(death.rotation);
+        a.root.position.y = death.baseY + pose.lift;
+        for (const material of death.materials) material.alpha = pose.opacity;
+        continue;
+      }
       if (performance.now() - a.seen > 4000) { this.remove(a); this.avatars.delete(id); continue; }
       const samples = a.samples;
       while (samples.length > 2 && samples[1].at < serverTime) samples.shift();
@@ -99,6 +154,7 @@ export class RemotePlayers {
     }
   }
   private presentation(a: Avatar, dt: number): void {
+    if (a.death) { a.label.hidden = true; return; }
     const cam = this.scene.activeCamera;
     if (!cam) return;
     cam.computeWorldMatrix();
@@ -120,14 +176,7 @@ export class RemotePlayers {
     // Reveal after stable visibility; hide immediately when all interior probes are
     // occluded. Never retain an enemy marker behind a newly occluding wall.
     a.clearFor = a.visible ? Math.min(.1, a.clearFor + dt) : 0;
-    const color = a.friendly ? new Color3(.2, .5, 1) : new Color3(1, .08, .06);
-    for (const mesh of a.meshes) {
-      mesh.renderOutline = this.outlinesEnabled && a.visible;
-      mesh.outlineColor = color;
-      // The humanoid has detailed cuffs/cap/gear; a millimetre-scale hull avoids
-      // filling those small features with color while keeping a thin silhouette.
-      mesh.outlineWidth = Math.max(.002, Math.min(.016, distance * .0012));
-    }
+    this.silhouettes?.set(a.meshes, a.friendly, this.presenting && bodyInView);
     a.label.hidden = !this.presenting || !inView || (!a.friendly && a.clearFor < .04);
     if (!a.label.hidden) {
       a.label.style.left = `${screen.x}px`; a.label.style.top = `${screen.y}px`;
@@ -154,9 +203,14 @@ export class RemotePlayers {
   inspect() {
     return [...this.avatars].map(([id, a]) => ({ id, x: a.root.position.x, y: a.root.position.y, z: a.root.position.z,
       yaw: a.root.rotation.y, height: a.height, friendly: a.friendly, visible: a.visible,
-      labelVisible: !a.label.hidden && !this.labels.hidden, outline: a.meshes.some((m) => m.renderOutline),
+      labelVisible: !a.label.hidden && !this.labels.hidden, outline: !a.death && a.visible && (this.silhouettes?.has(a.meshes) ?? false),
+      death: a.death ? { elapsed: a.death.elapsed, ...deathPose(a.death.elapsed, a.death.direction),
+        alpha: a.meshes[0].material?.alpha, rotation: a.root.rotationQuaternion?.asArray() } : null,
       source: a.character ? 'glb' : 'placeholder', animation: a.character?.inspect() ?? null,
       health: a.samples.at(-1)?.player.health ?? 0 }));
   }
-  clear(): void { for (const a of this.avatars.values()) this.remove(a); this.avatars.clear(); }
+  clear(): void {
+    for (const a of this.avatars.values()) this.remove(a);
+    this.avatars.clear(); this.silhouettes?.update(false);
+  }
 }

@@ -38,21 +38,21 @@ for (const mode of ['ffa', 'teams']) test(`Authoritative player combat: ${mode}`
     }
     throw new Error(`Timed out; ${JSON.stringify(c.messages.slice(-4).map((m) => ({ type: m.type, code: m.code })))}`);
   }
-  async function open(weapon = 'rifle', resumeToken) {
+  async function open(weapon = 'rifle', resumeToken, spawnWhenNeeded = true) {
     const ws = new WebSocket(new URL('/ws', base).href.replace('http:', 'ws:'), { origin });
     const c = { ws, messages: [], snapshot: null, id: '', token: '', seq: 0 };
     clients.push(c);
     ws.on('message', (raw) => { const m = JSON.parse(String(raw)); c.messages.push(m); if (m.snapshot) c.snapshot = m.snapshot; });
     ws.on('error', () => {});
     await new Promise((resolve, reject) => { ws.once('open', resolve); ws.once('error', reject); });
-    c.send = (m) => ws.send(JSON.stringify({ v: 5, ...m }));
+    c.send = (m) => ws.send(JSON.stringify({ v: 6, ...m }));
     c.send({ type: 'join', name: `Combat ${clients.length}`, ...(resumeToken ? { resumeToken } : {}) });
     const welcome = await wait(c, (m) => m.type === 'welcome');
     c.id = welcome.selfId; c.token = welcome.resumeToken;
     c.seq = c.snapshot.players.find((p) => p.id === c.id).ack;
     c.heartbeat = setInterval(() => { if (ws.readyState === WebSocket.OPEN) c.send({ type: 'ping', at: Date.now() }); }, 500);
     ws.once('close', () => clearInterval(c.heartbeat));
-    if (!me(c).alive) await spawn(c, weapon);
+    if (spawnWhenNeeded && !me(c).alive) await spawn(c, weapon);
     assert.equal(c.snapshot.match.mode, mode);
     return c;
   }
@@ -97,6 +97,10 @@ for (const mode of ['ffa', 'teams']) test(`Authoritative player combat: ${mode}`
         const result = await shot(a, b);
         assert.equal(result.hits.length, 1); assert.equal(result.hits[0].id, b.id);
         assert.equal(result.hits[0].amount, expected); assert.equal(result.hits[0].head, false);
+        const direction = result.hits[0].direction;
+        assert.ok(Math.abs(Math.hypot(direction.x, direction.y, direction.z) - 1) < .001);
+        assert.ok(direction.z < -.9, 'incoming direction derives from the actual server shot');
+        assert.equal(result.hits[0].life, me(b).life);
         for (const c of [a, b]) await wait(c, (m) => m.type === 'snapshot' && m.snapshot.players.some((p) => p.id === b.id && p.life === 1 && p.health === 100 - expected));
         if (weapon === 'shotgun') { assert.equal(result.hits[0].killed, true); assert.equal(me(a).kills, 1); assert.equal(me(b).deaths, 1); }
         await leave(a); await leave(b);
@@ -121,6 +125,9 @@ for (const mode of ['ffa', 'teams']) test(`Authoritative player combat: ${mode}`
       assert.equal(killed.hits[0].health, 0); assert.equal(killed.hits[0].killed, true); assert.equal(killed.hits[0].head, true);
       const elimination = await wait(victim, (m) => m.type === 'elimination', mark);
       assert.equal(elimination.elimination.killerId, sniper.id);
+      assert.equal(elimination.elimination.victimLife, me(victim).life);
+      assert.equal(typeof elimination.elimination.id, 'string');
+      assert.deepEqual(elimination.elimination.direction, killed.hits[0].direction);
       await wait(victim, (m) => m.type === 'snapshot' && m.snapshot.players.some((p) => p.id === victim.id && p.deaths === 1));
       assert.equal(me(sniper).kills, 1); assert.equal(me(victim).deaths, 1); assert.equal(me(victim).alive, false);
       if (mode === 'teams') assert.equal(sniper.snapshot.match.teamScores[me(sniper).team], teamBefore + 1);
@@ -130,7 +137,19 @@ for (const mode of ['ffa', 'teams']) test(`Authoritative player combat: ${mode}`
       const life = me(victim).life;
       await spawn(victim, 'smg'); assert.equal(me(victim).life, life + 1); assert.equal(me(victim).deaths, 1);
       assert.equal(me(victim).combat.gun.ammo, 32);
-      await leave(sniper); await leave(victim);
+      // Real resume after earned nonzero scores must retain the entire life/loadout.
+      const saved = [sniper, victim].map((c) => ({ id: c.id, kills: me(c).kills, deaths: me(c).deaths,
+        health: me(c).health, life: me(c).life, team: me(c).team, weapon: me(c).weapon, ammo: me(c).combat.gun.ammo,
+        endsAt: c.snapshot.match.endsAt, scores: c.snapshot.match.teamScores }));
+      const restored = [];
+      for (const [i, c] of [sniper, victim].entries()) {
+        c.ws.close(); await delay(100);
+        const r = await open(c === sniper ? 'sniper' : 'smg', c.token); restored.push(r);
+        assert.deepEqual({ id: r.id, kills: me(r).kills, deaths: me(r).deaths, health: me(r).health,
+          life: me(r).life, team: me(r).team, weapon: me(r).weapon, ammo: me(r).combat.gun.ammo,
+          endsAt: r.snapshot.match.endsAt, scores: r.snapshot.match.teamScores }, saved[i]);
+      }
+      for (const c of restored) await leave(c);
     });
     await t.test('actual map walls block player damage', async () => {
       const a = await open('sniper'), b = await open();
@@ -189,6 +208,70 @@ for (const mode of ['ffa', 'teams']) test(`Authoritative player combat: ${mode}`
         assert.equal(me(target).health, 100);
       }
       await leave(target);
+    });
+    await t.test('regeneration waits, heals by server time, resets on hits and survives resume without reviving dead lives', async () => {
+      let a = await open('sniper'), b = await open('rifle');
+      // Rejected clients from the preceding security case remain in grace.
+      // Choose a real opponent using authoritative teams, never assign a team.
+      const extra = [];
+      while (mode === 'teams' && me(a).team === me(b).team && extra.length < 4) { extra.push(b); b = await open('rifle'); }
+      if (mode === 'teams') assert.notEqual(me(a).team, me(b).team);
+      for (const c of extra) await leave(c);
+      await place(a, b); await aim(a, b); await shot(a, b); // B: 25 HP.
+      await aim(b, a); await shot(b, a); // A: 75 HP.
+      const first = await stub.healthForTest(a.id);
+      assert.equal(first.health, 75);
+      assert.ok(first.regenAt > first.now && first.regenAt <= first.now + 5000, JSON.stringify(first));
+      await delay(1300); await shot(b, a); // Another hit before regeneration.
+      const second = await stub.healthForTest(a.id);
+      assert.equal(second.health, 50); assert.ok(second.regenAt > first.regenAt + 1000);
+      const at = async (c, time) => {
+        await delay(Math.max(0, time - Date.now()));
+        return (await wait(c, (m) => m.type === 'snapshot' && m.snapshot.serverTime >= time)).snapshot;
+      };
+      const assertRate = (s, id, base, eligible) => {
+        const expected = Math.min(100, base + Math.max(0, Math.floor((s.serverTime - eligible) / 100)));
+        assert.ok(Math.abs(s.players.find((p) => p.id === id).health - expected) <= 1, '10 HP/s from elapsed server time');
+      };
+      const healing = await at(a, second.regenAt + 2100);
+      assertRate(healing, a.id, 50, second.regenAt);
+      const waiting = a.messages.filter((m) => m.type === 'snapshot' && m.snapshot.serverTime > second.regenAt - 5000
+        && m.snapshot.serverTime < second.regenAt + 100);
+      assert.ok(waiting.length > 40);
+      assert.ok(waiting.every((m) => m.snapshot.players.find((p) => p.id === a.id).health === 50), 'five full seconds plus first complete 100ms step');
+      const peer = (await wait(b, (m) => m.type === 'snapshot' && m.snapshot.serverTime === healing.serverTime)).snapshot;
+      assert.equal(peer.players.find((p) => p.id === a.id).health, healing.players.find((p) => p.id === a.id).health);
+
+      const interrupt = (await shot(b, a)).hits.find((h) => h.id === a.id); // Interrupt active healing with real damage.
+      assert.ok(interrupt && interrupt.amount === 25 && interrupt.health + interrupt.amount < 100,
+        `accepted hit interrupts a still-healing life: ${JSON.stringify(interrupt)}`);
+      const interrupted = await stub.healthForTest(a.id);
+      assert.equal(interrupted.health, interrupt.health);
+      assert.ok(interrupted.regenAt > interrupted.now && interrupted.regenAt <= interrupted.now + 5000, JSON.stringify(interrupted));
+      const original = a; a.ws.close(); await delay(100);
+      a = await open('sniper', original.token); a.position = original.position;
+      assert.equal(a.id, original.id);
+      assert.equal((await stub.healthForTest(a.id)).regenAt, interrupted.regenAt, 'resume retains the waiting deadline');
+      assert.equal(me(a).health, interrupted.health);
+      const resumedHealth = await at(a, interrupted.regenAt + 2100);
+      assertRate(resumedHealth, a.id, interrupted.health, interrupted.regenAt);
+      const capped = await at(b, interrupted.regenAt + 2200);
+      assert.equal(capped.players.find((p) => p.id === b.id).health, 100);
+      assert.equal((await stub.healthForTest(b.id)).regenAt, null);
+      for (let k = 0; k < 4 && me(a).alive; k++) { await shot(b, a); await delay(180); }
+      assert.equal(me(a).alive, false);
+      const guest = await open('rifle', undefined, false);
+      await delay(5300);
+      for (const c of [a, guest]) {
+        const s = await stub.healthForTest(c.id); assert.equal(s.health, 0); assert.equal(s.regenAt, null);
+      }
+      await spawn(a, 'rifle'); await place(a, b); await aim(b, a); await shot(b, a);
+      assert.ok((await stub.healthForTest(a.id)).regenAt !== null);
+      await stub.advanceMapForTest();
+      for (const c of [a, b, guest]) {
+        const s = await stub.healthForTest(c.id); assert.equal(s.health, 0); assert.equal(s.regenAt, null, 'round transition discards old healing');
+      }
+      await leave(a); await leave(b); await leave(guest);
     });
   } finally {
     for (const c of clients) { clearInterval(c.heartbeat); c.ws.terminate(); }

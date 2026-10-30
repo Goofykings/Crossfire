@@ -23,13 +23,13 @@ describe('network simulation state', () => {
   it('rejects malformed envelopes, versions, nonfinite look and client-assigned state', () => {
     expect(parseClientMessage('{')).toBeNull();
     expect(parseClientMessage(JSON.stringify({ v: 99, type: 'join', name: 'Player' }))).toBeNull();
-    expect(parseClientMessage(JSON.stringify({ v: 5, type: 'join', name: 'Player', kills: 999 }))).toBeNull();
-    expect(parseClientMessage(JSON.stringify({ v: 5, type: 'input', roundId: 0, mapVersion: 'test', frames: [{ seq: 1, yaw: NaN, pitch: 0, intent: NO_INTENT }] }))).toBeNull();
+    expect(parseClientMessage(JSON.stringify({ v: 6, type: 'join', name: 'Player', kills: 999 }))).toBeNull();
+    expect(parseClientMessage(JSON.stringify({ v: 6, type: 'input', roundId: 0, mapVersion: 'test', frames: [{ seq: 1, yaw: NaN, pitch: 0, intent: NO_INTENT }] }))).toBeNull();
     expect(parseClientMessage(' '.repeat(8193))).toBeNull();
   });
   it('accepts slide intent but rejects old movement packets and client-assigned slide speeds or timers', () => {
     const frame = { seq: 1, yaw: 0, pitch: 0, intent: { ...NO_INTENT, z: 1, slide: true }, combat: { trigger: false, reload: false } };
-    const message = { v: 5, type: 'input', roundId: 0, mapVersion: 'test', frames: [frame] };
+    const message = { v: 6, type: 'input', roundId: 0, mapVersion: 'test', frames: [frame] };
     expect(parseClientMessage(JSON.stringify(message))).toEqual(message);
     expect(parseClientMessage(JSON.stringify({ ...message, v: 4 }))).toBeNull();
     for (const injected of [{ sprint: true }, { crouch: true }, { speed: 99 }, { slideCooldown: 0 }, { slideRemaining: 10 }, { slide: 1 }]) {

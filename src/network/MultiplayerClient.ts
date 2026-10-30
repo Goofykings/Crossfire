@@ -9,6 +9,7 @@ import { INPUT_BATCH_LIMIT, NETWORK_HZ, parseServerMessage, type ClientMessage, 
 
 type Welcome = Extract<ServerMessage, { type: 'welcome' }>;
 export type ConnectionState = 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'error' | 'closed';
+interface NetworkEvent { at: number; event: string; detail: Record<string, unknown> }
 
 /** Real WebSocket transport. Its timers are independent of the render loop. */
 export class MultiplayerClient {
@@ -19,6 +20,13 @@ export class MultiplayerClient {
   onSnapshot: (snapshot: Snapshot) => void = () => {};
   onShot: (shot: ShotResult) => void = () => {};
   onElimination: (event: Elimination) => void = () => {};
+  private readonly combatEvents = new Set<string>();
+  private firstCombatEvent(id: string): boolean {
+    if (this.combatEvents.has(id)) return false;
+    this.combatEvents.add(id);
+    if (this.combatEvents.size > 256) this.combatEvents.delete(this.combatEvents.values().next().value!);
+    return true;
+  }
   onState: (state: ConnectionState, message?: string) => void = () => {};
   private socket: WebSocket | null = null;
   private token = '';
@@ -33,6 +41,25 @@ export class MultiplayerClient {
   private retryTimer = 0;
   private deadline = 0;
   private lastMessage = 0;
+  private lastPing = 0;
+  private lastPong = 0;
+  private lastAck = 0;
+  private lastAckAt = 0;
+  private connectedAt = 0;
+  private resumedAt = 0;
+  private ackLatency = 0;
+  private readonly sentAt = new Map<number, number>();
+  private readonly events: NetworkEvent[] = [];
+  private opens = 0;
+  private closes = 0;
+  private lastBackpressure = 0;
+  private visibilityListening = false;
+  private readonly onVisibility = () => {
+    if (document.hidden || this.state !== 'connected' || this.socket?.readyState !== WebSocket.OPEN) return;
+    this.resumedAt = Date.now();
+    this.trace('visibility_resume', { lastMessage: this.lastMessage });
+    this.ping();
+  };
   private resolve: ((w: Welcome) => void) | null = null;
   private reject: ((e: Error) => void) | null = null;
   private ready: Promise<Welcome> | null = null;
@@ -47,7 +74,7 @@ export class MultiplayerClient {
   private readonly url: string;
   private spawning: { id: string; resolve: (s: Snapshot) => void; reject: (e: Error) => void; timeout: number } | null = null;
 
-  constructor(url: string, private readonly name: string | (() => string) = 'Player') {
+  constructor(url: string, private readonly name: string | (() => string) = 'Player', private readonly options: { debug?: boolean } = {}) {
     const parsed = multiplayerEndpoint(url);
     this.url = parsed.href;
     try {
@@ -60,7 +87,26 @@ export class MultiplayerClient {
   private saveToken(): void {
     try { if (this.token) sessionStorage.setItem(this.storageKey, this.token); else sessionStorage.removeItem(this.storageKey); } catch { /* Optional persistence. */ }
   }
-  private setState(state: ConnectionState, message?: string): void { this.state = state; this.onState(state, message); }
+  private trace(event: string, detail: Record<string, unknown> = {}): void {
+    const row = { at: Date.now(), event, detail };
+    this.events.push(row); if (this.events.length > 128) this.events.shift();
+    if (this.options.debug) console.debug('[crossfire network]', row);
+  }
+  inspect() {
+    return { state: this.state, socketState: this.socket?.readyState ?? null, opens: this.opens, closes: this.closes,
+      attempts: this.attempts, lastMessage: this.lastMessage, lastPing: this.lastPing, lastPong: this.lastPong,
+      lastAck: this.lastAck, lastAckAt: this.lastAckAt, pending: this.pending.length, unsent: this.unsent.length,
+      inFlight: this.sentSequence - this.lastAck, ackLatency: this.ackLatency, inputWindow: this.inputWindow,
+      events: [...this.events] };
+  }
+  // Even if all packets arrive together, outstanding input must fit the server's
+  // unchanged 48-frame queue. Longer delays apply backpressure, never reconnect.
+  private get inputWindow(): number { return Math.max(24, Math.min(48, Math.ceil((this.ackLatency + 150) / (FIXED_DT * 1000)))); }
+  private setState(state: ConnectionState, message?: string): void {
+    if (state === this.state) return;
+    this.trace('state', { from: this.state, to: state, message });
+    this.state = state; this.onState(state, message);
+  }
 
   connect(): Promise<Welcome> {
     if (this.state === 'connected' && this.ready) return this.ready;
@@ -78,7 +124,12 @@ export class MultiplayerClient {
 
   private open(): void {
     if (this.stopped) return;
+    if (this.socket) { this.trace('overlapping_open_blocked'); return; }
+    this.stopTimers();
     this.fatal = false;
+    this.connectedAt = 0;
+    this.resumedAt = 0;
+    this.sentAt.clear(); this.ackLatency = 0;
     this.setState(this.attempts ? 'reconnecting' : 'connecting');
     this.pending = [];
     this.unsent = [];
@@ -88,17 +139,30 @@ export class MultiplayerClient {
     this.lastCombat = { ...NO_COMBAT };
     const socket = new WebSocket(this.url);
     this.socket = socket;
-    this.deadline = window.setTimeout(() => socket.close(), 5000);
+    this.trace('connect_attempt', { attempt: this.attempts });
+    this.deadline = window.setTimeout(() => {
+      if (this.socket !== socket) return;
+      this.trace('handshake_timeout', { socketState: socket.readyState });
+      socket.close(4000, 'handshake_timeout');
+    }, 5000);
     socket.onopen = () => {
       if (this.socket !== socket) return;
-      this.send({ v: 5, type: 'join', name: typeof this.name === 'function' ? this.name() : this.name, ...(this.token ? { resumeToken: this.token } : {}) });
+      this.opens++; this.trace('open');
+      this.send({ v: 6, type: 'join', name: typeof this.name === 'function' ? this.name() : this.name, ...(this.token ? { resumeToken: this.token } : {}) });
     };
     socket.onmessage = (event) => {
       if (this.socket !== socket || typeof event.data !== 'string') return;
       const m = parseServerMessage(event.data);
-      if (!m) { this.fail('Invalid message from multiplayer server'); socket.close(); return; }
+      if (!m) {
+        let version: unknown = null;
+        try { version = JSON.parse(event.data).v; } catch { /* Malformed JSON. */ }
+        this.trace('protocol_rejected', { expected: 6, received: typeof version === 'number' ? version : null });
+        this.fail('Invalid message from multiplayer server (expected protocol v6). Rebuild matching frontend and backend.');
+        socket.close(4002, 'protocol_error'); return;
+      }
       this.lastMessage = Date.now();
       if (m.type === 'error') {
+        this.trace('server_error', { code: m.code, fatal: m.fatal });
         this.cancelSpawn(m.message);
         if (m.code === 'resume_expired') { this.token = ''; this.saveToken(); return; }
         if (m.fatal) { this.fail(m.message); socket.close(); }
@@ -111,11 +175,13 @@ export class MultiplayerClient {
         this.saveToken();
         this.sequence = m.snapshot.players.find((p) => p.id === m.selfId)?.ack ?? 0;
         this.sentSequence = this.sequence;
+        this.lastAck = this.sequence; this.lastAckAt = Date.now();
         this.round = m.snapshot.roundId;
         this.life = m.snapshot.players.find((p) => p.id === m.selfId)?.life ?? -1;
         this.pending = [];
         this.unsent = [];
-        this.attempts = 0;
+        this.connectedAt = Date.now();
+        this.trace('welcome', { resumed: m.resumed, id: m.selfId });
         this.clockOffset = m.snapshot.serverTime - Date.now();
         this.latest = m.snapshot;
         this.setState('connected');
@@ -133,10 +199,21 @@ export class MultiplayerClient {
           this.unsent = [];
           this.sequence = ack;
           this.sentSequence = ack;
+          this.sentAt.clear(); this.ackLatency = 0;
           this.life = self?.life ?? -1;
           this.round = m.snapshot.roundId;
           this.lastYaw = this.lastPitch = NaN;
         } else this.pending = this.pending.filter((f) => f.seq > ack);
+        if (ack !== this.lastAck) {
+          let sent: number | undefined;
+          for (const [seq, at] of this.sentAt) if (seq <= ack) { sent = at; this.sentAt.delete(seq); }
+          if (sent !== undefined) {
+            const sample = Math.max(0, Date.now() - sent);
+            this.ackLatency = this.ackLatency ? this.ackLatency * .8 + sample * .2 : sample;
+          }
+          this.lastAckAt = Date.now();
+        }
+        this.lastAck = ack;
         this.onSnapshot(m.snapshot);
         if (m.type === 'spawned' && this.spawning?.id === m.requestId) {
           const pending = this.spawning;
@@ -145,21 +222,30 @@ export class MultiplayerClient {
           pending.resolve(m.snapshot);
         }
       } else if (m.type === 'shot') {
-        if (m.shot.roundId === this.latest?.roundId) this.onShot(m.shot);
+        if (m.shot.roundId === this.latest?.roundId && this.firstCombatEvent(m.shot.id)) this.onShot(m.shot);
       } else if (m.type === 'elimination') {
-        if (m.elimination.roundId !== this.latest?.roundId) return;
+        if (m.elimination.roundId !== this.latest?.roundId || !this.firstCombatEvent(m.elimination.id)
+          || this.latest.players.find((p) => p.id === m.elimination.victimId)?.life !== m.elimination.victimLife) return;
+        // Presentation must retain the existing living instance before the dead snapshot removes it.
+        this.onElimination(m.elimination);
         this.latest = { ...this.latest, players: this.latest.players.map((p) => p.id === m.elimination.victimId ? { ...p, health: 0, alive: false } : p) };
         this.onSnapshot(this.latest);
-        this.onElimination(m.elimination);
       } else if (m.type === 'left' && this.latest) {
         this.latest = { ...this.latest, players: this.latest.players.filter((p) => p.id !== m.id) };
         this.onSnapshot(this.latest);
       } else if (m.type === 'pong') {
+        this.lastPong = Date.now();
+        this.trace('pong', { sentAt: m.at, receivedAt: this.lastPong, rtt: this.lastPong - m.at });
         this.clockOffset = m.serverTime - (m.at + Date.now()) / 2;
       }
     };
-    socket.onerror = () => { /* Close gives a single retry path, including failed upgrade handshakes. */ };
+    socket.onerror = () => { if (this.socket === socket) this.trace('socket_error'); /* Close owns retries. */ };
     socket.onclose = (event) => {
+      socket.onopen = socket.onmessage = socket.onclose = socket.onerror = null;
+      this.closes++;
+      this.trace('close', { code: event.code, reason: event.reason ?? '', clean: event.wasClean ?? false,
+        stale: this.socket !== socket, lastMessage: this.lastMessage, lastPong: this.lastPong,
+        lastAckAt: this.lastAckAt, pending: this.pending.length });
       if (this.socket !== socket) return;
       this.stopTimers();
       this.cancelSpawn('Connection interrupted. Try spawning again after reconnection.');
@@ -175,9 +261,12 @@ export class MultiplayerClient {
         this.fail('This session was opened in another tab. Retry to join as a new player.');
         return;
       }
+      if (this.connectedAt && Date.now() - this.connectedAt >= 30000) this.attempts = 0;
       if (++this.attempts > 5) { this.fail('Unable to connect to the multiplayer server. Check the endpoint and allowed origin, then Retry.'); return; }
       this.setState('reconnecting', 'Connection lost; reconnecting…');
-      this.retryTimer = window.setTimeout(() => this.open(), Math.min(3000, 300 * 2 ** (this.attempts - 1)));
+      const delay = Math.min(3000, 300 * 2 ** (this.attempts - 1) * (.8 + Math.random() * .4));
+      this.trace('retry_scheduled', { attempt: this.attempts, delay, reason: event.reason ?? '', code: event.code });
+      this.retryTimer = window.setTimeout(() => this.open(), delay);
     };
   }
 
@@ -191,26 +280,41 @@ export class MultiplayerClient {
   }
 
   private startTimers(): void {
+    this.stopTimers();
+    if (typeof document !== 'undefined' && !this.visibilityListening) {
+      document.addEventListener('visibilitychange', this.onVisibility); this.visibilityListening = true;
+    }
     this.flushTimer = window.setInterval(() => {
-      if (Date.now() - this.lastMessage > 8000) { this.socket?.close(); return; }
+      const now = Date.now();
+      if (now - Math.max(this.lastMessage, this.resumedAt) > 8000) {
+        this.trace('receive_timeout', { lastMessage: this.lastMessage, lastPing: this.lastPing, lastPong: this.lastPong });
+        this.socket?.close(4000, 'receive_timeout'); return;
+      }
       if (this.unsent.length && this.latest && (this.socket?.bufferedAmount ?? 0) < 32768) {
         const ack = this.latest.players.find((p) => p.id === this.selfId)?.ack ?? 0;
-        // Leave half of the existing server queue for timer/network jitter. A slow
-        // receiver must acknowledge work before another render backlog is sent.
-        const count = Math.min(INPUT_BATCH_LIMIT, Math.max(0, 24 - (this.sentSequence - ack)));
+        // In-flight frames include propagation/ACK time, not just the Worker's
+        // queue. Retain bounded 20Hz batches and allow a backlog to drain.
+        const count = Math.min(INPUT_BATCH_LIMIT, this.unsent.length,
+          Math.max(0, this.inputWindow - (this.sentSequence - ack)));
         if (count) {
           const frames = this.unsent.splice(0, count);
-          this.send({ v: 5, type: 'input', roundId: this.latest.roundId, mapVersion: this.latest.mapVersion, frames });
+          this.send({ v: 6, type: 'input', roundId: this.latest.roundId, mapVersion: this.latest.mapVersion, frames });
           this.sentSequence = frames[frames.length - 1].seq;
+          this.sentAt.set(this.sentSequence, now);
         }
       }
     }, 1000 / NETWORK_HZ);
-    this.pingTimer = window.setInterval(() => this.send({ v: 5, type: 'ping', at: Date.now() }), 2000);
+    this.pingTimer = window.setInterval(() => this.ping(), 2000);
+  }
+  private ping(): void {
+    this.lastPing = Date.now(); this.trace('ping', { sentAt: this.lastPing, lastPong: this.lastPong });
+    this.send({ v: 6, type: 'ping', at: this.lastPing });
   }
   private stopTimers(): void {
     for (const t of [this.flushTimer, this.pingTimer]) window.clearInterval(t);
     window.clearTimeout(this.deadline);
     window.clearTimeout(this.retryTimer);
+    if (this.visibilityListening) { document.removeEventListener('visibilitychange', this.onVisibility); this.visibilityListening = false; }
   }
   private send(message: ClientMessage): void {
     if (this.socket?.readyState === WebSocket.OPEN) this.socket.send(JSON.stringify(message));
@@ -225,7 +329,14 @@ export class MultiplayerClient {
       && player.crouch === 0 && !player.sliding && player.slideCooldown === 0 && !this.lastSlide && !intent.slide && !intent.jumpPressed && intent.x === 0 && intent.z === 0
       && !intent.aim && !this.lastAim && !combat.trigger && !combat.reload && !this.lastCombat.trigger && !this.lastCombat.reload
       && yaw === this.lastYaw && player.pitch === this.lastPitch) return;
-    if (this.pending.length >= 120) { this.reconnect(); return; }
+    if (this.pending.length >= 120) {
+      if (Date.now() - this.lastBackpressure >= 1000) {
+        this.lastBackpressure = Date.now();
+        this.trace('input_backpressure', { pending: this.pending.length, lastAckAt: this.lastAckAt,
+          lastMessage: this.lastMessage, socketState: this.socket?.readyState });
+      }
+      return;
+    }
     this.lastYaw = yaw;
     this.lastPitch = player.pitch;
     // An idle Shift release must reach the server before another press can be an edge.
@@ -262,14 +373,16 @@ export class MultiplayerClient {
   /** Deliberate transport interruption for diagnostics; resumes the existing authenticated session. */
   reconnect(): void {
     if (!this.socket || this.stopped) return;
-    this.setState('reconnecting', 'Connection interrupted; reconnecting…');
+    this.trace('manual_reconnect');
     this.socket.close(4000, 'reconnect');
   }
 
   disconnect(): void {
     this.cancelSpawn('Left match');
     this.stopped = true;
-    this.send({ v: 5, type: 'leave' });
+    this.trace('intentional_leave');
+    this.send({ v: 6, type: 'leave' });
+    if (this.socket) this.socket.onopen = this.socket.onmessage = this.socket.onerror = null;
     this.socket?.close(1000, 'left');
     this.socket = null;
     this.stopTimers();
@@ -290,7 +403,7 @@ export class MultiplayerClient {
     const id = crypto.randomUUID();
     return new Promise((resolve, reject) => {
       this.spawning = { id, resolve, reject, timeout: window.setTimeout(() => this.cancelSpawn('Spawn request timed out. Try again.'), 5000) };
-      this.send({ v: 5, type: 'spawn', requestId: id, weapon, roundId: this.latest!.roundId, mapVersion: this.latest!.mapVersion });
+      this.send({ v: 6, type: 'spawn', requestId: id, weapon, roundId: this.latest!.roundId, mapVersion: this.latest!.mapVersion });
     });
   }
 

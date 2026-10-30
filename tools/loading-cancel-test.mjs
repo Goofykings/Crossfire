@@ -61,6 +61,9 @@ try {
   });
   await page.goto(`${base}?quality=low&shadows=low`, { waitUntil: 'domcontentloaded' });
   await completeGuestProfile(page, 'Cancel Test');
+  await page.waitForFunction(() => window.__crossfire.homeCharacter().ready);
+  check((await page.evaluate(() => window.__crossfire.homeCharacter())).engines === 2,
+    'home owns only the main renderer and isolated character preview');
   await page.setRequestInterception(true);
   page.on('request', (request) => {
     const url = request.url();
@@ -86,6 +89,8 @@ try {
   }
   await page.evaluate(() => { window.__holdJoin = true; });
   await page.click('#menu .primary'); await page.waitForSelector('#loading.visible');
+  check(await page.evaluate(() => !window.__crossfire.homeCharacter().active && window.__crossfire.homeCharacter().engines === 1
+    && !document.querySelector('.home-character')), 'starting a join fully disposes the home preview engine, canvas and rig');
   check(await page.$eval('.loading-back', (e) => { const r = e.getBoundingClientRect(); return r.left === 24 && r.top === 24; }), 'Back sits at the top left');
   check(await page.$eval('.loading-spinner', (e) => getComputedStyle(e).animationName === 'loading-spin' && getComputedStyle(e).animationDuration === '0.8s'), 'small loading wheel spins continuously');
   await page.screenshot({ path: 'test-results/loading-cancel/loading.png' });

@@ -80,6 +80,8 @@ class ModernTerrain(IndustrialTerrain):
             if style not in ("brick", "railing"):
                 continue
             x0, z0, x1, z1 = w["rect"]
+            # Leave a masonry joint at adjoining lot / curb planes.
+            x0,z0,x1,z1=x0+.015,z0+.015,x1-.015,z1-.015
             H = w["height"]
             along_x = (x1 - x0) >= (z1 - z0)
             a0, a1 = (x0, x1) if along_x else (z0, z1)

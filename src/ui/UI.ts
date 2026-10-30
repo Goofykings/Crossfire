@@ -9,6 +9,7 @@ import { Scoreboard } from './Scoreboard';
 import { CROSSFIRE_LOGO } from './WeaponIcons';
 import { validWeapon } from '../../shared/protocol';
 import type { WeaponId } from '../weapons/Weapon';
+import { DamageFeedback } from './DamageFeedback';
 
 export type Screen = 'menu' | 'loading' | 'start' | 'weapons' | 'hud' | 'pause' | 'settings' | 'error';
 
@@ -109,6 +110,7 @@ export class UI {
   private readonly labels: Record<WeaponId, string> = { smg: 'SMG', rifle: 'Assault Rifle', shotgun: 'Shotgun', sniper: 'Sniper Rifle' };
   currentScreen: Screen = 'menu';
   readonly scoreboard: Scoreboard;
+  readonly damage: DamageFeedback;
 
   constructor(
     private readonly root: HTMLElement,
@@ -129,6 +131,7 @@ export class UI {
     this.buildError();
     this.buildGuestPrompt();
     this.scoreboard = new Scoreboard(root);
+    this.damage = new DamageFeedback(root);
   }
 
   private screen(id: Screen, cls = ''): HTMLElement {
@@ -738,6 +741,7 @@ export class UI {
 
   // ---------------------------------------------------------------------------------------------
   show(screen: Screen, overlayHud = false): void {
+    if (screen === 'menu' || screen === 'loading' || screen === 'error') this.damage?.clear();
     this.currentScreen = screen;
     document.body.dataset.screen = screen;
     const homeSettings = screen === 'settings' && this.settingsReturn === 'menu';

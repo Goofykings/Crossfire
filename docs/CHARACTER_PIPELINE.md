@@ -1,6 +1,6 @@
 # Multiplayer character
 
-The player is an original stylized humanoid inspired by the supplied `references_images/Player.png`: dark cap, short beard, charcoal shirt/trousers, tactical vest, gloves and boots. The existing analytic `char_geometry.py` geometry was reused and finished through Blender; map geometry, weapons, menus and the multiplayer protocol are unchanged.
+The player is an original stylized humanoid inspired by the supplied `references_images/Player.png`: dark cap, short beard, charcoal shirt/trousers, tactical vest, gloves and boots. The existing analytic `char_geometry.py` geometry was reused and finished through Blender. Map geometry and weapon assets are unchanged; subsequent outline/death/menu integration and protocol-v6 metadata are described in [combat visuals](COMBAT_VISUALS.md).
 
 ## Generate and inspect
 
@@ -49,7 +49,7 @@ Transport regression tests also found that new-life/reset paths shared the same 
 
 ## Visibility and lifetime
 
-Existing relative-team colors remain: all other FFA players red, teammates blue and opponents red in Teams. The native depth-tested outline pass uses the skinned geometry, with a thinner hull suitable for cuffs, fingers and cap details. Static union bounds measured over all poses keep moving limbs in the frustum without per-frame CPU reskinning.
+Existing relative-team colors remain: all other FFA players red, teammates blue and opponents red in Teams. A shared depth-tested screen-space union mask now replaces per-mesh hulls, removing internal skin/clothing/gear outlines. Static union bounds measured over all poses keep moving limbs in the frustum without per-frame CPU reskinning. See [combat visuals](COMBAT_VISUALS.md) for the 500ms directional death/fade and home preview of this same skin.
 
 After Babylon evaluates animations, LOS probes use actual head/chest/pelvis/shoulder/hand/foot bone positions against the existing map triangle index. Enemy names require visibility; teammate names may remain through walls inside the camera view. Name anchors follow the actual animated head. Meshes, rigs, groups and labels are disposed when their real player leaves or dies; the shared source asset remains available for respawn/reconnect/map transitions.
 
@@ -72,4 +72,4 @@ node tools/combat-visibility-test.mjs --out test-results/character --url http://
 
 The browser tool uses independent actual browsers and actual Worker WebSocket clients, not fabricated remote players. Bounded input frames from a real WebSocket client drive the authoritative controller while browsers observe real animation groups and bone positions. It also preserves the existing FFA/Teams combat, wall visibility, health, elimination, respawn and disconnect checks. Fixture RPC only positions already spawned sessions on clear map sightlines. Final results and remaining limits are recorded at the top of PROGRESS.md.
 
-This character feature changes frontend presentation/assets and needs a frontend rebuild/publication when authorized. It adds no Worker/protocol change; the baseline backend must still support protocol v5. No commit, push or deployment is automatic. Local GPU measurements are not a claim of performance on every Chromebook or of public-server load capacity.
+The original character export added no Worker/protocol change. The subsequent directional combat-visual update requires protocol v6 and matching frontend/Worker builds; see [deployment boundary](COMBAT_VISUALS.md). No commit, push or deployment is automatic. Local GPU measurements do not establish performance on every Chromebook or public-server load capacity.

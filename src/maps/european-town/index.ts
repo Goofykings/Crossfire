@@ -14,7 +14,7 @@ export const EUROPEAN_TOWN: MapDefinition = {
   assetPath: 'assets/models/european-town/',
   layout: layout as unknown as MapLayout,
   assetIndex: 'map-assets.json',
-  dimensions: [66, 66],
+  dimensions: [52, 52],
   environment: {
     hdr: 'assets/env/sky_1k.hdr',
     skyImage: 'assets/env/sky_4k.jpg',
@@ -36,16 +36,12 @@ export const EUROPEAN_TOWN: MapDefinition = {
     // labels for the Tab map, keyed by layout zone ids (positions come from the zones themselves)
     landmarks: {
       plaza: 'Well Plaza',
-      spawn_blue: 'West Yard',
-      spawn_bluer: 'East Yard',
-      n_lane_mid: 'North Terrace',
-      n_lane_midr: 'South Terrace',
-      ne_court: 'NE Court',
-      ne_courtr: 'SW Court',
-      blue_yard: 'Gate Yard',
-      blue_yardr: 'Gate Yard',
-      cn_room: 'Hall',
-      cn_roomr: 'Hall',
+      shop_court: 'Market Court',
+      market_court: 'Cart Court',
+      garden: 'Garden',
+      garden_room: 'Garden Hall',
+      baker_court: 'Baker Court',
+      shop_lane: 'Gallery Lane',
     },
   },
 };

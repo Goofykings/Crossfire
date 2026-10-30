@@ -44,11 +44,11 @@ describe.each(WEAPONS)('$id authoritative weapon state', (stats) => {
   });
 });
 it('accepts control intent but never client-assigned damage, targets, shots or gun state', () => {
-  const base = { v: 5, type: 'input', roundId: 0, mapVersion: 'test', frames: [{ seq: 1, yaw: 0, pitch: 0,
+  const base = { v: 6, type: 'input', roundId: 0, mapVersion: 'test', frames: [{ seq: 1, yaw: 0, pitch: 0,
     intent: { x: 0, z: 0, slide: false, aim: true, jumpPressed: false }, combat: { trigger: true, reload: false } }] };
   expect(parseClientMessage(JSON.stringify(base))).toEqual(base);
   for (const forged of [{ damage: 900 }, { targetId: 'victim' }, { ammo: 99 }, { cooldown: 0 }, { origin: [0, 0, 0] }]) {
     expect(parseClientMessage(JSON.stringify({ ...base, frames: [{ ...base.frames[0], combat: { ...base.frames[0].combat, ...forged } }] }))).toBeNull();
   }
-  expect(parseClientMessage(JSON.stringify({ v: 5, type: 'shot', damage: 100, targetId: 'victim' }))).toBeNull();
+  expect(parseClientMessage(JSON.stringify({ v: 6, type: 'shot', damage: 100, targetId: 'victim' }))).toBeNull();
 });

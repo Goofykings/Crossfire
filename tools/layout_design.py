@@ -1,7 +1,7 @@
 """European Town layout bootstrapper.
 
 Authors the walkable network (streets, yards, courtyards, passages, terraces) as rectangles,
-mirrors it with 180-degree rotational symmetry so both spawns get equivalent routes, and
+uses asymmetric compact loops for 2-6 public players, and
 renders a top-down plan with gameplay metrics.
 
 This is a design aid; the canonical, hand-editable map data is
@@ -20,12 +20,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT_PNG = ROOT / "docs" / "european-town-plan.png"
 LAYOUT_JSON = ROOT / "src" / "maps" / "european-town" / "layout.json"
 
-HALF = 35  # map spans [-35, 35] on x and z (metres). +x = east, +z = south on the plan.
+HALF = 28  # diagnostic plan extent; buildings keep their authored metre dimensions
 
 
 @dataclass
@@ -48,62 +49,17 @@ class Area:
 
 
 # ----------------------------------------------------------------------------------------------
-# Walkable network, authored for the north half + west part of the centre band.
-# Everything here is rotated 180 degrees about the origin to produce the other half.
-# ----------------------------------------------------------------------------------------------
-AREAS: list[Area] = [
-    # Blue spawn yard (west edge). Rotation produces the red spawn on the east edge.
-    Area("spawn_blue", "spawn", -33, -7, -25, 7, team="blue"),
-    # Spawn exits (north exit on the west side; the south exit comes from rotating red's north exit)
-    Area("blue_exit_n", "street", -33, -11, -29, -7),
-    Area("blue_arch", "passage", -25, 0, -21, 3),
-    # North-west loop
-    Area("nw_a", "street", -33, -15, -25, -11),
-    Area("nw_b", "street", -29, -27, -25, -11),
-    Area("nw_c", "street", -33, -31, -14, -27),
-    Area("nw_d", "street", -18, -27, -14, -15),
-    Area("nw_e", "street", -21, -15, -6, -11),
-    Area("cw_a", "street", -10, -11, -6, -5),
-    # Blue gate yard behind the arch, with its north exit
-    Area("blue_yard", "yard", -21, -5, -15, 4),
-    Area("blue_yard_n", "street", -21, -11, -18, -5),
-    Area("west_entry", "street", -15, -5, -5, -1),
-    # North lane (raised terrace in the middle, reached by steps at both ends)
-    Area("n_lane_mid", "terrace", -14, -27, 4, -23, height=0.72),
-    Area("n_jog2", "street", 4, -31, 8, -23),
-    Area("n_lane_e", "street", 8, -31, 20, -27),
-    Area("n_jog3", "street", 16, -27, 20, -17),
-    Area("ne_lane", "street", 20, -24, 29, -20),
-    # Centre-north access into the plaza, plus a walk-through ground-floor hall
-    Area("cn_a", "street", -4, -23, 0, -17),
-    Area("cn_b", "street", -4, -17, 8, -13),
-    Area("cn_c", "street", 1, -13, 5, -5),
-    Area("cn_room", "room", -14, -21, -4, -18),
-    Area("ne_link", "street", 8, -20, 12, -13),
-    Area("ne_arch", "passage", 12, -20, 16, -17),
-    # Red side north flank (becomes blue's south flank after rotation)
-    Area("red_exit_n", "street", 25, -11, 29, -7),
-    Area("e_edge", "street", 29, -24, 33, -9),
-    Area("ne_mid", "street", 15, -13, 29, -9),
-    Area("red_yard_n", "street", 15, -9, 18, -4),
-    Area("ne_court", "court", 22, -32, 30, -26, height=0.54),
-    Area("ne_court_gate_s", "passage", 24, -26, 27, -24),
-    Area("ne_court_gate_w", "passage", 20, -30, 22, -28),
-    # Centre plaza (self-symmetric)
-    Area("plaza", "plaza", -5, -5, 5, 5, center=True),
-]
+# Compact, asymmetric walkable network (normal metre-scale streets and lots).
+from compact_layouts import town as authored_routes
+
+AREAS = authored_routes(Area)
 
 # Decorative / gameplay obstacle in the plaza centre (well). Not walkable.
 OBSTACLES = [(-1.2, -1.2, 1.2, 1.2)]
 
 
 def all_areas() -> list[Area]:
-    out: list[Area] = []
-    for a in AREAS:
-        out.append(a)
-        if not a.center:
-            out.append(a.rotated())
-    return out
+    return list(AREAS)
 
 
 def rasterize(areas: list[Area]):
@@ -206,7 +162,7 @@ def metrics(grid):
             z += 1
     runs.sort(reverse=True)
     thin = []
-    inside = lambda x, z: -33 <= x - HALF and x - HALF < 33 and -33 <= z - HALF and z - HALF < 33
+    inside = lambda x, z: -PLAY <= x - HALF < PLAY and -PLAY <= z - HALF < PLAY
     for z in range(n):
         for x in range(n):
             if walk[z][x] or not inside(x, z):
@@ -304,8 +260,8 @@ def render(areas, grid, kinds, buildings=None, path=OUT_PNG, scale=12):
 # backdrop band outside the playable edge) into rectangles, then split long rectangles into
 # townhouse-sized lots.
 # ----------------------------------------------------------------------------------------------
-PLAY = 33       # playable edge (street faces of perimeter buildings)
-OUTER = 40      # backdrop buildings extend to here
+PLAY = 26       # playable edge (street faces of perimeter buildings)
+OUTER = 34      # backdrop buildings extend to here
 MAX_SIDE = 99
 LOT_MAX = 11      # split rectangles whose side exceeds this into townhouse lots
 
@@ -368,27 +324,9 @@ def greedy_rects(mass):
 
 def decompose(areas):
     """Interior blocks first, then extend edge blocks outward, then fill the backdrop band."""
-    full = mass_grid(areas)
-    n = len(full)
-    inside = lambda xi, zi: -PLAY <= xi - OUTER < PLAY and -PLAY <= zi - OUTER < PLAY
-    interior = [[full[z][x] and inside(x, z) for x in range(n)] for z in range(n)]
-    rects = absorb_slivers(greedy_rects(interior))
-    # extend blocks that touch the playable edge out to the backdrop limit
-    ext = []
-    for (x0, z0, x1, z1) in rects:
-        if x0 == -PLAY: x0 = -OUTER
-        if x1 == PLAY: x1 = OUTER
-        if z0 == -PLAY: z0 = -OUTER
-        if z1 == PLAY: z1 = OUTER
-        ext.append((x0, z0, x1, z1))
-    # fill whatever band remains (corners, behind street ends)
-    band = [[full[z][x] and not inside(x, z) for x in range(n)] for z in range(n)]
-    for (x0, z0, x1, z1) in ext:
-        for zi in range(max(0, z0 + OUTER), min(n, z1 + OUTER)):
-            for xi in range(max(0, x0 + OUTER), min(n, x1 + OUTER)):
-                band[zi][xi] = False
-    rest = absorb_slivers(greedy_rects(band))
-    return ext + rest
+    # Reuse the newer toolkit's covered-area anchors: greedy lots must not split a gate.
+    from layoutkit import LayoutKit
+    return LayoutKit(areas, PLAY, OUTER, lot_max=LOT_MAX).decompose()
 
 
 def absorb_slivers(rects):
@@ -566,7 +504,7 @@ def choose_type(world, r, inside, exp, open_len, corners, h):
     if passages:
         # a lot that is nothing but the passage is a bridge building spanning the lane
         bridge = any((a.x1 - a.x0) * (a.z1 - a.z0) >= w * d - 0.01 for a in passages)
-        return "archway" if bridge or min(w, d) > 5 else "narrow_passage"
+        return "archway" if bridge or min(w, d) > 5 or (w >= 4 and d <= 10) else "narrow_passage"
     if "plaza" in corners.values():
         return "corner"
     faces_square = any(k == "open" and world.classify(x, z)[1].kind in ("plaza", "yard")
@@ -711,6 +649,10 @@ def emit_layout(areas, rects):
         **dressing,
     }
     # free-for-all spawn points over the whole map (they keep clear of the props and targets placed above)
+    from upper_routes import make_route
+    from compact_dressing import finish_layout
+    layout['upperRoutes'] = [make_route('market_gallery', [-17,-21,-14,-3], 'gallery')]
+    finish_layout(layout, PROPS)
     layout["spawns"] = ffa_spawns(layout, PROPS)
     return layout
 
@@ -727,39 +669,24 @@ SIDE_HEADING = {"n": 0, "e": 90, "s": 180, "w": 270}
 
 # (x0, z0, x1, z1) span across a lane, plus springing height; rotated copies are added.
 ARCHES = [
-    ("arch_nw_b", (-29, -21.4, -25, -20.6)),
-    ("arch_cn_a", (-4, -20.4, 0, -19.6)),
-    ("arch_e_edge", (29, -16.4, 33, -15.6)),
-    ("arch_nw_e", (-12.4, -15, -11.6, -11)),
+    ("plaza_arch", (0,-15.4,4,-14.6)),
+    ("east_arch", (18,7,22,7.8)),
 ]
 
 MANUAL_PROPS = [
-    # plaza: market stall against the north frontage, benches facing the well
-    ("market_stall", (-2.6, 0, -4.15), 180),
-    # clear of the door in B42's east face (z 2.45..3.55)
-    ("bench", (-4.3, 0, 1.2), 90),
-    # gate yards: a hand cart for cover
-    ("cart", (-16.4, 0, 1.9), 0),
-    ("crate_stack", (-20.2, 0, -4.2), 90),
-    # raised court: stall, bench, fenced herb garden
-    ("market_stall", (25.0, 0.54, -31.15), 180),
-    # Full bench length plus clearance from the north facade trim and the gate stairs
-    # at z -30..-28; keep the back slats clear of the garden wall as well.
-    ("bench", (22.65, 0.54, -31.0), 90),
-    ("fence", (29.0, 0.54, -30.0), 0),
-    ("fence_gate", (28.0, 0.54, -31.0), 270),
-    ("flower_pot_large", (29.1, 0.54, -31.2), 0),
-    ("flower_pot", (29.4, 0.54, -30.5), 0),
-    # (free-for-all: no safe zones, so no zone signage or barriers)
+    ("market_stall", (-3.8,0,-4.6),180),
+    ("bench", (4.5,0,3.6),270),
+    ("cart", (15.5,0,-10.5),90),
+    ("barrel_group", (10.5,0,-14),0),
+    ("flower_box", (-16,0,14.8),0),
+    ("market_crate", (14,0,-14.5),0),
+    ("stone_bollard", (4.9,0,-4.8),0),
+    ("bench", (14.3,0,15.7),180),
+    ("flower_pot_large", (-13,0,11.2),0),
 ]
 
-STREET_LANTERNS = [(-4.3, 0, -4.3), (4.3, 0, -4.3), (-20.4, 0, 3.4), (22.6, 0.54, -26.6)]
+STREET_LANTERNS = [(-4.8,0,4.8),(4.8,0,-4.8),(-15,0,15),(16.5,0,-15)]
 
-TARGETS = [
-    ((-31.2, 0, -29.0), 90), ((-27.0, 0, -25.0), 180), ((-16.0, 0, -16.2), 0), ((-8.0, 0, -9.8), 180),
-    ((-9.0, 0.72, -25.0), 90), ((28.6, 0.54, -28.6), 270), ((31.0, 0, -22.6), 180), ((10.0, 0, -19.0), 180),
-    ((18.0, 0, -25.6), 180), ((-18.0, 0, -2.0), 270), ((-31.6, 0, 5.4), 90), ((-3.6, 0, -3.6), 135),
-]
 
 
 def rot_pos(p):
@@ -801,7 +728,7 @@ def dress(world, areas, buildings, terraces):
 
     props, lights = [], []
 
-    def add(ptype, pos, heading, mirror=True):
+    def add(ptype, pos, heading, mirror=False):
         props.append({"type": ptype, "pos": [round(pos[0], 3), round(pos[1], 3), round(pos[2], 3)],
                       "heading": heading % 360})
         sx, _, sz = PROPS[ptype]["size"]
@@ -963,9 +890,6 @@ def dress(world, areas, buildings, terraces):
 
 
     targets = []
-    for i, (pos, hd) in enumerate(TARGETS):
-        targets.append({"id": f"T{len(targets) + 1:02d}", "pos": list(pos), "heading": hd})
-        targets.append({"id": f"T{len(targets) + 1:02d}", "pos": list(rot_pos(pos)), "heading": rot_heading(hd)})
 
     arches = []
     for aid, (x0, z0, x1, z1) in ARCHES:

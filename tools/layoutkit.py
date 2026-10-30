@@ -154,6 +154,10 @@ class LayoutKit:
     # --- metrics ------------------------------------------------------------------------------------
     def metrics(self, seed: int = 7) -> dict:
         n, O = self.n, self.OUTER
+        # Interiors connect routes but their walls interrupt sightlines. Use a
+        # separate grid for connectivity rather than reporting false islands.
+        nav = [[self.cell_area[z][x] is not None and -self.PLAY <= x - O < self.PLAY
+                and -self.PLAY <= z - O < self.PLAY for x in range(n)] for z in range(n)]
         # walk-in interiors are walled (only their doors let sight through): leave them out of the sight metrics
         walk = [[self.cell_area[z][x] is not None and self.cell_area[z][x].kind not in ("interior", "room")
                  and -self.PLAY <= x - O < self.PLAY and -self.PLAY <= z - O < self.PLAY for x in range(n)] for z in range(n)]
@@ -167,7 +171,7 @@ class LayoutKit:
             x, z = stack.pop()
             for dx, dz in ((1, 0), (-1, 0), (0, 1), (0, -1)):
                 q = (x + dx, z + dz)
-                if 0 <= q[0] < n and 0 <= q[1] < n and walk[q[1]][q[0]] and q not in seen:
+                if 0 <= q[0] < n and 0 <= q[1] < n and nav[q[1]][q[0]] and q not in seen:
                     seen.add(q)
                     stack.append(q)
         corners = sum(1 for z in range(n - 1) for x in range(n - 1)
@@ -220,7 +224,7 @@ class LayoutKit:
                     runs.append((z - s0, f"x={x - O} z={s0 - O}..{z - O}"))
                 z += 1
         runs.sort(reverse=True)
-        return {"walkable_m2": len(cells), "connected": len(seen) == len(cells), "corner_vertices": corners,
+        return {"walkable_m2": len(cells), "connected": len(seen) == sum(sum(row) for row in nav), "corner_vertices": corners,
                 "top_runs": [f"{r[1]} ({r[0]} m)" for r in runs[:5]],
                 "longest_axis_run_m": longest, "median_max_sightline_m": round(sight[len(sight) // 2], 1),
                 "p90_max_sightline_m": round(sight[int(len(sight) * 0.9)], 1)}

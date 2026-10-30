@@ -34,6 +34,33 @@ try {
   await page.waitForFunction(() => window.__crossfire && document.querySelector('#menu.visible'), { timeout: 240000 });
   check(await page.$eval('.logo', (e) => e.getAttribute('aria-label') === 'CROSSFIRE' && e.querySelectorAll('svg').length === 1), 'original CROSS / crossed rifles / FIRE logo has an accessible full title');
   check(await page.evaluate(() => window.__crossfire.stats().mapId == null), 'home loads no playable map');
+  await page.waitForFunction(() => window.__crossfire.homeCharacter().ready, { timeout: 60000 });
+  const preview = await page.evaluate(() => window.__crossfire.homeCharacter());
+  check(preview.skin === 'assets/characters/player.glb' && preview.character.bones === 18 && preview.character.clip === 'IDLE',
+    'home previews the actual multiplayer skin and its idle clip');
+  check(!preview.platformVisible && await page.$eval('.home-character', (e) => getComputedStyle(e).maskImage.includes('linear-gradient')),
+    'preview hides the platform and fades the character canvas');
+  await page.mouse.move(1590, 20); await new Promise((r) => setTimeout(r, 450));
+  const turned = await page.evaluate(() => window.__crossfire.homeCharacter());
+  const headOffset = (state) => 2 * Math.acos(Math.min(1, Math.abs(state.headRotation.reduce((sum, n, i) => sum + n * state.animatedHeadRotation[i], 0))));
+  check(turned.yaw > .18 && turned.yaw < Math.PI / 12 && turned.pitch > .02
+    && turned.headYaw > .08 && turned.headPitch > .1 && headOffset(turned) > .12
+    && turned.character.frame !== preview.character.frame,
+    'idle advances while the body and actual head rig turn toward the upper-right cursor');
+  await page.screenshot({ path: 'test-results/home/look-right-up.png' });
+  await new Promise((r) => setTimeout(r, 800));
+  const held = await page.evaluate(() => window.__crossfire.homeCharacter());
+  check(Math.abs(headOffset(held) - headOffset(turned)) < .04,
+    'holding the cursor does not accumulate head rotation over the idle animation');
+  await page.mouse.move(10, 880); await new Promise((r) => setTimeout(r, 500));
+  const opposite = await page.evaluate(() => window.__crossfire.homeCharacter());
+  check(opposite.yaw < -.18 && opposite.pitch < -.02 && opposite.headYaw < -.08 && opposite.headPitch < -.1
+    && headOffset(opposite) > .12, 'body and actual head rig follow the lower-left cursor');
+  await page.screenshot({ path: 'test-results/home/look-left-down.png' });
+  await page.mouse.move(800, 450); await new Promise((r) => setTimeout(r, 400));
+  const neutral = await page.evaluate(() => window.__crossfire.homeCharacter());
+  check(Math.abs(neutral.yaw) < .02 && Math.abs(neutral.headYaw) < .02 && Math.abs(neutral.headPitch) < .02 && headOffset(neutral) < .03,
+    'center cursor restores the neutral body and head without accumulated rotation');
   check(!requests.some((u) => /\/assets\/(models|env|textures)\//.test(u)), 'home requests no map/weapon geometry, environment or material textures');
   check(await page.$eval('.home-backdrop', (e) => e.complete && e.naturalWidth > 0 && parseFloat(getComputedStyle(e).filter.match(/blur\(([^p]+)/)?.[1]) > 0), 'existing lightweight map image forms the blurred background');
   check((await page.$$('#menu button, .home-nav button')).length === 3 && !(await page.$('#map-list')), 'home has two navigation tabs, one main action and no map selector');
@@ -68,6 +95,10 @@ try {
       const e = document.querySelector(selector); return [selector, { rect: e.getBoundingClientRect().toJSON(), scrollWidth: e.scrollWidth, clientWidth: e.clientWidth }];
     }))));
     check(layout, `${width}x${height}: full title, upper navigation and bottom-centered Play without clipping`);
+    check(await page.$eval('.home-character', (e) => { const r = e.getBoundingClientRect();
+      return r.width > 0 && r.height > 0 && r.top >= document.querySelector('.home-nav').getBoundingClientRect().bottom
+        && r.bottom <= document.querySelector('.home-actions').getBoundingClientRect().top && r.left >= -1 && r.right <= innerWidth + 1;
+    }), `${width}x${height}: character viewport stays between navigation and Play`);
   }
   await page.setViewport({ width: 1600, height: 900 });
   await page.mouse.move(0, 0);
@@ -133,6 +164,14 @@ try {
   check(await page.$('#menu.visible'), 'Back returns to home');
   await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
   check(await page.$eval('.home-backdrop', (e) => getComputedStyle(e).animationName === 'none'), 'reduced-motion preference disables background motion');
+  await page.waitForFunction(() => window.__crossfire.homeCharacter().ready);
+  await new Promise((r) => setTimeout(r, 200));
+  const reducedFrame = (await page.evaluate(() => window.__crossfire.homeCharacter())).character.frame;
+  await page.mouse.move(1590, 450); await new Promise((r) => setTimeout(r, 400));
+  const reducedPreview = await page.evaluate(() => window.__crossfire.homeCharacter());
+  check(reducedPreview.reducedMotion && reducedPreview.character.frame === reducedFrame && Math.abs(reducedPreview.yaw) < .001
+    && Math.abs(reducedPreview.headYaw) < .001 && Math.abs(reducedPreview.headPitch) < .001,
+    'reduced motion freezes the preview idle and cursor response');
   await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'no-preference' }]);
   check(errors.length === 0, 'no browser errors during appearance checks');
   if (!process.argv.includes('--appearance-only')) {
@@ -146,6 +185,8 @@ try {
     });
     await page.click('#menu .btn.primary');
     await page.waitForSelector('#loading.visible');
+    check(!(await page.evaluate(() => window.__crossfire.homeCharacter())).active && !(await page.$('.home-character')),
+      'entering a match releases the preview scene, canvas and rig');
     check(await page.$eval('#loading', (e) => e.querySelector('.loading-word')?.textContent === 'LOADING' && e.querySelector('.loading-back')?.textContent.trim() === 'Back'
       && e.querySelector('.loading-spinner') && getComputedStyle(e).backgroundColor === 'rgb(41, 44, 49)'), 'join shows centered LOADING, spinner and Back on an opaque dark-gray screen');
     await page.screenshot({ path: 'test-results/home/loading.png' });

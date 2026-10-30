@@ -1,12 +1,172 @@
-# Current task: actual Blender multiplayer character - final verification in progress
+# Current task: compact maps for 2-6 players - complete
 
-Updated: 2026-10-28. The supplied reference is `references_images/Player.png`. Reused existing analytic humanoid geometry and generated `blender/characters/player.blend` plus the actual skinned `public/assets/characters/player.glb` using Blender 5.2.3 LTS. Actual GLB audit: 18 joints, 9,248 triangles, 4,931 exported vertices, 456,152 bytes, three materials sharing an embedded 256px atlas pair, and six real in-place clips. Source/metadata and `npm.cmd run assets:player` are provided. Asset verification passes 188 manifest entries.
+Updated: 2026-10-30. Completed European Town, Industrial Complex, Modern City,
+then shared collision/spawn validation, preserving earlier uncommitted work.
+No commit, push or deployment. Details, regeneration commands and evidence:
+`docs/COMPACT_MAPS.md`.
 
-The game loads and independently animates actual remote humanoids, with shared geometry/materials, blended movement/jump/landing/slide states, current-bone visibility/name anchors and native skinned red/blue outlines. No local first-person humanoid is created. The slide is posed, not vertically squashed. World/controller positions, maps, weapons, damage, menus and protocol v5 are preserved.
+- Town: **52 x 52 m**, down from 66 x 66 m (21.2% per dimension), with offset
+  street loops, well plaza, market/shop courts, garden hall and baker court.
+- Industrial: **54 x 54 m**, down from 68 x 68 m (20.6%), with connected warehouse
+  and workshop interiors, loading square, goods/container yards and utility yard.
+- City: **54 x 54 m**, down from 68 x 68 m (20.6%), with varied roads/sidewalks,
+  diner/shop routes, garden court, plaza and lobby shortcuts.
+- Each has a two-ended **2.8 m upper route**: covered market gallery, metal
+  warehouse catwalk, covered second-floor passage. Stairs/decks/supports/rails
+  use the same procedural solid parts for visible geometry and Worker collision.
+  Suspended decks retain a standing-height underpass; both stair approaches work.
+- Added five optimized Blender props: flower box, market crate, stone bollard,
+  pump skid and utility box. Retained existing prop assets, architecture, roof/PBR
+  textures, environments, lighting/shadows and graphics presets. No model scaling.
+  The revised maps place 51/23/35 props plus Town's well; clearance checks keep
+  doors/stairs clear, furniture supported and wires attached to surviving poles.
+  Two purposeful industrial yard fence segments replace automatic fence slivers.
+- Regenerated map building GLBs, terrain, collision/debug GLBs, map indexes,
+  prop catalog/new GLBs, asset manifests and editable map/props `.blend` sources.
+  Removed only obsolete generated block files. Source reproduction is byte-for-byte
+  identical for all three layouts. Added overhead `docs/*-compact-plan.png`
+  diagnostics; no gameplay tactical map was added.
+- Sixteen asymmetric spawn candidates per map retain safe ground, clearance,
+  quadrant coverage and spacing. The authoritative spawn chooser now prefers
+  separation and geometry-screened opponent sightlines, with a clear fallback.
+  Shared layout/collision/catalog imports automatically revise frontend and Worker
+  hashes. Protocol v6, public-main, 10-minute rounds, combat, health and saved
+  settings are preserved. **Both frontend and Cloudflare Worker need publication
+  together when authorized**; public Cloudflare was not tested or changed.
 
-Fixed observed startup/movement issues: Retry enters an already server-approved live session after a lost/late spawn acknowledgement; pending/unsent input arrays are independent on resets (the old alias duplicated frames); outgoing input waits for server acknowledgements with at most 24 frames in flight under the unchanged 48-frame server queue. Animation follows actual server position interpolation even when end-of-snapshot velocity is zero.
+Final verification: **207 frontend tests in 23 files**, frontend TypeScript and
+production builds, **178 asset entries / 213 materials**, backend TypeScript,
+Wrangler dry-run build and **41 real Worker/SQLite/WebSocket tests** all pass.
+New checks cover route cycles, actual prop-inclusive ground connectivity, stair
+traversal in both directions, headroom/underpasses, physical yard fences, shared
+revisions and screened spawn selection against 1-5 opponents across every map.
+Existing geometry-overlap limits were retained; detected shared surface planes,
+a canopy/stair collision, sidewalk/lobby overlap and workshop prop obstruction
+were corrected in the generators/placements.
 
-170 frontend unit tests and production build pass. The full FFA character/combat/visibility/respawn/disposal case passes with real Worker WebSockets and independent browsers; final per-mode runs and preservation regressions are underway. Final results will replace this entry. See `docs/CHARACTER_PIPELINE.md`. No commit, push or deployment is authorized/performed.
+Production Chrome tests loaded all three maps under `/crossfire/`, walked all six
+upper-route directions, retained settings and resolved all PBR materials, without
+asset errors or uncaught browser exceptions. High-quality gallery and overhead
+captures were visually inspected. Two actual browser players then stayed connected
+for over **61 seconds with delayed real packets**, synchronized keyboard movement
+and orientation, recovered from genuine socket closes with exactly one socket/actor
+per session, preserved health/ammo/life/team/scores/round timing, and left without
+retrying. This validates local multiplayer, not a public deployment or human
+six-player balance. The first cohosted backend run hit an existing close-event
+timing assertion; its isolated rerun passed without changing heartbeat detection.
+
+Evidence: `test-results/compact-{frontend-tests,typecheck,build,build-local-network,
+assets,server-types,server-final,browser-final,multiplayer}.log`, plus screenshots
+and samples in `test-results/compact-browser/` and `compact-multiplayer/`.
+The multiplayer browser build explicitly supplied the local WebSocket URL; the
+GitHub Pages workflow and production URL configuration were not changed.
+`git diff --check` passes; the existing large-bundle warning remains.
+
+No implementation stage remains in this request. Stopped after completion;
+further human 2-6-player balance feedback and any publication require a new request.
+
+# Previous task: directional damage haze and health regeneration - complete
+
+Updated: 2026-10-30. Added only the requested damage presentation and server health regeneration, preserving maps/assets, graphics settings, weapon damage/actions, scoring, teams, animations, HUD layout, protocol v6 and the previous reconnect fix. No commit, push or deployment was performed. Implementation and exact verification commands: `docs/HEALTH_AND_DAMAGE_FEEDBACK.md`.
+
+The existing confirmed current-life hit path now weights four lightweight CSS edge gradients using the actual incoming server ray and current camera yaw/pitch. Side attacks emphasize the matching side, front attacks favor the upper edges, and rear attacks tint the perimeter with stronger bottom/rear emphasis. Turning after a valid hit updates the weights. The middle remains fully transparent, with bounded alpha, the existing quick onset/500ms fade, repeated-hit refresh and direction arrow retained. No attacker tracking or health-difference-triggered damage cues were added.
+
+The Worker uses its existing room simulation and a private persisted `regenAt` cursor: every accepted damaging hit restarts a full five-second wait, then each complete 100ms earns 1 HP (first point at 5.1s), up to the existing 100 HP maximum. Elapsed server time determines progress regardless of tick/input frequency. New damage interrupts healing; death, respawn and round transitions clear old progress. The cursor accompanies health in SQLite sessions and socket attachments; valid resumes consume only elapsed unused steps, including time within the existing disconnect grace. Older damaged records start a conservative new wait. No client healing timer, per-player repeating timer, new public protocol field or authentication change was introduced. Existing snapshots update local HUD and peers.
+
+Verification passes: **189 frontend tests in 22 files**, frontend TypeScript, production Vite build, backend TypeScript, Wrangler dry-run build and **41 real Worker/SQLite/TCP tests**. Exact boundary tests cover five full seconds, first 100ms, 10 HP/s, irregular cadence, serialized progress reuse without double-healing, repeated damage, interruption, death and fractional-health cap. Real FFA and Teams tests use genuine shots for delayed healing, delay resets, interruption, authoritative peer snapshots, valid resume without restarting the deadline, full-health cap, dead/unspawned exclusion, respawn and round changes. Existing packet security, weapon/rate/ammo, score, movement, heartbeat, object eviction and runtime reconstruction checks still pass. Actively healing rooms intentionally keep the shared simulation running; an exploratory forced-active-eviction check was removed because Miniflare refuses active references. No production lifecycle limit was relaxed.
+
+The focused production-browser test passed against a real isolated Worker with one actual shooter socket and a real browser victim. Server-confirmed SMG shots from right/left/front/behind drove correctly directed rendered gradient pixels; the camera-turn and repeated-hit checks passed. Sampled center pixels were exactly clear for all directions, opacity stayed bounded, and the effect faded fully in about half a second. Captured right/rear gradient images were visually inspected. The existing HUD displayed regenerated authoritative health and the actual peer received the identical snapshot health. No uncaught browser errors or asset failures occurred. CSS pixel inspection clones only recorded real-hit HUD styles over black for deterministic captures, without synthetic hits, fabricated players or health assignments. Test rendering cost was bounded; transport/physics/health clocks remain real.
+
+Final evidence: `test-results/health-{unit,typecheck,build,server-types,server-final,browser}.log`, plus screenshots and actual style/pixel samples in `test-results/health-browser/`. Earlier setup/timing/active-eviction attempts are superseded by these final passing records. `git diff --check` passes; existing bundle-size warnings remain. Publish the frontend and Worker when authorized to make both improvements public; no public Cloudflare session was validated by local tests. Stop here; no other feature work was started.
+
+---
+
+# Previous task: recurring multiplayer reconnection - complete
+
+Updated: 2026-10-30. Prioritized this issue exclusively. The old client generated 120 input frames/second but allowed only 24 outstanding frames; delayed ACKs filled the 120-frame prediction queue and called `reconnect()` on a healthy socket. The old-code regression reproduced the first reconnect at 3,799 ms with valid 250 ms delayed snapshots. Resetting retries on every welcome made this repeat indefinitely. This is a confirmed source/local reproduction; a live public Cloudflare trace has not been obtained.
+
+Implemented latency-aware outstanding input (24-48 frames), retaining the server's 48-frame queue and 12-frame/20 Hz batches. Full prediction queues apply bounded backpressure instead of closing sockets. Actual close events own bounded exponential retries with jitter; only 30 seconds of stability resets the budget. Duplicate state notifications/opens are guarded, old callbacks and timers/listeners are cleaned up, Leave cancels retries, and visibility resume probes before timing out. Valid packets update liveness; heartbeat intervals, receive/Worker timeouts, protocol v6 and authoritative gameplay/persistence are unchanged. Added default-silent client/Worker diagnostics, focused transport regressions, real earned-score resume assertions and a two-browser delayed-message/socket-drop harness. See `docs/NETWORK_RECONNECTION.md` for diagnosis, exact PowerShell commands, diagnostics and deployment boundary.
+
+Frontend TypeScript, production Vite build and all **184 frontend tests** pass. Backend TypeScript, Wrangler dry-run build and **39 real Worker/SQLite/TCP tests** pass, including newly strengthened resume checks after earned nonzero kills/deaths/team scores, plus health, ammunition, weapon, life, team and round deadline. Existing rejection of malformed/replayed/flooded input, heartbeat expiry, session expiry, object eviction and complete runtime reconstruction remain tested. No production heartbeat or server queue limit was relaxed.
+
+The final complete production-browser regression passed with two independent Chrome contexts and a real isolated Worker. Both clients remained connected for **61.719 seconds** with actual incoming packets delayed 250 ms, no additional opens/closes, no reconnecting toast and ongoing authoritative ACK progress (over 6,000 frames each between first/last samples). Real keyboard movement, peer rendered position and orientation passed. Actual server socket closes with code 1012 were reported, followed by authenticated resume with one active socket per browser, the same identities and unchanged health/ammo/life/weapon/team/scores/map/mode/deadline. No duplicate roster entries or remote actors remained. Intentional Leave closed both sockets with code 1000, produced zero Worker presence and no retry over the next five seconds. Default network console logging was silent; no uncaught browser errors or asset HTTP failures occurred. Test rendering was bounded (Low quality/half resolution/frame scheduling) to avoid cohosted GPU contention; elapsed-time physics and production transport/heartbeat timers were unchanged. This is connection validation, not an FPS benchmark.
+
+Evidence: `test-results/reconnect-baseline.log` records the old-code failure; final passing records are `test-results/reconnect-{unit,typecheck,build,server-typecheck,server,browser-final}.log` and `test-results/reconnection-final/results.json`. Earlier concurrent asset-audit timeout, fixed-delay/browser-render-rate assertions and navigation-contention attempts are superseded by the final passing runs. The harness now awaits actual authoritative movement/orientation and tests continued ACK progress at transport cadence rather than imposing a rendering benchmark. `git diff --check` passes. The production build retains the existing large-bundle warning.
+
+**Deployment:** the loop correction requires a rebuilt/published frontend. This task's Worker changes only add optional diagnostics, so a Worker release is needed for those logs, not for this client fix against an already matching v6 backend. Prior unshipped v6 changes in this working tree still require matching frontend/Worker versions when released. Keep the Actions `VITE_MULTIPLAYER_URL` set to the real public `wss://.../ws`, not the local test URL. Public Cloudflare/GitHub Pages two-client operation was not validated; no public endpoint trace was obtained. No commit, push or deployment was performed. No other feature stage was started. Stop here.
+
+---
+
+# Previous task: home character mouse look - complete
+
+Updated: 2026-10-30. Increased the preview body's horizontal mouse response to 15 degrees and added a subtle vertical lean. The actual head rig follows the cursor horizontally and vertically with an additional, slightly stronger rotation. Its offset is applied after the IDLE animation and restored before the next animation update, preventing accumulated rotation and preserving the existing breathing motion and reduced-motion behavior. The responsive camera also makes the character slightly larger while retaining the full head and the fade above the knees. No gameplay, multiplayer or character-asset changes were made.
+
+Frontend TypeScript and production Vite build pass. Production-browser home checks pass for upper-right and lower-left cursor movement, actual head-bone rotation, idle playback, a stationary cursor without rotation drift, return to neutral, reduced motion, existing settings/navigation and five desktop/mobile viewports. Screenshots were inspected for framing and head movement; evidence is in ignored `test-results/home/` and `test-results/home-mouse{,-build}.log`. No commit, push or deployment was performed.
+
+---
+
+# Previous task: home character framing - complete
+
+Updated: 2026-10-30. Enlarged the existing home preview with an aspect-aware camera that keeps the head and shoulders in frame and shows the torso, arms and upper thighs. The canvas has a smooth transparency mask derived from character height, fading from the upper thighs to fully transparent above the knees. The procedural pad and rim remain present but disabled; no asset or character-model changes were needed. Existing IDLE, cursor response, skin, reduced-motion handling, background, navigation and lazy map loading remain intact. No gameplay or multiplayer code was changed.
+
+Frontend TypeScript and production Vite build pass. The existing production-browser home suite passes at 1920x1080, 1280x720, 1024x600, 390x844 and 320x568, including preview skin/idle, cursor movement, platform visibility, mask, settings, navigation, reduced motion and no map/weapon/environment loads. Inspected desktop and mobile screenshots for full head, smooth fade, absence of knees/feet/platform and no black rectangle; evidence is in ignored `test-results/home/` and `test-results/home-framing{,-build}.log`. The initial dev-server browser attempt timed out during dependency optimization and logged the pre-existing public-asset import warning; the completed production build was used for visual verification. No commit, push or deployment was performed.
+
+---
+
+# Previous task: silhouettes, directional deaths/damage and home character - complete
+
+Updated: 2026-10-29. Implemented the latest character-visuals attachment in its requested order, preserving the existing character GLB/six clips, maps, weapons/damage, multiplayer authority, menus and Pages/Vite configuration. No commit, push or deployment was performed. Implementation/PowerShell runbook: `docs/COMBAT_VISUALS.md`.
+
+## Features implemented
+
+- Replaced per-part expanded outline hulls with one shared, depth-tested visible-union mask and a thin 1.5 CSS-pixel inward contour. Skin, clothing and gear use the same mask color; no internal material boundaries or bounding boxes are outlined. Existing rig deformation follows running/jumping/sliding. Opaque map geometry and foreground weapons occlude the mask; FFA opponents are red and relative Teams allies blue. Name LOS/through-wall teammate rules remain intact. The mask is excluded from SSAO prepasses and the contour stays after bloom/AA when quality pipelines rebuild.
+- Added confirmed directional deaths: the current actor tips along the actual incoming world-space shot ray, fades smoothly over 500ms, then disposes its instance/rig/groups and temporary fade materials/texture clones. A small foot lift and depth prepass limit floor/transparency artifacts. Labels/outlines stop on elimination. New authoritative lives replace unfinished effects without delaying respawns; surviving actors keep their original shared assets.
+- Added bounded 500ms CSS red screen edges with a clear center and off-crosshair red turning chevron. Front hits omit the arrow; side/rear hits use the shortest turn toward the attacker, with direct-rear ambiguity consistently right. Turning updates the direction. Repeated hits refresh from current opacity with bounded strength; navigation and new lives clear stale effects.
+- Added the actual multiplayer GLB/IDLE skin to the existing blurred home background on a rounded dark metallic pad with soft shadow and preview lights. The project has one skin, which is reused without another selection system/model. Cursor turning is smoothly limited to 7.2 degrees, with feet on the pad; reduced motion freezes movement. No playable map, environment texture, weapon or player connection loads for the preview. Settings/match navigation aborts loading, removes listeners and disposes the preview scene, source assets, rig, engine and canvas.
+- Protocol **v6** adds server-derived normalized incoming rays and victim life to accepted hit entries, plus unique elimination IDs/life/lethal direction (null for falls). The Worker still derives hits from authoritative poses and unchanged weapon simulation; clients cannot submit hits/damage/direction. Runtime validation, bounded event deduplication and stale-round/life rejection protect presentation. Elimination is delivered before its dead snapshot removes the actor. No storage migration or gameplay balance change is introduced.
+
+## Verification completed
+
+- Frontend TypeScript, **175 tests in 21 files**, production Vite build, backend TypeScript, Wrangler dry-run build and **39 real Worker/SQLite/TCP WebSocket tests** pass. New units cover directional wraparound/rear ambiguity, death pose/fade, normalized event validation, duplicate/stale elimination ordering and repeated-hit timing/brightness. Real server tests verify accepted shot directions and life metadata. Asset verification passes **188 entries**, 213 materials and all three maps; character/map/weapon assets are unchanged.
+- The full production-browser suite passes in **FFA and Teams**, using two independent Chrome contexts and two actual Node WebSocket sessions against isolated Workers. Actual GPU union-mask samples and screenshots show no internal seams; red/blue colors, opaque-wall/partial/scoped/distant visibility and all six movement clips pass. Real front/left/right/rear shots verify arrows, fading/tipping, removal in approximately 0.49-0.55s and normal ready skins after respawn. Existing 75-damage sniper body hits, HUD/peer health 25, browser-input damage, headshot death, Respawn/health 100, real keyboard movement, lost-spawn-ack retry and disconnect cleanup remain verified. Skeletons decrease 2 to 1 and groups 12 to 6 on leave, with private pose textures freed and shared assets retained. No unexpected asset HTTP failures or uncaught browser errors occurred.
+- Home checks pass five viewport sizes, complete title and navigation, actual GLB/IDLE advancement, restrained cursor turn/neutral return, no map/weapon/environment downloads, existing settings/audio behavior and reduced-motion freezing. Cancellation tests prove the preview engine count drops 2 to 1 on joining, its canvas/rig are disposed, actual delayed join/material/character/weapon/preview/map loads and round transitions cancel safely, and retry/approved spawning work without duplicate previews. The real two-browser lifecycle suite passes all three map transitions, loadout locking, SMG fire/reload without arms, fall/respawn, settings, scoreboard, reconnect and leave.
+- Final focused quality verification passes in **both FFA and Teams** after fixing asynchronous pipeline rebuild ordering and opting the unlit mask out of the main scene SSAO prepass. It uses one actual browser plus three real peer/guest sockets, waits for shader/pipeline readiness and verifies High/Medium transitions keep the contour after bloom/AA. Red/blue pixels, internal-mask probes and no uncaught browser errors also pass. The full combat suite above separately used two browsers plus two peer/guest sockets. Earlier interrupted/failing quality attempts are superseded by `test-results/polish-quality.log`; the targeted check avoids a stalled High-quality screenshot readback rather than claiming that capture succeeded.
+- Evidence: ignored `test-results/polish/` contains inspected outline, wall, partial-cover, movement, directional damage and death screenshots plus actual sampled death timing JSON. Final suite logs: `test-results/polish-{unit,build,assets,server-typecheck,server,browser,home,loading,lifecycle,quality}.log`. Earlier failed fixture runs are superseded by the named final passing records where stated. The server integration fixture's grace window was widened from 3s to 10s because local runtime reconstruction could exceed 3s; explicit expiry is still tested and production timeouts remain unchanged. Browser firing uses real canvas/window Input handlers via MouseEvents because native headless CDP delivery was unreliable.
+
+## Files and deployment boundary
+
+New runtime files: `src/rendering/PlayerSilhouettes.ts`, `src/game/CombatPresentation.ts`, `src/ui/DamageFeedback.ts`, `src/ui/HomeCharacter.ts`. Integrated through `src/game/Game.ts`, `src/game/RemotePlayers.ts`, `src/ui/UI.ts`, `src/styles.css`, `src/network/MultiplayerClient.ts`, `shared/protocol.ts`, `server/src/index.ts`.
+
+Verification: new `tests/combatPresentation.test.ts`, `tests/damageFeedback.test.ts`; extended `tests/multiplayerTransport.test.ts`, protocol fixtures in `tests/{combat,guestProfile,network,prespawn}.test.ts`; `server/tests/{combat,integration,runtime-fixture}.mjs`; `tools/{combat-visibility,home,loading-cancel}-test.mjs`. Documentation: `docs/COMBAT_VISUALS.md`, `docs/{CHARACTER_PIPELINE,MULTIPLAYER_ARCHITECTURE,MULTIPLAYER_COMBAT,TESTING}.md`, both READMEs, CLAUDE.md and PROGRESS.md.
+
+**Cloudflare needs redeployment alongside a matching protocol-v6 frontend when authorized.** Preserve public-main, existing SQLite bindings/storage and exact allowed Pages origin; production uses `wss://<worker-host>/ws`. Local tests do not establish public operation, full 16-player capacity or Chromebook hardware performance. Short cohosted Medium-quality outline-enabled/disabled samples were FFA 46.9/45.3 FPS and Teams 43.6/47.9 FPS; these are noisy comparisons, not hardware guarantees. Existing large-bundle warnings remain. No unrelated development stage is started.
+
+All requested implementation and local checks are complete. `git diff --check` passes. Stop here; no commit, push or deployment was performed.
+
+---
+
+# Previous task: actual Blender multiplayer character - complete
+
+Updated: 2026-10-29. Finished implementation and local verification of the supplied multiplayer-character request. The reference is `references_images/Player.png`. Reused the existing analytic humanoid geometry and generated the editable `blender/characters/player.blend` and actual skinned `public/assets/characters/player.glb` using Blender 5.2.3 LTS. The reproducible bpy source is `blender/characters/generate_player.py`; run `npm.cmd run assets:player`. See `docs/CHARACTER_PIPELINE.md` for the pipeline, axes, measurements and exact verification commands.
+
+## Completed implementation
+
+- The actual exported humanoid has a face, cap/beard, clothing, tactical vest/pouches, articulated hands and boots. Its audited GLB contains one 18-joint skin, 9,248 triangles, 4,931 exported vertices and three materials sharing an embedded 256px albedo/ORM atlas pair; file size is 456,152 bytes. Metadata and source atlases accompany the GLB. All six real in-place clips are exported and played: IDLE (2.4s), RUN (0.8s), JUMP_START (0.2s), JUMP_LOOP (0.8s), JUMP_LAND (0.3s), SLIDE (1.0s). Grounded feet and posed bounds are measured during generation.
+- The game loads the character once and shares geometry, materials and textures across independent rigs and animation groups. Presentation normalizes height to 1.8m, preserves heading/ground alignment and blends states from existing authoritative snapshots. Animation follows interpolated server displacement even when a snapshot's final instantaneous velocity is zero. The slide uses a low articulated pose without squashing the mesh or moving the authoritative root. No local first-person humanoid is created.
+- Native depth-tested skinned outlines retain red opponents and blue teammates relative to the viewer. Actual animated bones drive LOS probes and head-label anchors: enemy names require visibility; teammate names retain the existing through-wall rule inside the camera view. Static measured pose bounds avoid per-frame CPU reskinning. Leaving/death disposes the instance's skeleton, groups and private GPU pose texture while preserving shared assets for remaining players.
+- Fixed observed client startup/movement issues encountered during real testing: Retry enters an already server-approved life after a lost/late spawn acknowledgement; independent pending/unsent arrays prevent duplicated input frames on reset; input sends wait for acknowledgements with at most 24 frames in flight under the unchanged 48-frame server queue. Server authority, protocol v5, maps, weapon balance/models, menus, Vite and GitHub Pages configuration remain intact.
+
+## Final verification
+
+- Frontend TypeScript, **170 tests in 19 files** and production Vite build pass. Backend TypeScript, Wrangler dry-run build and **39 real workerd/SQLite/TCP WebSocket tests** pass. Asset verification passes **188 manifest entries**, 213 global materials and all three maps. `tools/inspect-character.mjs` checks actual GLB skin weights, embedded textures, clip channels, in-place root and asset budgets.
+- The complete production-browser character/combat suite passes in **both FFA and Teams**, against isolated real Workers with two independent Chrome contexts plus two actual Node WebSocket sessions (one unspawned). Verified actual GLB loading without placeholder bodies, all six clips, advancing RUN frames, independent poses, authoritative jump height, articulated slide, shared assets, native relative-team colors, wall/partial/distant/scoped visibility and labels. Actual browser keyboard movement stays connected. Dropping one real spawn acknowledgement verifies the Retry recovery without inventing a response.
+- Real combat still passes: sniper body damage 75, victim HUD/second-browser health 25, browser input damaging another player, lethal headshot and approved Respawn/health 100. Disconnect reduces skeletons 2 to 1 and animation groups 12 to 6, frees the departed rig's private GPU pose texture, and preserves the remaining actor's ready shared textures. No unexpected asset HTTP failures or uncaught browser errors occurred. Browser firing uses MouseEvents through the real Input handlers because native headless CDP mouse delivery was unreliable; physical mouse hardware is not covered by that automation.
+- Preservation regressions pass all three map transitions, approved/locked loadouts, SMG fire/reload, settings, death/respawn, reconnect and leave. Loading Back cancels actual join/material/character/weapon/preview/map transfers and round transitions, blocks stale completion and allows successful retry, including a cancelled GLB download. Home checks pass five viewport sizes, full-title visibility, text navigation, settings, reduced motion and lazy loading.
+- Visually inspected the final FFA/Teams character, run, jump, slide, wall and partial-cover screenshots. Evidence is under ignored `test-results/character/`; logs are `test-results/character-{blender,glb-audit,assets,unit,build,server-typecheck,server,browser,lifecycle,loading,home}.log`. Short local outline-enabled/disabled samples were FFA 49.4/46.6 FPS and Teams 43.1/45.6 FPS with two visible remote characters. These cohosted samples do not establish full-room capacity or Chromebook hardware performance.
+
+## Completion and limits
+
+The character feature is complete locally. Public deployment/operation, full 16-player load and performance on actual Chromebook hardware remain unverified. This feature adds no backend/protocol change; the baseline server must support protocol v5. A frontend publication requires separate authorization. No commit, push or deployment was performed by this continuation. Stop here; no next development stage is started.
 
 ---
 

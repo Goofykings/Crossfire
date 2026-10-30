@@ -23,6 +23,7 @@ import { MultiplayerClient } from '../network/MultiplayerClient';
 import { RemotePlayers } from './RemotePlayers';
 import { Presence } from '../network/Presence';
 import { weaponPreviews } from '../ui/WeaponPreviews';
+import { HomeCharacter } from '../ui/HomeCharacter';
 import type { Snapshot } from '../../shared/protocol';
 
 type State = 'menu' | 'loading' | 'start' | 'playing' | 'paused';
@@ -106,6 +107,7 @@ export class Game {
   private preSpawnPaused = false;
   private presence: Presence | null = null;
   private readonly remotePlayers: RemotePlayers;
+  private readonly homeCharacter: HomeCharacter;
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -115,6 +117,7 @@ export class Game {
     this.ctx = new RenderContext(canvas, { preserveDrawingBuffer: options.autoplay });
     this.input = new Input(canvas);
     this.ui = new UI(uiRoot, this.settings, this.audio, this.guestProfile);
+    this.homeCharacter = new HomeCharacter(uiRoot.querySelector('#menu')!);
     this.materials = new MaterialLibrary(this.ctx.scene);
     this.maps = new MapManager(this.ctx, this.materials, () => GRAPHICS_PRESETS[this.settings.value.graphicsQuality].batchCell, !options.multiplayer);
     this.remotePlayers = new RemotePlayers(this.ctx.scene, uiRoot);
@@ -314,14 +317,20 @@ export class Game {
     this.input.releaseLock();
     this.audio.unlock();
     this.state = 'loading';
+    this.homeCharacter.setVisible(false);
     this.ui.setLoading(0, 'Opening match');
     this.ui.show('loading');
     try {
       if (this.options.multiplayer) {
-        const network = new MultiplayerClient(import.meta.env.VITE_MULTIPLAYER_URL ?? '', () => this.guestProfile.value.username);
+        const network = new MultiplayerClient(import.meta.env.VITE_MULTIPLAYER_URL ?? '', () => this.guestProfile.value.username,
+          { debug: new URLSearchParams(location.search).has('networkDebug') });
         this.network = network;
         network.onShot = (shot) => {
-          if (signal.aborted || this.network !== network || shot.shooterId !== network.selfId || !shot.hits.length) return;
+          if (signal.aborted || this.network !== network) return;
+          const self = network.latest?.players.find((p) => p.id === network.selfId);
+          const received = shot.hits.find((h) => h.id === network.selfId && h.life === self?.life);
+          if (received) this.ui.damage.hit(received.direction, received.amount);
+          if (shot.shooterId !== network.selfId || !shot.hits.length) return;
           const head = shot.hits.some((h) => h.head);
           this.stats.hits++;
           if (head) this.stats.headshots++;
@@ -332,6 +341,7 @@ export class Game {
         };
         network.onElimination = (event) => {
           if (signal.aborted || this.network !== network) return;
+          this.remotePlayers.eliminate(event);
           this.ui.showToast(event.killerName ? `${event.killerName} eliminated ${event.victimName}${event.head ? ' (headshot)' : ''}`
             : `${event.victimName} was eliminated`, event.victimId === network.selfId ? 'warn' : '', 2.5);
         };
@@ -423,6 +433,7 @@ export class Game {
     this.ui.setHealth(self.health, PLAYER_MAX_HEALTH);
     if (self.alive) {
       if ((self.life !== this.networkLife || self.id !== this.appliedPlayerId) && self.weapon) {
+        this.ui.damage.clear();
         this.networkLife = self.life;
         this.appliedPlayerId = self.id;
         this.player.restore(self.motion);
@@ -601,6 +612,7 @@ export class Game {
     if (changed.includes('graphicsQuality')) {
       const p = GRAPHICS_PRESETS[v.graphicsQuality];
       this.postfx.apply(p);
+      this.remotePlayers.refreshEffects();
       this.materials.setAnisotropy(p.anisotropy);
       this.map?.environment.setFog(p.fog);
     }
@@ -616,6 +628,7 @@ export class Game {
 
   // --- main loop -------------------------------------------------------------------------------
   private frame(rawDt: number): void {
+    this.homeCharacter.setVisible(this.state === 'menu' && this.ui.currentScreen === 'menu' && !this.options.autoplay);
     if (this.state === 'menu') { this.ui.update(rawDt); this.input.endFrame(); return; }
     const dt = Math.min(MAX_FRAME_DT, Math.max(0, rawDt));
     this.fps.frames++;
@@ -635,6 +648,8 @@ export class Game {
     if (this.network?.state === 'connected') this.remotePlayers.update(Date.now() + this.network.clockOffset - 100, dt);
     this.effects?.update(dt);
     this.ui.update(dt);
+    const cameraAngles = this.ctx.camera.rotationQuaternion?.toEulerAngles();
+    this.ui.damage.update(cameraAngles?.y ?? this.player?.yaw ?? 0, cameraAngles?.x ?? this.player?.pitch ?? 0);
     this.updateHudMeta();
     this.ctx.scene.render();
     this.input.endFrame();
@@ -887,7 +902,7 @@ export class Game {
     return {
       ready: () => this.state === 'playing' && !!this.map && (!this.options.multiplayer || this.network?.state === 'connected'),
       network: () => ({ state: this.network?.state ?? 'idle', selfId: this.network?.selfId ?? '',
-        snapshot: this.network?.latest ?? null, rendered: this.remotePlayers.inspect() }),
+        snapshot: this.network?.latest ?? null, rendered: this.remotePlayers.inspect(), diagnostics: this.network?.inspect() ?? null }),
       networkReconnect: () => this.network?.reconnect(),
       networkLeave: () => this.quitToMenu(),
       state: () => this.state,
@@ -947,6 +962,10 @@ export class Game {
       motion: () => (this.player ? { ...this.player.capture(), height: this.player.height,
         eyeHeight: this.player.eyeHeight, cameraY: this.ctx.camera.position.y } : null),
       characterAsset: () => this.remotePlayers.characters.inspect(),
+      homeCharacter: () => this.homeCharacter.inspect(),
+      silhouetteStats: () => this.remotePlayers.silhouetteStats(),
+      silhouetteInterior: () => this.remotePlayers.silhouetteInterior(),
+      damageFeedback: () => this.ui.damage.inspect(),
       sceneTextureIds: () => this.ctx.scene.textures.map((t) => t.uniqueId),
       visibilityStats: () => this.remotePlayers.visibilityStats(),
       remoteOutlines: (enabled: boolean) => this.remotePlayers.setOutlinesEnabled(enabled),

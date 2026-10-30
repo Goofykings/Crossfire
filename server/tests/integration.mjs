@@ -17,7 +17,9 @@ const options = convertV4MiniflareOptions({
     { type: 'ESModule', path: path.join(root, 'dist/index.js') }], compatibilityDate: '2026-10-25',
   durableObjects: { ROOM: { className: 'PublicRoom', useSQLite: true } },
   resourcePersistencePath: persistence, host: '127.0.0.1', port: 0,
-  bindings: { ALLOWED_ORIGINS: origin, SESSION_GRACE_MS: '3000', HEARTBEAT_TIMEOUT_MS: '3000' },
+  // Runtime reconstruction can exceed 3s on a cohosted browser/build machine.
+  // Test expiry explicitly below; keep production settings unchanged.
+  bindings: { ALLOWED_ORIGINS: origin, SESSION_GRACE_MS: '10000', HEARTBEAT_TIMEOUT_MS: '3000' },
   log: new Log(LogLevel.ERROR),
 });
 
@@ -32,7 +34,7 @@ test('Public room: real Workers runtime and real WebSocket clients', { timeout: 
     ws.on('error', () => {});
     const client = {
       ws, messages, welcome: null,
-      send: (m) => ws.send(JSON.stringify({ v: 5, ...(['spawn', 'input'].includes(m.type) ? { roundId: client.welcome?.snapshot.roundId ?? 0 } : {}), ...m })),
+      send: (m) => ws.send(JSON.stringify({ v: 6, ...(['spawn', 'input'].includes(m.type) ? { roundId: client.welcome?.snapshot.roundId ?? 0 } : {}), ...m })),
       async wait(predicate, from = 0) {
         const until = Date.now() + 5000;
         while (Date.now() < until) {
@@ -266,7 +268,7 @@ test('Public room: real Workers runtime and real WebSocket clients', { timeout: 
     await t.test('reconnect grace expires; expired players cannot be impersonated', async () => {
       const expired = b.welcome.resumeToken;
       b.ws.close();
-      await delay(3300);
+      await delay(10300);
       const c = await open({ resumeToken: expired });
       assert.equal(c.welcome.code, 'resume_expired');
       const fresh = await open();

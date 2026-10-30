@@ -15,7 +15,7 @@ export const INDUSTRIAL_COMPLEX: MapDefinition = {
   assetPath: 'assets/models/industrial-complex/',
   layout: layout as unknown as MapLayout,
   assetIndex: 'map-assets.json',
-  dimensions: [68, 68],
+  dimensions: [54, 54],
   environment: {
     hdr: 'assets/env/sky_industrial_1k.hdr',
     skyImage: 'assets/env/sky_industrial_4k.jpg',
@@ -35,18 +35,13 @@ export const INDUSTRIAL_COMPLEX: MapDefinition = {
   collision: { killY: -20 },
   tactical: {
     landmarks: {
-      // keyed by layout zone / covered-area ids
-      centre: 'Loading Square',
-      hall_n: 'North Hall',
-      hall_nr: 'South Hall',
-      cyard: 'Container Yard',
-      cyardr: 'Container Yard',
-      dock_n: 'North Dock',
-      dock_nr: 'South Dock',
-      substation: 'Substation',
-      substationr: 'Substation',
-      spawn_blue: 'West Yard',
-      spawn_bluer: 'East Yard',
+      loading_square: 'Loading Square',
+      warehouse_n: 'North Hall',
+      warehouse_s: 'South Hall',
+      utility_yard: 'Utility Yard',
+      south_storage: 'Container Yard',
+      workshop: 'Workshop',
+      south_gallery_lane: 'Catwalk Lane',
     },
   },
 };

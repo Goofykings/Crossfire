@@ -16,7 +16,7 @@ const snapshot = (players: PlayerState[]): Snapshot => ({ room: 'public-main', m
 
 describe('pre-spawn protocol and loadout', () => {
   it('accepts only implemented loadouts and never client scores, positions or live state', () => {
-    const request = { v: 5, type: 'spawn', roundId: 0, mapVersion: 'test', requestId: 'life-1', weapon: 'shotgun' };
+    const request = { v: 6, type: 'spawn', roundId: 0, mapVersion: 'test', requestId: 'life-1', weapon: 'shotgun' };
     expect(parseClientMessage(JSON.stringify(request))).toEqual(request);
     for (const fields of [{ weapon: 'invalid' }, { alive: true }, { kills: 8 }, { position: { x: 100, y: 0, z: 0 } }, { requestId: '' }]) {
       expect(parseClientMessage(JSON.stringify({ ...request, ...fields }))).toBeNull();
@@ -24,7 +24,7 @@ describe('pre-spawn protocol and loadout', () => {
   });
   it('validates authoritative life and score fields instead of accepting malformed snapshots', () => {
     const s = snapshot([player('Connected menu player', 0, 0)]);
-    const message = { v: 5, type: 'snapshot', snapshot: s };
+    const message = { v: 6, type: 'snapshot', snapshot: s };
     expect(parseServerMessage(JSON.stringify(message))).toEqual(message);
     for (const fields of [{ kills: -1 }, { deaths: 1.5 }, { alive: true, weapon: null }, { life: -1 }, { team: 'fake' }]) {
       expect(parseServerMessage(JSON.stringify({ ...message, snapshot: { ...s, players: [{ ...s.players[0], ...fields }] } }))).toBeNull();

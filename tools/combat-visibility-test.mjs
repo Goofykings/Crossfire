@@ -66,7 +66,7 @@ try {
       const c = { ws, messages: [], snapshot: null, id: '', seq: 0, position: null }; sockets.push(c);
       ws.on('message', (raw) => { const m = JSON.parse(String(raw)); c.messages.push(m); if (m.snapshot) c.snapshot = m.snapshot; }); ws.on('error', () => {});
       await new Promise((resolve, reject) => { ws.once('open', resolve); ws.once('error', reject); });
-      c.send = (m) => ws.send(JSON.stringify({ v: 5, ...m }));
+      c.send = (m) => ws.send(JSON.stringify({ v: 6, ...m }));
       c.send({ type: 'join', name });
       const welcome = await until(() => c.messages.find((m) => m.type === 'welcome'), 'Node join');
       c.id = welcome.selfId;
@@ -163,14 +163,16 @@ try {
       const a = await openNode('Actual shooter');
       const b = await openBrowser('Actual viewer');
       await openNode('Actual pre-spawn guest', false);
-      const d = await openBrowser('Second actual browser');
+      const qualityOnly = process.argv.includes('--quality-only');
+      const peerName = qualityOnly ? 'Actual quality peer' : 'Second actual browser';
+      const d = qualityOnly ? await openNode(peerName) : await openBrowser(peerName);
       await b.bringToFront();
       // Restore the full input surface after clipped pixel captures in headless Chrome.
       await b.setViewport({ width: 1280, height: 720 });
-      const bs = await state(b), ds = await state(d);
+      const bs = await state(b), ds = qualityOnly ? { snapshot: d.snapshot } : await state(d);
       check(bs.snapshot.players.length === 4 && bs.snapshot.players.filter((p) => p.alive).length === 3, `${mode}: four actual sessions, including one real unspawned guest`);
       if (mode === 'teams') check(bs.snapshot.players.find((p) => p.id === b.id).team === 'red'
-        && ds.snapshot.players.find((p) => p.id === d.id).team === 'red', 'both browser teammates are authoritative Red Team members');
+        && ds.snapshot.players.find((p) => p.id === d.id).team === 'red', 'viewer and peer are authoritative Red Team members');
       await arrange(b, a, [[-3, 0, -2], [-3, 0, 2]]);
       await place(d.id, [-1.4, 0, -1.7], [-3, 0, 2]);
       await until(async () => (await avatar(b, a.id))?.labelVisible && (await avatar(b, d.id))?.labelVisible, 'visible labels');
@@ -178,7 +180,7 @@ try {
       check((await avatar(b, d.id)).friendly === (mode === 'teams'), 'relationship uses the local team, not a fixed server color');
       const labels = await b.$$eval('.remote-player-label:not([hidden])', (els) => els.map((e) => ({ name: e.textContent, relationship: e.dataset.relationship, color: getComputedStyle(e).color })));
       check(labels.some((e) => e.name === 'Actual shooter' && e.relationship === 'opponent' && e.color === 'rgb(255, 102, 96)'), 'actual opponent name is red');
-      check(labels.some((e) => e.name === 'Second actual browser' && e.color === (mode === 'teams' ? 'rgb(114, 173, 255)' : 'rgb(255, 102, 96)')), 'actual second browser name uses the correct relative color');
+      check(labels.some((e) => e.name === peerName && e.color === (mode === 'teams' ? 'rgb(114, 173, 255)' : 'rgb(255, 102, 96)')), 'actual peer name uses the correct relative color');
       const asset = await b.evaluate(() => window.__crossfire.characterAsset());
       check(asset.state === 'ready' && asset.bones === 18 && asset.loads === 1
         && ['IDLE', 'RUN', 'JUMP_START', 'JUMP_LOOP', 'JUMP_LAND', 'SLIDE'].every((clip) => asset.clips.includes(clip))
@@ -196,6 +198,17 @@ try {
       await b.evaluate(() => window.__crossfire.remoteOutlines(true)); await delay(100);
       const on = await pixels(b);
       check(on.red > off.red + 15, `visible silhouette contributes red outline pixels (${off.red} -> ${on.red})`);
+      const interior = await b.evaluate(() => window.__crossfire.silhouetteInterior());
+      const shot = Buffer.from(await b.screenshot()).toString('base64');
+      const internalRed = await b.evaluate(async (data, interior) => {
+        const img = new Image(); img.src = `data:image/png;base64,${data}`; await img.decode();
+        const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+        const ctx = c.getContext('2d'); ctx.drawImage(img, 0, 0); const p = ctx.getImageData(0, 0, c.width, c.height).data;
+        return interior.filter(({ x, y }) => { const i = (y * c.width + x) * 4;
+          return p[i] > 170 && p[i + 1] < 105 && p[i + 2] < 105; }).length;
+      }, shot, interior);
+      check(interior.length > 40 && internalRed <= Math.max(2, interior.length * .015),
+        `GPU union mask has no internal red seams (${internalRed}/${interior.length} interior samples)`);
       if (mode === 'teams') {
         const allyOn = await pixels(b, { x: 800, y: 160, width: 360, height: 400 });
         check(allyOn.blue > allyOff.blue + 15, `Red Team teammate silhouette is blue (${allyOff.blue} -> ${allyOn.blue})`);
@@ -207,6 +220,15 @@ try {
       const outlineFps = await b.evaluate(() => window.__crossfire.stats().fps);
       check(outlineFps >= plainFps * .7, `${mode}: local outline on/off comparison ${outlineFps.toFixed(1)}/${plainFps.toFixed(1)} FPS`);
       await b.screenshot({ path: `${out}/${mode}-visible.png` });
+      // Rebuilding quality effects must keep bloom/AA before the sharp contour.
+      await b.bringToFront();
+      await b.evaluate(() => window.__crossfire.setSetting({ graphicsQuality: 'high' }));
+      await until(() => b.evaluate(() => window.__crossfire.silhouetteStats().last), 'High quality pipeline settles after shader compilation', 30000);
+      check(await b.evaluate(() => window.__crossfire.silhouetteStats().last), 'quality changes retain the contour after bloom and antialiasing');
+      await b.evaluate(() => window.__crossfire.setSetting({ graphicsQuality: 'medium' }));
+      await until(() => b.evaluate(() => window.__crossfire.silhouetteStats().last), 'Medium quality pipeline settles after rebuilding', 30000);
+      check(await b.evaluate(() => window.__crossfire.silhouetteStats().last), 'returning to Medium retains sharp silhouettes');
+      if (process.argv.includes('--quality-only')) continue;
       // Drive real, bounded WebSocket controller inputs and inspect actual groups/bones.
       // Fixture RPC only resets the real actor to a clear start between movements.
       async function drive(intent, ms, during) {
@@ -353,6 +375,56 @@ try {
       await b.click('#start .btn.primary');
       await b.waitForFunction(() => window.__crossfire.ready() && window.__crossfire.network().snapshot.players.find((p) => p.id === window.__crossfire.network().selfId)?.life === 2);
       check(await b.$eval('.health .value', (e) => e.textContent === '100'), 'approved respawn restores 100 health');
+      // All four real incoming directions, actual server damage/elimination only.
+      const arena = await stub.directionalArenaForTest();
+      for (const [side, arrow] of [['front', 0], ['left', -1], ['right', 1], ['behind', 1]]) {
+        const source = arena.sources[side];
+        await place(b.id, arena.center, arena.sources.front);
+        await b.evaluate(() => window.__crossfire.look(0, 0));
+        await place(a.id, source, arena.center); a.position = source; b.position = arena.center;
+        await place(d.id, arena.observer, arena.center);
+        await d.evaluate(() => window.__crossfire.look(-45, -6));
+        await delay(240);
+        await fireNode(a, b);
+        await until(async () => (await b.evaluate(() => window.__crossfire.damageFeedback())).edges > .03, `${side} damage edges`);
+        const feedback = await b.evaluate(() => window.__crossfire.damageFeedback());
+        check(arrow === 0 ? feedback.arrow === 0 : feedback.arrow > 0 && feedback.direction === (arrow < 0 ? 'left' : 'right'),
+          `${mode}: ${side} confirmed hit gives correct shortest-turn arrow`);
+        await b.screenshot({ path: `${out}/${mode}-damage-${side}.png` });
+        await delay(550);
+        check((await b.evaluate(() => window.__crossfire.damageFeedback())).edges === 0, 'damage edges clear within half a second');
+        await d.bringToFront();
+        await d.evaluate((id) => {
+          window.__deathSamples = [];
+          window.__deathTimer = setInterval(() => {
+            const a = window.__crossfire.network().rendered.find((p) => p.id === id);
+            window.__deathSamples.push({ at: performance.now(), death: a?.death ?? null });
+          }, 16);
+        }, b.id);
+        const result = await fireNode(a, b, true);
+        check(result.shot.hits.some((h) => h.id === b.id && h.killed), `${side} real lethal shot`);
+        // Capture a real intermediate pose if Chrome delivers the screenshot before completion.
+        await until(async () => (await d.evaluate(() => window.__deathSamples)).some((s) => s.death), `${side} confirmed fall begins`);
+        await d.screenshot({ path: `${out}/${mode}-death-${side}.png` });
+        await delay(550);
+        const samples = await d.evaluate(() => { clearInterval(window.__deathTimer); return window.__deathSamples; });
+        const poses = samples.filter((s) => s.death), last = poses.at(-1);
+        const firstGone = samples.find((s) => last && s.at > last.at && !s.death);
+        const dir = result.shot.hits[0].direction;
+        fs.writeFileSync(`${out}/${mode}-death-${side}.json`, JSON.stringify({ dir, samples }, null, 2));
+        console.log(`${mode} ${side} death timing`, { poses: poses.length, first: poses[0]?.death, last: last?.death,
+          duration: firstGone && firstGone.at - poses[0].at });
+        check(poses.length >= 2 && poses.every((s) => s.death.fall.x * dir.x + s.death.fall.z * dir.z > .8)
+          && poses.some((s) => s.death.alpha < .85 && s.death.tip > .3)
+          && firstGone && firstGone.at - poses[0].at < 650,
+          `${mode}: ${side} world-space fall fades and fully disposes in approximately 0.5s`);
+        await b.waitForSelector('#start.visible .btn.primary:not(:disabled)');
+        await b.click('#start .btn.primary');
+        await b.waitForFunction(() => window.__crossfire.ready());
+        await until(async () => (await avatar(d, b.id))?.source === 'glb' && !(await avatar(d, b.id)).death,
+          'respawn restores normal character');
+        check((await avatar(d, b.id)).animation.textures.every((t) => t.ready), 'respawn retains the original ready skin');
+      }
       const beforeDispose = await b.evaluate(() => window.__crossfire.memory());
       const remainingBefore = (await avatar(b, a.id)).animation;
       const poseTextures = (await avatar(b, d.id)).animation.poseTextures;
@@ -386,6 +458,7 @@ try {
               roster: n.snapshot?.players.map((p) => ({ id: p.id, name: p.name, alive: p.alive, health: p.health, ammo: p.combat.gun?.ammo, trigger: p.combat.triggerHeld })),
               rendered: n.rendered.map((p) => ({ id: p.id, z: p.z, animation: p.animation?.clip, history: p.animation?.history })),
               mouseEvents: window.testMouseEvents,
+              silhouettes: window.__crossfire.silhouetteStats(),
               mouseTarget: document.elementFromPoint(640, 360)?.outerHTML.slice(0, 180) };
           }));
           await page.screenshot({ path: `${out}/${mode}-failure-${page.id}.png` });

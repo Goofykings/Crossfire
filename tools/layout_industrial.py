@@ -1,7 +1,7 @@
 """Industrial Complex layout designer.
 
 Authors the walkable network (service roads, alleys, loading yards, docks, platforms, passages, walk-in warehouse
-interiors) for the north half of the map, rotates it 180 degrees for the other half, decomposes the rest into
+interiors) as asymmetric loops for small matches, decomposes the rest into
 industrial lots and writes src/maps/industrial-complex/layout.json (the canonical, hand-editable map data).
 
 Usage:
@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # python -I does not add the script's folder
-from layoutkit import SIDE_HEADING, SIDE_OUT, SIDES, Area, LayoutKit, covered_floor, ground_zones, inside, mirror_all  # noqa: E402
+from layoutkit import SIDE_HEADING, SIDE_OUT, SIDES, Area, LayoutKit, covered_floor, ground_zones, inside  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 LAYOUT_JSON = ROOT / "src" / "maps" / "industrial-complex" / "layout.json"
@@ -26,94 +26,58 @@ sys.path.insert(0, str(ROOT / "blender" / "scripts" / "lib"))
 from catalog import PROPS  # noqa: E402
 from spawn_points import ffa_spawns  # noqa: E402
 
-PLAY = 34
-OUTER = 42
+PLAY = 27
+OUTER = 35
 WALL = 0.3  # warehouse wall thickness: interiors are inset by this from the lot edge
 DOCK_H = 1.1
 PLATFORM_H = 3.0
 GANTRY_H = 1.8
 
 # ---------------------------------------------------------------------------------------------------------------------
-# Walkable network, authored for the north half (z < 0) plus the west part of the centre band; everything is rotated
-# 180 degrees about the origin for the other half. Designed from the written brief (the reference sheet in
-# references/industrial-complex/ was found only later, see docs/LEVEL_DESIGN.md): three routes between the old spawn yards (north: dock lane -> North Hall -> container yard; middle: gate -> yard -> covered
-# alley -> loading square; south: the north route rotated), cross-links forming loops, and set pieces along them.
-# ---------------------------------------------------------------------------------------------------------------------
-AREAS: list[Area] = [
-    # blue spawn yard on the west edge: exits north (here), south (rotated red north exit) and east (gate passage)
-    Area("spawn_blue", "spawn", -33, -6, -25, 6, team="blue"),
-    Area("blue_exit_n", "street", -33, -12, -29, -6),
-    Area("blue_gate", "passage", -25, -3, -21, 0),
-    Area("blue_yard", "yard", -21, -5, -15, 5),
-    Area("yard_passage", "passage", -19, -12, -16, -5),
-    # west service road and the loop up to the north lane
-    Area("w_road", "street", -33, -16, -16, -12),
-    Area("nw_link", "alley", -26, -26, -23, -16),
-    Area("n_lane_w", "street", -31, -31, -16, -26),
-    # loading dock lane: a raised dock (stairs at its west end) above the ground lane
-    Area("dock_n", "dock", -16, -31, -6, -28, height=DOCK_H, extra={"stairs": [("w", None)]}),
-    Area("n_lane_mid", "street", -16, -28, -6, -24),
-    # North Hall: walk-through warehouse (doors west, east and south)
-    Area("hall_n", "interior", -6, -31, 4, -22),
-    # container yard and the north-east lane down to the red spawn's north exit
-    Area("cyard", "yard", 4, -31, 14, -20),
-    Area("ne_lane", "street", 14, -24, 24, -20),
-    Area("ne_link", "alley", 14, -20, 17, -16),
-    Area("e_cross", "street", 14, -16, 29, -12),
-    Area("red_exit_n", "street", 25, -12, 29, -6),
-    # substation pocket in the north-east corner, looped back to the cross street
-    Area("sub_gantry", "platform", 24, -28, 31, -25, height=GANTRY_H, extra={"stairs": [("s", (28, 31))]}),
-    Area("substation", "yard", 24, -25, 31, -20),
-    Area("sub_link", "alley", 29, -20, 31, -16),
-    # cross-links toward the centre
-    Area("cl_w", "alley", -16, -24, -13, -16),
-    Area("w_cross", "street", -16, -16, -11, -12),
-    Area("c_link_n", "alley", -4, -22, 0, -12),
-    Area("e_link", "alley", 8, -20, 11, -12),
-    Area("c_north", "street", -11, -12, 11, -8),
-    Area("c_link_s", "alley", -4, -8, 0, -6),
-    # small walk-through workshop between the north street and the west entry alley
-    Area("w_shop", "interior", -11, -8, -7, 1),
-    Area("w_entry", "alley", -15, 1, -6, 5),
-    # loading square in the middle (self-symmetric), split by a container stack
-    Area("centre", "yard", -6, -6, 6, 6, center=True),
-]
+# Compact, asymmetric walkable network (normal metre-scale streets and lots).
+from compact_layouts import industrial as authored_routes
+
+AREAS = authored_routes(Area)
 
 # overhead covered walkways and pipe bridges: (id, rect, spring height, style); rotated copies are added
 ARCHES = [
-    ("cv_w_entry", (-14.5, 1, -11.5, 5), 3.6, "canopy"),
-    ("cv_cl_w", (-16, -21, -13, -19), 3.6, "canopy"),
-    ("pb_ne_lane", (19.4, -24, 20.6, -20), 5.0, "pipes"),
-
-    ("pb_c_north", (5.4, -12, 6.6, -8), 5.4, "pipes"),
+    ("hall_canopy", (5,-15,9,-14),3.6,"canopy"),
+    ("cross_pipe", (11.5,2,12.5,7),5.2,"pipes"),
 ]
 
-# hand-placed dressing for the north half: (type, (x, y, z), heading); rotated copies are added
+# Hand-placed landmark dressing: (type, (x, y, z), heading), without mirroring.
 MANUAL_PROPS = [
-    ("container_stack_a", (0.0, 0, 0.0), 0),
-    ("container_blue", (9.0, 0, -26.0), 90),
-    ("container_stack_b", (11.6, 0, -23.0), 0),
-    ("container_red", (6.4, 0, -21.6), 0),
-    ("forklift", (-12.0, 0, -25.4), 90),
-    ("pallet_goods", (-13.4, DOCK_H, -30.4), 0),
-    ("pallet_wrapped", (-10.6, DOCK_H, -30.4), 0),
-    ("pallet_goods", (-8.2, DOCK_H, -30.4), 0),
-    ("skip_bin", (-29.5, 0, -21.0), 90),
-    ("jersey_barrier", (-23.5, 0, -15.0), 0),
-    ("transformer", (26.0, 0, -22.6), 0),
-    ("electrical_cabinet", (30.3, 0, -22.5), 270),
-    ("gas_cage", (-20.4, 0, -1.2), 90),
-    ("drum_group", (-16.0, 0, 4.0), 0),
-    ("cable_reel", (-20.0, 0, 4.2), 90),
-    ("pipe_bundle", (22.5, 0, -23.3), 0),
-    ("tire_stack", (-30.4, 0, -29.4), 0),
+    ("container_stack_a", (0,0,0),0),
+    ("container_blue", (16.5,0,19),0),
+    ("pallet_goods", (13,0,12.5),0),
+    ("pallet_wrapped", (19.7,0,12.3),0),
+    ("pump_skid", (18.5,0,-14.5),0),
+    ("transformer", (18.5,0,-9.5),0),
+    ("electrical_cabinet", (20.5,0,-12),90),
+    ("cable_reel", (11,0,-14.5),90),
+    ("gas_cage", (-10.5,0,5.4),0),
+    ("drum_group", (-11,0,9),0),
+    ("forklift", (-8.8,0,7.5),90),
+    ("pipe_bundle", (-3,0,-17),0),
 ]
 
-TARGETS = [
-    ((-29.5, 0, -29.0), 90), ((-14.5, 0, -22.5), 0), ((-12.0, DOCK_H, -29.6), 180), ((-24.5, 0, -18.0), 0),
-    ((-1.0, 0, -27.5), 90), ((0.0, 0, -14.0), 180), ((12.5, 0, -27.5), 270), ((25.5, 0, -26.5), 90),
-    ((25.0, GANTRY_H, -26.5), 90), ((9.5, 0, -13.5), 180), ((-18.0, 0, 3.6), 90), ((-4.5, 0, -4.5), 135),
+MANUAL_PROPS += [
+    ('pallet_stack', (-5.4,0,-18.6),0),
+    ('shelving_rack', (2,0,-18.7),0),
+    ('oil_drum_red', (-5.5,0,-11.1),0),
+    ('ibc_tank', (3.7,0,-11.1),0),
+    ('workbench', (-14.5,0,-16.7),0),
+    ('pallet_wrapped', (-16.6,0,-10.2),0),
+    ('pallet_goods', (-4.6,0,19),0),
+    ('crate_large', (4.5,0,19.2),0),
+    ('shelving_rack', (1.5,0,12.5),0),
+    ('oil_drum', (11.5,0,-8),0),
+    ('pallet_stack', (11,0,-16),0),
+    ('jersey_barrier', (2.5,0,-23),0),
+    ('drum_group', (-23.4,0,-20.3),0),
+    ('tire_stack', (23.4,0,10),0),
 ]
+
 
 
 
@@ -168,7 +132,8 @@ def make_building(kit: LayoutKit, info, index: int):
         if not inside(a, r):
             print(f"LAYOUT PROBLEM: covered area {a.id} split by lot {r}")
     if min(w, d) <= 2 or w * d <= 6:
-        style = "fence" if any(faces_kind(info, s, ("yard", "spawn")) for s in SIDES) else "concrete"
+        # Sliver lots are solid architecture. Fences are explicitly authored yard dividers.
+        style = "concrete"
         if max(w, d) <= 2:
             style = "pillar"
         return "wall", {"rect": [x0, z0, x1, z1], "height": 2.6 if style == "fence" else 3.0, "style": style,
@@ -326,7 +291,7 @@ def dress(kit: LayoutKit, areas, buildings, terraces):
     def free(x, z, rad):
         return all((x - ox) ** 2 + (z - oz) ** 2 >= (rad + orr) ** 2 for ox, oz, orr in occupied)
 
-    def add(ptype, pos, heading, mirror=True):
+    def add(ptype, pos, heading, mirror=False):
         sx, _, sz = PROPS[ptype]["size"]
         props.append({"type": ptype, "pos": [round(pos[0], 3), round(pos[1], 3), round(pos[2], 3)], "heading": heading % 360})
         occupied.append((pos[0], pos[2], max(sx, sz) * 0.55))
@@ -336,7 +301,7 @@ def dress(kit: LayoutKit, areas, buildings, terraces):
             occupied.append((rp[0], rp[2], max(sx, sz) * 0.55))
 
     for ptype, pos, hd in MANUAL_PROPS:
-        add(ptype, pos, hd, mirror=abs(pos[0]) + abs(pos[2]) > 0.1)
+        add(ptype, pos, hd, mirror=False)
 
     # keep doorways, stairs and spawn exits clear
     for b in buildings:
@@ -433,9 +398,6 @@ def dress(kit: LayoutKit, areas, buildings, terraces):
                 break
 
     targets = []
-    for pos, hd in TARGETS:
-        targets.append({"id": f"T{len(targets) + 1:02d}", "pos": list(pos), "heading": hd})
-        targets.append({"id": f"T{len(targets) + 1:02d}", "pos": list(rot_pos(pos)), "heading": rot_heading(hd)})
     lights = []  # free-for-all: no team lights at the old spawn yards
     arches = []
     for aid, (x0, z0, x1, z1), spring, style in ARCHES:
@@ -446,7 +408,7 @@ def dress(kit: LayoutKit, areas, buildings, terraces):
 
 
 def build():
-    areas = mirror_all(AREAS)
+    areas = list(AREAS)
     kit = LayoutKit(areas, PLAY, OUTER, lot_max=16)
     rects = kit.split_lots(kit.decompose())
     kit.set_lots(rects)
@@ -477,6 +439,16 @@ def build():
         "terraces": terraces, "buildings": buildings, "walls": walls, **dressing,
     }
     # free-for-all spawn points over the whole map (clear of the props and targets placed above)
+    from upper_routes import make_route
+    from compact_dressing import finish_layout
+    layout['upperRoutes'] = [make_route('warehouse_catwalk', [-18,-3,-15,14], 'catwalk')]
+    layout['walls'] += [
+        {'id':'utility_divider_n','rect':[15.92,-15.5,16.08,-12], 'height':2.2,
+         'style':'fence','gates':[], 'purpose':'utility equipment / storage yard divider'},
+        {'id':'utility_divider_s','rect':[15.92,-9,16.08,-7.8], 'height':2.2,
+         'style':'fence','gates':[], 'purpose':'utility equipment / storage yard divider'},
+    ]
+    finish_layout(layout, PROPS)
     layout["spawns"] = ffa_spawns(layout, PROPS)
     return kit, layout
 

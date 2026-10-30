@@ -95,6 +95,14 @@ export interface MapLayout {
   outerLimit: number;
   ground: { baseHeight: number; zones: GroundZone[]; covered: { id: string; kind: string; rect: Rect }[] };
   terraces: Terrace[];
+  upperRoutes?: (Terrace & { style: 'gallery' | 'catwalk' | 'sky_passage' })[];
+  navigation?: {
+    version: number;
+    groundRoutes: { id: string; kind: string; rect: Rect }[];
+    coveredRoutes: { id: string; kind: string; rect: Rect }[];
+    upperRoutes: { id: string; waypoints: Vec3Tuple[] }[];
+    groundObstacles: { id: string; rect: Rect }[];
+  };
   buildings: Building[];
   walls: { id: string; rect: Rect; height: number; style: string; gates: { rect: Rect }[] }[];
   arches: { id: string; rect: Rect; spring: number; axis: 'x' | 'z' }[];

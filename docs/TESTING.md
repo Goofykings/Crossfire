@@ -1,12 +1,30 @@
 # Testing
 
+Directional haze / authoritative regeneration: see [implementation and commands](HEALTH_AND_DAMAGE_FEEDBACK.md).
+`node tools/damage-regeneration-test.mjs --url http://127.0.0.1:4198/crossfire/`
+uses a production browser, actual shooter and isolated real Worker for confirmed
+directional pixels/fading/turning, clear-center checks and regenerated HUD/peer health.
+The server combat suite checks delay/rate/reset/interruption/resume/dead/round rules
+in both FFA and Teams; exact time boundaries and cursor persistence have unit tests.
+
+Current reconnection fix: see [diagnosis and exact commands](NETWORK_RECONNECTION.md).
+`node tools/reconnection-test.mjs` uses two independent production-browser clients
+and its own real local Worker for a 60-second delayed-ACK soak, actual server
+socket drops, authenticated resume/state preservation, no duplicate actors and
+intentional-Leave cleanup. Build first, serve dist on port 4198, then run the tool.
+Run heavy suites sequentially. Local evidence does not establish public operation.
+
 Current combat/visibility task: frontend TypeScript and unit tests, backend TypeScript, actual Worker
 runtime combat/integration tests and the production Vite/Worker dry-run builds are required.
 `node tools/combat-visibility-test.mjs --url http://127.0.0.1:4176/crossfire/` starts isolated real Workers
 and independent browser/WebSocket clients in FFA and Teams. It checks real health/HUD changes, scores,
 respawn, relative red/blue colors, clear/occluded/partly exposed/distant player visibility, teammate
 labels through walls, actual exported humanoids/all six clips, independent shared-asset rigs,
-lost-spawn-ack recovery and disposal of dead/disconnected instances.
+lost-spawn-ack recovery and disposal of dead/disconnected instances. It also checks actual GPU union-mask
+interior pixels for internal seams and real front/left/right/rear shots for damage arrows, 500ms
+directional death/fade, complete removal and restored skins on respawn. Home checks cover the same GLB,
+idle/cursor response, reduced motion, five viewport sizes and lazy map loading. Loading checks cover
+preview disposal and cancellation/retry. See [visual-effect contract](COMBAT_VISUALS.md).
 It uses actual map geometry and server-spawned sessions; fixture RPC only positions those sessions.
 See [combat runbook](MULTIPLAYER_COMBAT.md) and PROGRESS.md for final counts/evidence/limits.
 Character regeneration and GLB byte auditing: `npm.cmd run assets:player`,
