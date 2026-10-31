@@ -1061,6 +1061,45 @@
     0.5
    ]
   },
+  "market_table": {
+   "file": "market_table.glb",
+   "size": [
+    1.8,
+    0.98,
+    0.8
+   ],
+   "collider": [
+    1.8,
+    0.98,
+    0.8
+   ]
+  },
+  "valve_manifold": {
+   "file": "valve_manifold.glb",
+   "size": [
+    1.9,
+    1.55,
+    0.7
+   ],
+   "collider": [
+    1.9,
+    1.55,
+    0.7
+   ]
+  },
+  "cafe_board": {
+   "file": "cafe_board.glb",
+   "size": [
+    0.66,
+    1.08,
+    0.6
+   ],
+   "collider": [
+    0.66,
+    1.08,
+    0.6
+   ]
+  },
   "target": {
    "file": "target.glb",
    "size": [

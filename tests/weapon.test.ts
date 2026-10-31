@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { FIXED_DT } from '../src/config/constants';
+import { CollisionWorld } from '../src/physics/CollisionWorld';
+import { PlayerController } from '../src/player/PlayerController';
+import { rayPlayer } from '../shared/combat';
 import {
   applySpread,
   damageAt,
   Loadout,
   RIFLE,
+  SMG,
   SHOTGUN,
   SNIPER,
   Weapon,
@@ -38,6 +42,16 @@ function simulate(w: Weapon | Loadout, seconds: number, input: Partial<WeaponInp
 }
 const count = (ev: WeaponEvent[], type: WeaponEvent['type']) => ev.filter((e) => e.type === type).length;
 const cues = (ev: WeaponEvent[]) => ev.filter((e): e is Extract<WeaponEvent, { type: 'cue' }> => e.type === 'cue').map((e) => e.cue);
+
+describe('SMG', () => {
+  it('fires approximately 17 rounds per second while retaining the lowest bullet damage', () => {
+    const w = new Weapon(SMG), fired = count(simulate(w, 1, { trigger: true }), 'fire');
+    const oldRate = count(simulate(new Weapon({ ...SMG, rpm: 960 }), 1, { trigger: true }), 'fire');
+    expect(fired).toBeGreaterThanOrEqual(16); expect(fired).toBeLessThanOrEqual(18);
+    expect(fired).toBeGreaterThan(oldRate);
+    expect(SMG.damage).toBeLessThan(RIFLE.damage); expect(w.ammo).toBe(SMG.magazine - fired);
+  });
+});
 
 describe('Assault rifle', () => {
   it('fires automatically at its rate of fire', () => {
@@ -116,18 +130,40 @@ describe('Assault rifle', () => {
 });
 
 describe('Pump shotgun', () => {
-  it('fires nine pellets per shell and has to be pumped between shots', () => {
-    expect(SHOTGUN.pellets).toBe(9);
+  it('uses two shells, wider hip/ADS spread, stronger close damage and bounded falloff', () => {
+    const w = new Weapon(SHOTGUN);
+    expect(w.ammo).toBe(2); expect(w.reserve).toBe(Infinity);
+    expect(SHOTGUN.pellets).toBeGreaterThan(9); expect(SHOTGUN.pelletSpread).toBeGreaterThan(6);
+    expect(SHOTGUN.spreadAds / SHOTGUN.spreadHip).toBeGreaterThan(.7);
+    expect(SHOTGUN.damage * SHOTGUN.pellets).toBeGreaterThan(108);
+    expect(damageAt(SHOTGUN, 30) * SHOTGUN.pellets).toBeLessThan(50);
+    w.restore({ ...w.capture(), ammo: 6 }); expect(w.ammo).toBe(2);
+  });
+  it('counts individual pellets, allowing a centered close elimination without granting missed damage', () => {
+    const p = new PlayerController(new CollisionWorld()); p.teleport({ x: 0, y: 0, z: -4 });
+    const origin = { x: 0, y: 1.64, z: 0 }, forward = { x: 0, y: -.74 / Math.hypot(4, .74), z: -4 / Math.hypot(4, .74) };
+    let seed = 1; const rand = () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 0x100000000);
+    const hits = Array.from({ length: SHOTGUN.pellets }, () => rayPlayer(origin, applySpread(forward, SHOTGUN.pelletSpread, rand), p.capture()));
+    const body = hits.filter((hit) => hit?.zone === 'body');
+    expect(body.length).toBeGreaterThanOrEqual(Math.ceil(100 / SHOTGUN.damage));
+    expect(body.length).toBeLessThan(SHOTGUN.pellets);
+    expect(body.length * damageAt(SHOTGUN, 4)).toBeGreaterThanOrEqual(100);
+  });
+  it('fires fourteen pellets per shell and has to be pumped between shots', () => {
+    expect(SHOTGUN.pellets).toBe(14);
     const w = new Weapon(SHOTGUN);
     const ev = simulate(w, 0.05, { trigger: true });
     expect(count(ev, 'fire')).toBe(1);
     expect(w.action).toBe('cycle');
     // holding the trigger does not fire again: it needs a fresh pull after the pump stroke
-    expect(count(simulate(w, SHOTGUN.cycleTime + 0.2, { trigger: true }), 'fire')).toBe(0);
+    const cycle = simulate(w, SHOTGUN.cycleTime + 0.2, { trigger: true });
+    expect(count(cycle, 'fire')).toBe(0);
+    expect(cues(cycle)).toEqual(['pump_back', 'eject', 'pump_fwd']);
     expect(w.action).toBe('idle');
     const pumped = simulate(w, 0.05, { trigger: true });
     expect(count(pumped, 'fire')).toBe(1);
-    expect(cues(simulate(w, SHOTGUN.cycleTime))).toEqual(['pump_back', 'eject', 'pump_fwd']);
+    expect(w.ammo).toBe(0);
+    expect(w.action).toBe('shellStart');
   });
 
   it('recoils much harder than the rifle and spreads its pellets in a cone', () => {
@@ -147,15 +183,12 @@ describe('Pump shotgun', () => {
     const ev = simulate(w, r.start + r.perShell * 2 + r.end + 0.1);
     expect(count(ev, 'shellIn')).toBe(2);
     expect(w.ammo).toBe(SHOTGUN.magazine);
-    // interrupt: two shells down, reload, fire after the first shell
-    simulate(w, 0.05, { trigger: true });
-    simulate(w, SHOTGUN.cycleTime + 0.05);
+    // Interrupt a partial reload before the next shell starts.
     simulate(w, 0.05, { trigger: true });
     simulate(w, SHOTGUN.cycleTime + 0.05);
     simulate(w, 0.02, { reloadPressed: true });
-    simulate(w, r.start + r.perShell * 0.3);
     simulate(w, 0.02, { trigger: true });
-    simulate(w, r.perShell + r.end + 0.05);
+    simulate(w, r.start + r.end + 0.05);
     expect(w.ammo).toBe(SHOTGUN.magazine - 1);
     expect(w.action).toBe('idle');
   });

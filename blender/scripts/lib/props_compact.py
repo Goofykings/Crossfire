@@ -1,5 +1,56 @@
 """Small, low-poly additions using the existing tiled PBR material library."""
+import math
 from meshkit import MeshData
+
+
+def market_table():
+    """Compact produce display; a single material-batched prop, origin at floor."""
+    m=MeshData()
+    for x in (-.78,.78):
+        for z in (-.28,.28): m.box(x-.045,0,z-.045,x+.045,.78,z+.045,'wood_dark')
+    m.box(-.9,.74,-.4,.9,.82,.4,'wood_weathered')
+    for x in (-.55,0,.55):
+        m.box(x-.24,.82,-.32,x+.24,.87,.32,'wood_crate')
+        for z in (-.15,.12):
+            for dx in (-.12,.12): m.sphere((x+dx,.90,z),.075,'produce',rings=3,segments=6)
+    return m
+
+
+def valve_manifold():
+    """Freestanding utility-yard pipe rack, sharing the industrial materials."""
+    m=MeshData()
+    m.box(-.95,0,-.35,.95,.12,.35,'concrete_floor')
+    for x in (-.8,.8):
+        m.box(x-.05,.12,-.24,x+.05,1.5,-.14,'steel_dark')
+    m.tube((-.85,.5,0),(.85,.5,0),.10,'steel_grey',segments=10)
+    m.tube((-.85,1.25,0),(.85,1.25,0),.10,'steel_yellow',segments=10)
+    for x in (-.5,.5):
+        m.tube((x,.5,0),(x,1.25,0),.075,'steel_grey',segments=10)
+        m.tube((x,.9,0),(x,.9,-.23),.04,'steel_dark',segments=8)
+        # Low-poly wheel: rim and spokes, rather than a solid floating disc.
+        for k in range(10):
+            a,b=k*math.tau/10,(k+1)*math.tau/10
+            m.tube((x+.16*math.cos(a),.9+.16*math.sin(a),-.25),
+                   (x+.16*math.cos(b),.9+.16*math.sin(b),-.25),.018,'steel_yellow',segments=4)
+        for dx,dy in ((.16,0),(-.16,0),(0,.16),(0,-.16)):
+            m.tube((x,.9,-.25),(x+dx,.9+dy,-.25),.015,'steel_dark',segments=4)
+    return m
+
+
+def cafe_board():
+    """Small A-frame storefront board, no extra textures or alpha draw calls."""
+    m=MeshData()
+    for side in (-1,1):
+        z=side*.21
+        m.box(-.29,.24,z-.025,.29,.98,z+.025,'wood_dark')
+        m.box(-.25,.30,z-.03,.25,.92,z+.03,'steel_dark')
+        for x in (-.30,.30):
+            m.tube((x,0,side*.29),(x,1.04,side*.16),.025,'wood_weathered',segments=4)
+        # Simple light menu strokes, staying decorative rather than readable UI.
+        for y,w in ((.8,.18),(.67,.16),(.56,.20),(.45,.13)):
+            m.box(-w,y,z+side*.035-.003,w,y+.012,z+side*.035+.003,'concrete_smooth_light')
+    m.tube((-.32,1.04,0),(.32,1.04,0),.025,'steel_grey',segments=6)
+    return m
 
 
 def flower_box():
@@ -56,4 +107,5 @@ def utility_box():
 
 
 COMPACT_BUILDERS={'flower_box':flower_box,'market_crate':market_crate,
-                  'stone_bollard':stone_bollard,'pump_skid':pump_skid,'utility_box':utility_box}
+                  'stone_bollard':stone_bollard,'pump_skid':pump_skid,'utility_box':utility_box,
+                  'market_table':market_table,'valve_manifold':valve_manifold,'cafe_board':cafe_board}

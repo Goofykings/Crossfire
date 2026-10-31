@@ -103,22 +103,23 @@ def room_layout(b: dict, room: dict):
     x0, z0, x1, z1 = room["rect"]
     cx0, cz0, cx1, cz1 = x0, z0, x1, z1
     doors = []
+    allowed = room.get('doorSides', ('w','e','n','s'))
     if abs(x0 - bx0) < 1e-6:
         cx0 = x0 + WALL_T
         zc = (z0 + z1) / 2
-        doors.append(("w", (x0 - 0.05, zc - ROOM_DOOR_W / 2, x0 + WALL_T + 0.05, zc + ROOM_DOOR_W / 2)))
+        if 'w' in allowed: doors.append(("w", (x0 - 0.05, zc - ROOM_DOOR_W / 2, x0 + WALL_T + 0.05, zc + ROOM_DOOR_W / 2)))
     if abs(x1 - bx1) < 1e-6:
         cx1 = x1 - WALL_T
         zc = (z0 + z1) / 2
-        doors.append(("e", (x1 - WALL_T - 0.05, zc - ROOM_DOOR_W / 2, x1 + 0.05, zc + ROOM_DOOR_W / 2)))
+        if 'e' in allowed: doors.append(("e", (x1 - WALL_T - 0.05, zc - ROOM_DOOR_W / 2, x1 + 0.05, zc + ROOM_DOOR_W / 2)))
     if abs(z0 - bz0) < 1e-6:
         cz0 = z0 + WALL_T
         xc = (x0 + x1) / 2
-        doors.append(("n", (xc - ROOM_DOOR_W / 2, z0 - 0.05, xc + ROOM_DOOR_W / 2, z0 + WALL_T + 0.05)))
+        if 'n' in allowed: doors.append(("n", (xc - ROOM_DOOR_W / 2, z0 - 0.05, xc + ROOM_DOOR_W / 2, z0 + WALL_T + 0.05)))
     if abs(z1 - bz1) < 1e-6:
         cz1 = z1 - WALL_T
         xc = (x0 + x1) / 2
-        doors.append(("s", (xc - ROOM_DOOR_W / 2, z1 - WALL_T - 0.05, xc + ROOM_DOOR_W / 2, z1 + 0.05)))
+        if 's' in allowed: doors.append(("s", (xc - ROOM_DOOR_W / 2, z1 - WALL_T - 0.05, xc + ROOM_DOOR_W / 2, z1 + 0.05)))
     # interior side walls (room long sides inside the building mass)
     return (cx0, cz0, cx1, cz1), doors
 

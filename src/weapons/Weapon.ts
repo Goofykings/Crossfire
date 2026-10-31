@@ -120,19 +120,19 @@ export const SHOTGUN: WeaponStats = {
   id: 'shotgun',
   name: 'Pump Shotgun',
   slot: 2,
-  magazine: 6,
+  magazine: 2,
   mode: 'pump',
   rpm: 90,
   cycleTime: 0.6,
   cycleCues: [{ at: 0.18, cue: 'pump_back' }, { at: 0.32, cue: 'eject' }, { at: 0.58, cue: 'pump_fwd' }],
-  damage: 12,
-  pellets: 9,
-  pelletSpread: 3.4,
-  falloff: { start: 7, end: 24, minScale: 0.25 },
+  damage: 14,
+  pellets: 14,
+  pelletSpread: 7,
+  falloff: { start: 6, end: 22, minScale: 0.18 },
   range: 60,
   reload: { kind: 'shells', start: 0.45, perShell: 0.5, end: 0.4, insertAt: 0.72 },
   spreadHip: 0.7,
-  spreadAds: 0.2,
+  spreadAds: 0.55,
   spreadMove: 1.0,
   spreadPerShot: 0,
   spreadRecovery: 4,
@@ -196,7 +196,7 @@ export const SNIPER: WeaponStats = {
 };
 
 export const SMG: WeaponStats = {
-  ...RIFLE, id: 'smg', name: 'SMG', slot: 4, magazine: 32, rpm: 960, damage: 11,
+  ...RIFLE, id: 'smg', name: 'SMG', slot: 4, magazine: 32, rpm: 1030, damage: 11,
   range: 140, falloff: { start: 15, end: 55, minScale: 0.55 },
   reload: { ...(RIFLE.reload as MagazineReload), time: 1.65, emptyTime: 2.05 },
   spreadHip: 1.7, spreadAds: 0.16, recoilPitch: 0.34, recoilYaw: 0.18, viewKick: 5,
@@ -286,6 +286,7 @@ export class Weapon {
 
   restore(s: WeaponState): void {
     Object.assign(this, { ...s, cues: s.cues.map((c) => ({ ...c })) });
+    this.ammo = Math.min(this.stats.magazine, this.ammo);
   }
 
   get simulating(): boolean {

@@ -586,7 +586,23 @@ def emit_layout(areas, rects):
                                 "style": "lintel" if btype == "narrow_passage" else "arch", "clear": 3.2}
                                for a in passages]
         if rooms:
-            bld["rooms"] = [{"rect": [a.x0, a.z0, a.x1, a.z1], "clear": 3.0} for a in rooms]
+            bld["rooms"] = []
+            for a in rooms:
+                # A lot edge may touch another solid lot. Do not carve a
+                # convincing-looking doorway which immediately meets its wall.
+                sides = []
+                cx, cz = (a.x0+a.x1)/2, (a.z0+a.z1)/2
+                for side, edge, probes in [
+                    ('w', a.x0 == x0, [(a.x0-.6,cz+d) for d in (-.6,0,.6)]),
+                    ('e', a.x1 == x1, [(a.x1+.6,cz+d) for d in (-.6,0,.6)]),
+                    ('n', a.z0 == z0, [(cx+d,a.z0-.6) for d in (-.6,0,.6)]),
+                    ('s', a.z1 == z1, [(cx+d,a.z1+.6) for d in (-.6,0,.6)]),
+                ]:
+                    if edge and all(world.classify(px,pz)[0] in ('open','covered') for px,pz in probes):
+                        sides.append(side)
+                if len(sides) < 2:
+                    raise ValueError(f'{a.id}: through-room needs two clear exits, got {sides}')
+                bld["rooms"].append({"rect": [a.x0,a.z0,a.x1,a.z1], "clear": 3.0, "doorSides": sides})
         if btype == "corner":
             pick = [k for k, v in corners.items() if v == "plaza"] or list(corners) or ["se"]
             bld["chamfer"] = {"corner": pick[0], "size": 2.0}
@@ -680,6 +696,7 @@ MANUAL_PROPS = [
     ("barrel_group", (10.5,0,-14),0),
     ("flower_box", (-16,0,14.8),0),
     ("market_crate", (14,0,-14.5),0),
+    ("market_table", (16.5,0,-15),0),
     ("stone_bollard", (4.9,0,-4.8),0),
     ("bench", (14.3,0,15.7),180),
     ("flower_pot_large", (-13,0,11.2),0),
@@ -829,17 +846,19 @@ def dress(world, areas, buildings, terraces):
             along_x = (cx1 - cx0) >= (cz1 - cz0)
             if along_x:
                 mid = (cx0 + cx1) / 2
-                add("table", (mid, 0.02, cz0 + 0.45), 0, mirror=False)
-                for dx in (-0.5, 0.5):
-                    add("stool", (mid + dx, 0.02, cz0 + 1.15), 0, mirror=False)
+                if cz1-cz0 >= 4:
+                    add("table", (mid, 0.02, cz0 + 0.45), 0, mirror=False)
+                    for dx in (-0.5, 0.5):
+                        add("stool", (mid + dx, 0.02, cz0 + 1.15), 0, mirror=False)
                 add("crate_small", (cx0 + 0.6, 0.02, cz1 - 0.38), 0, mirror=False)
                 add("barrel", (cx1 - 0.6, 0.02, cz0 + 0.38), 0, mirror=False)
                 add("crate", (cx1 - 0.65, 0.02, cz1 - 0.45), 10, mirror=False)
             else:
                 mid = (cz0 + cz1) / 2
-                add("table", (cx0 + 0.45, 0.02, mid), 90, mirror=False)
-                for dz in (-0.5, 0.5):
-                    add("stool", (cx0 + 1.15, 0.02, mid + dz), 90, mirror=False)
+                if cx1-cx0 >= 4:
+                    add("table", (cx0 + 0.45, 0.02, mid), 90, mirror=False)
+                    for dz in (-0.5, 0.5):
+                        add("stool", (cx0 + 1.15, 0.02, mid + dz), 90, mirror=False)
                 add("crate_small", (cx1 - 0.38, 0.02, cz0 + 0.6), 0, mirror=False)
                 add("barrel", (cx0 + 0.38, 0.02, cz1 - 0.6), 0, mirror=False)
 

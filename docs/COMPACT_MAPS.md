@@ -1,5 +1,9 @@
 # Compact maps for 2-6 players
 
+The 2026-10-31 audit and extensions are documented in [PHASE2_MAPS.md](PHASE2_MAPS.md).
+Current footprints remain 52/54/54 m; the earlier percentages below describe
+per-dimension reductions, rather than the newer brief's area target.
+
 2026-10-30. All coordinates remain metres. These layouts replace outer sections;
 no buildings, players, weapons or street models were globally scaled.
 

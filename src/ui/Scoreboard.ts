@@ -1,5 +1,12 @@
 import type { PlayerState, Snapshot } from '../../shared/protocol';
 import { weaponIcon } from './WeaponIcons';
+import { teammates } from '../../shared/combat';
+
+export function scoreboardRelationship(snapshot: Snapshot, selfId: string, player: PlayerState): 'friendly' | 'opponent' {
+  if (player.id === selfId) return 'friendly';
+  const self = snapshot.players.find((p) => p.id === selfId);
+  return teammates(snapshot.match.mode, self?.team ?? null, player.team) ? 'friendly' : 'opponent';
+}
 
 export const scoreOrder = (a: PlayerState, b: PlayerState): number => b.kills - a.kills || a.deaths - b.deaths
   || a.name.localeCompare(b.name) || a.id.localeCompare(b.id);
@@ -52,7 +59,9 @@ export class Scoreboard {
         const row = body.insertRow();
         row.dataset.playerId = p.id;
         row.classList.toggle('local', p.id === selfId);
-        row.insertCell().textContent = p.name;
+        const name = row.insertCell();
+        name.className = `score-name-${snapshot ? scoreboardRelationship(snapshot, selfId, p) : 'opponent'}`;
+        name.textContent = p.name;
         row.insertCell().innerHTML = weaponIcon(p.weapon);
         for (const value of [p.kills, p.deaths]) row.insertCell().textContent = String(value);
       }

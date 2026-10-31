@@ -45,7 +45,7 @@ for (const mode of ['ffa', 'teams']) test(`Authoritative player combat: ${mode}`
     ws.on('message', (raw) => { const m = JSON.parse(String(raw)); c.messages.push(m); if (m.snapshot) c.snapshot = m.snapshot; });
     ws.on('error', () => {});
     await new Promise((resolve, reject) => { ws.once('open', resolve); ws.once('error', reject); });
-    c.send = (m) => ws.send(JSON.stringify({ v: 7, ...m }));
+    c.send = (m) => ws.send(JSON.stringify({ v: 9, ...m }));
     c.send({ type: 'join', name: `Combat ${clients.length}`, ...(resumeToken ? { resumeToken } : {}) });
     const welcome = await wait(c, (m) => m.type === 'welcome');
     c.id = welcome.selfId; c.token = welcome.resumeToken;
@@ -58,6 +58,8 @@ for (const mode of ['ffa', 'teams']) test(`Authoritative player combat: ${mode}`
   }
   const me = (c) => c.snapshot.players.find((p) => p.id === c.id);
   async function spawn(c, weapon) {
+    const remaining = (me(c).death?.respawnAt ?? 0) - Date.now();
+    if (remaining > 0) await delay(remaining + 25);
     const mark = c.messages.length, requestId = crypto.randomUUID();
     c.send({ type: 'spawn', weapon, requestId, roundId: c.snapshot.roundId, mapVersion: c.snapshot.mapVersion });
     await wait(c, (m) => m.type === 'spawned' && m.requestId === requestId, mark);
@@ -93,19 +95,43 @@ for (const mode of ['ffa', 'teams']) test(`Authoritative player combat: ${mode}`
       await t.test(`${weapon}: actual opponents lose weapon-specific health on both clients`, async () => {
         const a = await open(weapon), b = await open();
         if (mode === 'teams') assert.notEqual(me(a).team, me(b).team);
-        await place(a, b); await aim(a, b);
+        await place(a, b, weapon === 'shotgun' ? [[-3, 0, 1], [-3, 0, -1]] : undefined); await aim(a, b);
         const result = await shot(a, b);
         assert.equal(result.hits.length, 1); assert.equal(result.hits[0].id, b.id);
         assert.equal(result.hits[0].amount, expected); assert.equal(result.hits[0].head, false);
         const direction = result.hits[0].direction;
         assert.ok(Math.abs(Math.hypot(direction.x, direction.y, direction.z) - 1) < .001);
-        assert.ok(direction.z < -.9, 'incoming direction derives from the actual server shot');
+        const dx = b.position[0] - a.position[0], dy = b.position[1] + .9 - a.position[1] - 1.64, dz = b.position[2] - a.position[2];
+        const aimLength = Math.hypot(dx, dy, dz);
+        assert.ok((direction.x * dx + direction.y * dy + direction.z * dz) / aimLength > .96,
+          'incoming direction follows the actual aimed shot, including pellet spread');
         assert.equal(result.hits[0].life, me(b).life);
         for (const c of [a, b]) await wait(c, (m) => m.type === 'snapshot' && m.snapshot.players.some((p) => p.id === b.id && p.life === 1 && p.health === 100 - expected));
         if (weapon === 'shotgun') { assert.equal(result.hits[0].killed, true); assert.equal(me(a).kills, 1); assert.equal(me(b).deaths, 1); }
         await leave(a); await leave(b);
       });
     }
+    await t.test('shotgun pellets that miss do not grant damage or extra ammunition', async () => {
+      const a = await open('shotgun'), b = await open('rifle');
+      if (mode === 'teams') assert.notEqual(me(a).team, me(b).team);
+      await place(a, b);
+      const truePosition = b.position;
+      b.position = [truePosition[0] + 8, truePosition[1], truePosition[2]];
+      await aim(a, b);
+      const result = await shot(a, b);
+      assert.equal(result.hits.length, 0);
+      const mark = b.messages.length;
+      const snapshot = await wait(b, (m) => m.type === 'snapshot' && m.snapshot.players.some((p) => p.id === a.id && p.combat.gun?.ammo === 1), mark);
+      assert.equal(snapshot.snapshot.players.find((p) => p.id === b.id).health, 100);
+      assert.equal(snapshot.snapshot.players.find((p) => p.id === a.id).combat.gun.ammo, 1);
+      await delay(750);
+      assert.equal((await shot(a, b)).hits.length, 0);
+      const emptyMark = b.messages.length;
+      await wait(b, (m) => m.type === 'snapshot' && m.snapshot.players.some((p) => p.id === a.id && p.combat.gun?.ammo === 0), emptyMark);
+      const reloaded = await wait(b, (m) => m.type === 'snapshot' && m.snapshot.players.some((p) => p.id === a.id && p.combat.gun?.ammo === 2), emptyMark);
+      assert.equal(reloaded.snapshot.players.find((p) => p.id === b.id).health, 100);
+      await leave(a); await leave(b);
+    });
     await t.test('1.5x headshots, lethal sniper, authoritative scores, respawn and health on resume', async () => {
       const a = await open(), b = await open();
       await place(a, b); await aim(a, b, 1.6);
@@ -128,6 +154,7 @@ for (const mode of ['ffa', 'teams']) test(`Authoritative player combat: ${mode}`
       assert.equal(elimination.elimination.victimLife, me(victim).life);
       assert.equal(typeof elimination.elimination.id, 'string');
       assert.deepEqual(elimination.elimination.direction, killed.hits[0].direction);
+      assert.equal(elimination.elimination.respawnAt - elimination.elimination.at, 3000);
       await wait(victim, (m) => m.type === 'snapshot' && m.snapshot.players.some((p) => p.id === victim.id && p.deaths === 1));
       assert.equal(me(sniper).kills, 1); assert.equal(me(victim).deaths, 1); assert.equal(me(victim).alive, false);
       if (mode === 'teams') assert.equal(sniper.snapshot.match.teamScores[me(sniper).team], teamBefore + 1);
@@ -135,6 +162,9 @@ for (const mode of ['ffa', 'teams']) test(`Authoritative player combat: ${mode}`
       send(victim, [frame(victim, sniper, 1.6, true)]);
       assert.equal((await wait(victim, (m) => m.type === 'error', invalid)).code, 'not_spawned');
       const life = me(victim).life;
+      const early = victim.messages.length;
+      victim.send({ type: 'spawn', weapon: 'smg', requestId: 'early', roundId: victim.snapshot.roundId, mapVersion: victim.snapshot.mapVersion });
+      assert.equal((await wait(victim, (m) => m.type === 'error', early)).code, 'respawn_wait');
       await spawn(victim, 'smg'); assert.equal(me(victim).life, life + 1); assert.equal(me(victim).deaths, 1);
       assert.equal(me(victim).combat.gun.ammo, 32);
       // Real resume after earned nonzero scores must retain the entire life/loadout.
@@ -277,7 +307,9 @@ for (const mode of ['ffa', 'teams']) test(`Authoritative player combat: ${mode}`
         const expected = Math.min(100, base + Math.max(0, Math.floor((s.serverTime - eligible) / 100)));
         assert.ok(Math.abs(s.players.find((p) => p.id === id).health - expected) <= 1, '10 HP/s from elapsed server time');
       };
-      const healing = await at(a, second.regenAt + 2100);
+      // Leave time to deliver the interrupt before healing reaches the cap even
+      // when the local runtime or test process is briefly descheduled.
+      const healing = await at(a, second.regenAt + 500);
       assertRate(healing, a.id, 50, second.regenAt);
       const waiting = a.messages.filter((m) => m.type === 'snapshot' && m.snapshot.serverTime > second.regenAt - 5000
         && m.snapshot.serverTime < second.regenAt + 100);

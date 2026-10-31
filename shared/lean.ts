@@ -16,6 +16,8 @@ export function leanOffset(yaw: number, amount: number): { x: number; z: number 
 /** Sweep the upper body from the authoritative center; small increments also catch thin walls. */
 export function safeLean(world: CollisionWorld, position: Vec3, yaw: number, eyeHeight: number, desired: number): number {
   const amount = Math.max(-1, Math.min(1, desired));
+  // Neutral players need no additional collision sweeps on every simulation tick.
+  if (Math.abs(amount) < 1e-8) return 0;
   const displacement = leanOffset(yaw, amount);
   const steps = Math.max(1, Math.ceil(Math.abs(amount * LEAN_OFFSET) / .02));
   let clear = 0;

@@ -52,10 +52,12 @@ MANUAL_PROPS = [
     ("bench_modern", (0,0,-3.65),180),
     ("cafe_set", (-4.5,0,3.5),0),
     ("bench_modern", (4.8,0,3.6),270),
+    ("cafe_board", (14.4,0,-7.8),0),
     ("utility_box", (8.1,0,-13.3),0),
     ("dumpster_blue", (15,0,-13.6),0),
     ("trash_bags", (15,0,-11.5),0),
-    ("bike_rack", (8.5,0,-8.3),0),
+    # The old courtyard location crowded the walk-through shop entrance.
+    ("bike_rack", (14,0,24),0),
     ("planter", (-7.5,0,10.5),90),
     ("trash_bin_grey", (-4,0,14),0),
     ("dumpster", (-20.1,0,-6),90),
@@ -228,7 +230,9 @@ def make_building(kit: LayoutKit, info, extra_zones: list):
             for i, (sx, sz) in enumerate(kit.side_samples(r, side)):
                 pos = base + i
                 k, outside = kit.classify(sx, sz)
-                ok = lo <= pos < hi and k == "open" and outside.height <= CURB_H + 0.01
+                # Covered alleys/interiors are valid approaches too. Ignoring
+                # them sealed the west shop passage against an uncut wall.
+                ok = lo <= pos < hi and k in ("open", "covered") and outside.height <= CURB_H + 0.01
                 cur = cur + 1 if ok else 0
                 if cur > best:
                     best, best_end = cur, i

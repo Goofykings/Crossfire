@@ -20,6 +20,8 @@ export class MultiplayerClient {
   onSnapshot: (snapshot: Snapshot) => void = () => {};
   onShot: (shot: ShotResult) => void = () => {};
   onElimination: (event: Elimination) => void = () => {};
+  onChat: (message: Extract<ServerMessage, { type: 'chat' }>) => void = () => {};
+  onChatError: (message: string) => void = () => {};
   private readonly combatEvents = new Set<string>();
   private firstCombatEvent(id: string): boolean {
     if (this.combatEvents.has(id)) return false;
@@ -150,7 +152,7 @@ export class MultiplayerClient {
     socket.onopen = () => {
       if (this.socket !== socket) return;
       this.opens++; this.trace('open');
-      this.send({ v: 7, type: 'join', name: typeof this.name === 'function' ? this.name() : this.name, ...(this.token ? { resumeToken: this.token } : {}) });
+      this.send({ v: 9, type: 'join', name: typeof this.name === 'function' ? this.name() : this.name, ...(this.token ? { resumeToken: this.token } : {}) });
     };
     socket.onmessage = (event) => {
       if (this.socket !== socket || typeof event.data !== 'string') return;
@@ -158,13 +160,14 @@ export class MultiplayerClient {
       if (!m) {
         let version: unknown = null;
         try { version = JSON.parse(event.data).v; } catch { /* Malformed JSON. */ }
-        this.trace('protocol_rejected', { expected: 7, received: typeof version === 'number' ? version : null });
-        this.fail('Invalid message from multiplayer server (expected protocol v7). Rebuild matching frontend and backend.');
+        this.trace('protocol_rejected', { expected: 9, received: typeof version === 'number' ? version : null });
+        this.fail('Invalid message from multiplayer server (expected protocol v9). Rebuild matching frontend and backend.');
         socket.close(4002, 'protocol_error'); return;
       }
       this.lastMessage = Date.now();
       if (m.type === 'error') {
         this.trace('server_error', { code: m.code, fatal: m.fatal });
+        if (m.code === 'chat_rate') { this.onChatError(m.message); return; }
         this.cancelSpawn(m.message);
         if (m.code === 'resume_expired') { this.token = ''; this.saveToken(); return; }
         if (m.fatal) { this.fail(m.message); socket.close(); }
@@ -223,6 +226,8 @@ export class MultiplayerClient {
           window.clearTimeout(pending.timeout);
           pending.resolve(m.snapshot);
         }
+      } else if (m.type === 'chat') {
+        this.onChat(m);
       } else if (m.type === 'shot') {
         if (m.shot.roundId === this.latest?.roundId && this.firstCombatEvent(m.shot.id)) this.onShot(m.shot);
       } else if (m.type === 'elimination') {
@@ -230,7 +235,7 @@ export class MultiplayerClient {
           || this.latest.players.find((p) => p.id === m.elimination.victimId)?.life !== m.elimination.victimLife) return;
         // Presentation must retain the existing living instance before the dead snapshot removes it.
         this.onElimination(m.elimination);
-        this.latest = { ...this.latest, players: this.latest.players.map((p) => p.id === m.elimination.victimId ? { ...p, health: 0, alive: false } : p) };
+        this.latest = { ...this.latest, players: this.latest.players.map((p) => p.id === m.elimination.victimId ? { ...p, health: 0, alive: false, death: m.elimination } : p) };
         this.onSnapshot(this.latest);
       } else if (m.type === 'left' && this.latest) {
         this.latest = { ...this.latest, players: this.latest.players.filter((p) => p.id !== m.id) };
@@ -300,7 +305,7 @@ export class MultiplayerClient {
           Math.max(0, this.inputWindow - (this.sentSequence - ack)));
         if (count) {
           const frames = this.unsent.splice(0, count);
-          this.send({ v: 7, type: 'input', roundId: this.latest.roundId, mapVersion: this.latest.mapVersion, frames });
+          this.send({ v: 9, type: 'input', roundId: this.latest.roundId, mapVersion: this.latest.mapVersion, frames });
           this.sentSequence = frames[frames.length - 1].seq;
           this.sentAt.set(this.sentSequence, now);
         }
@@ -310,7 +315,7 @@ export class MultiplayerClient {
   }
   private ping(): void {
     this.lastPing = Date.now(); this.trace('ping', { sentAt: this.lastPing, lastPong: this.lastPong });
-    this.send({ v: 7, type: 'ping', at: this.lastPing });
+    this.send({ v: 9, type: 'ping', at: this.lastPing });
   }
   private stopTimers(): void {
     for (const t of [this.flushTimer, this.pingTimer]) window.clearInterval(t);
@@ -320,6 +325,13 @@ export class MultiplayerClient {
   }
   private send(message: ClientMessage): void {
     if (this.socket?.readyState === WebSocket.OPEN) this.socket.send(JSON.stringify(message));
+  }
+
+  sendChat(text: string): boolean {
+    const clean = text.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 200);
+    if (!clean || this.state !== 'connected' || this.socket?.readyState !== WebSocket.OPEN) return false;
+    this.send({ v: 9, type: 'chat', text: clean });
+    return true;
   }
 
   fixedInput(player: PlayerController, intent: MoveIntent, combat: CombatIntent = NO_COMBAT): void {
@@ -385,7 +397,7 @@ export class MultiplayerClient {
     this.cancelSpawn('Left match');
     this.stopped = true;
     this.trace('intentional_leave');
-    this.send({ v: 7, type: 'leave' });
+    this.send({ v: 9, type: 'leave' });
     if (this.socket) this.socket.onopen = this.socket.onmessage = this.socket.onerror = null;
     this.socket?.close(1000, 'left');
     this.socket = null;
@@ -407,7 +419,7 @@ export class MultiplayerClient {
     const id = crypto.randomUUID();
     return new Promise((resolve, reject) => {
       this.spawning = { id, resolve, reject, timeout: window.setTimeout(() => this.cancelSpawn('Spawn request timed out. Try again.'), 5000) };
-      this.send({ v: 7, type: 'spawn', requestId: id, weapon, roundId: this.latest!.roundId, mapVersion: this.latest!.mapVersion });
+      this.send({ v: 9, type: 'spawn', requestId: id, weapon, roundId: this.latest!.roundId, mapVersion: this.latest!.mapVersion });
     });
   }
 

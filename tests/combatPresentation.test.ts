@@ -1,6 +1,16 @@
 import { expect, it } from 'vitest';
 import { damageHaze, damageTurn, deathPose } from '../src/game/CombatPresentation';
 import { parseClientMessage, parseServerMessage } from '../shared/protocol';
+import { combatRelationship } from '../src/ui/CombatFeed';
+
+it('colors kill-feed names relative to the local player and actual teams', () => {
+  expect(combatRelationship('ffa', 'me', null, 'me', null)).toBe('friendly');
+  expect(combatRelationship('ffa', 'me', null, 'other1', null)).toBe('opponent');
+  expect(combatRelationship('ffa', 'me', null, 'other2', null)).toBe('opponent');
+  expect(combatRelationship('teams', 'me', 'red', 'ally', 'red')).toBe('friendly');
+  expect(combatRelationship('teams', 'me', 'red', 'enemy', 'blue')).toBe('opponent');
+  expect(combatRelationship('teams', 'me', null, 'unassigned', null)).toBe('opponent');
+});
 
 it('weights the actual incoming ray against current camera yaw/pitch for directional edge haze', () => {
   const right = damageHaze({ x: -1, y: 0, z: 0 }, 0);
@@ -41,14 +51,16 @@ it('falls along the world-space incoming ray and fades completely in half a seco
   expect(deathPose(2, null).opacity).toBe(0);
 });
 const elimination = { id: 'death-unit', victimLife: 2, direction: { x: 0, y: 0, z: 1 }, roundId: 1,
-  victimId: 'victim', victimName: 'Victim', killerId: 'killer', killerName: 'Killer', weapon: 'rifle', head: false };
+  victimId: 'victim', victimName: 'Victim', killerId: 'killer', killerName: 'Killer', weapon: 'rifle', head: false,
+  at: 1000, respawnAt: 4000, killerTeam: null, victimTeam: null };
 it('validates actual server direction vectors and rejects old or client-invented combat events', () => {
-  const message = { v: 7, type: 'elimination', elimination };
+  const message = { v: 9, type: 'elimination', elimination };
   expect(parseServerMessage(JSON.stringify(message))).toEqual(message);
   expect(parseServerMessage(JSON.stringify({ ...message, v: 5 }))).toBeNull();
+  expect(parseServerMessage(JSON.stringify({ ...message, elimination: { ...elimination, respawnAt: 3999 } }))).toBeNull();
   for (const direction of [{ x: 0, y: 0, z: 0 }, { x: 99, y: 0, z: 1 }, { x: null, y: 0, z: 1 }, { x: 0, z: 1 }]) {
     expect(parseServerMessage(JSON.stringify({ ...message, elimination: { ...elimination, direction } }))).toBeNull();
   }
   expect(parseClientMessage(JSON.stringify(message))).toBeNull();
-  expect(parseClientMessage(JSON.stringify({ v: 7, type: 'damage', direction: { x: 0, y: 0, z: 1 }, amount: 100 }))).toBeNull();
+  expect(parseClientMessage(JSON.stringify({ v: 9, type: 'damage', direction: { x: 0, y: 0, z: 1 }, amount: 100 }))).toBeNull();
 });

@@ -3,7 +3,9 @@ import { ArcRotateCamera, Color3, Mesh, MeshBuilder, PBRMaterial, Quaternion, Sc
 import { AudioManager, type SoundName } from '../audio/AudioManager';
 import { FIXED_DT, MAX_FRAME_DT, MOVEMENT, PLAYER_MAX_HEALTH } from '../config/constants';
 import { SettingsStore, type Settings } from '../config/settings';
+import { isTextInput } from '../config/keybindings';
 import { GuestProfileStore } from '../config/guestProfile';
+import { LastUsedWeapon } from '../config/lastUsedWeapon';
 import { Input } from '../core/Input';
 import { MapManager, type LoadedMap } from '../maps/MapManager';
 import { DEFAULT_MAP_ID, getMap, MAPS } from '../maps/registry';
@@ -24,9 +26,9 @@ import { RemotePlayers } from './RemotePlayers';
 import { Presence } from '../network/Presence';
 import { weaponPreviews } from '../ui/WeaponPreviews';
 import { HomeCharacter } from '../ui/HomeCharacter';
-import type { Snapshot } from '../../shared/protocol';
+import type { Elimination, Snapshot } from '../../shared/protocol';
 
-type State = 'menu' | 'loading' | 'start' | 'playing' | 'paused';
+type State = 'menu' | 'loading' | 'start' | 'playing' | 'paused' | 'spectating';
 
 /** Sounds for the timed cues inside reloads and pump/bolt actions (weapons/Weapon.ts). */
 const CUE_SOUNDS: Record<string, SoundName> = {
@@ -61,6 +63,7 @@ export class Game {
   readonly input: Input;
   readonly settings = new SettingsStore();
   readonly guestProfile = new GuestProfileStore();
+  private readonly lastUsedWeapon = new LastUsedWeapon();
   readonly audio = new AudioManager();
   readonly ui: UI;
   readonly materials: MaterialLibrary;
@@ -105,6 +108,7 @@ export class Game {
   private appliedPlayerId = '';
   private tabHeld = false;
   private preSpawnPaused = false;
+  private spectatingDeath: Elimination | null = null;
   private presence: Presence | null = null;
   private readonly remotePlayers: RemotePlayers;
   private readonly homeCharacter: HomeCharacter;
@@ -116,11 +120,12 @@ export class Game {
   ) {
     this.ctx = new RenderContext(canvas, { preserveDrawingBuffer: options.autoplay });
     this.input = new Input(canvas);
+    this.input.setBindings(this.settings.value.keyBindings);
     this.ui = new UI(uiRoot, this.settings, this.audio, this.guestProfile);
     this.homeCharacter = new HomeCharacter(uiRoot.querySelector('#menu')!);
     this.materials = new MaterialLibrary(this.ctx.scene);
     this.maps = new MapManager(this.ctx, this.materials, () => GRAPHICS_PRESETS[this.settings.value.graphicsQuality].batchCell, !options.multiplayer);
-    this.remotePlayers = new RemotePlayers(this.ctx.scene, uiRoot);
+    this.remotePlayers = new RemotePlayers(this.ctx.scene, uiRoot, this.materials);
     this.postfx = new PostFX(this.ctx.scene, this.ctx.camera);
     this.instrumentation = new SceneInstrumentation(this.ctx.scene);
     this.instrumentation.captureFrameTime = true;
@@ -161,34 +166,64 @@ export class Game {
     };
     this.ui.onQuit = () => this.quitToMenu();
     this.ui.onCancelLoading = () => this.quitToMenu();
+    this.ui.onChatSend = (text) => this.network?.sendChat(text) ?? false;
+    this.ui.onChatClose = () => {
+      if (this.state !== 'playing') return;
+      this.input.clearState();
+      if (this.options.autoplay) this.input.enabled = true;
+      else void this.input.requestLock().then(() => { if (!this.input.pointerLocked && this.state === 'playing') this.ui.setLockHint(true); });
+    };
     this.input.lockListeners.add((locked) => this.onPointerLock(locked));
     this.ctx.canvas.addEventListener('click', () => {
-      if (this.state === 'playing' && !this.input.pointerLocked && !this.options.autoplay) void this.input.requestLock();
+      if (this.state === 'playing' && !this.ui.chatOpen && !this.input.pointerLocked && !this.options.autoplay) void this.input.requestLock();
     });
     window.addEventListener('beforeunload', (e) => {
       // Ask before leaving mid-game through a browser shortcut
-      if (this.state === 'playing' || this.state === 'paused') {
+      if (this.state === 'playing' || this.state === 'paused' || this.state === 'spectating') {
         e.preventDefault();
         e.returnValue = '';
       }
     });
     window.addEventListener('pagehide', () => { this.network?.disconnect(); this.presence?.dispose(); });
-    window.addEventListener('keyup', (e) => { if (e.code === 'Tab') { this.tabHeld = false; this.ui.scoreboard.setVisible(false); } });
+    window.addEventListener('keyup', (e) => { if (this.input.matches('leaderboard', e.code)) { this.tabHeld = false; this.ui.scoreboard.setVisible(false); } });
+    window.addEventListener('mouseup', (e) => { if (this.input.matches('leaderboard', `Mouse${e.button}`)) { this.tabHeld = false; this.ui.scoreboard.setVisible(false); } });
     window.addEventListener('blur', () => { this.tabHeld = false; this.ui.scoreboard.setVisible(false); });
     document.addEventListener('visibilitychange', () => { if (document.hidden) { this.tabHeld = false; this.input.clearState(); this.ui.scoreboard.setVisible(false); } });
     window.addEventListener('keydown', (e) => {
-      if (e.code === 'Escape' && this.state === 'start' && !this.ui.spawnPending && (this.ui.currentScreen === 'start' || this.ui.currentScreen === 'weapons')) {
+      if (this.ui.chatOpen || isTextInput(e.target)) return;
+      if (this.input.matches('chat', e.code) && this.state === 'playing' && !e.repeat) {
+        e.preventDefault();
+        if (this.network?.state !== 'connected') this.ui.showToast('Chat is available in multiplayer', 'warn');
+        else { this.input.enabled = false; this.input.clearState(); this.ui.openChat(); this.input.releaseLock(); }
+        return;
+      }
+      if (this.input.matches('pause', e.code) && this.state === 'playing' && !e.repeat) {
+        e.preventDefault(); this.state = 'paused'; this.input.enabled = false; this.input.clearState(); this.input.releaseLock(); this.ui.show('pause', true);
+      }
+      if (this.input.matches('pause', e.code) && this.state === 'start' && !this.ui.spawnPending && (this.ui.currentScreen === 'start' || this.ui.currentScreen === 'weapons')) {
         this.preSpawnPaused = true;
         this.state = 'paused';
         this.tabHeld = false;
         this.ui.show('pause');
       }
-      if (e.code === 'Tab' && (this.ui.currentScreen === 'hud' || this.ui.currentScreen === 'start')) {
+      if (this.input.matches('leaderboard', e.code) && (this.ui.currentScreen === 'hud' || this.ui.currentScreen === 'start')) {
         e.preventDefault();
         this.tabHeld = true;
       }
       if (e.code === 'F3') this.settings.update({ showFps: !this.settings.value.showFps });
       if (e.code === 'F2' && this.map && this.state === 'playing') void this.map.toggleCollisionDebug();
+    });
+    this.ctx.canvas.addEventListener('mousedown', (e) => {
+      if (this.ui.chatOpen) return;
+      if (this.state === 'playing' && this.input.matches('chat', `Mouse${e.button}`)) {
+        e.preventDefault();
+        if (this.network?.state !== 'connected') this.ui.showToast('Chat is available in multiplayer', 'warn');
+        else { this.input.enabled = false; this.input.clearState(); this.ui.openChat(); this.input.releaseLock(); }
+        return;
+      }
+      if (this.state === 'playing' && this.input.matches('pause', `Mouse${e.button}`)) {
+        e.preventDefault(); this.state = 'paused'; this.input.enabled = false; this.input.clearState(); this.input.releaseLock(); this.ui.show('pause', true);
+      }
     });
 
     const first = MAPS.some((m) => m.id === this.options.map) ? this.options.map! : DEFAULT_MAP_ID;
@@ -201,7 +236,7 @@ export class Game {
     if (this.options.autoplay) await this.play(first);
   }
 
-  /** No playable map, environment, weapon GLB or textures are requested by home. */
+  /** Playable maps and environments are loaded only when entering the game. */
   private prepareGameAssets(signal?: AbortSignal): Promise<void> {
     if (this.gameAssets) return abortable(this.gameAssets, signal);
     let effects: Effects | null = null;
@@ -325,6 +360,11 @@ export class Game {
         const network = new MultiplayerClient(import.meta.env.VITE_MULTIPLAYER_URL ?? '', () => this.guestProfile.value.username,
           { debug: new URLSearchParams(location.search).has('networkDebug') });
         this.network = network;
+        network.onChat = (message) => {
+          if (signal.aborted || this.network !== network) return;
+          this.ui.addChat(message.name, message.text);
+        };
+        network.onChatError = (message) => { if (!signal.aborted && this.network === network) this.ui.showToast(message, 'warn'); };
         network.onShot = (shot) => {
           if (signal.aborted || this.network !== network) return;
           const self = network.latest?.players.find((p) => p.id === network.selfId);
@@ -342,8 +382,7 @@ export class Game {
         network.onElimination = (event) => {
           if (signal.aborted || this.network !== network) return;
           this.remotePlayers.eliminate(event);
-          this.ui.showToast(event.killerName ? `${event.killerName} eliminated ${event.victimName}${event.head ? ' (headshot)' : ''}`
-            : `${event.victimName} was eliminated`, event.victimId === network.selfId ? 'warn' : '', 2.5);
+          if (network.latest) this.ui.combatFeed.add(event, network.latest, network.selfId);
         };
         network.onSnapshot = (snapshot) => { if (!signal.aborted && this.network === network) this.acceptSnapshot(snapshot); };
         network.onState = (state, message) => {
@@ -410,7 +449,8 @@ export class Game {
         if (self.alive) {
           if (this.options.autoplay) this.activateWithoutLock();
           else { this.state = 'paused'; this.ui.show('pause'); }
-        } else this.showPreSpawn();
+        } else if (self.death) this.beginSpectating(self.death);
+        else this.showPreSpawn();
         return;
       }
     })().finally(() => { if (this.roundLoad === work) this.roundLoad = null; });
@@ -433,6 +473,7 @@ export class Game {
     this.ui.setHealth(self.health, PLAYER_MAX_HEALTH);
     if (self.alive) {
       if ((self.life !== this.networkLife || self.id !== this.appliedPlayerId) && self.weapon) {
+        this.lastUsedWeapon.remember(self.weapon);
         this.ui.damage.clear();
         this.networkLife = self.life;
         this.appliedPlayerId = self.id;
@@ -444,10 +485,26 @@ export class Game {
         this.acc = 0;
         this.cameraRig?.snapFov(this.settings.value.fov);
       } else this.network.reconcile(this.player, snapshot, this.weapon);
-    } else if (this.state === 'playing' || (this.state === 'paused' && !this.preSpawnPaused)) this.showPreSpawn();
+    } else if (self.death) {
+      if (this.state !== 'spectating' || this.spectatingDeath?.id !== self.death.id) this.beginSpectating(self.death);
+      else this.spectatingDeath = self.death;
+    } else if (this.state === 'playing' || this.state === 'spectating' || (this.state === 'paused' && !this.preSpawnPaused)) this.showPreSpawn();
+  }
+
+  private beginSpectating(death: Elimination): void {
+    this.spectatingDeath = death;
+    this.state = 'spectating';
+    this.tabHeld = false;
+    this.input.enabled = false; this.input.clearState(); this.input.releaseLock();
+    this.weaponView?.setVisible(false); this.ui.setScope(0); this.ui.damage.clear();
+    this.ui.setRespawnBusy(false);
+    this.remotePlayers.setSpectated(death.killerId);
+    this.ui.setSpectate(death.killerName, Math.max(0, death.respawnAt - (Date.now() + (this.network?.clockOffset ?? 0))), this.network?.state === 'connected');
+    this.ui.show('spectate');
   }
 
   private showPreSpawn(): void {
+    this.spectatingDeath = null; this.remotePlayers.setSpectated(null);
     this.state = 'start';
     this.tabHeld = false;
     this.input.enabled = false;
@@ -460,9 +517,12 @@ export class Game {
   }
 
   private async spawnSelected(): Promise<void> {
-    if (this.state !== 'start' || this.ui.currentScreen !== 'start') return;
+    const spectating = this.state === 'spectating';
+    if (spectating ? this.ui.currentScreen !== 'spectate' : this.state !== 'start' || this.ui.currentScreen !== 'start') return;
+    if (spectating && (!this.spectatingDeath || this.network?.state !== 'connected'
+      || Date.now() + this.network.clockOffset < this.spectatingDeath.respawnAt)) return;
     const respawn = (this.network?.latest?.players.find((p) => p.id === this.network?.selfId)?.life ?? 0) > 0;
-    this.ui.setSpawnState(respawn, true);
+    if (spectating) this.ui.setRespawnBusy(true); else this.ui.setSpawnState(respawn, true);
     try {
       if (this.options.multiplayer) {
         const network = this.network!;
@@ -471,23 +531,29 @@ export class Game {
         // spawn or change its server-locked weapon.
         const approved = network.latest?.players.find((p) => p.id === network.selfId)?.alive;
         const snapshot = approved ? network.latest! : await network.spawn(this.ui.selectedWeapon);
-        if (this.network !== network || !this.networkReady || network.state !== 'connected' || this.state !== 'start') return;
+        if (this.network !== network || !this.networkReady || network.state !== 'connected' || this.state !== (spectating ? 'spectating' : 'start')) return;
         this.acceptSnapshot(snapshot);
       } else {
         this.spawn();
         this.loadout.reset(WEAPONS.findIndex((w) => w.id === this.ui.selectedWeapon), !this.options.autoplay);
+        this.lastUsedWeapon.remember(this.weapon.stats.id);
         this.weaponView?.select(this.weapon.stats.id);
         this.ui.setWeaponName(this.weapon.stats.name);
       }
+      this.spectatingDeath = null; this.remotePlayers.setSpectated(null); this.ui.setRespawnBusy(false);
+      // enterPlay's pointer-lock callback transitions from the pre-spawn state.
+      if (spectating) this.state = 'start';
       if (this.options.autoplay) this.activateWithoutLock();
       else await this.enterPlay();
     } catch (e) {
-      if (this.state === 'start') this.ui.setSpawnState(respawn, false, (e as Error).message);
+      if (spectating && this.state === 'spectating') this.ui.setRespawnBusy(false, (e as Error).message);
+      else if (this.state === 'start') this.ui.setSpawnState(respawn, false, (e as Error).message);
     }
   }
 
   private activateWithoutLock(): void {
     this.preSpawnPaused = false;
+    this.spectatingDeath = null; this.remotePlayers.setSpectated(null);
     this.state = 'playing';
     this.input.enabled = true;
     this.input.clearState();
@@ -554,6 +620,7 @@ export class Game {
 
   private onPointerLock(locked: boolean): void {
     if (locked) {
+      if (this.ui.chatOpen) { this.input.releaseLock(); return; }
       if (this.options.multiplayer && !this.network?.latest?.players.find((p) => p.id === this.network?.selfId)?.alive) {
         this.input.releaseLock();
         return;
@@ -566,7 +633,7 @@ export class Game {
         this.ui.setLockHint(false);
         this.weaponView?.setVisible(true);
       }
-    } else if (this.state === 'playing' && !this.options.autoplay) {
+    } else if (this.state === 'playing' && !this.options.autoplay && !this.ui.chatOpen) {
       this.state = 'paused';
       this.input.enabled = false;
       this.ui.show('pause', true);
@@ -574,6 +641,7 @@ export class Game {
   }
 
   private quitToMenu(): void {
+    this.spectatingDeath = null; this.remotePlayers.setSpectated(null); this.ui.combatFeed.clear();
     const wasLoading = this.state === 'loading';
     this.joinAbort?.abort();
     this.joinAbort = null;
@@ -607,6 +675,7 @@ export class Game {
   }
 
   private applySettings(v: Readonly<Settings>, changed: (keyof Settings)[]): void {
+    if (changed.includes('keyBindings')) { this.input.setBindings(v.keyBindings); this.ui.setChatBinding(v.keyBindings.chat[0]); }
     if (changed.includes('resolutionScale')) this.ctx.setResolutionScale(v.resolutionScale);
     if (changed.includes('masterVolume')) this.audio.setVolume(v.masterVolume);
     if (changed.includes('graphicsQuality')) {
@@ -628,6 +697,8 @@ export class Game {
 
   // --- main loop -------------------------------------------------------------------------------
   private frame(rawDt: number): void {
+    this.homeCharacter.setWeapon(this.lastUsedWeapon.value ?? this.ui.selectedWeapon);
+    this.homeCharacter.setName(this.guestProfile.value.username);
     this.homeCharacter.setVisible(this.state === 'menu' && this.ui.currentScreen === 'menu' && !this.options.autoplay);
     if (this.state === 'menu') { this.ui.update(rawDt); this.input.endFrame(); return; }
     const dt = Math.min(MAX_FRAME_DT, Math.max(0, rawDt));
@@ -644,8 +715,21 @@ export class Game {
       this.menuCamera(dt);
     }
     this.updateScoreboard();
-    this.remotePlayers.setPresentationVisible(this.ui.currentScreen === 'hud');
+    this.remotePlayers.setPresentationVisible(this.ui.currentScreen === 'hud' || this.state === 'spectating');
     if (this.network?.state === 'connected') this.remotePlayers.update(Date.now() + this.network.clockOffset - 100, dt);
+    this.ui.combatFeed.setVisible(this.ui.currentScreen === 'hud' || this.ui.currentScreen === 'spectate');
+    if (this.state === 'spectating' && this.spectatingDeath) {
+      const death = this.spectatingDeath;
+      const pose = death.killerId && this.network?.state === 'connected' ? this.remotePlayers.spectatePose(death.killerId) : null;
+      if (pose) {
+        const camera = this.ctx.camera, blend = 1 - Math.exp(-dt * 7);
+        camera.position = Vector3.Lerp(camera.position, pose.position, blend);
+        camera.rotationQuaternion ??= Quaternion.Identity();
+        Quaternion.SlerpToRef(camera.rotationQuaternion, pose.rotation, blend, camera.rotationQuaternion);
+        this.ctx.setFov(this.settings.value.fov);
+      }
+      this.ui.setSpectate(death.killerName, Math.max(0, death.respawnAt - (Date.now() + (this.network?.clockOffset ?? 0))), this.network?.state === 'connected');
+    }
     this.effects?.update(dt);
     this.ui.update(dt);
     const cameraAngles = this.ctx.camera.rotationQuaternion?.toEulerAngles();
@@ -771,6 +855,7 @@ export class Game {
     this.ui.setAmmo(w.ammo, w.reserve, w.stats.magazine, w.reloading, w.reloadProgress);
     this.ui.setWeaponSlots(this.options.multiplayer ? [w.stats.name] : this.loadout.weapons.map((x) => x.stats.name), this.options.multiplayer ? 0 : this.loadout.switchingTo ?? this.loadout.currentIndex);
     this.ui.setHealth(this.health, PLAYER_MAX_HEALTH);
+    this.ui.setSlideEffect(player.sliding, player.horizontalSpeed, player.slideRemaining / MOVEMENT.slideDuration);
   }
 
   private onWeaponEvent(e: WeaponEvent): void {
@@ -789,6 +874,7 @@ export class Game {
         else if (CUE_SOUNDS[e.cue]) this.sound(CUE_SOUNDS[e.cue], 0.55);
         break;
       case 'equipStart':
+        this.lastUsedWeapon.remember(this.weapon.stats.id);
         this.weaponView?.select(this.weapon.stats.id);
         this.ui.setWeaponName(this.weapon.stats.name);
         this.sound('draw', 0.45);
@@ -909,6 +995,9 @@ export class Game {
       networkReconnect: () => this.network?.reconnect(),
       networkLeave: () => this.quitToMenu(),
       state: () => this.state,
+      spectate: () => ({ death: this.spectatingDeath, camera: this.ctx.camera.position.asArray(),
+        rotation: this.ctx.camera.rotationQuaternion?.asArray() ?? null,
+        target: this.spectatingDeath?.killerId ? this.remotePlayers.spectatePose(this.spectatingDeath.killerId)?.position.asArray() ?? null : null }),
       loadingState: () => ({ round: this.loadedRound, networkReady: this.networkReady, mapLoad: this.loading?.id,
         roundLoad: !!this.roundLoad, sceneReady: this.ctx.scene.isReady() }),
       teleport: (x: number, y: number, z: number, heading = 0, pitch = 0) => {

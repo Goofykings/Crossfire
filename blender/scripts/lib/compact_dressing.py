@@ -14,6 +14,13 @@ def finish_layout(layout, catalog):
     doors = []
     import building_spec as bs
     for b in layout['buildings']:
+        # Reserve physical entrances, not only the decorative facade doors.
+        # Their landing space must survive manual AND procedural dressing.
+        real_doors = [(side,r) for room in b.get('rooms',[]) for side,r in bs.room_layout(b,room)[1]]
+        real_doors += [(d['side'],d['rect']) for i in b.get('interiors',[]) for d in i['doors']]
+        for side,r in real_doors:
+            x0,z0,x1,z1=r
+            portals.append([x0-.85,z0,x1+.85,z1] if side in ('w','e') else [x0,z0-.85,x1,z1+.85])
         for d in b.get('doors', []):
             doors.append((*bs.side_point(b,d['side'],d['at'],.7), d['width']/2+.5))
 

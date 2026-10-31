@@ -1,4 +1,261 @@
-# Current task: compact maps for 2-6 players - complete
+# Phase 2 map improvements
+
+Updated: 2026-10-31. Complete, in the requested Town / Industrial / City order.
+This supersedes the historical Phase 2 deferral notes in older entries below.
+The earlier compact-map update already reduced Town from 66 x 66 to 52 x 52 m
+and the other maps from 68 x 68 to 54 x 54 m (37.9% / 36.9% less area).
+This phase retains those existing footprints rather than shrinking them again;
+the brief's 20–25% AREA target differs from that earlier per-dimension reduction.
+Human 2–6-player balance testing is still needed before further size changes.
+
+European Town completed: added a walk-through market shop linking the north
+approach and market courtyard, with two real 1.6 m doorways. Kept the plaza
+well/fountain landmark, asymmetric loops, two-ended 2.8 m gallery, and all
+existing PBR/lighting. Added an optimized produce-table GLB and Blender source.
+Fixed a garden-room doorway opening straight into an adjacent solid building:
+authored room door sides now drive Blender geometry, collision and map queries.
+The shared dressing pass now reserves real room/interior entrances as well as
+decorative doors. Narrow through-rooms no longer receive tables/stools in the
+walking lane. Town has 46 validated props plus the existing landmark obstacle.
+
+Town verification: 22 relevant map/physical-portal/tactical tests and frontend
+typecheck pass. Real local Chrome traversal passed both stair directions and
+walking/sliding/jumping through the shop in both directions; screenshots were
+visually inspected. All PBR materials loaded, no missing assets/browser errors,
+and settings survived map loads. Regenerated layout, collision/debug GLB, map
+GLBs, editable .blend, manifests and the top-down diagnostic. Blender completed
+exports but emitted its existing thumbnail-cache/deprecation warnings.
+
+Industrial Complex completed: added a three-door goods office between the west
+gallery lane, goods link and central loading area, creating a covered alternative
+to the west cross street. Preserved the 54 x 54 m footprint, two-ended 2.8 m metal
+catwalk, loading/container landmarks, warehouse interiors, and real utility-yard
+fence dividers. Added a material-batched valve-manifold prop in the utility yard.
+Actual interior doorway landing clearance now removes obstructive dressing;
+21 props remain. Regenerated all map outputs, editable Blender source and plan.
+Controller tests pass for both flank directions, all interior/arcade doors, and
+jumping/sliding on both stair approaches; loop/connectivity, standing/crouched
+reachability, screened spawns, fence clearance and frontend/Worker revision
+checks pass. Local Chrome walked both catwalk directions and walked/slid/jumped
+both flank directions; materials loaded without browser/asset errors. Inspected
+flank, stairs and overhead screenshots.
+
+Modern City completed: added a diner-service through-room between the diner
+alley and north plaza approach. Fixed the existing west shop passage's dead end:
+interior doorway generation now accepts covered approaches, opening a fourth
+shop entrance. Preserved the 54 x 54 m footprint, plaza, sidewalks, upper-floor
+loop and environmental settings. Added an optimized A-frame cafe board and
+relocated the bike rack onto the south sidewalk; 35 clearance-checked props
+remain. Regenerated source layouts, models, collision,
+editable Blender source, manifests and plan. All 24 relevant map/portal/graph/
+tactical/controller tests pass. Local Chrome passed stairs and both-direction
+walking/sliding/jumping through the new interior, with no browser/asset errors;
+inspected the final route and gallery screenshots. The final integration audit
+caught overlapping yard/interior floor faces in the Industrial connection;
+its alley now meets the office at its threshold and the geometry suite passes.
+
+Final verification: all 250 frontend tests, frontend TypeScript/production build,
+181-entry asset verification, Worker typecheck and dry-run build, and all 49
+Worker tests pass. Worker tests use real local WebSocket clients and cover
+movement, combat/state preservation, reconnects, and all three map rotations.
+Fixed their shuffle-coverage assumption: starting mid-bag can require up to five
+rounds to include a full three-map bag; production rotation is unchanged. One
+timing-sensitive Worker run failed while heavy browser checks were also running;
+the final full Worker run without those browser checks passed. Verified all three
+procedural layouts and collision exports regenerate identically from their
+sources, and the generated prop catalog matches its source dimensions/colliders.
+Production Chrome traversed all three maps under /crossfire/ with no missing
+assets/materials or browser exceptions; repeated City after its final bike-rack
+move. Inspected new props, passages, upper-route approaches and overhead views.
+Updated top-down diagnostics and docs/PHASE2_MAPS.md. Public Cloudflare/Pages
+deployment and human 2–6-player balance remain untested. Frontend and Worker
+must be rebuilt/published together for the revised map hashes, only when
+authorized. No commit, push or deployment. Stopped after Phase 2.
+
+# Home character weapon poses and profile name
+
+Updated: 2026-10-31. The home-only weapon pose now solves the two arm chains
+using outward/downward elbow targets and orients the hands at the actual GLB
+grip anchors. The previous shared IK solution put elbows above/across the
+shoulders and left wrist rotations inherited from the idle pose. Four separate
+home poses use the supplied references for weapon position and angle; remote
+player presentation retains its existing IK. The existing character mesh has
+no finger bones, so the fingers cannot individually curl around the grips.
+
+The home preview shows the most recently active weapon from an approved match
+life or a completed practice weapon switch. This preference is persisted under
+`crossfire.last-used-weapon`, with an in-memory fallback; an unused loadout
+selection does not overwrite it. Before any weapon has been used, the preview
+falls back to the selected weapon. The active guest name appears above the
+preview, and the existing idle, mouse movement, fade and no-map preview remain.
+
+Verification: 235 frontend tests passed, as did TypeScript checks and the
+production build. Browser checks visually inspected all four actual poses,
+verified grip contact and elbow placement while idle and turning, name layout
+at desktop and mobile sizes, first-visit fallback and no map load. The local
+headless preview sustained approximately 60 fps in a short browser sample. A real
+two-client local Worker test confirmed last-used persistence only after server
+spawn approval, plus the existing remote weapon, chat and movement behavior.
+No public deployment was tested, and no commit, push or deployment was made.
+
+# Character metadata asset loading
+
+Updated: 2026-10-31. Removed the Vite-invalid TypeScript import of generated
+`public/assets/characters/player.json`. Character metadata is now fetched
+through the existing `assetUrl` and `fetchJson` helpers before loading the
+GLB; generated JSON, models, textures and audio remain in `public/assets`.
+Home and remote previews retain the existing nonfatal missing-asset fallback.
+
+Verification: 233 frontend tests and TypeScript checks pass. Both the default
+production build and a build with `BASE_PATH=/crossfire/` pass. Browser smoke tests confirmed HTTP
+200 for the character JSON and GLB and the animated, armed home preview on
+both the Vite development server and a `/crossfire/` production preview.
+No public GitHub Pages deployment was changed or tested. No commit, push or
+deployment was performed.
+
+# Phase 4 elimination, spectating and respawn
+
+Updated: 2026-10-31. Phase 2 is deferred at the user's direction. Phase 4 is
+implemented locally; no commit, push or deployment was performed.
+
+- **Elimination animation: complete.** Preserved the existing deduplicated,
+  server-confirmed 500 ms directional fall and fade, including held weapons.
+- **Elimination confirmation and kill feed: complete.** The killer sees a
+  short red confirmation. A bounded, fading feed shows server-issued names,
+  weapon silhouettes and FFA/Teams relationship colors.
+- **Spectating and respawn: complete.** Eliminated players stop controlling
+  their life and follow the killer's synchronized eye position and orientation.
+  The spectated body and first-person weapon are hidden. If the killer leaves,
+  the last valid view remains; no unrestricted spectator controls are exposed.
+  The eliminated-by label, gray countdown, blue respawn button, next-life
+  weapon selection, settings, and leave action are available over the live map.
+- **Server authority and reconnect: complete.** The Worker records the unique
+  elimination, killer/victim, weapon, teams, server time and three-second
+  eligibility deadline in the session and snapshots. It rejects early respawn
+  requests and retains a pending deadline through reconnect and round changes.
+  A successful new life clears the death record. Existing scores, health and
+  server hit detection remain authoritative.
+
+Phase 4 files: `shared/protocol.ts`, `server/src/index.ts`,
+`src/network/MultiplayerClient.ts`, `src/game/Game.ts`,
+`src/game/RemotePlayers.ts`, `src/ui/UI.ts`, `src/ui/CombatFeed.ts`,
+`src/styles.css`, relevant protocol/combat/transport tests and local browser
+test tools. Existing uncommitted Phase 1 and Phase 3 work remains in place.
+
+Verification: 232 frontend tests and 49 local Worker/WebSocket tests passed;
+the frontend production build, Worker dry-run build, typechecks and all three
+maps' asset verification passed. Two real local browser clients verified an
+actual lethal sniper hit, attribution, death-body removal, notification/feed,
+disabled gray countdown, camera tracking, reconnect continuity, killer-leave
+fallback, settings/weapon selection and the approved shotgun respawn. Unit
+tests cover duplicate events and FFA/Teams feed relationships. A normal
+pointer-lock client resumed gameplay after respawn, and the two-client Phase 3
+weapon, animation, chat and scoreboard regression also passed. A separate
+browser run loaded all three maps with their PBR materials and traversed both
+ends of every upper route, with no missing assets or browser exceptions. The
+two-client controls regression passed custom bindings, typing isolation,
+chat, pause, leaderboard and server-confirmed slide-jump. The first
+Worker run exposed a flaky shotgun direction assertion; its corrected
+aim-relative assertion passed in the full rerun. No tests remain known to fail.
+
+The camera follows synchronized motion only; it cannot reproduce the killer's
+private first-person recoil or view model. Tests used local clients and Worker,
+not the public deployment. Protocol is now **v9**: deploy a matching Worker
+and frontend together when authorized, with the frontend's existing
+`VITE_MULTIPLAYER_URL` pointing at the Worker and its origin allowlist including
+the GitHub Pages origin. Mixed v8/v9 builds will not connect. Phase 2 remains
+deferred, and no other phase was started.
+
+# Phase 3 character weapons, chat and leaderboard
+
+Updated: 2026-10-30. The home character and real remote characters now use the
+existing weapon GLBs and their exported grip anchors. A scene-local shared
+asset library supplies independent attachments, with arm IK and additive
+upper-body/head aim layered on the existing movement and lean animations.
+Remote loadout, yaw, pitch and ADS come from the authoritative snapshots; this
+presentation does not change server positions, collision or hit detection.
+Weapon attachments are replaced on a server-approved new life. The home preview
+loads only its selected weapon and character, retaining the existing idle,
+mouse response and fade without loading a map.
+
+The existing server-validated public chat now defaults to Enter for new control
+settings, shows the current binding above the health bar, and displays a bounded,
+fading HUD feed. Existing saved custom bindings, including the earlier T default,
+are preserved. Typing isolates gameplay input and restores pointer lock when
+the browser permits it. Scoreboard name colors use the actual local player and
+server team relationship; kills, deaths and weapon silhouettes are unchanged.
+The existing server chat protocol, validation and rate limit are reused.
+
+Verification: 231 frontend tests, 49 local Worker tests, frontend and backend
+typechecks, frontend production build and Worker dry-run build passed. Two real
+local browser clients verified the selected home weapon and hand anchors,
+server-synchronized weapon and aim, running/sliding/jumping, a valid respawn
+weapon change with one attachment, the updated home preview, chat delivery and
+Escape, and FFA relationship colors. FFA and Teams name relationships and all
+four weapon assets were additionally checked in frontend tests. Local tests do
+not validate the publicly deployed Worker or GitHub Pages. Phase 3 changes
+require a frontend publication; the Worker must already include the Phase 1
+protocol-v8 chat changes. No commit, push or deployment was performed. Phase 2
+was not supplied, and no later phase was started.
+
+# Phase 1 controls, sliding, weapons and HUD
+
+Updated: 2026-10-30. Added customizable keyboard/mouse bindings under Gameplay,
+with conflict detection, Escape cancellation, individual/all resets and the
+existing Apply/Back draft and localStorage behavior. Keyboard aim is supported.
+The existing game had no chat; T opens a small real multiplayer room chat with
+server-derived names, bounded messages and rate limiting. Gameplay input is
+cleared/ignored while typing. Interact is absent from the current game.
+
+The shared movement controller now jump-cancels slides at any point, including
+after leaving an edge, preserves horizontal momentum and applies the existing
+cooldown and capped air control. A lightweight masked speed-line effect fades
+at the screen edges. The health bar is slightly larger with a faded line.
+Shared shotgun settings now use two shells and fourteen wider-spread pellets,
+stronger close hits and faster falloff; only pellets that hit deal damage.
+SMG rate is 1030 RPM with an original sharper synthesized, non-clipping sound.
+
+The Worker and frontend now use protocol v8 so changed simulation and weapon
+rules cannot be mixed with old clients. Both require publication together when
+authorized; no commit, push or deployment was performed. No public Cloudflare
+validation was performed. See `docs/PHASE1_CONTROLS.md` for details. Phase 2
+has not been supplied and was not started.
+
+Verification: 228 frontend tests, 49 local Worker/WebSocket tests, both
+typechecks, the production frontend and Worker dry-run builds, and asset
+verification passed. Two local browser clients exercised rebinding and
+conflicts, Apply/Back/reset and storage, keyboard aim/fire, default mouse fire,
+leaderboard/pause, actual room chat and typing isolation, server-confirmed
+slide-jump, edge effects and health HUD. The original SMG waveform was
+reproduced from its generator and measured at a 0.8 peak with no clipped samples.
+The browser and Worker results are local and do not validate public deployment.
+
+# Q/E corner leaning
+
+Updated: 2026-10-30. The existing shared fixed-step movement now eases held Q/E
+lean, checks the upper-body path against map collision, and returns to neutral
+when both keys are held or during a jump/slide. The camera and weapon move and
+roll together. The weapon pulls back or hides against close cover, with bounded
+pullback and recovery when clear. Q formerly selected the last weapon; number
+keys and the mouse wheel still switch weapons.
+
+The Worker validates lean input and derives the firing eye, upper-body/head
+hitboxes and shot direction using authoritative movement and map collision.
+Snapshots carry lean to the existing remote skeleton; the visible head was
+checked against its hitbox at multiple headings. Protocol v7 requires matching
+frontend and Worker releases, and persisted older motion initializes neutral.
+Public Cloudflare has not been tested or changed. No commit, push or deployment
+was performed. See `docs/LEANING.md` for details.
+
+The local Worker suite passed all 45 tests, including real FFA/Teams WebSocket
+shots at leaned players, map wall blocking, validation and session continuity.
+All 215 frontend tests, both typechecks, the frontend production build and the
+Worker dry-run build passed. Two real local browser clients verified Q/E and simultaneous-key neutral,
+animated remote head alignment at two headings, walking, jump/slide cancellation,
+aimed damage and reloading, both wall-limited lean directions, bounded weapon
+clearance and recovery. This uses the local Worker, not public Cloudflare.
+
+# Compact maps for 2-6 players - complete
 
 Updated: 2026-10-30. Completed European Town, Industrial Complex, Modern City,
 then shared collision/spawn validation, preserving earlier uncommitted work.

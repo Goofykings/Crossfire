@@ -1,7 +1,7 @@
 {
  "generator": "blender/scripts/generate_all.py",
  "blender": "5.2.3 LTS",
- "generated": "2026-10-30 17:46:52",
+ "generated": "2026-10-31 09:49:41",
  "assets": [
   {
    "path": "assets/characters/player-albedo.png",
@@ -67,10 +67,10 @@
   {
    "path": "assets/models/european-town/buildings/block_04.glb",
    "kind": "map-buildings",
-   "bytes": 246688,
-   "description": "1 buildings: B15 (plaster3)",
+   "bytes": 156524,
+   "description": "1 buildings: B15 (room)",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 6414
+   "triangles": 2612
   },
   {
    "path": "assets/models/european-town/buildings/block_05.glb",
@@ -83,15 +83,15 @@
   {
    "path": "assets/models/european-town/buildings/block_06.glb",
    "kind": "map-buildings",
-   "bytes": 398440,
+   "bytes": 397992,
    "description": "3 buildings: B21 (narrow_passage), B25 (room), B30 (shop)",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 7541
+   "triangles": 7533
   },
   {
    "path": "assets/models/european-town/buildings/block_07.glb",
    "kind": "map-buildings",
-   "bytes": 378992,
+   "bytes": 378920,
    "description": "1 buildings: B26 (corner)",
    "script": "blender/scripts/generate_all.py",
    "triangles": 8094
@@ -99,7 +99,7 @@
   {
    "path": "assets/models/european-town/buildings/block_08.glb",
    "kind": "map-buildings",
-   "bytes": 196040,
+   "bytes": 196032,
    "description": "1 buildings: B27 (plaster3)",
    "script": "blender/scripts/generate_all.py",
    "triangles": 3256
@@ -131,17 +131,17 @@
   {
    "path": "assets/models/european-town/collision.json",
    "kind": "collision",
-   "bytes": 12259,
-   "description": "154 oriented collision boxes (runtime physics)",
+   "bytes": 12725,
+   "description": "160 oriented collision boxes (runtime physics)",
    "script": "blender/scripts/lib/collision_gen.py"
   },
   {
    "path": "assets/models/european-town/collision_debug.glb",
    "kind": "collision-debug",
-   "bytes": 171884,
+   "bytes": 178688,
    "description": "Collision boxes as meshes for in-game debug view (F2)",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 1848
+   "triangles": 1920
   },
   {
    "path": "assets/models/european-town/map-assets.json",
@@ -161,7 +161,7 @@
   {
    "path": "assets/models/industrial-complex/buildings/block_01.glb",
    "kind": "map-buildings",
-   "bytes": 404100,
+   "bytes": 403920,
    "description": "7 buildings: I19 (workshop), I07 (workshop), I03 (warehouse), I15 (warehouse), I04 (warehouse), I10 (shed), I20 (workshop)",
    "script": "blender/scripts/generate_all.py",
    "triangles": 5620
@@ -169,7 +169,7 @@
   {
    "path": "assets/models/industrial-complex/buildings/block_02.glb",
    "kind": "map-buildings",
-   "bytes": 67268,
+   "bytes": 67256,
    "description": "1 buildings: I12 (workshop)",
    "script": "blender/scripts/generate_all.py",
    "triangles": 684
@@ -177,7 +177,7 @@
   {
    "path": "assets/models/industrial-complex/buildings/block_03.glb",
    "kind": "map-buildings",
-   "bytes": 516320,
+   "bytes": 516184,
    "description": "7 buildings: I18 (warehouse), I08 (warehouse), I14 (warehouse), I01 (warehouse), I09 (shed), I16 (workshop), I02 (warehouse)",
    "script": "blender/scripts/generate_all.py",
    "triangles": 7568
@@ -185,7 +185,7 @@
   {
    "path": "assets/models/industrial-complex/buildings/block_04.glb",
    "kind": "map-buildings",
-   "bytes": 337300,
+   "bytes": 337240,
    "description": "7 buildings: I11 (workshop), I05 (warehouse), I17 (workshop), I06 (backdrop), I13 (warehouse), I22 (workshop), I21 (workshop)",
    "script": "blender/scripts/generate_all.py",
    "triangles": 4712
@@ -193,57 +193,57 @@
   {
    "path": "assets/models/industrial-complex/buildings/block_05.glb",
    "kind": "map-buildings",
-   "bytes": 105428,
-   "description": "1 buildings: I25 (workshop)",
+   "bytes": 143384,
+   "description": "2 buildings: I23 (warehouse), I26 (workshop)",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 1302
+   "triangles": 1636
   },
   {
    "path": "assets/models/industrial-complex/buildings/block_06.glb",
    "kind": "map-buildings",
-   "bytes": 396212,
-   "description": "7 buildings: I28 (workshop), I29 (shed), I30 (shed), I31 (shed), I33 (shed), I35 (workshop), I36 (warehouse)",
+   "bytes": 396112,
+   "description": "7 buildings: I29 (workshop), I30 (shed), I31 (shed), I32 (shed), I34 (shed), I36 (workshop), I37 (warehouse)",
    "script": "blender/scripts/generate_all.py",
    "triangles": 5406
   },
   {
    "path": "assets/models/industrial-complex/buildings/block_07.glb",
    "kind": "map-buildings",
-   "bytes": 67268,
-   "description": "1 buildings: I32 (workshop)",
+   "bytes": 67260,
+   "description": "1 buildings: I33 (workshop)",
    "script": "blender/scripts/generate_all.py",
    "triangles": 684
   },
   {
    "path": "assets/models/industrial-complex/buildings/block_08.glb",
    "kind": "map-buildings",
-   "bytes": 441916,
-   "description": "7 buildings: I23 (workshop), I24 (workshop), I27 (office), I37 (warehouse), I44 (warehouse), I43 (warehouse), I38 (office)",
+   "bytes": 441780,
+   "description": "7 buildings: I24 (workshop), I25 (workshop), I28 (office), I38 (warehouse), I45 (warehouse), I44 (warehouse), I39 (office)",
    "script": "blender/scripts/generate_all.py",
    "triangles": 7262
   },
   {
    "path": "assets/models/industrial-complex/buildings/block_09.glb",
    "kind": "map-buildings",
-   "bytes": 285176,
-   "description": "6 buildings: I42 (warehouse), I41 (workshop), I40 (warehouse), I39 (backdrop), I34 (backdrop), I26 (workshop)",
+   "bytes": 285120,
+   "description": "6 buildings: I43 (warehouse), I42 (workshop), I41 (warehouse), I40 (backdrop), I35 (backdrop), I27 (workshop)",
    "script": "blender/scripts/generate_all.py",
    "triangles": 4279
   },
   {
    "path": "assets/models/industrial-complex/collision.json",
    "kind": "collision",
-   "bytes": 12283,
-   "description": "155 oriented collision boxes (runtime physics)",
+   "bytes": 13118,
+   "description": "166 oriented collision boxes (runtime physics)",
    "script": "blender/scripts/lib/collision_gen.py"
   },
   {
    "path": "assets/models/industrial-complex/collision_debug.glb",
    "kind": "collision-debug",
-   "bytes": 175124,
+   "bytes": 188132,
    "description": "Collision boxes as meshes for in-game debug view (F2)",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 1860
+   "triangles": 1992
   },
   {
    "path": "assets/models/industrial-complex/map-assets.json",
@@ -255,15 +255,15 @@
   {
    "path": "assets/models/industrial-complex/terrain.glb",
    "kind": "map-terrain",
-   "bytes": 307516,
+   "bytes": 305520,
    "description": "Asphalt and concrete yards, loading docks, stairs, railings, fences, canopies, pipe bridges, road paint",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 5732
+   "triangles": 5706
   },
   {
    "path": "assets/models/modern-city/buildings/block_01.glb",
    "kind": "map-buildings",
-   "bytes": 501424,
+   "bytes": 501012,
    "description": "8 buildings: C14 (apartment), C08 (commercial), C01 (backdrop), C02 (apartment), C03 (apartment), C04 (apartment), C05 (backdrop), C18 (storefront)",
    "script": "blender/scripts/generate_all.py",
    "triangles": 11676
@@ -271,15 +271,15 @@
   {
    "path": "assets/models/modern-city/buildings/block_02.glb",
    "kind": "map-buildings",
-   "bytes": 480200,
+   "bytes": 483356,
    "description": "5 buildings: C10 (storefront), C11 (storefront), C16 (storefront), C17 (storefront), C19 (apartment)",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 8724
+   "triangles": 8636
   },
   {
    "path": "assets/models/modern-city/buildings/block_03.glb",
    "kind": "map-buildings",
-   "bytes": 87564,
+   "bytes": 87520,
    "description": "1 buildings: C12 (storefront)",
    "script": "blender/scripts/generate_all.py",
    "triangles": 1390
@@ -287,7 +287,7 @@
   {
    "path": "assets/models/modern-city/buildings/block_04.glb",
    "kind": "map-buildings",
-   "bytes": 79472,
+   "bytes": 79432,
    "description": "1 buildings: C13 (storefront)",
    "script": "blender/scripts/generate_all.py",
    "triangles": 1220
@@ -295,7 +295,7 @@
   {
    "path": "assets/models/modern-city/buildings/block_05.glb",
    "kind": "map-buildings",
-   "bytes": 657908,
+   "bytes": 657540,
    "description": "8 buildings: C06 (backdrop), C07 (backdrop), C09 (apartment), C15 (apartment), C20 (storefront), C21 (apartment), C26 (commercial), C24 (apartment)",
    "script": "blender/scripts/generate_all.py",
    "triangles": 14446
@@ -319,25 +319,25 @@
   {
    "path": "assets/models/modern-city/buildings/block_08.glb",
    "kind": "map-buildings",
-   "bytes": 723992,
+   "bytes": 724868,
    "description": "8 buildings: C29 (commercial), C38 (apartment), C28 (storefront), C37 (apartment), C36 (apartment), C27 (apartment), C31 (apartment), C35 (apartment)",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 15470
+   "triangles": 15482
   },
   {
    "path": "assets/models/modern-city/collision.json",
    "kind": "collision",
-   "bytes": 12637,
-   "description": "157 oriented collision boxes (runtime physics)",
+   "bytes": 13529,
+   "description": "169 oriented collision boxes (runtime physics)",
    "script": "blender/scripts/lib/collision_gen.py"
   },
   {
    "path": "assets/models/modern-city/collision_debug.glb",
    "kind": "collision-debug",
-   "bytes": 178944,
+   "bytes": 193204,
    "description": "Collision boxes as meshes for in-game debug view (F2)",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 1884
+   "triangles": 2028
   },
   {
    "path": "assets/models/modern-city/map-assets.json",
@@ -683,6 +683,14 @@
    "triangles": 180
   },
   {
+   "path": "assets/models/shared/props/cafe_board.glb",
+   "kind": "prop",
+   "bytes": 23308,
+   "description": "cafe_board (0.66 x 1.08 x 0.6 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 212
+  },
+  {
    "path": "assets/models/shared/props/cafe_set.glb",
    "kind": "prop",
    "bytes": 25520,
@@ -979,6 +987,14 @@
    "triangles": 723
   },
   {
+   "path": "assets/models/shared/props/market_table.glb",
+   "kind": "prop",
+   "bytes": 43156,
+   "description": "market_table (1.8 x 0.98 x 0.8 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 384
+  },
+  {
    "path": "assets/models/shared/props/newspaper_box.glb",
    "kind": "prop",
    "bytes": 9184,
@@ -1061,7 +1077,7 @@
   {
    "path": "assets/models/shared/props/props.json",
    "kind": "prop-catalog",
-   "bytes": 13500,
+   "bytes": 13994,
    "description": "Prop sizes and collision boxes used by the runtime",
    "script": "blender/scripts/lib/catalog.py"
   },
@@ -1266,6 +1282,14 @@
    "triangles": 716
   },
   {
+   "path": "assets/models/shared/props/valve_manifold.glb",
+   "kind": "prop",
+   "bytes": 49844,
+   "description": "valve_manifold (1.9 x 1.55 x 0.7 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 564
+  },
+  {
    "path": "assets/models/shared/props/van_white.glb",
    "kind": "prop",
    "bytes": 37152,
@@ -1362,21 +1386,21 @@
   {
    "path": "blender/source/european-town.blend",
    "kind": "blend",
-   "bytes": 1327070,
+   "bytes": 1302745,
    "description": "Editable source: buildings, terrain, collision, markers, prop preview",
    "script": "blender/scripts/generate_all.py"
   },
   {
    "path": "blender/source/industrial-complex.blend",
    "kind": "blend",
-   "bytes": 991474,
+   "bytes": 1006595,
    "description": "Editable source: buildings, terrain, collision, markers, prop preview",
    "script": "blender/scripts/generate_all.py"
   },
   {
    "path": "blender/source/modern-city.blend",
    "kind": "blend",
-   "bytes": 1118649,
+   "bytes": 1129241,
    "description": "Editable source: buildings, terrain, collision, markers, prop preview",
    "script": "blender/scripts/generate_all.py"
   },
@@ -1390,7 +1414,7 @@
   {
    "path": "blender/source/props.blend",
    "kind": "blend",
-   "bytes": 679891,
+   "bytes": 695841,
    "description": "Editable source: all street props",
    "script": "blender/scripts/generate_all.py"
   },

@@ -80,9 +80,9 @@ describe('held, authoritative lean', () => {
   it('rejects forged offsets, invalid lean and aim angles, and old protocol versions', () => {
     const frame = { seq: 1, yaw: 0, pitch: 0, intent: { ...NO_INTENT, lean: 1 },
       combat: { trigger: true, reload: false, aimYaw: .1, aimPitch: .05 } };
-    const message = { v: 7, type: 'input', roundId: 0, mapVersion: 'test', frames: [frame] };
+    const message = { v: 9, type: 'input', roundId: 0, mapVersion: 'test', frames: [frame] };
     expect(parseClientMessage(JSON.stringify(message))).toEqual(message);
-    expect(parseClientMessage(JSON.stringify({ ...message, v: 6 }))).toBeNull();
+    expect(parseClientMessage(JSON.stringify({ ...message, v: 7 }))).toBeNull();
     for (const lean of [-2, .5, 2, 'right', null]) {
       expect(parseClientMessage(JSON.stringify({ ...message, frames: [{ ...frame, intent: { ...frame.intent, lean } }] }))).toBeNull();
     }

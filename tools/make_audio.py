@@ -302,13 +302,15 @@ def ui_hover() -> list[float]:
 
 
 def smg_shot() -> list[float]:
-    crack = apply(highpass(noise(0.10, 740), 1800), env(int(0.10 * RATE), 0.0005, 42, 1.4))
-    body = apply(tone(lambda t: 210 - 900 * t, 0.10), env(int(0.10 * RATE), 0.001, 35, 1.2))
-    return mix(crack, body, 0, 0.8)
+    # Original synthesized transient: short enough to keep rapid fire distinct.
+    duration = 0.055
+    crack = apply(highpass(noise(duration, 740), 1200), env(int(duration * RATE), 0.0003, 14, 1.3))
+    body = apply(tone(lambda t: 280 - 1800 * t, duration), env(int(duration * RATE), 0.0006, 13, 1.3))
+    return mix(crack, body, 0, 0.75)
 
 
 def main() -> None:
-    write("smg_shot.wav", smg_shot(), 0.85)
+    write("smg_shot.wav", smg_shot(), 0.8)
     write("rifle_shot.wav", rifle_shot(), 0.92)
     write("shotgun_shot.wav", shotgun_shot(), 0.95)
     write("sniper_shot.wav", sniper_shot(), 0.95)

@@ -1,5 +1,7 @@
 # Multiplayer architecture and migration plan
 
+Phase 1 uses protocol v8 for shared slide-jump physics, weapon balance and room chat. Matching frontend and Worker builds are required. Earlier protocol descriptions below are historical.
+
 Current combat/visibility update (2026-10-29): **protocol v6** retains server-owned shared weapon simulation,
 health, blocked player hits, eliminations, scoring/respawn and actual FFA/Teams relationships. Existing
 Workers/DO/room, guest IDs vs resume credentials, fixed-step prediction and round/map rotation remain.

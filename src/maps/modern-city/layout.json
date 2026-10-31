@@ -429,6 +429,46 @@
     ]
    },
    {
+    "id": "diner_service",
+    "kind": "interior",
+    "rect": [
+     -6.7,
+     -9,
+     -2.3,
+     -6.3
+    ]
+   },
+   {
+    "id": "diner_service_door0",
+    "kind": "doorway",
+    "rect": [
+     -2.3,
+     -8.4,
+     -2,
+     -6.6
+    ]
+   },
+   {
+    "id": "diner_service_door1",
+    "kind": "doorway",
+    "rect": [
+     -4.9,
+     -6.3,
+     -3.1,
+     -6
+    ]
+   },
+   {
+    "id": "diner_service_door2",
+    "kind": "doorway",
+    "rect": [
+     -7,
+     -8.4,
+     -6.7,
+     -6.6
+    ]
+   },
+   {
     "id": "court_south",
     "kind": "interior",
     "rect": [
@@ -496,6 +536,16 @@
      17.7,
      10.9,
      18
+    ]
+   },
+   {
+    "id": "south_shop_door3",
+    "kind": "doorway",
+    "rect": [
+     6,
+     11.6,
+     6.3,
+     13.4
     ]
    },
    {
@@ -1119,18 +1169,52 @@
     "type": "flat"
    },
    "front": "s",
-   "doors": [
+   "doors": [],
+   "interiors": [
     {
-     "side": "e",
-     "at": 2.0,
-     "width": 1.0,
-     "kind": "door"
-    },
-    {
-     "side": "w",
-     "at": 2.0,
-     "width": 1.0,
-     "kind": "door"
+     "id": "diner_service",
+     "rect": [
+      -6.7,
+      -9,
+      -2.3,
+      -6.3
+     ],
+     "clear": 3.3,
+     "doors": [
+      {
+       "side": "e",
+       "rect": [
+        -2.3,
+        -8.4,
+        -2,
+        -6.6
+       ],
+       "height": 2.6,
+       "kind": "doorway"
+      },
+      {
+       "side": "s",
+       "rect": [
+        -4.9,
+        -6.3,
+        -3.1,
+        -6
+       ],
+       "height": 2.6,
+       "kind": "doorway"
+      },
+      {
+       "side": "w",
+       "rect": [
+        -7,
+        -8.4,
+        -6.7,
+        -6.6
+       ],
+       "height": 2.6,
+       "kind": "doorway"
+      }
+     ]
     }
    ]
   },
@@ -1521,6 +1605,17 @@
         17.7,
         10.9,
         18
+       ],
+       "height": 2.6,
+       "kind": "doorway"
+      },
+      {
+       "side": "w",
+       "rect": [
+        6,
+        11.6,
+        6.3,
+        13.4
        ],
        "height": 2.6,
        "kind": "doorway"
@@ -2071,6 +2166,15 @@
    "heading": 270
   },
   {
+   "type": "cafe_board",
+   "pos": [
+    14.4,
+    0.0,
+    -7.8
+   ],
+   "heading": 0
+  },
+  {
    "type": "utility_box",
    "pos": [
     8.1,
@@ -2091,9 +2195,9 @@
   {
    "type": "bike_rack",
    "pos": [
-    8.5,
+    14,
     0.0,
-    -8.3
+    24
    ],
    "heading": 0
   },
@@ -2132,15 +2236,6 @@
     16.4
    ],
    "heading": 90
-  },
-  {
-   "type": "planter",
-   "pos": [
-    12,
-    0.0,
-    16.6
-   ],
-   "heading": 0
   },
   {
    "type": "streetlight",
@@ -2476,15 +2571,6 @@
     12.5
    ],
    "heading": 0
-  },
-  {
-   "id": "T14",
-   "pos": [
-    10.0,
-    0.0,
-    7.5
-   ],
-   "heading": 90
   }
  ],
  "lights": [],
@@ -2866,6 +2952,46 @@
     ]
    },
    {
+    "id": "diner_service",
+    "kind": "interior",
+    "rect": [
+     -6.7,
+     -9,
+     -2.3,
+     -6.3
+    ]
+   },
+   {
+    "id": "diner_service_door0",
+    "kind": "doorway",
+    "rect": [
+     -2.3,
+     -8.4,
+     -2,
+     -6.6
+    ]
+   },
+   {
+    "id": "diner_service_door1",
+    "kind": "doorway",
+    "rect": [
+     -4.9,
+     -6.3,
+     -3.1,
+     -6
+    ]
+   },
+   {
+    "id": "diner_service_door2",
+    "kind": "doorway",
+    "rect": [
+     -7,
+     -8.4,
+     -6.7,
+     -6.6
+    ]
+   },
+   {
     "id": "court_south",
     "kind": "interior",
     "rect": [
@@ -2933,6 +3059,16 @@
      17.7,
      10.9,
      18
+    ]
+   },
+   {
+    "id": "south_shop_door3",
+    "kind": "doorway",
+    "rect": [
+     6,
+     11.6,
+     6.3,
+     13.4
     ]
    },
    {
@@ -3375,7 +3511,7 @@
     0.0,
     24.0
    ],
-   "heading": 90
+   "heading": 75
   },
   {
    "id": "S05",
@@ -3461,7 +3597,7 @@
   {
    "id": "S14",
    "pos": [
-    13.5,
+    13.0,
     0.0,
     -8.0
    ],
@@ -3479,11 +3615,11 @@
   {
    "id": "S16",
    "pos": [
-    18.5,
+    11.0,
     0.0,
-    15.0
+    8.0
    ],
-   "heading": 15
+   "heading": 315
   }
  ]
 }

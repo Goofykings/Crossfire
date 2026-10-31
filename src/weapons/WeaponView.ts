@@ -358,13 +358,19 @@ export class WeaponView {
   /** Pull the view model back if its muzzle path intersects physical cover. */
   avoidWalls(world: CollisionWorld, dt: number): void {
     if (!this.current) return;
-    this.root.position.z = Math.max(0, this.root.position.z - dt * 2.5);
+    // Never push the view model indefinitely through the eye and behind the
+    // player: when there is insufficient room, hide it until the path clears.
+    const maxPullback = 1;
+    this.root.position.z = Math.max(0, Math.min(maxPullback, this.root.position.z - dt * 2.5));
     this.ctx.camera.computeWorldMatrix();
     const eye = this.ctx.camera.globalPosition;
+    const forward = this.ctx.camera.getDirection(new Vector3(0, 0, -1));
+    let behindEye = false;
     const blocked = () => {
       this.root.computeWorldMatrix(true);
       const muzzle = this.muzzleWorld(), delta = muzzle.subtract(eye), length = delta.length();
-      if (length < .01) return false;
+      behindEye = Vector3.Dot(delta, forward) < .1;
+      if (behindEye) return true;
       const steps = Math.ceil(length / .04);
       for (let i = 1; i <= steps; i++) {
         const point = eye.add(delta.scale(i / steps));
@@ -373,8 +379,8 @@ export class WeaponView {
       return false;
     };
     let obstructed = blocked();
-    for (let i = 0; obstructed && i < 14; i++) {
-      this.root.position.z += .06;
+    for (let i = 0; obstructed && !behindEye && i < 17 && this.root.position.z < maxPullback; i++) {
+      this.root.position.z = Math.min(maxPullback, this.root.position.z + .06);
       obstructed = blocked();
     }
     this.wallHidden = obstructed;

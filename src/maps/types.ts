@@ -54,7 +54,7 @@ export interface Building {
   front: 'n' | 'e' | 's' | 'w';
   doors: BuildingDoor[];
   passages?: { rect: Rect; style: 'arch' | 'lintel'; clear: number }[];
-  rooms?: { rect: Rect; clear: number }[];
+  rooms?: { rect: Rect; clear: number; doorSides?: ('n' | 's' | 'w' | 'e')[] }[];
   chamfer?: { corner: 'nw' | 'ne' | 'se' | 'sw'; size: number };
   balcony?: { side: string; floor: number };
   shopfront?: { side: string };

@@ -1,5 +1,7 @@
 # Multiplayer combat and remote visibility
 
+Phase 1 uses protocol v8 for shared slide-jump physics, weapon balance and room chat. The Worker derives the firing eye and upper-body hitboxes from validated, collision-limited motion. Earlier protocol descriptions below are historical.
+
 Updated 2026-10-29. This extends the existing single Cloudflare Worker / Durable Object room; it does not replace the transport, movement prediction, guest identity, map rotation or Pages hosting. Protocol v6 adds authoritative incoming-ray/life metadata for directional deaths and damage feedback. See [combat visuals and home preview](COMBAT_VISUALS.md).
 
 ## Cause and authoritative combat

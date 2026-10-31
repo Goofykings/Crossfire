@@ -118,7 +118,7 @@ export function subtractRects(rect: Rect, holes: Rect[]): Rect[] {
 }
 
 /** Interior cavity and doorways of a walk-through room (building_spec.room_layout). */
-export function roomOpenings(b: Building, room: Rect): Rect[] {
+export function roomOpenings(b: Building, room: Rect, doorSides?: readonly string[]): Rect[] {
   const [bx0, bz0, bx1, bz1] = b.rect;
   let [cx0, cz0, cx1, cz1] = room;
   const [x0, z0, x1, z1] = room;
@@ -128,19 +128,19 @@ export function roomOpenings(b: Building, room: Rect): Rect[] {
   const hw = ROOM_DOOR_W / 2;
   if (Math.abs(x0 - bx0) < 1e-6) {
     cx0 = x0 + ROOM_WALL;
-    doors.push([x0, zc - hw, cx0, zc + hw]);
+    if (!doorSides || doorSides.includes('w')) doors.push([x0, zc - hw, cx0, zc + hw]);
   }
   if (Math.abs(x1 - bx1) < 1e-6) {
     cx1 = x1 - ROOM_WALL;
-    doors.push([cx1, zc - hw, x1, zc + hw]);
+    if (!doorSides || doorSides.includes('e')) doors.push([cx1, zc - hw, x1, zc + hw]);
   }
   if (Math.abs(z0 - bz0) < 1e-6) {
     cz0 = z0 + ROOM_WALL;
-    doors.push([xc - hw, z0, xc + hw, cz0]);
+    if (!doorSides || doorSides.includes('n')) doors.push([xc - hw, z0, xc + hw, cz0]);
   }
   if (Math.abs(z1 - bz1) < 1e-6) {
     cz1 = z1 - ROOM_WALL;
-    doors.push([xc - hw, cz1, xc + hw, z1]);
+    if (!doorSides || doorSides.includes('s')) doors.push([xc - hw, cz1, xc + hw, z1]);
   }
   return [[cx0, cz0, cx1, cz1], ...doors];
 }
@@ -200,7 +200,8 @@ export function deriveTacticalMap(layout: MapLayout, props: PropCatalog | null, 
   for (const c of layout.ground.covered) {
     const owner = layout.buildings.find((b) => b.rooms?.some((r) => sameRect(r.rect, c.rect)));
     if (c.kind === 'room' && owner) {
-      for (const r of roomOpenings(owner, c.rect)) covered.push({ id: c.id, kind: c.kind, poly: rectPoly(r) });
+      const room = owner.rooms!.find((r) => sameRect(r.rect, c.rect))!;
+      for (const r of roomOpenings(owner, c.rect, room.doorSides)) covered.push({ id: c.id, kind: c.kind, poly: rectPoly(r) });
     } else {
       covered.push({ id: c.id, kind: c.kind, poly: rectPoly(c.rect) });
     }

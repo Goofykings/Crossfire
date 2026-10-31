@@ -1,5 +1,46 @@
 # CLAUDE.md: notes for future sessions
 
+## Phase 2 maps (2026-10-31)
+
+Implemented; see docs/PHASE2_MAPS.md and the newest PROGRESS.md entry. Retain
+the existing 52/54/54 m compact footprints and two-ended upper routes. New
+market/goods-office/diner-service through-routes augment them. Town room
+doorSides must feed building_spec.py, collision, and tactical.roomOpenings;
+never cut room doors blindly into adjacent solid lots. Physical entrances
+need reserved dressing clearance. Industrial/City interior doors must accept
+covered approaches, or City's west shop passage becomes a dead end again.
+Keep the goods alley outside the goods-office floor to avoid coplanar faces.
+Regenerate layouts, GLBs/collision, editable .blend files and diagnostics from
+the sources. Worker/frontend map hashes include the prop catalog; publish both
+together only when authorized. Do not change the existing match rotation.
+
+## Phase 4 eliminations and spectating (2026-10-31)
+
+See the newest PROGRESS.md entry. Protocol is now v9; Worker and frontend must
+be published together when authorized. The Worker persists each confirmed
+elimination and three-second respawn deadline in the guest session, enforces
+it across reconnects and round transitions, and clears it on an approved
+spawn. Spectating follows only the killer's synchronized pose, hides their
+model and falls back to the last view if unavailable. Keep event deduplication,
+the 500 ms death fade, server-owned scoring and local input isolation intact.
+Phase 2 maps are now implemented separately. Do not commit, push or deploy automatically.
+
+## Phase 1 controls, sliding and weapons (2026-10-30)
+
+See docs/PHASE1_CONTROLS.md and PROGRESS.md. Settings bindings are a validated
+draft until Apply; preserve keyboard aim and text-input isolation. The shared
+controller handles jump-cancel and cooldown; both server and client use it.
+Shotgun/SMG tuning is shared, shotgun restore clamps old six-shell saves, and
+room chat uses bounded real messages with server-derived names. Protocol v8
+requires matching Worker and frontend builds. No automatic deployment.
+
+## Corner leaning (2026-10-30)
+
+See docs/LEANING.md and the newest PROGRESS.md entry. Q/E is held lean; the
+shared controller and Worker validate the collision-limited pose and shots.
+Protocol v7 requires matching frontend and Worker releases. Keep remote skeleton
+pose, the server head/torso hitboxes, camera and weapon clearance aligned.
+
 ## Compact maps for 2-6 players (2026-10-30)
 
 See docs/COMPACT_MAPS.md and the newest PROGRESS.md entry. Town is 52 x 52 m;

@@ -1,9 +1,8 @@
 import { BoundingInfo, Mesh, Quaternion, Space, TransformNode, Vector3, type AssetContainer, type Scene, type InstantiatedEntries, type AnimationGroup } from '@babylonjs/core';
-import { assetUrl } from '../core/assets';
+import { assetUrl, fetchJson } from '../core/assets';
 import { loadContainer } from '../core/loadContainer';
 import { abortable } from '../core/cancellation';
 import { PlayerAnimator, type CharacterClip, type CharacterMotion } from './PlayerAnimation';
-import exported from '../../public/assets/characters/player.json';
 import { LEAN_ANGLE } from '../../shared/lean';
 
 export type { CharacterClip } from './PlayerAnimation';
@@ -18,8 +17,8 @@ export interface CharacterAssetDefinition {
   bounds: { min: number[]; max: number[] };
 }
 
-// Measured by Blender and audited from the actual exported GLB before enabling.
-export const CHARACTER_ASSET: CharacterAssetDefinition = exported;
+// Generated alongside the GLB by Blender and served as a public asset.
+const CHARACTER_ASSET_PATH = 'assets/characters/player.json';
 
 export interface CharacterInstance {
   root: TransformNode;
@@ -49,17 +48,18 @@ export class CharacterAssetLibrary {
 
   constructor(private readonly scene: Scene) {}
 
-  load(definition: CharacterAssetDefinition | null, signal?: AbortSignal): Promise<void> {
-    if (!definition || this.container) return Promise.resolve();
+  load(signal?: AbortSignal): Promise<void> {
+    if (this.container) return Promise.resolve();
     if (this.loading) return abortable(this.loading, signal);
-    const work = this.performLoad(definition, signal).finally(() => { if (this.loading === work) this.loading = null; });
+    const work = this.performLoad(signal).finally(() => { if (this.loading === work) this.loading = null; });
     this.loading = work;
     return work;
   }
-  private async performLoad(definition: CharacterAssetDefinition, signal?: AbortSignal): Promise<void> {
+  private async performLoad(signal?: AbortSignal): Promise<void> {
     this.state = 'loading';
     let container: AssetContainer | null = null;
     try {
+      const definition = await fetchJson<CharacterAssetDefinition>(assetUrl(CHARACTER_ASSET_PATH), signal);
       if (!(definition.height > 0) || !Number.isFinite(definition.height) || !Number.isFinite(definition.groundY)
         || !Number.isFinite(definition.yawCorrection) || ![...definition.bounds.min, ...definition.bounds.max].every(Number.isFinite)) {
         throw new Error('Character export measurements are invalid');
@@ -125,7 +125,9 @@ export class CharacterAssetLibrary {
       for (const [node, weight] of [[spine, .45], [chest, .55]] as const) {
         node.rotationQuaternion ??= Quaternion.Identity();
         saved.set(node, { rotation: node.rotationQuaternion.clone(), position: node.position.clone() });
-        if (node === spine) node.position.x += lean * .08 / scale;
+        // The rotations add roughly 0.10 m at the head; together this keeps the
+        // animated head close to the server's 0.28 m full-lean hitbox offset.
+        if (node === spine) node.position.x += lean * .16 / scale;
         node.parent?.computeWorldMatrix(true);
         node.rotate(axis, lean * LEAN_ANGLE * weight, Space.WORLD);
         node.computeWorldMatrix(true);
@@ -146,7 +148,7 @@ export class CharacterAssetLibrary {
         textures: meshes.flatMap((m) => m.material?.getActiveTextures().map((t) => ({ id: t.uniqueId, ready: t.isReady() })) ?? []),
         poseTextures: [...new Set(meshes.map((m) => entries.skeletons[0].getTransformMatrixTexture(m)?.uniqueId)
           .filter((v): v is number => v !== undefined))],
-        rig: entries.skeletons[0].uniqueId, joints: Object.fromEntries(['head', 'hand_l', 'hand_r', 'foot_l', 'foot_r']
+        rig: entries.skeletons[0].uniqueId, joints: Object.fromEntries(['head', 'upper_arm_l', 'upper_arm_r', 'forearm_l', 'forearm_r', 'hand_l', 'hand_r', 'foot_l', 'foot_r']
           .map((name) => [name, point(name)?.asArray() ?? []])) }),
       dispose: () => { animator.dispose(); entries.dispose(); root.dispose(); } };
   }

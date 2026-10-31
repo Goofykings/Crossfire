@@ -52,6 +52,7 @@ MANUAL_PROPS = [
     ("pallet_goods", (13,0,12.5),0),
     ("pallet_wrapped", (19.7,0,12.3),0),
     ("pump_skid", (18.5,0,-14.5),0),
+    ("valve_manifold", (14,0,-12.5),0),
     ("transformer", (18.5,0,-9.5),0),
     ("electrical_cabinet", (20.5,0,-12),90),
     ("cable_reel", (11,0,-14.5),90),
@@ -201,7 +202,7 @@ def make_building(kit: LayoutKit, info, index: int):
             for i, (sx, sz) in enumerate(samples):
                 pos = base + i
                 k, outside = kit.classify(sx, sz)
-                ok = lo <= pos < hi and k == "open" and outside.height < 0.05
+                ok = lo <= pos < hi and k in ("open", "covered") and outside.height < 0.05
                 cur = cur + 1 if ok else 0
                 if cur > best:
                     best, best_end = cur, i

@@ -34,7 +34,7 @@ test('Public room: real Workers runtime and real WebSocket clients', { timeout: 
     ws.on('error', () => {});
     const client = {
       ws, messages, welcome: null,
-      send: (m) => ws.send(JSON.stringify({ v: 7, ...(['spawn', 'input'].includes(m.type) ? { roundId: client.welcome?.snapshot.roundId ?? 0 } : {}), ...m })),
+      send: (m) => ws.send(JSON.stringify({ v: 9, ...(['spawn', 'input'].includes(m.type) ? { roundId: client.welcome?.snapshot.roundId ?? 0 } : {}), ...m })),
       async wait(predicate, from = 0) {
         const until = Date.now() + 5000;
         while (Date.now() < until) {
@@ -69,6 +69,7 @@ test('Public room: real Workers runtime and real WebSocket clients', { timeout: 
       const health = await (await fetch(new URL('/health', base))).json();
       assert.equal(health.room, 'public-main');
       assert.equal(health.ok, true);
+      assert.equal(health.protocol, 9);
       assert.equal((await fetch(new URL('/ws', base), { headers: { Origin: origin } })).status, 426);
       assert.equal((await fetch(new URL('/unknown', base))).status, 404);
       await new Promise((resolve, reject) => {
@@ -90,6 +91,16 @@ test('Public room: real Workers runtime and real WebSocket clients', { timeout: 
       assert.equal('resumeToken' in shared.snapshot.players[0], false);
       const [pa, pb] = shared.snapshot.players.map((p) => p.motion.position);
       assert.ok(Math.hypot(pa.x - pb.x, pa.z - pb.z) > 0.8);
+    });
+    await t.test('room chat uses the server identity and reaches both real clients', async () => {
+      const markA = a.messages.length, markB = b.messages.length;
+      a.send({ type: 'chat', text: 'Hello from Alice' });
+      const received = await b.wait((m) => m.type === 'chat', markB);
+      assert.deepEqual({ id: received.id, name: received.name, text: received.text },
+        { id: a.welcome.selfId, name: 'Alice', text: 'Hello from Alice' });
+      await a.wait((m) => m.type === 'chat' && m.text === received.text, markA);
+      a.send({ type: 'chat', text: 'Too fast' });
+      assert.equal((await a.wait((m) => m.type === 'error' && m.code === 'chat_rate', markA)).code, 'chat_rate');
     });
     await t.test('server validates guest names and rejects client-selected guest/session identifiers', async () => {
       for (const [name, expected] of [[' <>\u0000 ', 'Player'], ['界'.repeat(30), '界'.repeat(24)]]) {
@@ -189,6 +200,23 @@ test('Public room: real Workers runtime and real WebSocket clients', { timeout: 
       if (c.ws.readyState === WebSocket.OPEN) c.send({ type: 'leave' });
       await delay(100);
     });
+    await t.test('slide-to-jump is accepted and synchronized with cooldown and momentum', async () => {
+      const c = await open(), id = c.welcome.selfId;
+      const yaw = c.welcome.snapshot.players.find((p) => p.id === id).motion.yaw;
+      const mark = b.messages.length;
+      c.send({ type: 'input', mapVersion: c.welcome.snapshot.mapVersion,
+        frames: Array.from({ length: 12 }, (_, i) => ({ ...frame(i + 1, yaw), intent: { ...frame(i + 1).intent, slide: true } })) });
+      const active = await b.wait((m) => m.type === 'snapshot' && m.snapshot.players.some((p) => p.id === id && p.ack >= 12 && p.motion.slideRemaining > 0), mark);
+      const before = active.snapshot.players.find((p) => p.id === id).motion;
+      c.send({ type: 'input', mapVersion: c.welcome.snapshot.mapVersion,
+        frames: [{ ...frame(13, yaw), intent: { ...frame(13).intent, slide: true, jumpPressed: true } }] });
+      const airborne = await b.wait((m) => m.type === 'snapshot' && m.snapshot.players.some((p) => p.id === id && p.ack >= 13 && !p.motion.grounded), mark);
+      const motion = airborne.snapshot.players.find((p) => p.id === id).motion;
+      assert.equal(motion.slideRemaining, 0); assert.ok(motion.slideCooldown > .7);
+      assert.ok(Math.hypot(motion.velocity.x, motion.velocity.z) > Math.hypot(before.velocity.x, before.velocity.z) - .2);
+      assert.ok(Math.hypot(motion.velocity.x, motion.velocity.z) <= 7.81);
+      c.send({ type: 'leave' }); await delay(100);
+    });
     await t.test('replayed input is rejected without granting extra simulation', async () => {
       const mark = a.messages.length;
       a.send({ type: 'input', roundId: 0, mapVersion: a.welcome.snapshot.mapVersion, frames: [frame(1)] });
@@ -241,7 +269,12 @@ test('Public room: real Workers runtime and real WebSocket clients', { timeout: 
       const c = await open({ heartbeat: false });
       const mark = b.messages.length;
       await b.wait((m) => m.type === 'left' && m.id === c.welcome.selfId, mark);
-      await delay(50);
+      // The removal broadcast can arrive before the TCP close handshake, especially
+      // on a loaded machine. Still require a real close with a bounded wait.
+      if (c.ws.readyState !== WebSocket.CLOSED) await new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error('Timed out waiting for heartbeat close')), 6000);
+        c.ws.once('close', () => { clearTimeout(timer); resolve(); });
+      });
       assert.equal(c.ws.readyState, WebSocket.CLOSED);
     });
     await t.test('explicit leave invalidates the resume credential', async () => {
@@ -287,13 +320,30 @@ test('Public room: real Workers runtime and real WebSocket clients', { timeout: 
       const dead = await c.wait((m) => m.type === 'snapshot' && m.snapshot.players.some((p) => p.id === id && !p.alive), mark);
       const state = dead.snapshot.players.find((p) => p.id === id);
       assert.equal(state.deaths, 1); assert.equal(state.kills, 0); assert.equal(state.life, 1);
+      assert.equal(state.death.respawnAt - state.death.at, 3000);
       assert.equal((await (await fetch(new URL('/presence', base))).json()).online, before + 1);
-      c.send({ type: 'spawn', weapon: 'shotgun', mapVersion: c.welcome.snapshot.mapVersion, requestId: 'second-life' });
-      const second = await c.wait((m) => m.type === 'spawned' && m.requestId === 'second-life');
+      const early = c.messages.length;
+      c.send({ type: 'spawn', weapon: 'shotgun', mapVersion: c.welcome.snapshot.mapVersion, requestId: 'too-early' });
+      assert.equal((await c.wait((m) => m.type === 'error', early)).code, 'respawn_wait');
+      c.ws.close(); await delay(100);
+      const resumed = await open({ resumeToken: c.welcome.resumeToken, spawn: false });
+      const retained = resumed.welcome.snapshot.players.find((p) => p.id === id);
+      assert.deepEqual(retained.death, state.death);
+      const roundStub = ns.get(ns.idFromName('public-main'));
+      const nextRound = await roundStub.advanceMapForTest();
+      roundStub[Symbol.dispose]?.();
+      assert.deepEqual(nextRound.players.find((p) => p.id === id).death, state.death);
+      const duringRound = resumed.messages.length;
+      resumed.send({ type: 'spawn', weapon: 'shotgun', roundId: nextRound.roundId, mapVersion: nextRound.mapVersion, requestId: 'round-too-early' });
+      assert.equal((await resumed.wait((m) => m.type === 'error', duringRound)).code, 'respawn_wait');
+      const remaining = state.death.respawnAt - Date.now();
+      if (remaining > 0) await delay(remaining + 25);
+      resumed.send({ type: 'spawn', weapon: 'shotgun', roundId: nextRound.roundId, mapVersion: nextRound.mapVersion, requestId: 'second-life' });
+      const second = await resumed.wait((m) => m.type === 'spawned' && m.requestId === 'second-life');
       const alive = second.snapshot.players.find((p) => p.id === id);
       assert.equal(alive.alive, true); assert.equal(alive.life, 2); assert.equal(alive.weapon, 'shotgun');
-      assert.equal(alive.deaths, 1); assert.equal(alive.kills, 0);
-      c.send({ type: 'leave' }); await delay(100);
+      assert.equal(alive.deaths, 0); assert.equal(alive.kills, 0); // New round resets score.
+      resumed.send({ type: 'leave' }); await delay(100);
     });
     await t.test('both real clients rotate through every map, approve all loadouts, reject old-round input and resume the current map', async () => {
       const c = await open({ spawn: false });
@@ -303,7 +353,9 @@ test('Public room: real Workers runtime and real WebSocket clients', { timeout: 
       const seen = new Set();
       let current = c.welcome.snapshot;
       try {
-        for (let i = 0; i < 3; i++) {
+        // Earlier checks may leave us in the middle of a shuffle bag. Five
+        // consecutive rounds include a complete three-map bag from any offset.
+        for (let i = 0; i < 5 && seen.size < 3; i++) {
           if (i) {
             const before = current;
             current = await stub.advanceMapForTest();

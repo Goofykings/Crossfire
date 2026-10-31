@@ -262,8 +262,17 @@ export class PlayerController {
     // --- jumping ------------------------------------------------------------------------------
     if (intent.jumpPressed) this.jumpBufferTimer = c.jumpBuffer;
     else this.jumpBufferTimer = Math.max(0, this.jumpBufferTimer - dt);
-    const canJump = (this.grounded || this.airTime < c.coyoteTime) && !this.jumpedThisAirborne;
-    if (this.jumpBufferTimer > 0 && canJump && this.crouch < 0.5 && !this.sliding) {
+    const jumpCancelsSlide = this.sliding && intent.jumpPressed && !this.jumpedThisAirborne;
+    // A slide can carry the player off an edge; its one jump remains available
+    // until that slide ends, without enabling a second jump in the same airtime.
+    const canJump = (this.grounded || this.airTime < c.coyoteTime || jumpCancelsSlide) && !this.jumpedThisAirborne;
+    if (this.jumpBufferTimer > 0 && canJump && (jumpCancelsSlide || (this.crouch < 0.5 && !this.sliding))) {
+      if (jumpCancelsSlide) {
+        // Keep the velocity earned by the slide; normal air control caps any
+        // subsequent acceleration and the regular cooldown still applies.
+        this.slideRemaining = 0;
+        this.slideCooldown = c.slideCooldown;
+      }
       v.y = c.jumpSpeed;
       this.grounded = false;
       this.jumpedThisAirborne = true;

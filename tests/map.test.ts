@@ -104,7 +104,7 @@ describe.each(MAP_IDS)('map %s: collision', (id) => {
     }
   });
 
-  it('keeps every walkable cell reachable for a player-sized body', () => {
+  it.each([MOVEMENT.standHeight, MOVEMENT.crouchHeight])('keeps walkable cells reachable with %sm body clearance', (height) => {
     // Flood fill on a 0.5 m grid over the open zones, using the same probes as the controller.
     const step = 0.5;
     const r = MOVEMENT.radius;
@@ -121,7 +121,7 @@ describe.each(MAP_IDS)('map %s: collision', (id) => {
           // Furniture tops are not additional ground-route cells.
           const y = terrain.groundHeight(x, z, r * 0.7, 2.0);
           if (y === -Infinity) continue;
-          if (world.overlapsCylinder(x, z, r, y + MOVEMENT.stepHeight, y + MOVEMENT.crouchHeight)) continue;
+          if (world.overlapsCylinder(x, z, r, y + MOVEMENT.stepHeight, y + height)) continue;
           cells.set(key(x, z), { x, z, y });
         }
       }

@@ -46,6 +46,9 @@ PALETTES = {
 }
 
 PROPS = {
+    "market_table": {"size": [1.8,.98,.8], "collider": [1.8,.98,.8]},
+    "valve_manifold": {"size": [1.9,1.55,.7], "collider": [1.9,1.55,.7]},
+    "cafe_board": {"size": [.66,1.08,.6], "collider": [.66,1.08,.6]},
     "flower_box": {"size": [1.44,.68,.48], "collider": [1.44,.42,.48]},
     "market_crate": {"size": [.76,.44,.56], "collider": [.76,.40,.56]},
     "stone_bollard": {"size": [.46,.96,.46], "collider": [.46,.96,.46]},

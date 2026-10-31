@@ -1,11 +1,16 @@
 import { Color3, Frustum, Material, Matrix, MeshBuilder, Quaternion, StandardMaterial, TransformNode, Vector3, type Scene, type Mesh, type BaseTexture } from '@babylonjs/core';
 import type { Elimination, PlayerState, Snapshot } from '../../shared/protocol';
 import { teammates } from '../../shared/combat';
-import { CHARACTER_ASSET, CharacterAssetLibrary, type CharacterInstance } from './CharacterAsset';
+import { CharacterAssetLibrary, type CharacterInstance } from './CharacterAsset';
 import { VisibilityWorld } from '../rendering/VisibilityWorld';
 import { animationVelocity } from './PlayerAnimation';
 import { deathPose } from './CombatPresentation';
 import { PlayerSilhouettes } from '../rendering/PlayerSilhouettes';
+import { CharacterWeaponLibrary, type CharacterWeapon } from './CharacterWeapon';
+import type { MaterialLibrary } from '../rendering/MaterialLibrary';
+import type { WeaponId } from '../weapons/Weapon';
+import { MOVEMENT } from '../config/constants';
+import { LEAN_ANGLE, leanOffset } from '../../shared/lean';
 
 interface Sample { at: number; player: PlayerState }
 interface Avatar {
@@ -13,6 +18,7 @@ interface Avatar {
   meshes: Mesh[]; label: HTMLDivElement; character: CharacterInstance | null;
   friendly: boolean; visible: boolean; clearFor: number; height: number;
   lean: number;
+  weapon: CharacterWeapon | null;
   life: number; death?: { elapsed: number; started: number; direction: Elimination['direction']; rotation: Quaternion; baseY: number; materials: Material[]; textures: Set<BaseTexture> };
 }
 
@@ -22,13 +28,16 @@ export class RemotePlayers {
   private readonly material: StandardMaterial;
   private readonly labels = document.createElement('div');
   private presenting = true;
+  private spectatedId: string | null = null;
   private outlinesEnabled = true;
   private visibilityWorld: VisibilityWorld | null = null;
   private dt = 1 / 60;
   private silhouettes: PlayerSilhouettes | null = null;
   readonly characters: CharacterAssetLibrary;
-  constructor(private readonly scene: Scene, uiRoot: HTMLElement) {
+  private readonly weapons: CharacterWeaponLibrary;
+  constructor(private readonly scene: Scene, uiRoot: HTMLElement, materials: MaterialLibrary) {
     this.characters = new CharacterAssetLibrary(scene);
+    this.weapons = new CharacterWeaponLibrary(scene, materials);
     this.labels.className = 'remote-player-labels';
     this.labels.setAttribute('aria-hidden', 'true');
     uiRoot.append(this.labels);
@@ -36,13 +45,16 @@ export class RemotePlayers {
     this.material.diffuseColor = new Color3(0.65, 0.5, 0.28);
     this.material.emissiveColor = new Color3(0.08, 0.06, 0.03);
     // Read actual animated bone positions after the engine evaluates this frame.
-    scene.onBeforeAnimationsObservable.add(() => { for (const a of this.avatars.values()) a.character?.restoreLean(); });
+    scene.onBeforeAnimationsObservable.add(() => { for (const a of this.avatars.values()) { a.weapon?.restore(); a.character?.restoreLean(); } });
     scene.onAfterAnimationsObservable.add(() => {
-      for (const a of this.avatars.values()) { a.character?.applyLean(); this.presentation(a, this.dt); }
+      for (const a of this.avatars.values()) { a.character?.applyLean(); if (!a.death) a.weapon?.update(); this.presentation(a, this.dt); }
       this.silhouettes?.update(this.outlinesEnabled && this.presenting);
     });
   }
-  prepare(signal?: AbortSignal): Promise<void> { return this.characters.load(CHARACTER_ASSET, signal); }
+  async prepare(signal?: AbortSignal): Promise<void> {
+    await Promise.all([this.characters.load(signal), ...(['rifle', 'smg', 'shotgun', 'sniper'] as WeaponId[])
+      .map((id) => this.weapons.load(id, signal).catch((error) => { if (signal?.aborted) throw error; console.warn('[crossfire] Remote weapon:', error); }))]);
+  }
   prepareVisibility(): void {
     this.visibilityWorld = VisibilityWorld.fromMeshes(this.scene.meshes);
     this.silhouettes ??= new PlayerSilhouettes(this.scene, this.scene.activeCamera!);
@@ -54,9 +66,27 @@ export class RemotePlayers {
   silhouetteInterior() { return this.silhouettes?.interiorPixels() ?? Promise.resolve([]); }
   visibilityStats() { return this.visibilityWorld?.inspect() ?? null; }
   setPresentationVisible(visible: boolean): void { this.presenting = visible; this.labels.hidden = !visible; }
+  setSpectated(id: string | null): void {
+    if (this.spectatedId === id) return;
+    this.spectatedId = id;
+    for (const [playerId, a] of this.avatars) {
+      a.root.setEnabled(playerId !== id);
+      if (playerId === id) { a.label.hidden = true; this.silhouettes?.remove(a.meshes); }
+    }
+  }
+  spectatePose(id: string): { position: Vector3; rotation: Quaternion } | null {
+    const a = this.avatars.get(id);
+    if (!a || a.death || !a.samples.length) return null;
+    const crouch = Math.max(0, Math.min(1, (1.8 - a.height) / .65));
+    const offset = leanOffset(a.root.rotation.y, a.lean);
+    return { position: new Vector3(a.root.position.x + offset.x,
+      a.root.position.y + MOVEMENT.standEye + (MOVEMENT.crouchEye - MOVEMENT.standEye) * crouch,
+      a.root.position.z + offset.z),
+      rotation: Quaternion.RotationYawPitchRoll(a.root.rotation.y, a.look.rotation.x, -a.lean * LEAN_ANGLE) };
+  }
   setOutlinesEnabled(enabled: boolean): void { this.outlinesEnabled = enabled; }
   private remove(a: Avatar): void {
-    this.silhouettes?.remove(a.meshes); a.character?.dispose(); a.root.dispose(); a.label.remove();
+    this.silhouettes?.remove(a.meshes); a.weapon?.dispose(); a.character?.dispose(); a.root.dispose(); a.label.remove();
     for (const material of a.death?.materials ?? []) material.dispose(false, false);
     for (const texture of a.death?.textures ?? []) texture.dispose();
   }
@@ -65,7 +95,7 @@ export class RemotePlayers {
     if (!a || a.life !== event.victimLife || a.death) return;
     const materials = new Map<Material, Material>();
     const textures = new Set<BaseTexture>();
-    for (const mesh of a.meshes) if (mesh.material) {
+    for (const mesh of [...a.meshes, ...(a.weapon?.meshes ?? [])]) if (mesh.material) {
       const source = mesh.material;
       let copy = materials.get(source);
       if (!copy) {
@@ -112,8 +142,13 @@ export class RemotePlayers {
         label.className = 'remote-player-label'; label.dataset.playerId = player.id; label.hidden = true;
         this.labels.append(label);
         a = { root, look, samples: [], seen: performance.now(), label, character,
-          meshes, friendly: false, visible: false, clearFor: 0, height: 1.8, lean: 0, life: player.life };
+          meshes, weapon: null, friendly: false, visible: false, clearFor: 0, height: 1.8, lean: 0, life: player.life };
         this.avatars.set(player.id, a);
+        root.setEnabled(player.id !== this.spectatedId);
+      }
+      if (a.weapon?.id !== player.weapon) {
+        a.weapon?.dispose();
+        a.weapon = player.weapon && a.character ? this.weapons.create(a.character, player.weapon) : null;
       }
       a.friendly = teammates(s.match.mode, self?.team ?? null, player.team);
       if (a.label.textContent !== player.name) a.label.textContent = player.name;
@@ -147,6 +182,8 @@ export class RemotePlayers {
         m.position.z + (n.position.z - m.position.z) * k);
       a.root.rotation.y = m.yaw + Math.atan2(Math.sin(n.yaw - m.yaw), Math.cos(n.yaw - m.yaw)) * k;
       a.look.rotation.x = m.pitch + (n.pitch - m.pitch) * k;
+      const ads = (older.player.combat.gun?.ads ?? 0) + ((newer.player.combat.gun?.ads ?? 0) - (older.player.combat.gun?.ads ?? 0)) * k;
+      a.weapon?.setPose(a.look.rotation.x, ads);
       const crouch = m.crouch + (n.crouch - m.crouch) * k;
       a.lean = m.lean + (n.lean - m.lean) * k;
       a.character?.setLean(a.lean);
@@ -164,7 +201,7 @@ export class RemotePlayers {
     }
   }
   private presentation(a: Avatar, dt: number): void {
-    if (a.death) { a.label.hidden = true; return; }
+    if (a.death || !a.root.isEnabled()) { a.label.hidden = true; return; }
     const cam = this.scene.activeCamera;
     if (!cam) return;
     cam.computeWorldMatrix();
@@ -216,7 +253,7 @@ export class RemotePlayers {
       labelVisible: !a.label.hidden && !this.labels.hidden, outline: !a.death && a.visible && (this.silhouettes?.has(a.meshes) ?? false),
       death: a.death ? { elapsed: a.death.elapsed, ...deathPose(a.death.elapsed, a.death.direction),
         alpha: a.meshes[0].material?.alpha, rotation: a.root.rotationQuaternion?.asArray() } : null,
-      source: a.character ? 'glb' : 'placeholder', animation: a.character?.inspect() ?? null,
+      source: a.character ? 'glb' : 'placeholder', animation: a.character?.inspect() ?? null, weapon: a.weapon?.inspect() ?? null,
       health: a.samples.at(-1)?.player.health ?? 0 }));
   }
   clear(): void {

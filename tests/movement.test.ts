@@ -16,6 +16,34 @@ function run(p: PlayerController, seconds: number, intent: Partial<MoveIntent> =
 }
 
 describe('PlayerController basics', () => {
+  it.each([0, .1, .5, .9])('jump cancels slide at %s seconds without losing horizontal momentum', (elapsed) => {
+    const p = new PlayerController(flatWorld()); p.teleport({ x: 0, y: 0, z: 0 });
+    run(p, .25, { z: 1 });
+    p.fixedUpdate(FIXED_DT, { ...NO_INTENT, z: 1, slide: true });
+    run(p, elapsed, { z: 1, slide: true });
+    const before = p.horizontalSpeed;
+    p.fixedUpdate(FIXED_DT, { ...NO_INTENT, z: 1, slide: true, jumpPressed: true });
+    expect(p.sliding).toBe(false); expect(p.grounded).toBe(false);
+    expect(p.velocity.y).toBeGreaterThan(0); expect(p.slideCooldown).toBe(MOVEMENT.slideCooldown);
+    expect(p.horizontalSpeed).toBeGreaterThan(before - .05);
+    run(p, .2, { z: 1, slide: true });
+    expect(p.horizontalSpeed).toBeLessThanOrEqual(MOVEMENT.slideSpeed + .01);
+    expect(p.slideCooldown).toBeGreaterThan(.7);
+  });
+  it('can cancel a slide after leaving an edge, but cannot jump twice', () => {
+    const w = new CollisionWorld(); w.add({ c: [0, -1, 0], h: [3, 1, 3] });
+    const p = new PlayerController(w); p.teleport({ x: 0, y: 0, z: -2.5 });
+    p.fixedUpdate(FIXED_DT, { ...NO_INTENT, z: 1, slide: true });
+    run(p, .3, { z: 1, slide: true });
+    expect(p.sliding).toBe(true); expect(p.grounded).toBe(false); expect(p.capture().airTime).toBeGreaterThan(MOVEMENT.coyoteTime);
+    const speed = p.horizontalSpeed;
+    p.fixedUpdate(FIXED_DT, { ...NO_INTENT, z: 1, slide: true, jumpPressed: true });
+    expect(p.sliding).toBe(false); expect(p.velocity.y).toBeGreaterThan(0); expect(p.slideCooldown).toBe(1);
+    expect(p.horizontalSpeed).toBeGreaterThan(speed - .05);
+    const vertical = p.velocity.y;
+    p.fixedUpdate(FIXED_DT, { ...NO_INTENT, jumpPressed: true });
+    expect(p.velocity.y).toBeLessThan(vertical);
+  });
   it('settles on the ground', () => {
     const p = new PlayerController(flatWorld());
     p.teleport({ x: 0, y: 2, z: 0 });

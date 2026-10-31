@@ -2,6 +2,7 @@ import { assetUrl } from '../core/assets';
 import type { AudioManager } from '../audio/AudioManager';
 import { SETTING_LIMITS, type Settings, type SettingsStore } from '../config/settings';
 import { SettingsDraft } from '../config/settingsDraft';
+import { BINDABLE_ACTIONS, BINDING_LABELS, DEFAULT_BINDINGS, bindingConflict, bindingName, defaultBindings, supportedBinding, type BindableAction } from '../config/keybindings';
 import type { GuestProfileStore } from '../config/guestProfile';
 import { normalizeUsername } from '../../shared/username';
 import { Dropdown } from './Dropdown';
@@ -10,8 +11,10 @@ import { CROSSFIRE_LOGO } from './WeaponIcons';
 import { validWeapon } from '../../shared/protocol';
 import type { WeaponId } from '../weapons/Weapon';
 import { DamageFeedback } from './DamageFeedback';
+import { CombatFeed } from './CombatFeed';
+import { weaponIcon } from './WeaponIcons';
 
-export type Screen = 'menu' | 'loading' | 'start' | 'weapons' | 'hud' | 'pause' | 'settings' | 'error';
+export type Screen = 'menu' | 'loading' | 'start' | 'spectate' | 'weapons' | 'hud' | 'pause' | 'settings' | 'error';
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, html?: string): HTMLElementTagNameMap[K] {
   const e = document.createElement(tag);
@@ -70,12 +73,21 @@ export class UI {
   onResume: () => void = () => {};
   onQuit: () => void = () => {};
   onCancelLoading: () => void = () => {};
+  onChatSend: (text: string) => boolean = () => false;
+  onChatClose: () => void = () => {};
+  chatOpen = false;
+  private chatBox!: HTMLElement;
+  private chatLog!: HTMLElement;
+  private chatInput!: HTMLInputElement;
+  private chatFeed!: HTMLElement;
+  private chatHint!: HTMLElement;
 
   // HUD elements
   private crosshair!: HTMLElement;
   private hitmarker!: HTMLElement;
   private healthValue!: HTMLElement;
   private healthBar!: HTMLElement;
+  private slideLines!: HTMLElement;
   private ammoBox!: HTMLElement;
   private ammoValue!: HTMLElement;
   private ammoReserve!: HTMLElement;
@@ -103,6 +115,15 @@ export class UI {
   private selectedName!: HTMLElement;
   private selectedPreview!: HTMLImageElement;
   private spawnButton!: HTMLButtonElement;
+  private respawnButton!: HTMLButtonElement;
+  private spectateBy!: HTMLElement;
+  private spectateName!: HTMLElement;
+  private spectateWeapon!: HTMLElement;
+  private spectateError!: HTMLElement;
+  private spectateKiller: string | null | undefined;
+  private spectateConnectionLost = false;
+  private spectateBusy = false;
+  private weaponSelectionReturn: 'start' | 'spectate' = 'start';
   private spawnError!: HTMLElement;
   private pendingWeapon: WeaponId = 'rifle';
   private readonly previews = new Map<WeaponId, string>();
@@ -111,6 +132,7 @@ export class UI {
   currentScreen: Screen = 'menu';
   readonly scoreboard: Scoreboard;
   readonly damage: DamageFeedback;
+  readonly combatFeed: CombatFeed;
 
   constructor(
     private readonly root: HTMLElement,
@@ -125,13 +147,16 @@ export class UI {
     try { const saved = localStorage.getItem('crossfire.pending-weapon'); if (validWeapon(saved)) this.pendingWeapon = saved; } catch { /* Optional preference. */ }
     this.buildStart();
     this.buildWeapons();
+    this.buildSpectate();
     this.buildHud();
+    this.setChatBinding(settings.value.keyBindings.chat[0]);
     this.buildPause();
     this.buildSettings();
     this.buildError();
     this.buildGuestPrompt();
     this.scoreboard = new Scoreboard(root);
     this.damage = new DamageFeedback(root);
+    this.combatFeed = new CombatFeed(root);
   }
 
   private screen(id: Screen, cls = ''): HTMLElement {
@@ -279,7 +304,7 @@ export class UI {
   private buildStart(): void {
     const s = this.screen('start');
     const card = el('div', 'prespawn');
-    card.appendChild(this.button('Switch Gun', '', '', () => this.show('weapons')));
+    card.appendChild(this.button('Switch Gun', '', '', () => { this.weaponSelectionReturn = 'start'; this.show('weapons'); }));
     this.selectedPreview = el('img', 'selected-preview');
     this.selectedPreview.alt = '';
     this.selectedPreview.hidden = true;
@@ -297,14 +322,14 @@ export class UI {
     const s = this.screen('weapons');
     s.setAttribute('aria-label', 'Select weapon');
     const head = el('div', 'weapon-select-head');
-    head.append(el('h2', '', 'Loadout'), this.button('Back', '', 'weapon-back', () => this.show('start')));
+    head.append(el('h2', '', 'Loadout'), this.button('Back', '', 'weapon-back', () => this.show(this.weaponSelectionReturn)));
     const grid = el('div', 'weapon-grid');
     for (const id of ['smg', 'rifle', 'sniper', 'shotgun'] as const) {
       const card = this.button(this.labels[id], '', 'weapon-card', () => {
         this.pendingWeapon = id;
         try { localStorage.setItem('crossfire.pending-weapon', id); } catch { /* Optional preference. */ }
         this.refreshSelection();
-        this.show('start');
+        this.show(this.weaponSelectionReturn);
       });
       card.dataset.weapon = id;
       this.weaponCards.set(id, card);
@@ -318,6 +343,7 @@ export class UI {
   get spawnPending(): boolean { return this.spawnButton.disabled; }
 
   private refreshSelection(): void {
+    if (this.spectateWeapon) this.spectateWeapon.innerHTML = `<span>${this.labels[this.pendingWeapon]}</span>${weaponIcon(this.pendingWeapon)}`;
     this.selectedName.textContent = this.labels[this.pendingWeapon];
     const url = this.previews.get(this.pendingWeapon);
     this.selectedPreview.hidden = !url;
@@ -326,6 +352,43 @@ export class UI {
       card.classList.toggle('selected', id === this.pendingWeapon);
       card.setAttribute('aria-pressed', String(id === this.pendingWeapon));
     }
+  }
+
+  private buildSpectate(): void {
+    const s = this.screen('spectate');
+    this.spectateBy = el('div', 'spectate-by');
+    const bottom = el('div', 'spectate-bottom');
+    this.spectateName = el('div', 'spectate-name');
+    this.respawnButton = this.button('RESPAWN', '', 'primary respawn-button', () => this.onStart());
+    this.respawnButton.disabled = true;
+    this.spectateError = el('div', 'spectate-error'); this.spectateError.setAttribute('role', 'status');
+    bottom.append(this.spectateName, this.respawnButton, this.spectateError);
+    const controls = el('div', 'spectate-controls');
+    this.spectateWeapon = el('div', 'spectate-weapon');
+    controls.append(this.spectateWeapon,
+      this.button('SWITCH WEAPON', '', '', () => { this.weaponSelectionReturn = 'spectate'; this.show('weapons'); }),
+      this.button('SETTINGS', '', '', () => this.openSettings('spectate')),
+      this.button('LEAVE MATCH', '', '', () => this.onQuit()));
+    s.append(this.spectateBy, bottom, controls);
+    this.refreshSelection();
+  }
+
+  setSpectate(name: string | null, remainingMs: number, connected: boolean): void {
+    if (name !== this.spectateKiller) {
+      this.spectateKiller = name;
+      const heading = el('strong'); heading.textContent = 'ELIMINATED BY';
+      const player = el('span'); player.textContent = name ?? 'Environment';
+      this.spectateBy.replaceChildren(heading, player);
+      this.spectateName.textContent = name ? `Spectating: ${name}` : 'Spectating: unavailable';
+    }
+    if (!connected) { this.spectateConnectionLost = true; this.spectateError.textContent = 'Reconnecting…'; }
+    else if (this.spectateConnectionLost) { this.spectateConnectionLost = false; this.spectateError.textContent = ''; }
+    this.respawnButton.disabled = !connected || this.spectateBusy || remainingMs > 0;
+    this.respawnButton.firstElementChild!.textContent = remainingMs > 0 ? `RESPAWN  ${Math.ceil(remainingMs / 1000)}` : 'RESPAWN';
+  }
+  setRespawnBusy(busy: boolean, error = ''): void {
+    this.spectateBusy = busy; this.spectateError.textContent = error;
+    if (busy) this.respawnButton.disabled = true;
   }
 
   setWeaponPreview(id: WeaponId, url: string): void {
@@ -353,6 +416,9 @@ export class UI {
 
   private buildHud(): void {
     const s = this.screen('hud');
+    this.slideLines = el('div', 'slide-lines');
+    this.slideLines.setAttribute('aria-hidden', 'true');
+    s.appendChild(this.slideLines);
     const ch = el('div', 'crosshair', '<i class="h l"></i><i class="h r"></i><i class="v t"></i><i class="v b"></i><i class="dot"></i>');
     this.crosshair = ch;
     s.appendChild(ch);
@@ -403,6 +469,24 @@ export class UI {
     s.appendChild(this.toast);
     this.lockHint = el('div', 'lock-hint', 'Click to capture the mouse');
     s.appendChild(this.lockHint);
+    this.chatHint = el('div', 'chat-hint');
+    this.chatFeed = el('div', 'chat-feed');
+    this.chatFeed.setAttribute('aria-live', 'polite');
+    s.append(this.chatHint, this.chatFeed);
+    this.chatBox = el('div', 'match-chat'); this.chatBox.hidden = true;
+    this.chatLog = el('div', 'chat-log'); this.chatLog.setAttribute('aria-live', 'polite');
+    const form = el('form', 'chat-form');
+    this.chatInput = el('input'); this.chatInput.maxLength = 200; this.chatInput.placeholder = 'Message';
+    this.chatInput.setAttribute('aria-label', 'Chat message'); this.chatInput.autocomplete = 'off';
+    form.appendChild(this.chatInput);
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const text = this.chatInput.value.trim();
+      if (text && !this.onChatSend(text)) { this.showToast('Chat is not connected', 'warn'); return; }
+      this.closeChat();
+    });
+    this.chatInput.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); this.closeChat(); } });
+    this.chatBox.append(this.chatLog, form); s.appendChild(this.chatBox);
 
   }
 
@@ -453,6 +537,8 @@ export class UI {
   private dirtyPill!: HTMLElement;
   private settingsStatus!: HTMLElement;
   private statusTimer = 0;
+  private rebinding: BindableAction | null = null;
+  private suppressBindingClick = false;
 
   /** Open the settings screen from the main menu or the pause menu; edits start from the applied settings. */
   private openSettings(from: Screen): void {
@@ -469,6 +555,7 @@ export class UI {
 
   /** Back: drop every unapplied edit and return to where settings were opened from. */
   private closeSettings(): void {
+    this.rebinding = null;
     this.draft.discard();
     this.usernameDraft = this.profile.value.username;
     this.usernameInput.setCustomValidity('');
@@ -575,6 +662,7 @@ export class UI {
         panel.appendChild(row);
         this.settingRows.set(key, row);
       }
+      if (c.key === 'gameplay') panel.appendChild(this.buildControls());
       const index = this.settingTabs.length;
       tab.addEventListener('click', () => this.selectSettingsTab(index, false));
       tab.addEventListener('keydown', (e) => {
@@ -588,7 +676,7 @@ export class UI {
       });
       tabs.appendChild(tab);
       panels.appendChild(panel);
-      this.settingTabs.push({ key: c.key, tab, panel, keys: c.rows.map(([k]) => k) });
+      this.settingTabs.push({ key: c.key, tab, panel, keys: [...c.rows.map(([k]) => k), ...(c.key === 'gameplay' ? ['keyBindings' as const] : [])] });
     }
 
     const foot = el('div', 'settings-foot');
@@ -618,6 +706,63 @@ export class UI {
     });
     this.selectSettingsTab(0, false);
     this.syncSettings();
+  }
+
+  private buildControls(): HTMLElement {
+    const section = el('div', 'control-settings');
+    section.appendChild(el('h3', '', 'Controls'));
+    const finish = (code: string) => {
+      const action = this.rebinding;
+      if (!action) return;
+      if (code === 'Escape') { this.rebinding = null; this.syncSettings(); return; }
+      if (!supportedBinding(code)) { this.setSettingsStatus('That key cannot be used. Press another key or Escape.'); return; }
+      const conflict = bindingConflict(this.draft.value.keyBindings, action, [code]);
+      if (conflict) { this.setSettingsStatus(`${bindingName(code)} is already used by ${BINDING_LABELS[conflict]}.`); return; }
+      this.draft.set('keyBindings', { ...this.draft.value.keyBindings, [action]: [code] });
+      this.rebinding = null;
+      this.setSettingsStatus('');
+      this.syncSettings();
+    };
+    window.addEventListener('keydown', (e) => {
+      if (!this.rebinding || this.currentScreen !== 'settings') return;
+      e.preventDefault(); e.stopImmediatePropagation();
+      if (!e.repeat) finish(e.code);
+    }, true);
+    window.addEventListener('mousedown', (e) => {
+      if (!this.rebinding || this.currentScreen !== 'settings') return;
+      e.preventDefault(); e.stopImmediatePropagation();
+      // Only a primary mouse down is followed by a normal click. Do not block
+      // the player's next intentional click after binding another button.
+      this.suppressBindingClick = e.button === 0;
+      if (this.suppressBindingClick) window.setTimeout(() => { this.suppressBindingClick = false; }, 500);
+      finish(`Mouse${e.button}`);
+    }, true);
+    window.addEventListener('click', (e) => {
+      if (!this.suppressBindingClick) return;
+      this.suppressBindingClick = false; e.preventDefault(); e.stopImmediatePropagation();
+    }, true);
+    for (const action of BINDABLE_ACTIONS) {
+      const row = el('div', 'control-row');
+      const label = el('span', '', BINDING_LABELS[action]);
+      const bind = el('button', 'control-bind'); bind.type = 'button';
+      bind.setAttribute('aria-label', `Rebind ${BINDING_LABELS[action]}`);
+      bind.addEventListener('click', () => { this.rebinding = action; this.setSettingsStatus('Press a key or mouse button. Escape cancels.'); this.syncSettings(); });
+      const reset = el('button', 'control-reset', 'Reset'); reset.type = 'button';
+      reset.setAttribute('aria-label', `Reset ${BINDING_LABELS[action]}`);
+      reset.addEventListener('click', () => {
+        const codes = [...DEFAULT_BINDINGS[action]];
+        const conflict = bindingConflict(this.draft.value.keyBindings, action, codes);
+        if (conflict) { this.setSettingsStatus(`Reset conflicts with ${BINDING_LABELS[conflict]}. Reset that control first.`); return; }
+        this.draft.set('keyBindings', { ...this.draft.value.keyBindings, [action]: codes });
+        this.syncSettings();
+      });
+      this.settingSyncs.push(() => { bind.textContent = this.rebinding === action ? 'Press a key' : this.draft.value.keyBindings[action].map(bindingName).join(' / '); });
+      row.append(label, bind, reset); section.appendChild(row);
+    }
+    const resetAll = el('button', 'control-reset-all', 'Reset controls'); resetAll.type = 'button';
+    resetAll.addEventListener('click', () => { this.rebinding = null; this.draft.set('keyBindings', defaultBindings()); this.syncSettings(); });
+    section.appendChild(resetAll);
+    return section;
   }
 
   private selectSettingsTab(index: number, focus: boolean): void {
@@ -741,7 +886,14 @@ export class UI {
 
   // ---------------------------------------------------------------------------------------------
   show(screen: Screen, overlayHud = false): void {
-    if (screen === 'menu' || screen === 'loading' || screen === 'error') this.damage?.clear();
+    if (screen !== 'hud') {
+      this.setSlideEffect(false, 0, 0);
+      this.chatOpen = false; this.chatBox.hidden = true; this.chatInput.blur();
+    }
+    if (screen === 'menu' || screen === 'loading' || screen === 'error') {
+      this.damage?.clear();
+      this.chatLog.replaceChildren(); this.chatFeed.replaceChildren();
+    }
     this.currentScreen = screen;
     document.body.dataset.screen = screen;
     const homeSettings = screen === 'settings' && this.settingsReturn === 'menu';
@@ -768,6 +920,31 @@ export class UI {
     this.mapTitle.innerHTML = `${name}<small>${sub}</small>`;
   }
 
+  openChat(): void { this.chatOpen = true; this.chatBox.hidden = false; this.chatInput.value = ''; this.chatInput.focus(); }
+  setChatBinding(code: string): void {
+    const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    icon.setAttribute('viewBox', '0 0 20 20'); icon.setAttribute('aria-hidden', 'true');
+    const outline = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    outline.setAttribute('d', 'M3 3.5h14v10H9l-4 3v-3H3z');
+    icon.appendChild(outline);
+    this.chatHint.replaceChildren(icon, document.createTextNode(`Press ${bindingName(code)} to Chat`));
+  }
+  closeChat(): void {
+    if (!this.chatOpen) return;
+    this.chatOpen = false; this.chatBox.hidden = true; this.chatInput.blur(); this.onChatClose();
+  }
+  addChat(name: string, text: string): void {
+    const line = el('div'); const sender = el('strong'); sender.textContent = `${name}: `;
+    line.append(sender, document.createTextNode(text)); this.chatLog.appendChild(line);
+    while (this.chatLog.childElementCount > 30) this.chatLog.firstElementChild?.remove();
+    this.chatLog.scrollTop = this.chatLog.scrollHeight;
+    const recent = line.cloneNode(true) as HTMLElement;
+    recent.className = 'chat-feed-message';
+    this.chatFeed.appendChild(recent);
+    while (this.chatFeed.childElementCount > 5) this.chatFeed.firstElementChild?.remove();
+    window.setTimeout(() => recent.remove(), 10000);
+  }
+
   setWeaponName(name: string): void {
     this.weaponName.textContent = name;
   }
@@ -775,6 +952,13 @@ export class UI {
   setHealth(hp: number, max: number): void {
     this.healthValue.textContent = String(Math.ceil(hp));
     this.healthBar.style.width = `${Math.max(0, (hp / max) * 100)}%`;
+  }
+
+  setSlideEffect(sliding: boolean, speed: number, remaining: number): void {
+    const start = Math.max(0, Math.min(1, (remaining - .75) / .25));
+    const strength = sliding ? Math.min(.55, (.18 + .22 * Math.min(1, speed / 8)) * (1 + .32 * start)) : 0;
+    this.slideLines.style.setProperty('--slide-strength', String(strength));
+    this.slideLines.classList.toggle('active', sliding);
   }
 
   /** The weapon slots strip: names in slot order, the one in hand highlighted. */

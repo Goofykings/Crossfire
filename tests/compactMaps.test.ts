@@ -64,9 +64,15 @@ describe.each(MAP_IDS)('%s compact routes', (id) => {
       const dz=Math.min(a.rect[3],b.rect[3])-Math.max(a.rect[1],b.rect[1]);
       return dx>=-.01&&dz>=-.01&&Math.max(dx,dz)>=.8?[j]:[];
     }));
+    const connected=new Set<number>(), pending=[0];
+    while(pending.length){const i=pending.pop()!;if(connected.has(i))continue;connected.add(i);pending.push(...adjacent[i]);}
+    expect(connected.size,'isolated route regions').toBe(routes.length);
     for(let i=0;i<routes.length;i++) {
       const a=routes[i], size=Math.max(a.rect[2]-a.rect[0],a.rect[3]-a.rect[1]);
-      if(!['street','alley','interior','room'].includes(a.kind)||size<4)continue;
+      if(size<2)continue;
+      // An arcade entirely inside one street is a covered section of that
+      // street, not a separate branch. Its two ends share the same node.
+      if(routes.some((b,j)=>j!==i&&b.rect[0]<=a.rect[0]&&b.rect[1]<=a.rect[1]&&b.rect[2]>=a.rect[2]&&b.rect[3]>=a.rect[3]))continue;
       const exits=adjacent[i];
       expect(exits.length,`dead end ${a.id}`).toBeGreaterThanOrEqual(2);
       const seen=new Set<number>([i]), queue=[exits[0]];

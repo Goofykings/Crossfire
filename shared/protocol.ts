@@ -3,7 +3,7 @@ import type { MoveIntent, ControllerState, Vec3 } from '../src/player/PlayerCont
 import type { WeaponId, WeaponState } from '../src/weapons/Weapon';
 import type { CombatIntent } from './combat';
 
-export const PROTOCOL_VERSION = 7;
+export const PROTOCOL_VERSION = 9;
 export const validWeapon = (x: unknown): x is WeaponId => x === 'rifle' || x === 'shotgun' || x === 'sniper' || x === 'smg';
 export const PUBLIC_ROOM = 'public-main';
 export const INPUT_BATCH_LIMIT = 12;
@@ -11,6 +11,7 @@ export const MESSAGE_LIMIT = 8192;
 export const NETWORK_HZ = 20;
 export const SESSION_GRACE_MS = 15000;
 export const HEARTBEAT_TIMEOUT_MS = 10000;
+export const RESPAWN_DELAY_MS = 3000;
 
 export interface InputFrame {
   seq: number;
@@ -28,6 +29,7 @@ export interface Elimination {
   id: string; victimLife: number; direction: Vec3 | null;
   roundId: number; victimId: string; victimName: string; killerId: string | null;
   killerName: string | null; weapon: WeaponId | null; head: boolean;
+  at: number; respawnAt: number; killerTeam: 'blue' | 'red' | null; victimTeam: 'blue' | 'red' | null;
 }
 export interface PlayerState {
   id: string;
@@ -42,6 +44,8 @@ export interface PlayerState {
   kills: number;
   deaths: number;
   team: 'blue' | 'red' | null;
+  /** Last server-confirmed elimination for this life, retained across reconnects. */
+  death: Elimination | null;
 }
 export interface Snapshot {
   room: typeof PUBLIC_ROOM;
@@ -53,26 +57,38 @@ export interface Snapshot {
   match: { mode: 'ffa' | 'teams' | null; endsAt: number | null; teamScores: { blue: number; red: number } | null };
 }
 export type ClientMessage =
-  | { v: 7; type: 'join'; name: string; resumeToken?: string }
-  | { v: 7; type: 'spawn'; roundId: number; mapVersion: string; weapon: WeaponId; requestId: string }
-  | { v: 7; type: 'input'; roundId: number; mapVersion: string; frames: InputFrame[] }
-  | { v: 7; type: 'ping'; at: number }
-  | { v: 7; type: 'leave' };
+  | { v: 9; type: 'join'; name: string; resumeToken?: string }
+  | { v: 9; type: 'spawn'; roundId: number; mapVersion: string; weapon: WeaponId; requestId: string }
+  | { v: 9; type: 'input'; roundId: number; mapVersion: string; frames: InputFrame[] }
+  | { v: 9; type: 'ping'; at: number }
+  | { v: 9; type: 'chat'; text: string }
+  | { v: 9; type: 'leave' };
 export type ServerMessage =
-  | { v: 7; type: 'shot'; shot: ShotResult }
-  | { v: 7; type: 'elimination'; elimination: Elimination }
-  | { v: 7; type: 'welcome'; selfId: string; resumeToken: string; resumed: boolean; snapshot: Snapshot }
-  | { v: 7; type: 'spawned'; requestId: string; snapshot: Snapshot }
-  | { v: 7; type: 'snapshot'; snapshot: Snapshot }
-  | { v: 7; type: 'left'; id: string }
-  | { v: 7; type: 'pong'; at: number; serverTime: number }
-  | { v: 7; type: 'error'; code: string; message: string; fatal: boolean };
+  | { v: 9; type: 'chat'; id: string; name: string; text: string }
+  | { v: 9; type: 'shot'; shot: ShotResult }
+  | { v: 9; type: 'elimination'; elimination: Elimination }
+  | { v: 9; type: 'welcome'; selfId: string; resumeToken: string; resumed: boolean; snapshot: Snapshot }
+  | { v: 9; type: 'spawned'; requestId: string; snapshot: Snapshot }
+  | { v: 9; type: 'snapshot'; snapshot: Snapshot }
+  | { v: 9; type: 'left'; id: string }
+  | { v: 9; type: 'pong'; at: number; serverTime: number }
+  | { v: 9; type: 'error'; code: string; message: string; fatal: boolean };
 
 const record = (x: unknown): x is Record<string, unknown> => !!x && typeof x === 'object' && !Array.isArray(x);
 const finite = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x);
 const direction = (x: unknown): boolean => record(x) && keys(x, ['x', 'y', 'z'])
   && finite(x.x) && finite(x.y) && finite(x.z) && Math.abs(Math.hypot(x.x, x.y, x.z) - 1) < .001;
 const keys = (x: Record<string, unknown>, allowed: string[]) => Object.keys(x).every((k) => allowed.includes(k));
+const team = (x: unknown) => x === null || x === 'blue' || x === 'red';
+export function validElimination(e: unknown): e is Elimination {
+  return record(e) && typeof e.id === 'string' && e.id.length > 0 && e.id.length <= 64
+    && Number.isSafeInteger(e.victimLife) && (e.victimLife as number) > 0 && (e.direction === null || direction(e.direction))
+    && Number.isSafeInteger(e.roundId) && (e.roundId as number) >= 0 && typeof e.victimId === 'string' && typeof e.victimName === 'string'
+    && (e.killerId === null || typeof e.killerId === 'string') && (e.killerName === null || typeof e.killerName === 'string')
+    && (e.weapon === null || validWeapon(e.weapon)) && typeof e.head === 'boolean'
+    && Number.isSafeInteger(e.at) && (e.at as number) >= 0 && e.respawnAt === (e.at as number) + RESPAWN_DELAY_MS
+    && team(e.killerTeam) && team(e.victimTeam);
+}
 
 export function validFrame(x: unknown): x is InputFrame {
   if (!record(x) || !keys(x, ['seq', 'yaw', 'pitch', 'intent', 'combat'])) return false;
@@ -107,6 +123,8 @@ export function parseClientMessage(text: string): ClientMessage | null {
       && x.mapVersion.length <= 64 && Array.isArray(x.frames) && x.frames.length > 0 && x.frames.length <= INPUT_BATCH_LIMIT
       && x.frames.every(validFrame) ? x as unknown as ClientMessage : null;
     case 'ping': return keys(x, ['v', 'type', 'at']) && finite(x.at) ? x as unknown as ClientMessage : null;
+    case 'chat': return keys(x, ['v', 'type', 'text']) && typeof x.text === 'string' && x.text.length > 0 && x.text.length <= 200
+      && !/[\u0000-\u001f\u007f]/.test(x.text) && !!x.text.trim() ? x as unknown as ClientMessage : null;
     case 'leave': return keys(x, ['v', 'type']) ? x as unknown as ClientMessage : null;
     default: return null;
   }
@@ -140,6 +158,9 @@ export function parseServerMessage(text: string): ServerMessage | null {
   let x: unknown;
   try { x = JSON.parse(text); } catch { return null; }
   if (!record(x) || x.v !== PROTOCOL_VERSION) return null;
+  if (x.type === 'chat') return keys(x, ['v', 'type', 'id', 'name', 'text']) && typeof x.id === 'string' && x.id.length <= 64
+    && typeof x.name === 'string' && x.name.length <= 24 && typeof x.text === 'string' && x.text.length > 0 && x.text.length <= 200
+    && !/[\u0000-\u001f\u007f]/.test(x.text) ? x as unknown as ServerMessage : null;
   if (x.type === 'shot') {
     const s = x.shot;
     return record(s) && typeof s.id === 'string' && typeof s.shooterId === 'string' && validWeapon(s.weapon)
@@ -150,12 +171,7 @@ export function parseServerMessage(text: string): ServerMessage | null {
       ? x as unknown as ServerMessage : null;
   }
   if (x.type === 'elimination') {
-    const e = x.elimination;
-    return record(e) && typeof e.id === 'string' && Number.isSafeInteger(e.victimLife) && (e.victimLife as number) > 0
-      && (e.direction === null || direction(e.direction))
-      && Number.isSafeInteger(e.roundId) && typeof e.victimId === 'string' && typeof e.victimName === 'string'
-      && (e.killerId === null || typeof e.killerId === 'string') && (e.killerName === null || typeof e.killerName === 'string')
-      && (e.weapon === null || validWeapon(e.weapon)) && typeof e.head === 'boolean' ? x as unknown as ServerMessage : null;
+    return validElimination(x.elimination) ? x as unknown as ServerMessage : null;
   }
   if (x.type === 'left' && typeof x.id === 'string') return x as unknown as ServerMessage;
   if (x.type === 'pong' && finite(x.at) && finite(x.serverTime)) return x as unknown as ServerMessage;
@@ -174,7 +190,8 @@ export function parseServerMessage(text: string): ServerMessage | null {
       && (p.combat.gun === null ? !p.alive : validGun(p.combat.gun))
       && (p.weapon === null || validWeapon(p.weapon)) && (!p.alive || p.weapon !== null)
       && Number.isSafeInteger(p.kills) && (p.kills as number) >= 0 && Number.isSafeInteger(p.deaths) && (p.deaths as number) >= 0
-      && (p.team === null || p.team === 'blue' || p.team === 'red'))) return null;
+      && team(p.team) && (p.death === null || (validElimination(p.death) && !p.alive && p.death.victimId === p.id
+        && p.death.victimLife === p.life && p.death.roundId <= (s.roundId as number))))) return null;
   const m = s.match;
   if (!record(m) || ![null, 'ffa', 'teams'].includes(m.mode as null | string) || !(m.endsAt === null || finite(m.endsAt))
     || !(m.teamScores === null || (record(m.teamScores) && ['blue', 'red'].every((k) => Number.isSafeInteger((m.teamScores as Record<string, unknown>)[k])

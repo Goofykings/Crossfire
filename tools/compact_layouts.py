@@ -25,6 +25,9 @@ def town(A):
         ('shop_plaza','street',[-10,-8,-6,-2]), ('west_gate','passage',[-20,-12,-18,-9]),
         ('market_court','court',[9,-16,18,-8]), ('market_north','passage',[10,-18,14,-16]),
         ('market_east','street',[18,-12,20,-8]), ('market_plaza','street',[6,-8,10,1]),
+        # A real shop interior links the north approach to the market without
+        # forcing both approaches through the exposed plaza or perimeter road.
+        ('market_room','room',[4,-15,9,-12]),
         ('garden','court',[-17,10,-11,16]), ('garden_west','street',[-20,12,-17,16]),
         ('garden_south','street',[-15,16,-11,20]), ('garden_room','room',[-11,11,-4,14]),
         ('garden_north','street',[-16,3,-12,10]),
@@ -56,7 +59,8 @@ def industrial(A):
         ('warehouse_east','alley',[6,14,12,18]), ('warehouse_west','alley',[-14,13,-6,17]),
         ('south_storage','yard',[12,11,21,21]), ('storage_north','alley',[14,7,18,11]),
         ('south_gallery_lane','street',[-19,-4,-13,15]),
-        ('west_goods','yard',[-13,4,-6,10]), ('goods_link','alley',[-8,0,-6,6]),
+        ('west_goods','yard',[-13,4,-6,10]), ('goods_link','alley',[-8,1,-6,6]),
+        ('goods_office','interior',[-13,-3,-6,1]),
         ('west_south_link','alley',[-19,17,-14,21]), ('west_south_court','yard',[-17,13,-11,21]),
         ('north_gate','passage',[-13,-25,-9,-21]),
         ('east_gate','passage',[21,-3,25,1]), ('south_gate','passage',[7,21,11,25]),
@@ -81,6 +85,7 @@ def city(A):
         ('diner_north','alley',[-13,-17,-9,-16]),
         ('diner_west','alley',[-19,-13,-15,-9]),
         ('diner_south','alley',[-11,-10,-7,-2]),
+        ('diner_service','interior',[-7,-9,-2,-6]),
         ('north_court','court',[7,-15,16,-7]),
         ('court_north','passage',[10,-17,14,-15]),
         ('court_east','alley',[16,-12,19,-8]),

@@ -480,6 +480,16 @@
     ]
    },
    {
+    "id": "market_room",
+    "kind": "room",
+    "rect": [
+     4,
+     -15,
+     9,
+     -12
+    ]
+   },
+   {
     "id": "garden_room",
     "kind": "room",
     "rect": [
@@ -906,15 +916,15 @@
   },
   {
    "id": "B15",
-   "type": "plaster3",
+   "type": "room",
    "rect": [
     4,
     -16,
     9,
     -8
    ],
-   "floors": 3,
-   "palette": "plaster_beige",
+   "floors": 2,
+   "palette": "brick_old",
    "seed": 8297,
    "roof": {
     "type": "gable",
@@ -926,6 +936,21 @@
      "side": "e",
      "at": 4.0,
      "width": 1.1
+    }
+   ],
+   "rooms": [
+    {
+     "rect": [
+      4,
+      -15,
+      9,
+      -12
+     ],
+     "clear": 3.0,
+     "doorSides": [
+      "w",
+      "e"
+     ]
     }
    ]
   },
@@ -1206,7 +1231,11 @@
       -4,
       14
      ],
-     "clear": 3.0
+     "clear": 3.0,
+     "doorSides": [
+      "w",
+      "e"
+     ]
     }
    ]
   },
@@ -2059,15 +2088,6 @@
    "heading": 90
   },
   {
-   "type": "barrel_group",
-   "pos": [
-    10.5,
-    0.0,
-    -14
-   ],
-   "heading": 0
-  },
-  {
    "type": "flower_box",
    "pos": [
     -16,
@@ -2082,6 +2102,15 @@
     14,
     0.0,
     -14.5
+   ],
+   "heading": 0
+  },
+  {
+   "type": "market_table",
+   "pos": [
+    16.5,
+    0.0,
+    -15
    ],
    "heading": 0
   },
@@ -2109,51 +2138,6 @@
     -4.8,
     0.0,
     4.8
-   ],
-   "heading": 0
-  },
-  {
-   "type": "street_lantern",
-   "pos": [
-    16.5,
-    0.0,
-    -15
-   ],
-   "heading": 0
-  },
-  {
-   "type": "stool",
-   "pos": [
-    -8.0,
-    0.0,
-    12.15
-   ],
-   "heading": 0
-  },
-  {
-   "type": "stool",
-   "pos": [
-    -7.0,
-    0.0,
-    12.15
-   ],
-   "heading": 0
-  },
-  {
-   "type": "crate_small",
-   "pos": [
-    -10.08,
-    0.0,
-    13.3
-   ],
-   "heading": 0
-  },
-  {
-   "type": "barrel",
-   "pos": [
-    -4.92,
-    0.0,
-    11.38
    ],
    "heading": 0
   },
@@ -3085,6 +3069,16 @@
     ]
    },
    {
+    "id": "market_room",
+    "kind": "room",
+    "rect": [
+     4,
+     -15,
+     9,
+     -12
+    ]
+   },
+   {
     "id": "garden_room",
     "kind": "room",
     "rect": [
@@ -3578,7 +3572,7 @@
     0.0,
     15.5
    ],
-   "heading": 15
+   "heading": 285
   },
   {
    "id": "S11",
@@ -3619,11 +3613,11 @@
   {
    "id": "S15",
    "pos": [
-    3.0,
+    10.5,
     0.0,
-    -15.5
+    -14.5
    ],
-   "heading": 180
+   "heading": 255
   },
   {
    "id": "S16",

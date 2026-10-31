@@ -1,3 +1,4 @@
+import { BINDABLE_ACTIONS, defaultBindings, isTextInput, type BindableAction, type KeyBindings } from '../config/keybindings';
 /**
  * Keyboard/mouse state with pointer-lock handling. Keys use `KeyboardEvent.code` so bindings work on
  * any keyboard layout (WASD stays in the same physical place on AZERTY, etc.).
@@ -18,44 +19,20 @@ export type Action =
   | 'toggleFps'
   | 'debugCollision'
   | 'leaderboard'
+  | 'chat'
   | 'weapon1'
   | 'weapon2'
   | 'weapon3'
+  | 'weapon4'
+  | 'pause'
   | 'lastWeapon'
   | 'nextWeapon'
   | 'prevWeapon';
 
-const KEY_BINDINGS: Record<string, Action> = {
-  KeyW: 'forward',
-  ArrowUp: 'forward',
-  KeyS: 'back',
-  ArrowDown: 'back',
-  KeyA: 'left',
-  ArrowLeft: 'left',
-  KeyD: 'right',
-  ArrowRight: 'right',
-  ShiftLeft: 'slide',
-  ShiftRight: 'slide',
-  Space: 'jump',
-  KeyR: 'reload',
-  Digit1: 'weapon1',
-  Digit2: 'weapon2',
-  Digit3: 'weapon3',
-  Numpad1: 'weapon1',
-  Numpad2: 'weapon2',
-  Numpad3: 'weapon3',
-  KeyQ: 'leanLeft',
-  KeyE: 'leanRight',
-  // held: shows the leaderboard (keydown is prevented while playing, so focus never moves)
-  Tab: 'leaderboard',
-  F3: 'toggleFps',
-  F2: 'debugCollision',
-};
-
-const MOUSE_BINDINGS: Record<number, Action> = { 0: 'fire', 2: 'aim' };
-
 export class Input {
   private readonly down = new Set<Action>();
+  private readonly heldControls = new Set<string>();
+  private bindings: KeyBindings = defaultBindings();
   private readonly pressedEdges = new Set<Action>();
   private mouseDX = 0;
   private mouseDY = 0;
@@ -77,30 +54,32 @@ export class Input {
     };
 
     on(window, 'keydown', (e) => {
-      const action = KEY_BINDINGS[e.code];
+      if (e.defaultPrevented || isTextInput(e.target)) return;
+      const action = this.actionFor(e.code) ?? (e.code === 'F3' ? 'toggleFps' : e.code === 'F2' ? 'debugCollision' : undefined);
       if (!action) return;
       if (this.enabled || action === 'toggleFps') {
         // keep the browser from scrolling / triggering shortcuts while playing
         if (this.enabled) e.preventDefault();
         if (!e.repeat && !this.down.has(action)) this.pressedEdges.add(action);
+        this.heldControls.add(e.code);
         this.down.add(action);
       }
     });
     on(window, 'keyup', (e) => {
-      const action = KEY_BINDINGS[e.code];
-      if (action) this.down.delete(action);
+      this.releaseControl(e.code);
     });
     on(window, 'blur', () => this.clearState());
     on(canvas, 'mousedown', (e) => {
-      const action = MOUSE_BINDINGS[e.button];
+      const code = `Mouse${e.button}`;
+      const action = this.actionFor(code);
       if (!action || !this.enabled) return;
       e.preventDefault();
       if (!this.down.has(action)) this.pressedEdges.add(action);
+      this.heldControls.add(code);
       this.down.add(action);
     });
     on(window, 'mouseup', (e) => {
-      const action = MOUSE_BINDINGS[e.button];
-      if (action) this.down.delete(action);
+      this.releaseControl(`Mouse${e.button}`);
     });
     on(canvas, 'contextmenu', (e) => e.preventDefault());
     // mouse wheel cycles weapons (one step per notch, however large the browser's delta)
@@ -123,13 +102,24 @@ export class Input {
     });
     on(document, 'pointerlockchange', () => {
       this.locked = document.pointerLockElement === this.canvas;
-      if (!this.locked) this.down.clear();
+      if (!this.locked) this.clearState();
       for (const l of this.lockListeners) l(this.locked);
     });
   }
 
   get pointerLocked(): boolean {
     return this.locked;
+  }
+
+  setBindings(bindings: KeyBindings): void { this.bindings = bindings; this.clearState(); }
+  matches(action: BindableAction, code: string): boolean { return this.bindings[action].includes(code); }
+  private actionFor(code: string): BindableAction | undefined { return BINDABLE_ACTIONS.find((a) => this.bindings[a].includes(code)); }
+  private releaseControl(code: string): void {
+    const action = this.actionFor(code);
+    this.heldControls.delete(code);
+    if (action && !this.bindings[action].some((key) => this.heldControls.has(key))) this.down.delete(action);
+    if (code === 'F3') this.down.delete('toggleFps');
+    if (code === 'F2') this.down.delete('debugCollision');
   }
 
   async requestLock(): Promise<void> {
@@ -195,6 +185,7 @@ export class Input {
 
   clearState(): void {
     this.down.clear();
+    this.heldControls.clear();
     this.pressedEdges.clear();
     this.mouseDX = this.mouseDY = 0;
   }

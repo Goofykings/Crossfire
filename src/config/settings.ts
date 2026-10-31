@@ -1,4 +1,5 @@
 /** Player settings persisted in localStorage. */
+import { defaultBindings, sanitizeBindings, type KeyBindings } from './keybindings';
 
 export type GraphicsQuality = 'low' | 'medium' | 'high';
 export type ShadowQuality = 'off' | 'low' | 'medium' | 'high';
@@ -16,6 +17,7 @@ export interface Settings {
   /** Render resolution relative to the display's device pixels (0.5..1). */
   resolutionScale: number;
   showFps: boolean;
+  keyBindings: KeyBindings;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -27,6 +29,7 @@ export const DEFAULT_SETTINGS: Settings = {
   shadowQuality: 'medium',
   resolutionScale: 1,
   showFps: true,
+  keyBindings: defaultBindings(),
 };
 
 export const SETTING_LIMITS = {
@@ -46,7 +49,7 @@ function clamp(v: number, lo: number, hi: number): number {
 
 /** Validate untrusted data (e.g. from localStorage) into a complete Settings object. */
 export function sanitizeSettings(raw: unknown): Settings {
-  const s: Settings = { ...DEFAULT_SETTINGS };
+  const s: Settings = { ...DEFAULT_SETTINGS, keyBindings: defaultBindings() };
   if (!raw || typeof raw !== 'object') return s;
   const r = raw as Record<string, unknown>;
   const num = (k: keyof typeof SETTING_LIMITS) => {
@@ -61,6 +64,7 @@ export function sanitizeSettings(raw: unknown): Settings {
   num('resolutionScale');
   if (typeof r.invertY === 'boolean') s.invertY = r.invertY;
   if (typeof r.showFps === 'boolean') s.showFps = r.showFps;
+  s.keyBindings = sanitizeBindings(r.keyBindings);
   if (r.graphicsQuality === 'low' || r.graphicsQuality === 'medium' || r.graphicsQuality === 'high') {
     s.graphicsQuality = r.graphicsQuality;
   }
@@ -92,7 +96,7 @@ export class SettingsStore {
 
   update(patch: Partial<Settings>): void {
     const next = sanitizeSettings({ ...this.current, ...patch });
-    const changed = (Object.keys(next) as (keyof Settings)[]).filter((k) => next[k] !== this.current[k]);
+    const changed = (Object.keys(next) as (keyof Settings)[]).filter((k) => !sameSetting(k, next[k], this.current[k]));
     if (!changed.length) return;
     this.current = next;
     this.save();
@@ -124,4 +128,8 @@ export class SettingsStore {
       /* storage full or blocked: settings still apply for this session */
     }
   }
+}
+
+export function sameSetting(key: keyof Settings, a: Settings[keyof Settings], b: Settings[keyof Settings]): boolean {
+  return key === 'keyBindings' ? JSON.stringify(a) === JSON.stringify(b) : a === b;
 }

@@ -307,7 +307,7 @@
     "kind": "alley",
     "rect": [
      -8,
-     0,
+     1,
      -6,
      6
     ],
@@ -428,6 +428,46 @@
      -14.8,
      -6.7,
      -13.2
+    ]
+   },
+   {
+    "id": "goods_office",
+    "kind": "interior",
+    "rect": [
+     -12.7,
+     -3,
+     -6.3,
+     0.7
+    ]
+   },
+   {
+    "id": "goods_office_door0",
+    "kind": "doorway",
+    "rect": [
+     -6.3,
+     -1.8,
+     -6,
+     -0.2
+    ]
+   },
+   {
+    "id": "goods_office_door1",
+    "kind": "doorway",
+    "rect": [
+     -7.8,
+     0.7,
+     -6.2,
+     1
+    ]
+   },
+   {
+    "id": "goods_office_door2",
+    "kind": "doorway",
+    "rect": [
+     -13,
+     -1.8,
+     -12.7,
+     -0.2
     ]
    },
    {
@@ -1299,6 +1339,81 @@
   },
   {
    "id": "I23",
+   "type": "warehouse",
+   "rect": [
+    -13,
+    -4,
+    -6,
+    1
+   ],
+   "height": 9.1,
+   "floors": 1,
+   "palette": "brick_red",
+   "seed": 4950,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "n",
+   "doors": [
+    {
+     "side": "n",
+     "at": 3.5,
+     "width": 3.8,
+     "kind": "roller"
+    }
+   ],
+   "sign": 0,
+   "interiors": [
+    {
+     "id": "goods_office",
+     "rect": [
+      -12.7,
+      -3,
+      -6.3,
+      0.7
+     ],
+     "clear": 5.6,
+     "doors": [
+      {
+       "side": "e",
+       "rect": [
+        -6.3,
+        -1.8,
+        -6,
+        -0.2
+       ],
+       "height": 2.4,
+       "kind": "doorway"
+      },
+      {
+       "side": "s",
+       "rect": [
+        -7.8,
+        0.7,
+        -6.2,
+        1
+       ],
+       "height": 2.4,
+       "kind": "doorway"
+      },
+      {
+       "side": "w",
+       "rect": [
+        -13,
+        -1.8,
+        -12.7,
+        -0.2
+       ],
+       "height": 2.4,
+       "kind": "doorway"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "I24",
    "type": "workshop",
    "rect": [
     6,
@@ -1344,7 +1459,7 @@
    "sign": 2
   },
   {
-   "id": "I24",
+   "id": "I25",
    "type": "workshop",
    "rect": [
     17,
@@ -1377,36 +1492,24 @@
    ]
   },
   {
-   "id": "I25",
+   "id": "I26",
    "type": "workshop",
    "rect": [
     -13,
-    -4,
+    1,
     -8,
     4
    ],
-   "height": 5.4,
+   "height": 6.2,
    "floors": 1,
-   "palette": "clad_cream",
-   "seed": 3772,
+   "palette": "brick_soot",
+   "seed": 1480,
    "roof": {
     "type": "gable",
-    "ridge": "z"
+    "ridge": "x"
    },
-   "front": "w",
+   "front": "s",
    "doors": [
-    {
-     "side": "w",
-     "at": 4.0,
-     "width": 3.2,
-     "kind": "roller"
-    },
-    {
-     "side": "n",
-     "at": 2.5,
-     "width": 3.2,
-     "kind": "roller"
-    },
     {
      "side": "s",
      "at": 2.5,
@@ -1414,10 +1517,10 @@
      "kind": "roller"
     }
    ],
-   "sign": 0
+   "sign": 15
   },
   {
-   "id": "I26",
+   "id": "I27",
    "type": "workshop",
    "rect": [
     -35,
@@ -1451,7 +1554,7 @@
    "sign": 11
   },
   {
-   "id": "I27",
+   "id": "I28",
    "type": "office",
    "rect": [
     25,
@@ -1478,7 +1581,7 @@
    "sign": 4
   },
   {
-   "id": "I28",
+   "id": "I29",
    "type": "workshop",
    "rect": [
     -13,
@@ -1512,7 +1615,7 @@
    "sign": 4
   },
   {
-   "id": "I29",
+   "id": "I30",
    "type": "shed",
    "rect": [
     -6,
@@ -1540,7 +1643,7 @@
    "sign": 12
   },
   {
-   "id": "I30",
+   "id": "I31",
    "type": "shed",
    "rect": [
     2,
@@ -1568,7 +1671,7 @@
    "sign": 4
   },
   {
-   "id": "I31",
+   "id": "I32",
    "type": "shed",
    "rect": [
     6,
@@ -1596,7 +1699,7 @@
    "sign": 2
   },
   {
-   "id": "I32",
+   "id": "I33",
    "type": "workshop",
    "rect": [
     18,
@@ -1624,7 +1727,7 @@
    "sign": 0
   },
   {
-   "id": "I33",
+   "id": "I34",
    "type": "shed",
    "rect": [
     6,
@@ -1652,7 +1755,7 @@
    "sign": 3
   },
   {
-   "id": "I34",
+   "id": "I35",
    "type": "backdrop",
    "rect": [
     -35,
@@ -1673,7 +1776,7 @@
    "sign": 8
   },
   {
-   "id": "I35",
+   "id": "I36",
    "type": "workshop",
    "rect": [
     -11,
@@ -1707,7 +1810,7 @@
    "sign": 10
   },
   {
-   "id": "I36",
+   "id": "I37",
    "type": "warehouse",
    "rect": [
     -6,
@@ -1793,7 +1896,7 @@
    ]
   },
   {
-   "id": "I37",
+   "id": "I38",
    "type": "warehouse",
    "rect": [
     25,
@@ -1833,7 +1936,7 @@
    "sign": 15
   },
   {
-   "id": "I38",
+   "id": "I39",
    "type": "office",
    "rect": [
     7,
@@ -1865,7 +1968,7 @@
    ]
   },
   {
-   "id": "I39",
+   "id": "I40",
    "type": "backdrop",
    "rect": [
     -35,
@@ -1886,7 +1989,7 @@
    "sign": 0
   },
   {
-   "id": "I40",
+   "id": "I41",
    "type": "warehouse",
    "rect": [
     -25,
@@ -1914,7 +2017,7 @@
    "sign": 13
   },
   {
-   "id": "I41",
+   "id": "I42",
    "type": "workshop",
    "rect": [
     -14,
@@ -1948,7 +2051,7 @@
    "sign": 14
   },
   {
-   "id": "I42",
+   "id": "I43",
    "type": "warehouse",
    "rect": [
     -4,
@@ -1982,7 +2085,7 @@
    "sign": 8
   },
   {
-   "id": "I43",
+   "id": "I44",
    "type": "warehouse",
    "rect": [
     11,
@@ -2022,7 +2125,7 @@
    "sign": 4
   },
   {
-   "id": "I44",
+   "id": "I45",
    "type": "warehouse",
    "rect": [
     25,
@@ -2142,18 +2245,6 @@
   },
   {
    "rect": [
-    -8,
-    -4,
-    -6,
-    0
-   ],
-   "height": 3.0,
-   "style": "concrete",
-   "gates": [],
-   "id": "W09"
-  },
-  {
-   "rect": [
     -21,
     -4,
     -19,
@@ -2162,7 +2253,7 @@
    "height": 3.0,
    "style": "concrete",
    "gates": [],
-   "id": "W10"
+   "id": "W09"
   },
   {
    "rect": [
@@ -2174,7 +2265,7 @@
    "height": 3.0,
    "style": "concrete",
    "gates": [],
-   "id": "W11"
+   "id": "W10"
   },
   {
    "rect": [
@@ -2186,7 +2277,7 @@
    "height": 3.0,
    "style": "concrete",
    "gates": [],
-   "id": "W12"
+   "id": "W11"
   },
   {
    "rect": [
@@ -2198,7 +2289,7 @@
    "height": 3.0,
    "style": "pillar",
    "gates": [],
-   "id": "W13"
+   "id": "W12"
   },
   {
    "rect": [
@@ -2210,7 +2301,7 @@
    "height": 3.0,
    "style": "concrete",
    "gates": [],
-   "id": "W14"
+   "id": "W13"
   },
   {
    "rect": [
@@ -2222,7 +2313,7 @@
    "height": 3.0,
    "style": "concrete",
    "gates": [],
-   "id": "W15"
+   "id": "W14"
   },
   {
    "id": "utility_divider_n",
@@ -2298,6 +2389,15 @@
    "heading": 0
   },
   {
+   "type": "valve_manifold",
+   "pos": [
+    14,
+    0.0,
+    -12.5
+   ],
+   "heading": 0
+  },
+  {
    "type": "transformer",
    "pos": [
     18.5,
@@ -2361,24 +2461,6 @@
    "heading": 0
   },
   {
-   "type": "workbench",
-   "pos": [
-    -14.5,
-    0.0,
-    -16.7
-   ],
-   "heading": 0
-  },
-  {
-   "type": "pallet_wrapped",
-   "pos": [
-    -16.6,
-    0.0,
-    -10.2
-   ],
-   "heading": 0
-  },
-  {
    "type": "pallet_goods",
    "pos": [
     -4.6,
@@ -2393,15 +2475,6 @@
     4.5,
     0.0,
     19.2
-   ],
-   "heading": 0
-  },
-  {
-   "type": "shelving_rack",
-   "pos": [
-    1.5,
-    0.0,
-    12.5
    ],
    "heading": 0
   },
@@ -2527,15 +2600,6 @@
   {
    "id": "T08",
    "pos": [
-    -16.0,
-    0.0,
-    -19.5
-   ],
-   "heading": 90
-  },
-  {
-   "id": "T09",
-   "pos": [
     -9.0,
     0.0,
     -14.0
@@ -2543,16 +2607,7 @@
    "heading": 90
   },
   {
-   "id": "T10",
-   "pos": [
-    15.0,
-    0.0,
-    -12.0
-   ],
-   "heading": 90
-  },
-  {
-   "id": "T11",
+   "id": "T09",
    "pos": [
     7.0,
     0.0,
@@ -2561,7 +2616,7 @@
    "heading": 90
   },
   {
-   "id": "T12",
+   "id": "T10",
    "pos": [
     16.0,
     0.0,
@@ -2570,7 +2625,7 @@
    "heading": 90
   },
   {
-   "id": "T13",
+   "id": "T11",
    "pos": [
     15.0,
     0.0,
@@ -2579,7 +2634,7 @@
    "heading": 0
   },
   {
-   "id": "T14",
+   "id": "T12",
    "pos": [
     13.5,
     0.0,
@@ -2588,7 +2643,7 @@
    "heading": 90
   },
   {
-   "id": "T15",
+   "id": "T13",
    "pos": [
     0.0,
     0.0,
@@ -2597,13 +2652,31 @@
    "heading": 0
   },
   {
-   "id": "T16",
+   "id": "T14",
    "pos": [
     9.0,
     0.0,
     16.0
    ],
    "heading": 90
+  },
+  {
+   "id": "T15",
+   "pos": [
+    -10.0,
+    0.0,
+    15.0
+   ],
+   "heading": 90
+  },
+  {
+   "id": "T16",
+   "pos": [
+    16.5,
+    0.0,
+    16.0
+   ],
+   "heading": 0
   }
  ],
  "lights": [],
@@ -2937,7 +3010,7 @@
     "kind": "alley",
     "rect": [
      -8,
-     0,
+     1,
      -6,
      6
     ]
@@ -3052,6 +3125,46 @@
      -14.8,
      -6.7,
      -13.2
+    ]
+   },
+   {
+    "id": "goods_office",
+    "kind": "interior",
+    "rect": [
+     -12.7,
+     -3,
+     -6.3,
+     0.7
+    ]
+   },
+   {
+    "id": "goods_office_door0",
+    "kind": "doorway",
+    "rect": [
+     -6.3,
+     -1.8,
+     -6,
+     -0.2
+    ]
+   },
+   {
+    "id": "goods_office_door1",
+    "kind": "doorway",
+    "rect": [
+     -7.8,
+     0.7,
+     -6.2,
+     1
+    ]
+   },
+   {
+    "id": "goods_office_door2",
+    "kind": "doorway",
+    "rect": [
+     -13,
+     -1.8,
+     -12.7,
+     -0.2
     ]
    },
    {

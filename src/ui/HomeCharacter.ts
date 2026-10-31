@@ -1,15 +1,32 @@
 import { Color3, Color4, DirectionalLight, Engine, FreeCamera, HemisphericLight, MeshBuilder,
   PBRMaterial, Quaternion, Scene, Space, TransformNode, Vector3 } from '@babylonjs/core';
-import { CHARACTER_ASSET, CharacterAssetLibrary, type CharacterInstance } from '../game/CharacterAsset';
+import { CharacterAssetLibrary, type CharacterInstance } from '../game/CharacterAsset';
+import { CharacterWeaponLibrary, type CharacterWeapon, type CharacterHoldPose } from '../game/CharacterWeapon';
+import { MaterialLibrary } from '../rendering/MaterialLibrary';
+import type { WeaponId } from '../weapons/Weapon';
+
+/** Each existing model has different grip spacing, stock and fore-end geometry. */
+const HOME_HOLDS: Record<WeaponId, CharacterHoldPose> = {
+  rifle: { offset: [.08, .01, -.20], yaw: .72, pitch: .18, elbows: [[.40, 1.10, -.14], [-.37, 1.09, -.28]], hands: [[0, -1, 0], [0, -.3, -1]] },
+  shotgun: { offset: [.09, -.02, -.19], yaw: .82, pitch: .22, elbows: [[.40, 1.08, -.14], [-.38, 1.08, -.30]], hands: [[0, -1, 0], [0, -.35, -1]] },
+  sniper: { offset: [.09, -.07, -.19], yaw: .68, pitch: -.08, elbows: [[.41, 1.06, -.14], [-.38, 1.06, -.30]], hands: [[0, -1, 0], [0, -.3, -1]] },
+  smg: { offset: [.10, .05, -.17], yaw: .88, pitch: .46, elbows: [[.38, 1.12, -.12], [-.34, 1.13, -.23]], hands: [[0, -1, 0], [0, -.3, -1]] },
+};
 
 /** Isolated preview of the same selected/default skin; never creates a map,
- * gameplay controller, environment, weapon or multiplayer connection. */
+ * gameplay controller, map, environment or multiplayer connection. */
 export class HomeCharacter {
   private canvas: HTMLCanvasElement | null = null;
+  private nameLabel: HTMLDivElement | null = null;
+  private playerName = '';
   private engine: Engine | null = null;
   private scene: Scene | null = null;
   private library: CharacterAssetLibrary | null = null;
   private character: CharacterInstance | null = null;
+  private weapons: CharacterWeaponLibrary | null = null;
+  private weapon: CharacterWeapon | null = null;
+  private selectedWeapon: WeaponId = 'rifle';
+  private loadingWeapon: WeaponId | null = null;
   private abort: AbortController | null = null;
   private target = 0;
   private targetPitch = 0;
@@ -44,6 +61,26 @@ export class HomeCharacter {
     this.canvas.style.setProperty('--character-fade-end', `${(top - .68) / height * 100}%`);
   };
   constructor(private readonly host: HTMLElement) {}
+  setName(name: string): void {
+    if (this.playerName === name) return;
+    this.playerName = name;
+    if (this.nameLabel) { this.nameLabel.textContent = name; this.nameLabel.hidden = !name; }
+  }
+  setWeapon(id: WeaponId): void {
+    if (this.selectedWeapon === id) return;
+    this.selectedWeapon = id;
+    this.syncWeapon();
+  }
+  private syncWeapon(): void {
+    if (!this.character || !this.weapons || !this.abort || this.loadingWeapon || this.weapon?.id === this.selectedWeapon) return;
+    const id = this.selectedWeapon, library = this.weapons, controller = this.abort;
+    this.loadingWeapon = id;
+    void library.load(id, controller.signal).then(() => {
+      if (controller.signal.aborted || library !== this.weapons || !this.character) return;
+      if (id === this.selectedWeapon) { this.weapon?.dispose(); this.weapon = library.create(this.character, id); this.weapon?.setHomePose(HOME_HOLDS[id]); }
+    }).catch((error) => { if (!controller.signal.aborted) console.warn('[crossfire] Home weapon:', error); })
+      .finally(() => { if (library === this.weapons) { this.loadingWeapon = null; if (id !== this.selectedWeapon) this.syncWeapon(); } });
+  }
   setVisible(visible: boolean): void {
     if (visible && !this.engine) this.create();
     else if (!visible && this.engine) this.dispose();
@@ -52,6 +89,9 @@ export class HomeCharacter {
     const canvas = document.createElement('canvas');
     canvas.className = 'home-character'; canvas.setAttribute('aria-hidden', 'true');
     this.host.append(canvas); this.canvas = canvas;
+    const label = document.createElement('div'); label.className = 'home-character-name';
+    label.textContent = this.playerName; label.hidden = !this.playerName;
+    (this.host.parentElement ?? this.host).append(label); this.nameLabel = label;
     const engine = new Engine(canvas, true, { alpha: true, audioEngine: false, powerPreference: 'low-power' }, false);
     this.engine = engine;
     engine.setHardwareScalingLevel(1 / Math.min(devicePixelRatio || 1, 1.25));
@@ -79,22 +119,28 @@ export class HomeCharacter {
     // mouse look in world axes afterwards. This keeps idle and avoids accumulating
     // rotations if animations are paused for reduced motion.
     scene.onBeforeAnimationsObservable.add(() => {
+      this.weapon?.restore();
       if (this.headNode?.rotationQuaternion && this.hasHeadPose) this.headNode.rotationQuaternion.copyFrom(this.animatedHead);
     });
     scene.onAfterAnimationsObservable.add(() => {
       const head = this.headNode;
-      if (!head?.rotationQuaternion) return;
-      this.animatedHead.copyFrom(head.rotationQuaternion); this.hasHeadPose = true;
-      head.parent?.computeWorldMatrix(true);
-      head.rotate(Vector3.Up(), this.headYaw, Space.WORLD);
-      head.rotate(Vector3.Right(), this.headPitch, Space.WORLD);
+      if (head?.rotationQuaternion) {
+        this.animatedHead.copyFrom(head.rotationQuaternion); this.hasHeadPose = true;
+        head.parent?.computeWorldMatrix(true);
+        head.rotate(Vector3.Up(), this.headYaw, Space.WORLD);
+        head.rotate(Vector3.Right(), this.headPitch, Space.WORLD);
+      }
+      this.weapon?.update();
     });
     this.library = new CharacterAssetLibrary(scene);
     const controller = new AbortController(); this.abort = controller;
-    void this.library.load(CHARACTER_ASSET, controller.signal).then(() => {
+    const materials = new MaterialLibrary(scene);
+    this.weapons = new CharacterWeaponLibrary(scene, materials);
+    void Promise.all([this.library.load(controller.signal), materials.load(undefined, controller.signal)]).then(() => {
       if (controller.signal.aborted || this.scene !== scene) return;
       this.character = this.library!.instantiate(pivot, 'home-preview');
       this.headNode = this.character?.entries.skeletons[0]?.bones.find((bone) => bone.name === 'head')?.getTransformNode() ?? null;
+      this.syncWeapon();
     }).catch((error) => { if (!controller.signal.aborted) console.warn('[crossfire] Home character:', error); });
     window.addEventListener('mousemove', this.move); window.addEventListener('mouseout', this.leave);
     window.addEventListener('blur', this.leave); window.addEventListener('resize', this.resize);
@@ -116,21 +162,22 @@ export class HomeCharacter {
       scene.render();
     });
   }
-  inspect() { return { active: !!this.engine, ready: !!this.character, skin: CHARACTER_ASSET.file,
+  inspect() { return { active: !!this.engine, ready: !!this.character, skin: this.library?.inspect().file ?? null,
     engines: Engine.Instances.length,
     platformVisible: this.scene?.getMeshByName('home:platform')?.isEnabled() ?? false,
     yaw: this.yaw, pitch: this.pitch, target: this.target, headYaw: this.headYaw, headPitch: this.headPitch,
     headRotation: this.headNode?.rotationQuaternion?.asArray() ?? null,
     animatedHeadRotation: this.hasHeadPose ? this.animatedHead.asArray() : null,
-    reducedMotion: this.reduced.matches, character: this.character?.inspect() ?? null,
+    reducedMotion: this.reduced.matches, character: this.character?.inspect() ?? null, weapon: this.weapon?.inspect() ?? null,
     meshes: this.scene?.meshes.length ?? 0, library: this.library?.inspect() ?? null }; }
   dispose(): void {
     this.abort?.abort(); this.abort = null;
     window.removeEventListener('mousemove', this.move); window.removeEventListener('mouseout', this.leave);
     window.removeEventListener('blur', this.leave); window.removeEventListener('resize', this.resize);
-    this.engine?.stopRenderLoop(); this.character?.dispose(); this.character = null;
+    this.engine?.stopRenderLoop(); this.weapon?.dispose(); this.weapon = null; this.character?.dispose(); this.character = null;
     this.scene?.dispose(); this.engine?.dispose(); this.scene = null; this.engine = null;
-    this.library = null; this.headNode = null; this.hasHeadPose = false; this.canvas?.remove(); this.canvas = null;
+    this.library = null; this.weapons = null; this.loadingWeapon = null; this.headNode = null; this.hasHeadPose = false; this.canvas?.remove(); this.canvas = null;
+    this.nameLabel?.remove(); this.nameLabel = null;
     this.yaw = this.target = this.targetPitch = this.pitch = this.headYaw = this.headPitch = 0;
   }
 }

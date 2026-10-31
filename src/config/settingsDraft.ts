@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, sanitizeSettings, type Settings, type SettingsStore } from './settings';
+import { DEFAULT_SETTINGS, sameSetting, sanitizeSettings, type Settings, type SettingsStore } from './settings';
 
 /**
  * Two layers of settings: the *applied* ones (owned by SettingsStore: live in the game and saved to localStorage) and a
@@ -15,7 +15,7 @@ export class SettingsDraft {
     this.draft = { ...store.value };
     // Applied settings can change behind the menu's back (F3 toggles the FPS counter): follow those for keys the player has not edited
     this.unsubscribe = store.onChange((now, changed) => {
-      for (const k of changed) if (this.draft[k] === this.base[k]) (this.draft[k] as Settings[typeof k]) = now[k];
+      for (const k of changed) if (sameSetting(k, this.draft[k], this.base[k])) (this.draft[k] as Settings[typeof k]) = now[k];
       this.base = { ...now };
     });
   }
@@ -27,7 +27,7 @@ export class SettingsDraft {
   /** Keys whose draft value differs from the applied value. */
   get dirtyKeys(): (keyof Settings)[] {
     const applied = this.store.value;
-    return (Object.keys(this.draft) as (keyof Settings)[]).filter((k) => this.draft[k] !== applied[k]);
+    return (Object.keys(this.draft) as (keyof Settings)[]).filter((k) => !sameSetting(k, this.draft[k], applied[k]));
   }
 
   get dirty(): boolean {
