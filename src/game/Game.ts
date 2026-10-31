@@ -24,11 +24,12 @@ import { TeammateRegistry, type RemotePlayer } from './Teammates';
 import { MultiplayerClient } from '../network/MultiplayerClient';
 import { RemotePlayers } from './RemotePlayers';
 import { Presence } from '../network/Presence';
+import { resolveMultiplayerBackend } from '../network/backendConfig';
 import { weaponPreviews } from '../ui/WeaponPreviews';
 import { HomeCharacter } from '../ui/HomeCharacter';
 import type { Elimination, Snapshot } from '../../shared/protocol';
 
-type State = 'menu' | 'loading' | 'start' | 'playing' | 'paused' | 'spectating';
+type State = 'menu' | 'loading' | 'start' | 'playing' | 'paused' | 'spectating' | 'results';
 
 /** Sounds for the timed cues inside reloads and pump/bolt actions (weapons/Weapon.ts). */
 const CUE_SOUNDS: Record<string, SoundName> = {
@@ -64,6 +65,7 @@ export class Game {
   readonly settings = new SettingsStore();
   readonly guestProfile = new GuestProfileStore();
   private readonly lastUsedWeapon = new LastUsedWeapon();
+  private readonly reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   readonly audio = new AudioManager();
   readonly ui: UI;
   readonly materials: MaterialLibrary;
@@ -110,8 +112,15 @@ export class Game {
   private preSpawnPaused = false;
   private spectatingDeath: Elimination | null = null;
   private presence: Presence | null = null;
+  private readonly multiplayerBackend = resolveMultiplayerBackend({
+    VITE_MULTIPLAYER_PROVIDER: import.meta.env.VITE_MULTIPLAYER_PROVIDER,
+    VITE_MULTIPLAYER_URL: import.meta.env.VITE_MULTIPLAYER_URL,
+    VITE_CUSTOM_MULTIPLAYER_URL: import.meta.env.VITE_CUSTOM_MULTIPLAYER_URL,
+  });
   private readonly remotePlayers: RemotePlayers;
   private readonly homeCharacter: HomeCharacter;
+  private shownResult = '';
+  private readonly dismissedResults = new Set<string>();
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -184,7 +193,11 @@ export class Game {
         e.returnValue = '';
       }
     });
-    window.addEventListener('pagehide', () => { this.network?.disconnect(); this.presence?.dispose(); });
+    window.addEventListener('pagehide', () => { this.network?.disconnect(false); this.presence?.dispose(); });
+    window.addEventListener('pageshow', (e) => {
+      if (e.persisted) this.presence?.start();
+      if (e.persisted && this.network) void this.network.connect().catch((error) => this.connectionError((error as Error).message));
+    });
     window.addEventListener('keyup', (e) => { if (this.input.matches('leaderboard', e.code)) { this.tabHeld = false; this.ui.scoreboard.setVisible(false); } });
     window.addEventListener('mouseup', (e) => { if (this.input.matches('leaderboard', `Mouse${e.button}`)) { this.tabHeld = false; this.ui.scoreboard.setVisible(false); } });
     window.addEventListener('blur', () => { this.tabHeld = false; this.ui.scoreboard.setVisible(false); });
@@ -206,7 +219,7 @@ export class Game {
         this.tabHeld = false;
         this.ui.show('pause');
       }
-      if (this.input.matches('leaderboard', e.code) && (this.ui.currentScreen === 'hud' || this.ui.currentScreen === 'start')) {
+      if (this.input.matches('leaderboard', e.code) && (this.ui.currentScreen === 'hud' || this.ui.currentScreen === 'start' || this.ui.currentScreen === 'spectate')) {
         e.preventDefault();
         this.tabHeld = true;
       }
@@ -228,7 +241,7 @@ export class Game {
 
     const first = MAPS.some((m) => m.id === this.options.map) ? this.options.map! : DEFAULT_MAP_ID;
     this.ui.show('menu');
-    this.presence = new Presence(import.meta.env.VITE_MULTIPLAYER_URL ?? '', (count) => this.ui.setOnline(count),
+    this.presence = new Presence(this.multiplayerBackend.ok ? this.multiplayerBackend.url : '', (count) => this.ui.setOnline(count),
       () => this.ui.currentScreen === 'menu');
     this.presence.start();
     this.ctx.engine.runRenderLoop(() => this.frame(this.ctx.engine.getDeltaTime() / 1000));
@@ -357,7 +370,8 @@ export class Game {
     this.ui.show('loading');
     try {
       if (this.options.multiplayer) {
-        const network = new MultiplayerClient(import.meta.env.VITE_MULTIPLAYER_URL ?? '', () => this.guestProfile.value.username,
+        if (!this.multiplayerBackend.ok) throw new Error(this.multiplayerBackend.error);
+        const network = new MultiplayerClient(this.multiplayerBackend.url, () => this.guestProfile.value.username,
           { debug: new URLSearchParams(location.search).has('networkDebug') });
         this.network = network;
         network.onChat = (message) => {
@@ -417,7 +431,10 @@ export class Game {
     const signal = this.joinAbort?.signal;
     const network = this.network;
     if (!signal || signal.aborted || !network) return Promise.resolve();
+    if (network.state !== 'connected') return Promise.resolve();
+    if (network.latest && this.presentRoundResult(network.latest)) return Promise.resolve();
     if (this.roundLoad) return this.roundLoad;
+    let failed = false;
     const work = (async () => {
       this.networkReady = false;
       this.state = 'loading';
@@ -442,6 +459,7 @@ export class Game {
         this.loadedRound = target.roundId;
         this.networkReady = true;
         this.acceptSnapshot(network.latest);
+        if (this.ui.currentScreen === 'results') return;
         this.ui.setMapTitle(this.map!.def.name, target.match.mode === 'teams' ? 'Teams' : target.match.mode === 'ffa' ? 'Free for all' : 'Public match');
         this.excludeViewFromSun(this.map!);
         const self = network.latest.players.find((p) => p.id === network.selfId);
@@ -453,12 +471,23 @@ export class Game {
         else this.showPreSpawn();
         return;
       }
-    })().finally(() => { if (this.roundLoad === work) this.roundLoad = null; });
+    })().catch((error) => { failed = true; throw error; }).finally(() => {
+      if (this.roundLoad === work) this.roundLoad = null;
+      // A reconnect can complete while an interrupted asset load still owns
+      // roundLoad. Retry that load once its old promise releases ownership.
+      if (!failed && !signal.aborted && this.network === network && network.state === 'connected'
+        && !this.networkReady && this.state === 'loading') {
+        queueMicrotask(() => { void this.prepareNetworkMap().catch((e) => {
+          if (!signal.aborted) this.connectionError((e as Error).message);
+        }); });
+      }
+    });
     this.roundLoad = work;
     return work;
   }
 
   private acceptSnapshot(snapshot: Snapshot): void {
+    if (this.presentRoundResult(snapshot) || this.state === 'results') return;
     if (!this.networkReady || !this.player || !this.map || this.network?.state !== 'connected') return;
     if (snapshot.roundId !== this.loadedRound || snapshot.mapId !== this.map.def.id) {
       const signal = this.joinAbort?.signal;
@@ -480,6 +509,8 @@ export class Game {
         this.player.restore(self.motion);
         this.loadout.reset(WEAPONS.findIndex((w) => w.id === self.weapon), true);
         this.weaponView?.select(self.weapon);
+        this.weaponView?.motion.reset();
+        this.cameraRig?.resetMotion();
         this.ui.setWeaponName(this.weapon.stats.name);
         if (self.combat.gun) this.weapon.restore(self.combat.gun);
         this.acc = 0;
@@ -489,6 +520,32 @@ export class Game {
       if (this.state !== 'spectating' || this.spectatingDeath?.id !== self.death.id) this.beginSpectating(self.death);
       else this.spectatingDeath = self.death;
     } else if (this.state === 'playing' || this.state === 'spectating' || (this.state === 'paused' && !this.preSpawnPaused)) this.showPreSpawn();
+  }
+
+  private presentRoundResult(snapshot: Snapshot): boolean {
+    const result = snapshot.result, network = this.network;
+    const self = snapshot.players.find((p) => p.id === network?.selfId);
+    if (!result || !network || self?.lastPlayedRound !== result.roundId) return false;
+    const key = `crossfire.result.${network.selfId}.${result.roundId}`;
+    let dismissed = this.dismissedResults.has(key);
+    try { dismissed ||= sessionStorage.getItem(key) === 'dismissed'; } catch { /* Optional persistence. */ }
+    if (dismissed) return false;
+    if (this.shownResult === key && this.state === 'results') return true;
+    this.shownResult = key;
+    this.networkReady = false; this.state = 'results'; this.tabHeld = false;
+    this.spectatingDeath = null; this.remotePlayers.setSpectated(null); this.remotePlayers.clear();
+    this.input.enabled = false; this.input.clearState(); this.input.releaseLock();
+    this.weaponView?.setVisible(false); this.ui.setScope(0); this.ui.damage.clear(); this.ui.combatFeed.clear();
+    this.ui.showRoundResult(result, network.selfId, self.lastPlayedTeam, () => {
+      this.dismissedResults.add(key);
+      try { sessionStorage.setItem(key, 'dismissed'); } catch { /* Optional persistence. */ }
+      this.shownResult = '';
+      const signal = this.joinAbort?.signal;
+      void this.prepareNetworkMap().then(() => {
+        if (this.options.autoplay && this.networkReady) return this.spawnSelected();
+      }).catch((e) => { if (!signal?.aborted) this.connectionError((e as Error).message); });
+    }, () => this.quitToMenu());
+    return true;
   }
 
   private beginSpectating(death: Elimination): void {
@@ -596,6 +653,8 @@ export class Game {
     this.loadout.reset();
     this.weaponView?.select(this.weapon.stats.id);
     this.health = PLAYER_MAX_HEALTH;
+    this.cameraRig?.resetMotion();
+    this.weaponView?.motion.reset();
     this.cameraRig?.snapFov(this.settings.value.fov);
   }
 
@@ -735,13 +794,15 @@ export class Game {
     const cameraAngles = this.ctx.camera.rotationQuaternion?.toEulerAngles();
     this.ui.damage.update(cameraAngles?.y ?? this.player?.yaw ?? 0, cameraAngles?.x ?? this.player?.pitch ?? 0);
     this.updateHudMeta();
+    this.ui.matchHud.update(this.network?.latest ?? null, Date.now() + (this.network?.clockOffset ?? 0),
+      this.ui.currentScreen === 'hud' || this.ui.currentScreen === 'spectate');
     this.ctx.scene.render();
     this.input.endFrame();
   }
 
   /** No tactical-map DOM is created. Release, blur and screen changes hide Tab immediately. */
   private updateScoreboard(): void {
-    const show = (this.ui.currentScreen === 'hud' || this.ui.currentScreen === 'start')
+    const show = (this.ui.currentScreen === 'hud' || this.ui.currentScreen === 'start' || this.ui.currentScreen === 'spectate')
       && (this.tabHeld || this.input.isDown('leaderboard')) && (!this.options.multiplayer || this.network?.state === 'connected');
     this.ui.scoreboard.setVisible(show);
     if (show) this.ui.scoreboard.update(this.network?.latest ?? null, this.network?.selfId ?? '', Date.now() + (this.network?.clockOffset ?? 0));
@@ -808,9 +869,11 @@ export class Game {
       this.slideReleasePending = false;
       it.jumpPressed = jumpEdge;
       const wasGrounded = player.grounded;
+      player.weaponClearance = this.weapon.stats.id;
       player.fixedUpdate(FIXED_DT, it);
       this.network?.fixedInput(player, it, { trigger: input.isDown('fire'), reload: input.isDown('reload'), ...rig.aimAngles(this.scope) });
       rig.onTick();
+      if (player.landedSpeed > 3) this.weaponView?.land(player.landedSpeed);
       if (jumpEdge && wasGrounded && !player.grounded && player.velocity.y > 0) this.sound('jump', 0.35);
       if (player.landedSpeed > 4) this.sound('land', Math.min(0.8, player.landedSpeed * 0.07));
       events.length = 0;
@@ -838,10 +901,10 @@ export class Game {
     const w = this.weapon;
     // sniper scope: the overlay fades in over the last part of the aim and replaces the weapon in view
     this.scope = w.stats.scope ? Math.max(0, Math.min(1, (w.ads - 0.72) / 0.22)) : 0;
-    rig.update(dt, alpha, s.fov, zoom, this.scope);
+    rig.update(dt, alpha, s.fov, zoom, this.scope, this.reducedMotion.matches);
     const shown = this.viewOverride ? ({ ...this.viewOverride, stats: w.stats } as unknown as Weapon) : w;
-    this.weaponView?.update(dt, shown, { sprinting: false, bobX: rig.bobX, bobY: rig.bobY, crouch: player.crouch });
-    this.weaponView?.avoidWalls(map.world, dt);
+    this.weaponView?.update(dt, shown, { sprinting: false, speed: player.horizontalSpeed,
+      grounded: player.grounded, sliding: player.sliding, crouch: player.crouch, reducedMotion: this.reducedMotion.matches });
     this.weaponView?.setHidden(this.scope > 0.98);
     this.ui.setScope(this.scope);
 
@@ -1003,6 +1066,7 @@ export class Game {
       teleport: (x: number, y: number, z: number, heading = 0, pitch = 0) => {
         if (this.state === 'paused' && this.options.autoplay) this.state = 'playing';
         this.player?.teleport({ x, y, z }, heading);
+        this.cameraRig?.resetMotion();
         if (this.player) this.player.pitch = (pitch * Math.PI) / 180;
       },
       look: (headingDeg: number, pitchDeg: number) => {
@@ -1104,7 +1168,10 @@ export class Game {
           ads: w.ads,
           scope: this.scope,
           slots: this.loadout.weapons.map((x) => ({ id: x.stats.id, ammo: x.ammo, action: x.action })),
-          view: this.weaponView ? { ...this.weaponView.debug, shown: this.weaponView.currentId } : null,
+          view: this.weaponView ? { ...this.weaponView.debug, shown: this.weaponView.currentId,
+            motion: { ...this.weaponView.motion.debug }, transform: { ...this.weaponView.motion.pose },
+            pivot: this.ctx.scene.getTransformNodeByName('weapon-pivot')?.position.asArray(),
+            rotation: this.ctx.scene.getTransformNodeByName('weapon-pivot')?.rotationQuaternion?.asArray() } : null,
           viewMeshes: this.weaponView?.meshes.filter((m) => m.isEnabled()).map((m) => m.name) ?? [],
         };
       },

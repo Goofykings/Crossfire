@@ -9,6 +9,7 @@ const executablePath = [process.env.CHROME_PATH, 'C:/Program Files/Google/Chrome
 const browser = await puppeteer.launch({ executablePath, headless: true, pipe: true, protocolTimeout: 120000,
   defaultViewport: { width: 1200, height: 900 }, args: ['--ignore-gpu-blocklist', '--enable-gpu', '--use-angle=d3d11'] });
 const distance = (a, b) => Math.hypot(...a.map((n, i) => n - b[i]));
+const dot = (a, b) => a.reduce((sum, value, index) => sum + value * b[index], 0);
 fs.mkdirSync('test-results/home-hold-poses', { recursive: true });
 try {
   for (const weapon of ['rifle', 'shotgun', 'sniper', 'smg']) {
@@ -25,7 +26,11 @@ try {
     await new Promise((resolve) => setTimeout(resolve, 500));
     const state = await page.evaluate(() => window.__crossfire.homeCharacter());
     const j = state.character.joints, grips = state.weapon.grips;
-    assert.ok(distance(j.hand_r, grips[0]) < .03 && distance(j.hand_l, grips[1]) < .03, `${weapon}: hands meet the real grip anchors`);
+    for (const [index, hand] of state.weapon.homeHands.entries()) {
+      assert.ok(distance(hand.contact, grips[index]) < .035, `${weapon}: palm meets grip ${index}`);
+      assert.ok(dot(hand.fingers, hand.desiredFingers) > .99 && dot(hand.back, hand.desiredBack) > .99,
+        `${weapon}: fingers and palm face the intended weapon directions ${index}`);
+    }
     assert.ok(j.forearm_r[0] > .15 && j.forearm_l[0] < -.15
       && j.forearm_r[1] < j.upper_arm_r[1] - .08 && j.forearm_l[1] < j.upper_arm_l[1] - .08, `${weapon}: elbows stay below and outside the shoulders`);
     assert.ok(j.hand_r[2] < -.12 && j.hand_l[2] < -.20, `${weapon}: hands remain in front of the torso`);
@@ -35,8 +40,11 @@ try {
     await new Promise((resolve) => setTimeout(resolve, 450));
     const turned = await page.evaluate(() => window.__crossfire.homeCharacter());
     assert.ok(turned.yaw > .1 && turned.headPitch > .05, `${weapon}: mouse-responsive body and head remain active`);
-    assert.ok(distance(turned.character.joints.hand_r, turned.weapon.grips[0]) < .03
-      && distance(turned.character.joints.hand_l, turned.weapon.grips[1]) < .03, `${weapon}: hands remain attached while turning`);
+    for (const [index, hand] of turned.weapon.homeHands.entries()) {
+      assert.ok(distance(hand.contact, turned.weapon.grips[index]) < .035
+        && dot(hand.fingers, hand.desiredFingers) > .99 && dot(hand.back, hand.desiredBack) > .99,
+      `${weapon}: palms and finger directions remain aligned while turning`);
+    }
     assert.notEqual(turned.character.frame, state.character.frame, `${weapon}: idle animation advances`);
     assert.equal(await page.$eval('.home-character-name', (e) => e.textContent), 'Test Player');
     assert.ok(!requests.some((url) => /\/assets\/models\/(european-town|industrial-complex|modern-city)\//.test(url)), 'preview does not load a map');

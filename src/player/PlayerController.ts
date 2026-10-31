@@ -1,6 +1,13 @@
 import { MOVEMENT, type MovementConfig } from '../config/constants';
 import type { CollisionWorld, CylinderContact } from '../physics/CollisionWorld';
 import { LEAN_RATE, leanOffset, safeLean } from '../../shared/lean';
+import type { WeaponId } from '../weapons/Weapon';
+
+// Eye-to-muzzle distances include a small margin for view-model sway. Based on
+// the existing model anchors and the most forward of the hip and ADS poses.
+export const WEAPON_CLEARANCE: Record<WeaponId, number> = {
+  smg: .88, rifle: 1.12, shotgun: 1.13, sniper: 1.31,
+};
 
 /** Per-tick intent, produced by the input layer (or a network packet in the future). */
 export interface MoveIntent {
@@ -66,6 +73,8 @@ export class PlayerController {
   prevCrouch = 0;
   lean = 0;
   prevLean = 0;
+  /** Equipped, server-owned weapon; null disables the additional weapon sweep. */
+  weaponClearance: WeaponId | null = null;
   slideRemaining = 0;
   slideCooldown = 0;
   slideHeld = false;
@@ -325,6 +334,12 @@ export class PlayerController {
     return safeLean(this.world, position, this.yaw, eyeHeight, amount);
   }
 
+  /** Visual stair smoothing must not lift the eye through an overhead surface. */
+  safeViewEye(position: Vec3, height: number): number {
+    const ceiling = this.world.ceilingHeight(position.x, position.z, .12, position.y + this.cfg.stepHeight);
+    return Math.min(height, ceiling - position.y - .12);
+  }
+
   private substep(dt: number, wasGrounded: boolean): void {
     const c = this.cfg;
     const p = this.position;
@@ -344,6 +359,37 @@ export class PlayerController {
       if (into < 0) {
         v.x -= ct.nx * into;
         v.z -= ct.nz * into;
+      }
+    }
+
+    // Sweep a small collection of cylinders along the view weapon. Unlike
+    // enlarging the body cylinder, this keeps sideways movement and doorways
+    // usable. Only remove attempted movement: an existing overlap (e.g. after
+    // spawning or turning) must never push the player backwards.
+    if (this.weaponClearance && Math.hypot(p.x - oldX, p.z - oldZ) > 1e-8) {
+      const forward = this.forward();
+      const rightX = Math.cos(this.yaw), rightZ = -Math.sin(this.yaw);
+      const lean = leanOffset(this.yaw, this.lean);
+      const length = WEAPON_CLEARANCE[this.weaponClearance];
+      const horizontal = Math.cos(this.pitch);
+      for (let pass = 0; pass < 2; pass++) {
+        for (let distance = length; distance > .25; distance -= .18) {
+          for (const lateral of [0, .19]) {
+            const dx = lean.x + forward.x * distance * horizontal + rightX * lateral;
+            const dz = lean.z + forward.z * distance * horizontal + rightZ * lateral;
+            const y = p.y + this.eyeHeight - .18 + Math.sin(this.pitch) * distance;
+            const probe = this.world.resolveCylinder(p.x + dx, p.z + dz, .14, y - .16, y + .16, this.contacts);
+            for (const ct of probe.contacts) {
+              const movedInto = -((p.x - oldX) * ct.nx + (p.z - oldZ) * ct.nz);
+              if (movedInto <= 0) continue;
+              const correction = Math.min(movedInto, ct.depth + .00001);
+              p.x += ct.nx * correction;
+              p.z += ct.nz * correction;
+              const into = v.x * ct.nx + v.z * ct.nz;
+              if (into < 0) { v.x -= ct.nx * into; v.z -= ct.nz * into; }
+            }
+          }
+        }
       }
     }
 

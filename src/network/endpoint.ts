@@ -1,7 +1,8 @@
 /** Shared endpoint rules for the transport and read-only home presence poll. */
 export function multiplayerEndpoint(value: string): URL {
   if (!value) throw new Error('Set VITE_MULTIPLAYER_URL to the local or public WebSocket endpoint.');
-  const url = new URL(value);
+  let url: URL;
+  try { url = new URL(value); } catch { throw new Error('Enter a valid WebSocket URL.'); }
   if (url.protocol !== 'wss:' && !(url.protocol === 'ws:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname))) {
     throw new Error('Multiplayer requires wss://, or ws:// on localhost for development.');
   }

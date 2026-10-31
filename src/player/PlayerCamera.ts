@@ -2,6 +2,7 @@ import { Quaternion } from '@babylonjs/core';
 import type { RenderContext } from '../rendering/RenderContext';
 import type { PlayerController, Vec3 } from './PlayerController';
 import { LEAN_ANGLE, LEAN_OFFSET, leanOffset } from '../../shared/lean';
+import { DampedSpring } from '../core/DampedSpring';
 
 const DEG = Math.PI / 180;
 /** Radians of yaw per mouse count at sensitivity 1. */
@@ -13,14 +14,13 @@ const MAX_PITCH = 88 * DEG;
  * smoothed stair steps and crouching, a subtle head bob, landing dip, recoil kick and ADS zoom.
  */
 export class PlayerCamera {
-  private stepOffset = 0;
+  private groundY: number | null = null;
+  private wasGrounded = false;
   private bobPhase = 0;
   private bobWeight = 0;
-  private dip = 0;
-  private dipVel = 0;
-  private kickPitch = 0;
+  private readonly dip = new DampedSpring(Math.sqrt(120), 14 / (2 * Math.sqrt(120)));
+  private readonly kickPitch = new DampedSpring(Math.sqrt(260), 22 / (2 * Math.sqrt(260)));
   private kickYaw = 0;
-  private kickVel = 0;
   private fov = 90;
   private swayTime = 0;
   private readonly tmp: Vec3 = { x: 0, y: 0, z: 0 };
@@ -46,7 +46,7 @@ export class PlayerCamera {
 
   /** Visual kick (spring-recovered) plus a small permanent drift of the real aim. */
   addRecoil(pitchDeg: number, yawDeg: number): void {
-    this.kickVel += pitchDeg * DEG * 22;
+    this.kickPitch.velocity += pitchDeg * DEG * 22;
     this.kickYaw += yawDeg * DEG * (Math.random() < 0.5 ? -1 : 1);
     this.player.pitch = Math.min(MAX_PITCH, this.player.pitch + pitchDeg * DEG * 0.4);
     this.player.yaw += yawDeg * DEG * 0.25 * (Math.random() - 0.5);
@@ -54,8 +54,13 @@ export class PlayerCamera {
 
   /** Called once per fixed tick with the controller's snap/landing info. */
   onTick(): void {
-    if (this.player.stepUpDelta > 0) this.stepOffset -= this.player.stepUpDelta;
-    if (this.player.landedSpeed > 3) this.dipVel -= Math.min(1.2, this.player.landedSpeed * 0.09);
+    if (this.player.landedSpeed > 3) this.dip.velocity -= Math.min(1.2, this.player.landedSpeed * 0.09);
+  }
+
+  resetMotion(): void {
+    this.groundY = null; this.wasGrounded = false;
+    this.dip.reset(); this.kickPitch.reset(); this.kickYaw = 0;
+    this.bobWeight = this.bobX = this.bobY = 0;
   }
 
   snapFov(fov: number): void {
@@ -70,39 +75,43 @@ export class PlayerCamera {
     const sp = Math.sin(this.swayTime * 1.7 + 1.1) * .0011 * scopeSway * steady;
     const yaw = p.yaw + Math.max(-.34, Math.min(.34, this.kickYaw + sy));
     return { aimYaw: Math.atan2(Math.sin(yaw), Math.cos(yaw)),
-      aimPitch: Math.max(-Math.PI / 2, Math.min(Math.PI / 2, p.pitch + Math.max(-.34, Math.min(.34, this.kickPitch + sp)))) };
+      aimPitch: Math.max(-Math.PI / 2, Math.min(Math.PI / 2, p.pitch + Math.max(-.34, Math.min(.34, this.kickPitch.value + sp)))) };
   }
 
   /**
    * `scopeSway` (0..1): the slow figure-of-eight drift of a magnified scope held by a breathing shooter. It moves the
    * view itself, so shots go where the reticle is.
    */
-  update(dt: number, alpha: number, baseFov: number, zoom: number, scopeSway = 0): void {
+  update(dt: number, alpha: number, baseFov: number, zoom: number, scopeSway = 0, reducedMotion = false): void {
     const p = this.player;
     const pos = p.interpolated(alpha, this.tmp);
-    // smooth stair snaps back to zero
-    this.stepOffset *= Math.exp(-dt * 16);
-    if (Math.abs(this.stepOffset) < 1e-4) this.stepOffset = 0;
-    // landing dip spring
-    this.dipVel += (-this.dip * 120 - this.dipVel * 14) * dt;
-    this.dip += this.dipVel * dt;
+    // Follow small grounded height changes in BOTH directions. Fixed-tick step
+    // offsets previously accumulated ahead of render interpolation, and downward
+    // snaps had no smoothing at all. Large corrections and jumps stay physical.
+    if (this.groundY === null || !p.grounded || !this.wasGrounded
+      || Math.abs(pos.y - this.groundY) > p.cfg.snapDown + p.cfg.stepHeight) this.groundY = pos.y;
+    else this.groundY = pos.y + (this.groundY - pos.y) * Math.exp(-dt * 16);
+    this.wasGrounded = p.grounded;
+    this.dip.update(dt);
     // head bob while walking on the ground
     const speed = p.horizontalSpeed;
     const moving = p.grounded && !p.sliding && speed > 0.5;
-    this.bobWeight += ((moving ? Math.min(1, speed / 6) : 0) - this.bobWeight) * Math.min(1, dt * 8);
-    this.bobPhase += speed * dt * 1.85;
+    this.bobWeight += ((moving ? Math.min(1, speed / 6) : 0) - this.bobWeight) * (1 - Math.exp(-dt * 8));
+    this.bobPhase = (this.bobPhase + speed * dt * Math.PI / 2.1) % (Math.PI * 2);
     const adsDamp = 1 - (1 - zoom) * 3;
-    const bw = this.bobWeight * Math.max(0.15, adsDamp);
-    this.bobY = Math.sin(this.bobPhase * 2) * 0.028 * bw;
-    this.bobX = Math.cos(this.bobPhase) * 0.02 * bw;
+    const cosmetic = reducedMotion ? .12 : 1;
+    const bw = this.bobWeight * Math.max(0.15, adsDamp) * cosmetic;
+    this.bobY = Math.cos(this.bobPhase * 2) * 0.012 * bw;
+    this.bobX = Math.cos(this.bobPhase) * 0.008 * bw;
     // recoil kick spring
-    this.kickVel += (-this.kickPitch * 260 - this.kickVel * 22) * dt;
-    this.kickPitch += this.kickVel * dt;
+    this.kickPitch.update(dt);
     this.kickYaw *= Math.exp(-dt * 12);
 
     const cam = this.ctx.camera;
     const heightBlend = p.prevCrouch + (p.crouch - p.prevCrouch) * alpha;
-    const eye = p.cfg.standEye + (p.cfg.crouchEye - p.cfg.standEye) * heightBlend + this.stepOffset + this.bobY + this.dip * 0.1;
+    const desiredEye = p.cfg.standEye + (p.cfg.crouchEye - p.cfg.standEye) * heightBlend
+      + this.groundY - pos.y + this.bobY + this.dip.value * .1 * cosmetic;
+    const eye = p.safeViewEye(pos, desiredEye);
     const lean = p.prevLean + (p.lean - p.prevLean) * alpha;
     // Include bob in the sweep so visual motion cannot nudge the camera through a wall.
     const safe = p.safeViewLean(pos, lean + this.bobX / LEAN_OFFSET, eye);
@@ -114,7 +123,7 @@ export class PlayerCamera {
     const aim = this.aimAngles(scopeSway);
     Quaternion.RotationYawPitchRollToRef(aim.aimYaw, aim.aimPitch, roll, cam.rotationQuaternion);
     const targetFov = baseFov * zoom;
-    this.fov += (targetFov - this.fov) * Math.min(1, dt * 18);
+    this.fov += (targetFov - this.fov) * (1 - Math.exp(-dt * 18));
     this.ctx.setFov(this.fov);
   }
 }

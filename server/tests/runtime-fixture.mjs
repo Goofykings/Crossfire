@@ -4,6 +4,14 @@
 import { PublicRoom as ProductionRoom } from '../dist/index.js';
 export { default } from '../dist/index.js';
 export class PublicRoom extends ProductionRoom {
+  async snapshotForTest() { return this.snapshot(); }
+  async alarmForTest() { await this.alarm(); return this.snapshot(); }
+  async replayDeadTransitionForTest(victimId, killerId) {
+    const victim = this.players.get(victimId), killer = this.players.get(killerId);
+    if (!victim || victim.session.alive || !killer) throw new Error('Requires an already dead real victim');
+    this.eliminate(victim, killer, true);
+    return this.snapshot();
+  }
   async healthForTest(id) {
     const e = this.players.get(id);
     if (!e) throw new Error('Requires a real joined session');
@@ -121,9 +129,11 @@ export class PublicRoom extends ProductionRoom {
     throw new Error('No distant clear sightline between actual map spawns');
   }
   async advanceMapForTest() {
+    this.ledger.endsAt = Date.now();
     this.schedule.epoch -= 600000;
     await this.ctx.storage.put('map-schedule', this.schedule);
     this.ensureRound();
+    await this.persist();
     return this.snapshot();
   }
   async fallForTest(id) {

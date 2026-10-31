@@ -9,14 +9,15 @@ import { presenceEndpoint } from '../src/network/endpoint';
 const motion = new PlayerController(new CollisionWorld()).capture();
 const player = (id: string, kills: number, deaths: number, team: PlayerState['team'] = null): PlayerState => ({
   id, name: id, kills, deaths, team, motion, ack: 0, alive: false, health: 0,
+  score: kills * 100, comboCount: 0, comboUntil: null, lastPlayedRound: null, lastPlayedTeam: null,
   combat: { gun: null, triggerHeld: false, reloadHeld: false, aimHeld: false }, life: 0, weapon: null, death: null,
 });
-const snapshot = (players: PlayerState[]): Snapshot => ({ room: 'public-main', mapId: 'european-town', roundId: 0, mapVersion: 'test',
+const snapshot = (players: PlayerState[]): Snapshot => ({ result: null, room: 'public-main', mapId: 'european-town', roundId: 0, mapVersion: 'test',
   serverTime: 1000, players, match: { mode: null, endsAt: null, teamScores: null } });
 
 describe('pre-spawn protocol and loadout', () => {
   it('accepts only implemented loadouts and never client scores, positions or live state', () => {
-    const request = { v: 9, type: 'spawn', roundId: 0, mapVersion: 'test', requestId: 'life-1', weapon: 'shotgun' };
+    const request = { v: 10, type: 'spawn', roundId: 0, mapVersion: 'test', requestId: 'life-1', weapon: 'shotgun' };
     expect(parseClientMessage(JSON.stringify(request))).toEqual(request);
     for (const fields of [{ weapon: 'invalid' }, { alive: true }, { kills: 8 }, { position: { x: 100, y: 0, z: 0 } }, { requestId: '' }]) {
       expect(parseClientMessage(JSON.stringify({ ...request, ...fields }))).toBeNull();
@@ -24,7 +25,7 @@ describe('pre-spawn protocol and loadout', () => {
   });
   it('validates authoritative life and score fields instead of accepting malformed snapshots', () => {
     const s = snapshot([player('Connected menu player', 0, 0)]);
-    const message = { v: 9, type: 'snapshot', snapshot: s };
+    const message = { v: 10, type: 'snapshot', snapshot: s };
     expect(parseServerMessage(JSON.stringify(message))).toEqual(message);
     for (const fields of [{ kills: -1 }, { deaths: 1.5 }, { alive: true, weapon: null }, { life: -1 }, { team: 'fake' }]) {
       expect(parseServerMessage(JSON.stringify({ ...message, snapshot: { ...s, players: [{ ...s.players[0], ...fields }] } }))).toBeNull();
@@ -60,7 +61,7 @@ describe('server scoreboard presentation (fixtures, not multiplayer players)', (
     expect(s.players.map((p) => scoreboardRelationship(s, 'self', p))).toEqual(['friendly', 'friendly', 'opponent', 'opponent']);
     expect(scoreboardRelationship(s, 'missing', s.players[1])).toBe('opponent');
   });
-  it('sorts FFA by kills descending and deaths ascending, including connected menu players', () => {
+  it('sorts FFA by points with deterministic identity ties, including connected menu players', () => {
     const s = snapshot([player('C', 1, 0), player('B', 3, 2), player('A', 3, 1)]);
     s.match.mode = 'ffa';
     expect(scoreboardGroups(s).map((g) => g.players.map((p) => p.id))).toEqual([['A', 'B', 'C']]);
@@ -72,5 +73,11 @@ describe('server scoreboard presentation (fixtures, not multiplayer players)', (
     const groups = scoreboardGroups(s);
     expect(groups.map((g) => g.label)).toEqual(['BLUE · 12', 'RED · 8', 'UNASSIGNED']);
     expect(groups.map((g) => g.players.map((p) => p.id))).toEqual([['Blue'], ['Red'], ['Menu']]);
+  });
+  it('sorts each team by full points even when the lower-kill player has more bonus points', () => {
+    const players = [player('B', 10, 0, 'blue'), player('A', 9, 1, 'blue'), player('D', 5, 0, 'red'), player('C', 4, 0, 'red')];
+    players[1].score = 1100; players[3].score = 650;
+    const s = snapshot(players); s.match.mode = 'teams';
+    expect(scoreboardGroups(s).map((g) => g.players.map((p) => p.id))).toEqual([['A', 'B'], ['C', 'D']]);
   });
 });

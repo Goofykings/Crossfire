@@ -11,6 +11,7 @@ import { NO_COMBAT, rayPlayer, roundMode, teammates, type PlayerTeam, type Match
 import { normalizeUsername } from '../../shared/username';
 import { regenerate, REGEN_DELAY_MS } from './health';
 import { selectSpawn } from '../../shared/spawns';
+import { COMBO_WINDOW_MS, awardElimination, expireCombo, resetCombo, finalizeRound, type RoundLedger, type RoundResult, type ScoreState } from '../../shared/scoring';
 
 interface Bindings {
   ROOM: DurableObjectNamespace<PublicRoom>;
@@ -19,8 +20,11 @@ interface Bindings {
   HEARTBEAT_TIMEOUT_MS: string;
   MATCH_MODE?: string;
   NETWORK_DEBUG?: string;
+  COMBO_WINDOW_MS?: string;
 }
-interface Session {
+interface Session extends ScoreState {
+  lastPlayedRound: number | null;
+  lastPlayedTeam: PlayerTeam;
   roundId: number;
   alive: boolean;
   health: number;
@@ -90,6 +94,8 @@ export class PublicRoom extends DurableObject<Bindings> {
   private round!: MapRound;
   private activeMap!: typeof WORLDS[keyof typeof WORLDS];
   private scores = { roundId: -1, blue: 0, red: 0 };
+  private ledger!: RoundLedger;
+  private lastResult: RoundResult | null = null;
   private readonly damage = new DamageSystem();
 
   constructor(ctx: DurableObjectState, env: Bindings) {
@@ -100,6 +106,11 @@ export class PublicRoom extends DurableObject<Bindings> {
       this.round = mapRound(this.schedule, Date.now());
       this.activeMap = WORLDS[this.round.mapId];
       const scores = await ctx.storage.get<typeof this.scores>('team-scores');
+      const ledger = await ctx.storage.get<RoundLedger>('round-ledger');
+      this.lastResult = await ctx.storage.get<RoundResult>('round-result') ?? null;
+      if (ledger && ledger.roundId < this.round.id) this.lastResult = finalizeRound(ledger,
+        scores?.roundId === ledger.roundId ? scores : { blue: 0, red: 0 });
+      this.ledger = ledger?.roundId === this.round.id ? ledger : this.emptyLedger();
       if (scores?.roundId === this.round.id) this.scores = scores;
       else this.scores.roundId = this.round.id;
       const stored = await ctx.storage.get<Session[]>('sessions') ?? [];
@@ -122,6 +133,7 @@ export class PublicRoom extends DurableObject<Bindings> {
       }
       this.trace('restore', { sockets: ctx.getWebSockets().length, sessions: this.players.size });
       this.prune();
+      await this.persist();
       this.start();
     });
   }
@@ -147,7 +159,13 @@ export class PublicRoom extends DurableObject<Bindings> {
     session.weapon ??= null;
     session.kills ??= 0;
     session.deaths ??= 0;
+    session.score ??= 0;
+    session.comboCount ??= 0;
+    session.comboUntil ??= null;
+    session.lastPlayedRound ??= session.life > 0 ? session.roundId : null;
+    session.lastPlayedTeam ??= session.team ?? null;
     session.death ??= null;
+    if (session.death) session.death.award ??= null;
     if (session.alive) session.death = null;
     session.health ??= session.alive ? PLAYER_MAX_HEALTH : 0;
     // Older stored records have no damage timestamp: begin a conservative full
@@ -168,9 +186,11 @@ export class PublicRoom extends DurableObject<Bindings> {
       session.weapon = null;
       if (!session.death || Date.now() >= session.death.respawnAt) session.death = null;
       if (changedRound) session.kills = session.deaths = 0;
+      if (changedRound) { session.score = 0; resetCombo(session); }
       session.motion = controller.capture();
     } else controller.restore(session.motion);
     regenerate(session, Date.now());
+    expireCombo(session, Date.now());
     const stats = WEAPONS.find((w) => w.id === session.weapon);
     const gun = stats ? new Weapon(stats) : null;
     if (gun && validGun(session.combat.gun)) gun.restore(session.combat.gun);
@@ -206,6 +226,7 @@ export class PublicRoom extends DurableObject<Bindings> {
       || e.controller.sliding || e.controller.slideCooldown > 0
       || e.gun?.simulating
       || e.session.regenAt !== null
+      || e.session.comboCount > 0
       || Math.hypot(e.controller.velocity.x, e.controller.velocity.y, e.controller.velocity.z) > 0.001));
   }
 
@@ -215,7 +236,7 @@ export class PublicRoom extends DurableObject<Bindings> {
 
   private error(socket: WebSocket, code: string, message: string, fatal = false): void {
     this.trace('protocol_error', { id: this.current(socket)?.session.id, code, fatal });
-    this.send(socket, { v: 9, type: 'error', code, message, fatal });
+    this.send(socket, { v: PROTOCOL_VERSION, type: 'error', code, message, fatal });
     if (fatal) { void this.disconnect(socket); socket.close(1008, code); }
   }
 
@@ -243,7 +264,7 @@ export class PublicRoom extends DurableObject<Bindings> {
     e.lastSeen = now;
     if ((message.type === 'input' || message.type === 'spawn') && message.roundId !== this.round.id) {
       this.error(socket, 'round_changed', 'The map changed. Wait for the new map to load.');
-      this.send(socket, { v: 9, type: 'snapshot', snapshot: this.snapshot() });
+      this.send(socket, { v: PROTOCOL_VERSION, type: 'snapshot', snapshot: this.snapshot() });
       return;
     }
     if (message.type === 'leave') {
@@ -252,11 +273,11 @@ export class PublicRoom extends DurableObject<Bindings> {
     } else if (message.type === 'chat') {
       if (now - e.lastChatAt < 750) { this.error(socket, 'chat_rate', 'Wait before sending another message'); return; }
       e.lastChatAt = now;
-      this.publish({ v: 9, type: 'chat', id: e.session.id, name: e.session.name, text: message.text.trim() });
+      this.publish({ v: PROTOCOL_VERSION, type: 'chat', id: e.session.id, name: e.session.name, text: message.text.trim() });
     } else if (message.type === 'ping') {
       this.trace('heartbeat', { id: e.session.id, sentAt: message.at, receivedAt: now, lastSeen: e.lastSeen });
       this.attach(e);
-      this.send(socket, { v: 9, type: 'pong', at: message.at, serverTime: now });
+      this.send(socket, { v: PROTOCOL_VERSION, type: 'pong', at: message.at, serverTime: now });
       this.broadcast();
       await this.scheduleCleanup();
     } else if (message.type === 'spawn') {
@@ -275,6 +296,8 @@ export class PublicRoom extends DurableObject<Bindings> {
       e.session.death = null;
       e.session.health = PLAYER_MAX_HEALTH;
       e.session.regenAt = null;
+      e.session.lastPlayedRound = this.round.id;
+      e.session.lastPlayedTeam = e.session.team;
       e.gun = new Weapon(WEAPONS.find((w) => w.id === message.weapon)!);
       e.session.combat = { gun: e.gun.capture(), triggerHeld: false, reloadHeld: false, aimHeld: false };
       e.session.life++;
@@ -283,7 +306,7 @@ export class PublicRoom extends DurableObject<Bindings> {
       e.received = e.session.ack;
       this.attach(e);
       await this.persist();
-      this.send(socket, { v: 9, type: 'spawned', requestId: message.requestId, snapshot: this.snapshot() });
+      this.send(socket, { v: PROTOCOL_VERSION, type: 'spawned', requestId: message.requestId, snapshot: this.snapshot() });
       this.broadcast();
       this.start();
     } else {
@@ -312,11 +335,13 @@ export class PublicRoom extends DurableObject<Bindings> {
       const controller = new PlayerController(this.activeMap.world);
       e = this.entry({ id: crypto.randomUUID(), name, token: token(), generation: 0, motion: controller.capture(), ack: 0,
         roundId: this.round.id, alive: false, health: 0, regenAt: null, team: this.chooseTeam(), combat: { gun: null, triggerHeld: false, reloadHeld: false, aimHeld: false },
-        life: 0, weapon: null, kills: 0, deaths: 0, death: null, lastSeen: Date.now(), expiresAt: 0 });
+        life: 0, weapon: null, kills: 0, deaths: 0, death: null, score: 0, comboCount: 0, comboUntil: null,
+        lastPlayedRound: null, lastPlayedTeam: null, lastSeen: Date.now(), expiresAt: 0 });
       this.players.set(e.session.id, e);
     }
     // A valid resume credential preserves the session, while display names remain editable.
     regenerate(e.session, Date.now());
+    expireCombo(e.session, Date.now());
     e.session.name = name;
     const old = e.socket;
     e.socket = socket;
@@ -331,7 +356,7 @@ export class PublicRoom extends DurableObject<Bindings> {
     this.trace('join', { id: e.session.id, resumed, generation: e.session.generation, replaced: !!old && old !== socket });
     if (old && old !== socket) old.close(4001, 'session_replaced');
     await this.persist();
-    this.send(socket, { v: 9, type: 'welcome', selfId: e.session.id, resumeToken: e.session.token, resumed, snapshot: this.snapshot() });
+    this.send(socket, { v: PROTOCOL_VERSION, type: 'welcome', selfId: e.session.id, resumeToken: e.session.token, resumed, snapshot: this.snapshot() });
     this.broadcast();
     await this.scheduleCleanup();
     this.start();
@@ -345,19 +370,34 @@ export class PublicRoom extends DurableObject<Bindings> {
   }
 
   private snapshot(): Snapshot {
+    for (const e of this.players.values()) expireCombo(e.session, Date.now());
     const players: PlayerState[] = this.connected().map((e) => ({ id: e.session.id,
+      score: e.session.score, comboCount: e.session.comboCount, comboUntil: e.session.comboUntil,
+      lastPlayedRound: e.session.lastPlayedRound, lastPlayedTeam: e.session.lastPlayedTeam,
       name: e.session.name, motion: e.controller.capture(), ack: e.session.ack, alive: e.session.alive, life: e.session.life,
       health: e.session.health, combat: { ...e.session.combat, gun: e.gun?.capture() ?? null },
       weapon: e.session.weapon, kills: e.session.kills, deaths: e.session.deaths, team: e.session.team, death: e.session.death }));
-    return { room: PUBLIC_ROOM, mapId: this.round.mapId, roundId: this.round.id, mapVersion: this.activeMap.revision, serverTime: Date.now(), players,
+    return { result: this.lastResult, room: PUBLIC_ROOM, mapId: this.round.mapId, roundId: this.round.id, mapVersion: this.activeMap.revision, serverTime: Date.now(), players,
       match: { mode: this.mode, endsAt: this.round.endsAt, teamScores: this.mode === 'teams' ? { blue: this.scores.blue, red: this.scores.red } : null } };
+  }
+
+  private emptyLedger(): RoundLedger {
+    return { roundId: this.round.id, mapId: this.round.mapId, mode: this.mode, endsAt: this.round.endsAt, players: {} };
+  }
+  private recordStanding(e: Entry): void {
+    const s = e.session;
+    if (s.lastPlayedRound !== this.round.id) return;
+    this.ledger.players[s.id] = { id: s.id, name: s.name, team: s.lastPlayedTeam, score: s.score, kills: s.kills, deaths: s.deaths, weapon: s.weapon };
   }
 
   /** One canonical persisted schedule; clients never choose the public map. */
   private ensureRound(): void {
     const next = mapRound(this.schedule, Date.now());
     if (next.id === this.round.id) return;
+    for (const e of this.players.values()) this.recordStanding(e);
+    this.lastResult = finalizeRound(this.ledger, this.scores);
     this.round = next;
+    this.ledger = this.emptyLedger();
     this.activeMap = WORLDS[next.mapId];
     this.scores = { roundId: next.id, blue: 0, red: 0 };
     this.accumulator = 0;
@@ -372,6 +412,8 @@ export class PublicRoom extends DurableObject<Bindings> {
       e.session.weapon = null;
       if (!e.session.death || Date.now() >= e.session.death.respawnAt) e.session.death = null;
       e.session.kills = e.session.deaths = 0;
+      e.session.score = 0;
+      resetCombo(e.session);
       e.controller = new PlayerController(this.activeMap.world);
       e.queue.length = 0;
       e.received = e.session.ack;
@@ -392,7 +434,7 @@ export class PublicRoom extends DurableObject<Bindings> {
   }
 
   private broadcast(): void {
-    const message: ServerMessage = { v: 9, type: 'snapshot', snapshot: this.snapshot() };
+    const message: ServerMessage = { v: PROTOCOL_VERSION, type: 'snapshot', snapshot: this.snapshot() };
     for (const e of this.players.values()) if (e.socket) this.send(e.socket, message);
   }
 
@@ -405,21 +447,27 @@ export class PublicRoom extends DurableObject<Bindings> {
     victim.session.alive = false;
     victim.session.health = 0;
     victim.session.regenAt = null;
+    resetCombo(victim.session);
     victim.session.deaths++;
     victim.queue.length = 0;
     victim.received = victim.session.ack;
-    if (killer) {
-      killer.session.kills++;
-      if (this.mode === 'teams' && killer.session.team) this.scores[killer.session.team]++;
-    }
     const at = Date.now();
+    const credited = killer && killer !== victim ? killer : null;
+    const award = credited ? awardElimination(credited.session, at, head, Math.max(1, Math.trunc(positive(this.env.COMBO_WINDOW_MS ?? '', COMBO_WINDOW_MS)))) : null;
+    if (credited) {
+      credited.session.kills++;
+      if (this.mode === 'teams' && credited.session.team) this.scores[credited.session.team]++;
+      this.recordStanding(credited);
+    }
+    this.recordStanding(victim);
     const elimination: import('../../shared/protocol').Elimination = { id: crypto.randomUUID(), victimLife: victim.session.life,
+      award,
       direction, roundId: this.round.id, victimId: victim.session.id,
       victimName: victim.session.name, killerId: killer?.session.id ?? null, killerName: killer?.session.name ?? null,
       weapon: killer?.session.weapon ?? null, head, at, respawnAt: at + RESPAWN_DELAY_MS,
       killerTeam: killer?.session.team ?? null, victimTeam: victim.session.team };
     victim.session.death = elimination;
-    this.publish({ v: 9, type: 'elimination', elimination });
+    this.publish({ v: PROTOCOL_VERSION, type: 'elimination', elimination });
   }
 
   private fire(e: Entry, spread: number, control: InputFrame['combat']): boolean {
@@ -460,7 +508,7 @@ export class PublicRoom extends DurableObject<Bindings> {
       } else result.hits.push({ id: target.session.id, life: target.session.life, direction: { ...dir }, amount: before - target.session.health, health: target.session.health,
         head: nearest.zone === 'head', killed: !target.session.alive });
     }
-    this.publish({ v: 9, type: 'shot', shot: result });
+    this.publish({ v: PROTOCOL_VERSION, type: 'shot', shot: result });
     return result.hits.length > 0;
   }
 
@@ -470,6 +518,7 @@ export class PublicRoom extends DurableObject<Bindings> {
     let eliminated = false;
     let regeneratedToFull = false;
     for (const e of this.players.values()) if (e.socket) {
+      expireCombo(e.session, now);
       const healed = regenerate(e.session, now);
       regeneratedToFull ||= healed > 0 && e.session.health === PLAYER_MAX_HEALTH;
     }
@@ -483,6 +532,7 @@ export class PublicRoom extends DurableObject<Bindings> {
         const frame = e.queue.shift();
         frames.set(e, frame);
         if (frame) { e.controller.yaw = frame.yaw; e.controller.pitch = frame.pitch; e.session.ack = frame.seq; e.leanHeld = frame.intent.lean ?? 0; }
+        e.controller.weaponClearance = e.session.weapon;
         e.controller.fixedUpdate(FIXED_DT, frame?.intent ?? { ...NO_INTENT, slide: e.controller.slideHeld, lean: e.leanHeld });
         if (e.controller.position.y < MOVEMENT.killY) {
           this.eliminate(e, null);
@@ -533,7 +583,7 @@ export class PublicRoom extends DurableObject<Bindings> {
     e.queue.length = 0;
     e.session.expiresAt = Date.now() + this.grace;
     if (forget) this.players.delete(e.session.id);
-    for (const p of this.players.values()) if (p.socket) this.send(p.socket, { v: 9, type: 'left', id: e.session.id });
+    for (const p of this.players.values()) if (p.socket) this.send(p.socket, { v: PROTOCOL_VERSION, type: 'left', id: e.session.id });
     await this.persist();
     this.broadcast();
     await this.scheduleCleanup();
@@ -555,10 +605,13 @@ export class PublicRoom extends DurableObject<Bindings> {
   }
   private persist(): Promise<void> {
     for (const e of this.players.values()) {
+      expireCombo(e.session, Date.now());
+      this.recordStanding(e);
       e.session.motion = e.controller.capture();
       e.session.combat.gun = e.gun?.capture() ?? null;
     }
-    return this.ctx.storage.put({ 'team-scores': this.scores, sessions: [...this.players.values()].map((e) => e.session) });
+    return this.ctx.storage.put({ 'team-scores': this.scores, 'round-ledger': this.ledger, 'round-result': this.lastResult,
+      sessions: [...this.players.values()].map((e) => e.session) });
   }
   private async scheduleCleanup(): Promise<void> {
     const deadlines = [...this.players.values()].filter((e) => !e.socket).map((e) => e.session.expiresAt);

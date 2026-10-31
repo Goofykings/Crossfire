@@ -4,7 +4,7 @@ import type { Weapon, WeaponId } from '../weapons/Weapon';
 import { MOVEMENT } from '../config/constants';
 import { NO_COMBAT, type CombatIntent } from '../../shared/combat';
 import { multiplayerEndpoint } from './endpoint';
-import { INPUT_BATCH_LIMIT, NETWORK_HZ, parseServerMessage, type ClientMessage, type InputFrame,
+import { PROTOCOL_VERSION, INPUT_BATCH_LIMIT, NETWORK_HZ, parseServerMessage, type ClientMessage, type InputFrame,
   type ServerMessage, type Snapshot, type ShotResult, type Elimination } from '../../shared/protocol';
 
 type Welcome = Extract<ServerMessage, { type: 'welcome' }>;
@@ -152,7 +152,7 @@ export class MultiplayerClient {
     socket.onopen = () => {
       if (this.socket !== socket) return;
       this.opens++; this.trace('open');
-      this.send({ v: 9, type: 'join', name: typeof this.name === 'function' ? this.name() : this.name, ...(this.token ? { resumeToken: this.token } : {}) });
+      this.send({ v: PROTOCOL_VERSION, type: 'join', name: typeof this.name === 'function' ? this.name() : this.name, ...(this.token ? { resumeToken: this.token } : {}) });
     };
     socket.onmessage = (event) => {
       if (this.socket !== socket || typeof event.data !== 'string') return;
@@ -160,8 +160,8 @@ export class MultiplayerClient {
       if (!m) {
         let version: unknown = null;
         try { version = JSON.parse(event.data).v; } catch { /* Malformed JSON. */ }
-        this.trace('protocol_rejected', { expected: 9, received: typeof version === 'number' ? version : null });
-        this.fail('Invalid message from multiplayer server (expected protocol v9). Rebuild matching frontend and backend.');
+        this.trace('protocol_rejected', { expected: PROTOCOL_VERSION, received: typeof version === 'number' ? version : null });
+        this.fail(`Multiplayer protocol mismatch or invalid message: server v${typeof version === 'number' ? version : '?'}, client v${PROTOCOL_VERSION}. Publish matching frontend and backend.`);
         socket.close(4002, 'protocol_error'); return;
       }
       this.lastMessage = Date.now();
@@ -305,7 +305,7 @@ export class MultiplayerClient {
           Math.max(0, this.inputWindow - (this.sentSequence - ack)));
         if (count) {
           const frames = this.unsent.splice(0, count);
-          this.send({ v: 9, type: 'input', roundId: this.latest.roundId, mapVersion: this.latest.mapVersion, frames });
+          this.send({ v: PROTOCOL_VERSION, type: 'input', roundId: this.latest.roundId, mapVersion: this.latest.mapVersion, frames });
           this.sentSequence = frames[frames.length - 1].seq;
           this.sentAt.set(this.sentSequence, now);
         }
@@ -315,7 +315,7 @@ export class MultiplayerClient {
   }
   private ping(): void {
     this.lastPing = Date.now(); this.trace('ping', { sentAt: this.lastPing, lastPong: this.lastPong });
-    this.send({ v: 9, type: 'ping', at: this.lastPing });
+    this.send({ v: PROTOCOL_VERSION, type: 'ping', at: this.lastPing });
   }
   private stopTimers(): void {
     for (const t of [this.flushTimer, this.pingTimer]) window.clearInterval(t);
@@ -330,7 +330,7 @@ export class MultiplayerClient {
   sendChat(text: string): boolean {
     const clean = text.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 200);
     if (!clean || this.state !== 'connected' || this.socket?.readyState !== WebSocket.OPEN) return false;
-    this.send({ v: 9, type: 'chat', text: clean });
+    this.send({ v: PROTOCOL_VERSION, type: 'chat', text: clean });
     return true;
   }
 
@@ -369,6 +369,7 @@ export class MultiplayerClient {
     if (!self?.alive) return;
     const yaw = player.yaw, pitch = player.pitch;
     player.restore(self.motion);
+    player.weaponClearance = self.weapon;
     if (gun && self.combat.gun) gun.restore(self.combat.gun);
     let trigger = self.combat.triggerHeld, reload = self.combat.reloadHeld;
     for (const frame of this.pending) {
@@ -393,16 +394,17 @@ export class MultiplayerClient {
     this.socket.close(4000, 'reconnect');
   }
 
-  disconnect(): void {
+  /** Navigation may resume the server session; an explicit Leave always forgets it. */
+  disconnect(forget = true): void {
     this.cancelSpawn('Left match');
     this.stopped = true;
-    this.trace('intentional_leave');
-    this.send({ v: 9, type: 'leave' });
+    this.trace(forget ? 'intentional_leave' : 'navigation_disconnect');
+    if (forget) this.send({ v: PROTOCOL_VERSION, type: 'leave' });
     if (this.socket) this.socket.onopen = this.socket.onmessage = this.socket.onerror = null;
-    this.socket?.close(1000, 'left');
+    this.socket?.close(1000, forget ? 'left' : 'navigation');
     this.socket = null;
     this.stopTimers();
-    this.token = '';
+    if (forget) this.token = '';
     this.saveToken();
     this.latest = null;
     this.pending = [];
@@ -419,7 +421,7 @@ export class MultiplayerClient {
     const id = crypto.randomUUID();
     return new Promise((resolve, reject) => {
       this.spawning = { id, resolve, reject, timeout: window.setTimeout(() => this.cancelSpawn('Spawn request timed out. Try again.'), 5000) };
-      this.send({ v: 9, type: 'spawn', requestId: id, weapon, roundId: this.latest!.roundId, mapVersion: this.latest!.mapVersion });
+      this.send({ v: PROTOCOL_VERSION, type: 'spawn', requestId: id, weapon, roundId: this.latest!.roundId, mapVersion: this.latest!.mapVersion });
     });
   }
 

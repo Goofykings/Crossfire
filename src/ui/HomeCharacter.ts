@@ -7,10 +7,14 @@ import type { WeaponId } from '../weapons/Weapon';
 
 /** Each existing model has different grip spacing, stock and fore-end geometry. */
 const HOME_HOLDS: Record<WeaponId, CharacterHoldPose> = {
-  rifle: { offset: [.08, .01, -.20], yaw: .72, pitch: .18, elbows: [[.40, 1.10, -.14], [-.37, 1.09, -.28]], hands: [[0, -1, 0], [0, -.3, -1]] },
-  shotgun: { offset: [.09, -.02, -.19], yaw: .82, pitch: .22, elbows: [[.40, 1.08, -.14], [-.38, 1.08, -.30]], hands: [[0, -1, 0], [0, -.35, -1]] },
-  sniper: { offset: [.09, -.07, -.19], yaw: .68, pitch: -.08, elbows: [[.41, 1.06, -.14], [-.38, 1.06, -.30]], hands: [[0, -1, 0], [0, -.3, -1]] },
-  smg: { offset: [.10, .05, -.17], yaw: .88, pitch: .46, elbows: [[.38, 1.12, -.12], [-.34, 1.13, -.23]], hands: [[0, -1, 0], [0, -.3, -1]] },
+  rifle: { offset: [.08, .01, -.20], yaw: .72, pitch: .18, elbows: [[.40, 1.10, -.14], [-.37, 1.09, -.28]], hands: [
+    { fingers: [-.65, -.65, -.25], back: [.70, -.70, 0] }, { fingers: [0, .45, -.89], back: [0, -.89, -.45] }] },
+  shotgun: { offset: [.09, -.02, -.19], yaw: .82, pitch: .22, elbows: [[.40, 1.08, -.14], [-.38, 1.08, -.30]], hands: [
+    { fingers: [-.65, -.68, -.25], back: [.72, -.69, 0] }, { fingers: [0, .35, -.94], back: [0, -.94, -.35] }] },
+  sniper: { offset: [.09, -.07, -.19], yaw: .68, pitch: -.08, elbows: [[.41, 1.06, -.14], [-.38, 1.06, -.30]], hands: [
+    { fingers: [-.65, -.65, -.25], back: [.70, -.70, 0] }, { fingers: [0, .5, -.87], back: [0, -.87, -.5] }] },
+  smg: { offset: [.10, .05, -.17], yaw: .88, pitch: .46, elbows: [[.38, 1.12, -.12], [-.34, 1.13, -.23]], hands: [
+    { fingers: [-.63, -.70, -.25], back: [.74, -.67, 0] }, { fingers: [0, .3, -.95], back: [0, -.95, -.3] }] },
 };
 
 /** Isolated preview of the same selected/default skin; never creates a map,

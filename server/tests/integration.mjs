@@ -34,7 +34,7 @@ test('Public room: real Workers runtime and real WebSocket clients', { timeout: 
     ws.on('error', () => {});
     const client = {
       ws, messages, welcome: null,
-      send: (m) => ws.send(JSON.stringify({ v: 9, ...(['spawn', 'input'].includes(m.type) ? { roundId: client.welcome?.snapshot.roundId ?? 0 } : {}), ...m })),
+      send: (m) => ws.send(JSON.stringify({ v: 10, ...(['spawn', 'input'].includes(m.type) ? { roundId: client.welcome?.snapshot.roundId ?? 0 } : {}), ...m })),
       async wait(predicate, from = 0) {
         const until = Date.now() + 5000;
         while (Date.now() < until) {
@@ -69,7 +69,7 @@ test('Public room: real Workers runtime and real WebSocket clients', { timeout: 
       const health = await (await fetch(new URL('/health', base))).json();
       assert.equal(health.room, 'public-main');
       assert.equal(health.ok, true);
-      assert.equal(health.protocol, 9);
+      assert.equal(health.protocol, 10);
       assert.equal((await fetch(new URL('/ws', base), { headers: { Origin: origin } })).status, 426);
       assert.equal((await fetch(new URL('/unknown', base))).status, 404);
       await new Promise((resolve, reject) => {

@@ -42,11 +42,11 @@ describe('custom controls', () => {
     expect(loaded.value.fov).toBe(95); expect(loaded.value.keyBindings.aim).toEqual(['KeyF']);
   });
   it('validates chat text and rejects client-supplied sender identities', () => {
-    expect(parseClientMessage(JSON.stringify({ v: 9, type: 'chat', text: 'hello' }))).not.toBeNull();
+    expect(parseClientMessage(JSON.stringify({ v: 10, type: 'chat', text: 'hello' }))).not.toBeNull();
     for (const text of ['', '  ', 'x'.repeat(201), 'bad\nline']) {
-      expect(parseClientMessage(JSON.stringify({ v: 9, type: 'chat', text }))).toBeNull();
+      expect(parseClientMessage(JSON.stringify({ v: 10, type: 'chat', text }))).toBeNull();
     }
-    expect(parseClientMessage(JSON.stringify({ v: 9, type: 'chat', text: 'hi', name: 'forged' }))).toBeNull();
-    expect(parseServerMessage(JSON.stringify({ v: 9, type: 'chat', id: 'id', name: 'Player', text: 'hello' }))).not.toBeNull();
+    expect(parseClientMessage(JSON.stringify({ v: 10, type: 'chat', text: 'hi', name: 'forged' }))).toBeNull();
+    expect(parseServerMessage(JSON.stringify({ v: 10, type: 'chat', id: 'id', name: 'Player', text: 'hello' }))).not.toBeNull();
   });
 });

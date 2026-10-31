@@ -13,8 +13,12 @@ import type { WeaponId } from '../weapons/Weapon';
 import { DamageFeedback } from './DamageFeedback';
 import { CombatFeed } from './CombatFeed';
 import { weaponIcon } from './WeaponIcons';
+import { MatchHud } from './MatchHud';
+import type { RoundResult } from '../../shared/scoring';
+import { createRoundResults } from './RoundResults';
+import type { PlayerTeam } from '../../shared/combat';
 
-export type Screen = 'menu' | 'loading' | 'start' | 'spectate' | 'weapons' | 'hud' | 'pause' | 'settings' | 'error';
+export type Screen = 'menu' | 'loading' | 'start' | 'spectate' | 'results' | 'weapons' | 'hud' | 'pause' | 'settings' | 'error';
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, html?: string): HTMLElementTagNameMap[K] {
   const e = document.createElement(tag);
@@ -133,6 +137,8 @@ export class UI {
   readonly scoreboard: Scoreboard;
   readonly damage: DamageFeedback;
   readonly combatFeed: CombatFeed;
+  readonly matchHud: MatchHud;
+  private resultBody!: HTMLElement;
 
   constructor(
     private readonly root: HTMLElement,
@@ -148,6 +154,7 @@ export class UI {
     this.buildStart();
     this.buildWeapons();
     this.buildSpectate();
+    this.resultBody = this.screen('results');
     this.buildHud();
     this.setChatBinding(settings.value.keyBindings.chat[0]);
     this.buildPause();
@@ -157,6 +164,7 @@ export class UI {
     this.scoreboard = new Scoreboard(root);
     this.damage = new DamageFeedback(root);
     this.combatFeed = new CombatFeed(root);
+    this.matchHud = new MatchHud(root);
   }
 
   private screen(id: Screen, cls = ''): HTMLElement {
@@ -165,6 +173,10 @@ export class UI {
     this.root.appendChild(s);
     this.screens.set(id, s);
     return s;
+  }
+
+  showRoundResult(result: RoundResult, selfId: string, team: PlayerTeam, next: () => void, home: () => void): void {
+    this.resultBody.replaceChildren(createRoundResults(result, selfId, team, next, home)); this.show('results');
   }
 
   private button(label: string, sub: string, cls: string, onClick: () => void): HTMLButtonElement {
@@ -418,6 +430,16 @@ export class UI {
     const s = this.screen('hud');
     this.slideLines = el('div', 'slide-lines');
     this.slideLines.setAttribute('aria-hidden', 'true');
+    // A fixed set of lightweight streaks; only compositor transforms animate.
+    for (let i = 0; i < 28; i++) {
+      const line = el('i');
+      line.style.setProperty('--angle', `${i * 360 / 28 + (i % 3) * 1.3}deg`);
+      line.style.setProperty('--length', `${4 + i % 5}vmin`);
+      line.style.setProperty('--streak-opacity', String(.35 + (i % 5) * .08));
+      line.style.setProperty('--duration', `${.65 + (i % 4) * .075}s`);
+      line.style.setProperty('--delay', `${-i * .073}s`);
+      this.slideLines.appendChild(line);
+    }
     s.appendChild(this.slideLines);
     const ch = el('div', 'crosshair', '<i class="h l"></i><i class="h r"></i><i class="v t"></i><i class="v b"></i><i class="dot"></i>');
     this.crosshair = ch;

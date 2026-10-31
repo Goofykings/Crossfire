@@ -1,3 +1,280 @@
+# Polish update — Phase 3: results presentation and final verification
+
+Updated: 2026-10-31. Complete locally. No commit, push, deployment, hosting
+switch, or unrelated gameplay changes. See docs/POLISH_PHASE3.md for design,
+the complete file list, repeatable PowerShell checks and limitations.
+
+Phase 1 retained: elapsed-time weapon sway/bob/recoil/landing, aligned ADS,
+bounded sliding streaks, stair smoothing and reduced motion. Phase 2 retained:
+authoritative elimination/headshot/combo points, persistent numeric rank,
+compact scores, server countdown/team kills, winner/MVP and reconnect-safe
+results/loadout flow. All three phases were checked together in this pass.
+
+Phase 3 adds large centered blue VICTORY, red DEFEAT and neutral DRAW banners
+with matching dimensions/timing, long symmetric fading bars and a subtle
+opacity/transform entrance. The scoreboard, MVP and actions follow quickly;
+reduced motion removes movement and delays. The existing darkened backdrop
+uses a smaller CSS blur; no new rendering post-process or particle system.
+Team panels stay side by side at desktop/Chromebook viewport sizes and stack
+on narrow screens. Scrollable compact rows preserve both team headings and
+actions. Team totals remain actual eliminations, not individual bonus points.
+FFA has one numeric ranking and a winner marker, without invented team scores.
+Relative blue/red names, a local row highlight, weapon silhouettes, abbreviated
+points with full-value titles and the authoritative cross-team MVP are shown.
+No per-player ping was available and none was fabricated.
+
+The Worker now copies the complete real spawned-participant ledger, including
+departed players and their last server-approved weapon, into the frozen result
+before the next round resets. It survives real socket resumes and a full local
+runtime restart. Validation checks roster fields/unique IDs, MVP agreement and
+FFA winner/draw consistency. Protocol remains v10: optional result.players and
+standing.weapon are compatible additions, not a new wire version. Older saved
+summaries show detailed results unavailable; unknown old weapons show a dash.
+No new messages or recurring timers. Results DOM is created once per result.
+
+PLAY AGAIN and RETURN TO LOBBY share a one-shot guard and disable together.
+They reuse the existing public-main/map/loadout callbacks. The public schedule
+continues normally; no extra match, connection or private room is created.
+Lobby return intentionally leaves, cancels retry and removes the real session.
+Small interface corrections: feathered feed backgrounds, bounded spectator
+names, loading/spectating fades and opacity-only reduced-motion elimination
+feedback. Existing home, character, settings, HUD and gameplay were retained.
+
+Files in this phase: src/ui/RoundResults.ts (new), src/ui/UI.ts, src/styles.css,
+shared/scoring.ts, shared/protocol.ts, server/src/index.ts,
+tests/scoring.test.ts, server/tests/combat.mjs, tools/polish-phase2-test.mjs,
+docs/POLISH_PHASE3.md (new), CLAUDE.md and this log. Earlier uncommitted work,
+including the user's Wrangler configuration and .env.local, was preserved.
+
+Verification performed:
+- Frontend: 308 tests passed; typecheck and production builds passed with both
+  relative/default and /crossfire/ base paths. Final shared-rule cleanup also
+  passed all 28 focused scoring/protocol/result tests.
+- Worker: typecheck and dry-run build passed; all 50 real-runtime integration/
+  combat tests passed, including complete frozen rosters, authoritative damage,
+  regeneration, leaning, replay rejection, resume, hibernation, durable restart,
+  stale heartbeat removal, actual leaving and map/round rotation.
+- Dedicated scaffold: typecheck, bundle and 7 tests passed; still incomplete
+  as a gameplay backend and never substituted for Cloudflare.
+- Actual Chrome multiplayer: Teams on Vite dev and FFA on the production
+  /crossfire/ build. Each run used two real browser contexts connected for over
+  60 seconds with no extra socket opens, synchronized movement and real server
+  combat against real WebSocket opponents. Verified 1470 earned points, single
+  feed entries, numeric/compact rank, all nine spawned participants including
+  seven departed opponents, real team totals, victory/defeat, MVP, refresh,
+  transport reconnect, frozen results, Play Again/new-round reset, real draw,
+  Return to Lobby and actual room removal. Final runs had no uncaught errors.
+- Results checked at 1366x768, 1280x720 and 1024x600 and with reduced motion.
+  Victory, defeat and draw screenshots were visually inspected against the
+  provided Game_end/leaderboard references. Artifacts: ignored
+  test-results/polish-phase3-{ffa,teams}/.
+- Existing Phase 1 Chrome script passed all four guns' idle/recoil/ADS/actual
+  cover clearance, slide/jump/landing/crouched ADS, streaks, reduced motion and
+  real stairs in both directions; no missing assets or browser errors.
+- Existing settings Chrome script passed Apply/Back, keyboard/mouse controls,
+  persistence, live audio/FOV/FPS and pause entry; final local-backend run had
+  zero console errors. No physical Chromebook/FPS benchmark was performed.
+
+Earlier failed attempts were not hidden: a lobby test expected a nonexistent
+"disconnected" status, but Game correctly disposes the client and reports idle;
+the assertion now verifies idle, unchanged real socket count and room removal.
+One production combo assertion failed while a build ran concurrently; the
+isolated final run passed and logs confirmed kill gaps below four seconds.
+The combo rule was not relaxed. A settings attempt using the public presence
+endpoint failed its console check because the temporary local origin was not
+permitted. It was rerun successfully against Wrangler with an explicit local
+origin and process-only frontend URL overrides; no production policy changed.
+There are no outstanding failures from the final runs.
+
+Limits: public Cloudflare gameplay was not validated with this update. The last
+observed public /health reported v9; local sources remain v10 from Phase 2.
+Both frontend and Worker require matching authorized releases. Cloudflare stays
+the default and its DO/origin/session lifecycle remains intact. The existing
+large Babylon bundle warning and in-place turn/lean/swap/close-spawn weapon
+overlap limitation remain outside this polish. No speculative physics or rig
+rewrite was attempted. The polishing update is finished; stop here.
+
+# Polish update — Phase 2: points, combos, match HUD and results
+
+Updated: 2026-10-31. Implemented locally, preserving Phase 1, Cloudflare as the
+default, the canonical room, 600-second schedule, map/mode selection, existing
+team elimination totals, combat rules and respawn eligibility. The Worker now
+awards 100 points per confirmed elimination, 50 only for the final lethal
+headshot, and 20 times (combo count minus one). The server-owned four-second
+deadline renews per kill, expires at its exact boundary and resets on death or
+round change. COMBO_WINDOW_MS is an optional server-only binding. Duplicate
+dead transitions neither award again nor extend the deadline. Valid resumes
+retain score and the original combo deadline; offline time still counts.
+
+Added shared/scoring.ts with pure scoring, expiry, point ordering and winner/MVP
+rules. Integer points, combos, participant records and team totals are persisted
+with the latest frozen round result. Participants remain in the round ledger
+after leaving so earned points still count for winner/MVP. FFA uses highest
+points; tied leaders draw. Teams still uses team elimination totals, with tied
+totals drawing. MVP is highest individual points across either team, with equal
+MVP scores resolved deterministically by server ID. Results freeze before the
+current round resets and survive a complete local runtime restart.
+
+Elimination feedback shows the actual server award and only earned bonus lines.
+The Tab leaderboard adds Score, sorts full numeric totals with stable ID ties,
+groups Teams and preserves relative blue/red names and weapon silhouettes.
+Compact scores truncate to one decimal (1470 -> 1.4k); sorting never uses the
+formatted text. No per-player ping existed, so none was fabricated. The new
+top-center mode/countdown uses the synchronized server deadline; team totals
+flank it with fading blue/red backgrounds. The result screen shows the actual
+VICTORY/DEFEAT/DRAW and MVP name/points. Next Match acknowledges the result and
+uses the existing map/loadout/spawn flow while the next server round continues.
+
+Fixed refresh treating navigation as explicit Leave: navigation closes transport
+while retaining the server-issued resume credential, and explicit Leave still
+invalidates it and cancels retries. Existing resume grace remains 15 seconds.
+An interrupted map load now releases ownership and retries after reconnection;
+Next Match also works when clicked during a genuine transport interruption.
+
+Protocol is now v10 on both local runtimes, including score/award/result runtime
+validators and migration defaults for old stored sessions. Existing v9 kills/
+deaths remain; new point totals begin at zero instead of inventing historical
+headshot/combo awards. Incompatible wire versions fail clearly. The public
+Cloudflare health endpoint was read and still reported v9; the new features
+were NOT validated against the public Worker. Matching frontend and Worker
+publication is required when authorized. The future dedicated transport
+scaffold reuses v10 but remains intentionally incomplete. No hosting switch.
+
+Final verification: all 304 frontend tests, frontend typecheck/production build,
+Worker typecheck/dry-run build, all 50 real Worker/WebSocket tests, and all seven
+dedicated scaffold checks pass. Coverage includes normal/headshot/combo awards,
+expiration/death/round resets, large combos, replay protection, resume, complete
+runtime reconstruction, point truncation and team sorting, wins/draws/MVP ties,
+server deadlines and strict protocol compatibility. Earlier test-harness failures
+from reserved alarm RPC calls, retained Miniflare references, an old binary-frame
+version fixture and navigation-confirmation timing were corrected; final full
+runs pass without relaxing gameplay validation or test timeouts.
+
+tools/polish-phase2-test.mjs passed with two real Chrome players and real TCP
+WebSocket opponents in FFA and Teams. Seven actual headshot eliminations earned
+150/170/190/210/230/250/270 points, totaling 1470; the table showed 1.4k, while
+team totals remained seven eliminations. Reconnect and browser refresh retained
+identity, points, kills and the original match deadline. Victory/defeat, MVP,
+frozen results and next-round reset were checked and captures visually inspected.
+The final FFA run used the production build at /crossfire/ and entered an
+approved next-round life after clicking Next Match during a reconnect. No browser
+exceptions occurred. See docs/POLISH_PHASE2.md for configuration and policies.
+No commit, push or deployment. Stopped after Polish Phase 2.
+
+# Polish update — Phase 1: weapon motion, camera and sliding
+
+Updated: 2026-10-31. The existing WeaponView now composes its weapon-specific
+hip/ADS and action poses with one WeaponMotion contribution. Added a 4.2-second
+breathing loop, distance-based walking/faster-movement bob, smooth crouch/slide
+posture, a bounded per-shot whole-rig recoil impulse and a real-landing dip with
+damped rebound. Existing GLBs, attachments, reload/pump/bolt actions and the
+fully scoped sniper overlay remain in place; no first-person hands were added.
+Decorative transverse motion and rotations fade completely at full ADS, leaving
+recoil along the sight axis and restoring the original optical alignment.
+System prefers-reduced-motion reduces decorative weapon/camera movement and
+stops the speed-streak animation without changing gameplay recoil or controls.
+
+Replaced render-frame Euler spring integration with elapsed-time damped springs.
+The old stair camera subtracted upward snaps at fixed ticks before render
+interpolation and did not smooth downward snaps. It now follows small grounded
+height changes in both directions, follows jumps/large corrections directly,
+and clamps the visual eye below overhead solids. The existing movement rules,
+speeds, slide cooldown/jump-cancel momentum, weapon balance and protocol v9 were
+not changed by the polish work. No grounded-state instability was found on the
+tested stair route. There is still no separate sprint/manual-crouch control;
+the existing faster movement and slide-driven lowered state feed these poses.
+
+Speed lines use 28 preallocated CSS streaks, travelling from 14vmin near the
+center toward the edges with varied lengths/opacity and the existing fade.
+Their radial mask keeps the crosshair clear. No per-frame DOM objects or timers
+were introduced.
+
+The immediately preceding wall task is retained: removed avoidWalls and its
+wall-hidden state, so cover never retracts or hides the gun. Equipped-weapon
+movement clearance now runs in the shared controller on prediction and the
+Worker, with the server choosing the existing authoritative weapon ID. It only
+cancels attempted inward movement, preserving tangent motion without pushing
+the player backwards. The protocol is unchanged. This bounds movement toward
+cover, but does not resolve weapon overlap created solely by turning/leaning
+in place, swapping weapons or spawning already too close to geometry. Those
+cases are a remaining collision limitation, not a verified no-clipping claim.
+The shared collision change requires matching frontend/Worker publication when
+authorized; no publication was performed.
+
+Verification: all 278 frontend tests, frontend typecheck/production build,
+Worker typecheck/dry-run build and all 49 real Worker/WebSocket tests pass.
+New coverage checks 30/60/144 FPS spring recovery, bounded automatic recoil,
+ADS optical alignment, reduced motion, stair camera/ceiling behavior, equipped
+weapon stair traversal, collision stopping/sliding and prediction consistency.
+The first concurrent cold Worker run hit its existing 90-second FFA parent
+timeout and cancelled the regeneration child; the isolated full rerun passed
+all 49 tests without changing test limits or regeneration code.
+
+tools/polish-phase1-test.mjs passed in actual local Chrome for all four weapons:
+idle/firing/ADS, one impulse per fired shot, recoil recovery, approaches to real
+map cover with zero gun retraction, slide/jump momentum, landing, crouched ADS,
+reduced motion and both Town stair directions. Weapon captures were visually
+inspected. Stair traces showed 17.5 cm physical snaps with about 3.4 cm camera
+changes on the corresponding frames and no grounded-state flicker. Tests do not
+establish every map/corner/rotation combination or every hardware configuration.
+tools/polish-multiplayer-test.mjs passed with two independent Chrome sessions
+and the actual local Worker: synchronized movement, shared server-confirmed
+damage, one recoil impulse per shot, and reconnection preserving the life,
+weapon, ammunition and health. No public Cloudflare deployment was tested.
+No commit, push or deployment. Scoring/victory screens were not changed.
+
+# Dedicated-server preparation
+
+Updated: 2026-10-31. Cloudflare remains the default provider and the existing
+VITE_MULTIPLAYER_URL override remains supported; an absent override defaults to
+the public Worker endpoint. The new validated VITE_MULTIPLAYER_PROVIDER selects
+cloudflare or custom. Custom requires VITE_CUSTOM_MULTIPLAYER_URL and displays a
+configuration error without falling back to Cloudflare. GitHub Actions passes
+the public build variables; the existing .env.local was not modified.
+
+Created the independent TypeScript/Node server-dedicated transport scaffold.
+Its real HTTP/WebSocket endpoints validate origins, size, shared v9 messages
+and protocol versions, report ready:false and reject valid gameplay with an
+explicit server_incomplete error. No sessions, players or matches are simulated.
+The pure health regeneration rule moved to shared/health.ts; the Worker keeps
+its prior import path via a re-export. Protocol, Durable Object, room lifecycle,
+match rotation and other authoritative Worker systems remain in place. The
+authoritative Node room, secure sessions/resume, persistence, simulation,
+scoring/chat, rounds, presence and deployment/TLS integration are future work.
+See docs/DEDICATED_SERVER.md for setup, deployment, migration and switching.
+
+Verification: 253 frontend tests, frontend typecheck/production build, Worker
+typecheck/dry-run build and all 49 Worker tests passed. Seven dedicated scaffold
+checks passed, including real WebSocket version/schema/origin/payload rejection;
+the independent Node start command and health endpoint were also exercised.
+Chrome verified missing custom configuration never attempts Cloudflare and that
+a valid custom URL reaches the scaffold and shows its incomplete error, in both
+dev and a /crossfire/ production build. The Cloudflare-provider Pages build
+connected two actual browsers to the local Worker for 61 seconds, with movement,
+combat, disconnect/reconnect and state preservation checked. A shortened
+five-second run had an equality assertion during legitimate health regeneration;
+the normal-duration rerun passed. The public Worker health endpoint reported v9,
+and one real unspawned test session joined public-main and left cleanly; no
+public combat or two-client match was tested. No commit, push or deployment.
+
+# Home preview wrist and grip alignment
+
+Updated: 2026-10-31. The existing home-only arm solver now aligns both the
+finger direction and the back of each glove using the rig's mirrored hand axes.
+Previously it aligned only one axis, leaving wrist roll dependent on the idle
+pose, and placed the wrist itself at the weapon anchor. The wrist target now
+accounts for the palm's position; per-weapon hand frames turn the dominant
+fingers across the grip and the support palm toward the fore-end. Existing
+weapon placement and elbow targets remain the starting point. Remote poses,
+gameplay, home framing, last-used weapon and guest name remain unchanged.
+
+Local Chrome checked all four weapons, including grip contact, finger/palm
+direction, moving idle, mouse turn, guest name, fallback selection and responsive
+framing. Close front, angled and side views were visually inspected. The focused
+character/last-used-weapon tests, TypeScript check and production build pass.
+The existing mesh has no separately animated finger bones, so individual fingers
+cannot be curled around each weapon. No commit or deployment was made.
+
 # Phase 2 map improvements
 
 Updated: 2026-10-31. Complete, in the requested Town / Industrial / City order.

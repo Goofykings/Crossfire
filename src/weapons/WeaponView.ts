@@ -16,9 +16,9 @@ import {
 import { assetUrl } from '../core/assets';
 import type { MaterialLibrary } from '../rendering/MaterialLibrary';
 import type { RenderContext } from '../rendering/RenderContext';
-import type { CollisionWorld } from '../physics/CollisionWorld';
 import type { CasingType, Effects } from './Effects';
 import type { Weapon, WeaponAction, WeaponId } from './Weapon';
+import { WeaponMotion, type MotionInput } from './WeaponMotion';
 
 export const WEAPON_RENDER_GROUP = 1;
 
@@ -80,7 +80,6 @@ export const RIG_CONFIGS: Record<WeaponId, RigConfig> = {
   },
 };
 
-const SPRINT: Pose6 = [-0.03, -0.045, 0.0, -0.2, 0.55, 0.18];
 const DOWN: Pose6 = [0.04, -0.32, 0.08, -0.95, 0.25, 0.45];
 const ZERO6: Pose6 = [0, 0, 0, 0, 0, 0];
 
@@ -141,13 +140,8 @@ export class WeaponView {
   private reticle: StandardMaterial | null = null;
   private readonly containers: AssetContainer[] = [];
   private flashTimer = 0;
-  private swayX = 0;
-  private swayY = 0;
-  private kick = 0;
-  private kickVel = 0;
-  private sprint = 0;
+  readonly motion = new WeaponMotion();
   private hidden = false;
-  private wallHidden = false;
   /** Every weapon mesh: excluded from the sun by the game. */
   readonly meshes: AbstractMesh[] = [];
   /** Last frame's pose, for tests. */
@@ -290,7 +284,8 @@ export class WeaponView {
     this.current?.root.setEnabled(false);
     this.current?.flash.setEnabled(false);
     this.current = rig;
-    rig.root.setEnabled(!this.hidden && !this.wallHidden);
+    this.motion.reset();
+    rig.root.setEnabled(!this.hidden);
   }
 
   get currentId(): WeaponId | null {
@@ -307,9 +302,9 @@ export class WeaponView {
   fire(): void {
     const rig = this.current;
     if (!rig) return;
-    this.kickVel += 7.5 * rig.cfg.kick;
+    this.motion.fire(rig.cfg.kick);
     this.flashTimer = 0.045;
-    rig.flash.setEnabled(!this.hidden && !this.wallHidden);
+    rig.flash.setEnabled(!this.hidden);
     rig.flash.rotationQuaternion = Quaternion.RotationAxis(Vector3.Forward(), Math.random() * Math.PI * 2);
     rig.flash.scaling.setAll(0.85 + Math.random() * 0.35);
     if (this.flashLight) {
@@ -339,9 +334,10 @@ export class WeaponView {
   }
 
   addSway(dx: number, dy: number): void {
-    this.swayX = Math.max(-0.06, Math.min(0.06, this.swayX - dx * 0.00011));
-    this.swayY = Math.max(-0.05, Math.min(0.05, this.swayY + dy * 0.00011));
+    this.motion.addSway(dx, dy);
   }
+
+  land(speed: number): void { this.motion.land(speed); }
 
   setVisible(v: boolean): void {
     this.root.setEnabled(v);
@@ -351,82 +347,38 @@ export class WeaponView {
   setHidden(hidden: boolean): void {
     if (hidden === this.hidden) return;
     this.hidden = hidden;
-    this.current?.root.setEnabled(!hidden && !this.wallHidden);
+    this.current?.root.setEnabled(!hidden);
     if (hidden) this.current?.flash.setEnabled(false);
-  }
-
-  /** Pull the view model back if its muzzle path intersects physical cover. */
-  avoidWalls(world: CollisionWorld, dt: number): void {
-    if (!this.current) return;
-    // Never push the view model indefinitely through the eye and behind the
-    // player: when there is insufficient room, hide it until the path clears.
-    const maxPullback = 1;
-    this.root.position.z = Math.max(0, Math.min(maxPullback, this.root.position.z - dt * 2.5));
-    this.ctx.camera.computeWorldMatrix();
-    const eye = this.ctx.camera.globalPosition;
-    const forward = this.ctx.camera.getDirection(new Vector3(0, 0, -1));
-    let behindEye = false;
-    const blocked = () => {
-      this.root.computeWorldMatrix(true);
-      const muzzle = this.muzzleWorld(), delta = muzzle.subtract(eye), length = delta.length();
-      behindEye = Vector3.Dot(delta, forward) < .1;
-      if (behindEye) return true;
-      const steps = Math.ceil(length / .04);
-      for (let i = 1; i <= steps; i++) {
-        const point = eye.add(delta.scale(i / steps));
-        if (world.overlapsCylinder(point.x, point.z, .10, point.y - .1, point.y + .1)) return true;
-      }
-      return false;
-    };
-    let obstructed = blocked();
-    for (let i = 0; obstructed && !behindEye && i < 17 && this.root.position.z < maxPullback; i++) {
-      this.root.position.z = Math.min(maxPullback, this.root.position.z + .06);
-      obstructed = blocked();
-    }
-    this.wallHidden = obstructed;
-    this.current.root.setEnabled(!this.hidden && !this.wallHidden);
-    if (this.wallHidden) this.current.flash.setEnabled(false);
   }
 
   update(
     dt: number,
     w: Weapon,
-    s: { sprinting: boolean; bobX: number; bobY: number; crouch: number; fromEmpty?: boolean },
+    s: Omit<MotionInput, 'ads'>,
   ): void {
     const rig = this.current;
     if (!rig) return;
-    // springs
-    this.kickVel += (-this.kick * 300 - this.kickVel * 24) * dt;
-    this.kick += this.kickVel * dt;
-    this.swayX *= Math.exp(-dt * 9);
-    this.swayY *= Math.exp(-dt * 9);
-    this.sprint += ((s.sprinting && w.action === 'idle' ? 1 : 0) - this.sprint) * Math.min(1, dt * 9);
-
     const pose = this.pose(rig, w);
     const ads = smooth(w.ads);
+    const motion = this.motion.update(dt, { ...s, ads });
     const sight = rig.anchors.get('sight') ?? Vector3.Zero();
     const hip = v3(rig.cfg.hip);
     const adsPos = new Vector3(-sight.x, -sight.y, -rig.cfg.eye - sight.z);
     const pos = Vector3.Lerp(hip, adsPos, ads);
-    const swayK = 1 - ads * 0.85;
-    pos.x += (this.swayX + s.bobX * 0.6) * swayK;
-    pos.y += (this.swayY + s.bobY * 0.7) * swayK - s.crouch * 0.01;
-    // recoil: back, up and muzzle rise (less when aimed)
-    const kick = this.kick * (1 - ads * 0.45);
-    pos.z += kick * 0.03;
-    pos.y += kick * 0.004;
+    pos.x += motion.x;
+    pos.y += motion.y;
+    pos.z += motion.z;
     const hr = rig.cfg.hipRot;
-    let rx = kick * 0.05 + this.swayY * 1.5 * swayK + hr[0] * (1 - ads);
-    let ry = this.swayX * 1.6 * swayK + hr[1] * (1 - ads);
-    let rz = this.swayX * 1.2 * swayK + hr[2] * (1 - ads);
-    const sp = this.sprint * (1 - ads);
+    let rx = motion.pitch + hr[0] * (1 - ads);
+    let ry = motion.yaw + hr[1] * (1 - ads);
+    let rz = motion.roll + hr[2] * (1 - ads);
     const wp = pose.weapon;
-    pos.x += wp[0] + SPRINT[0] * sp;
-    pos.y += wp[1] + SPRINT[1] * sp;
-    pos.z += wp[2] + SPRINT[2] * sp;
-    rx += wp[3] + SPRINT[3] * sp;
-    ry += wp[4] + SPRINT[4] * sp;
-    rz += wp[5] + SPRINT[5] * sp;
+    pos.x += wp[0];
+    pos.y += wp[1];
+    pos.z += wp[2];
+    rx += wp[3];
+    ry += wp[4];
+    rz += wp[5];
     this.pivot.position.copyFrom(pos);
     this.pivot.rotationQuaternion = Quaternion.RotationYawPitchRoll(ry, rx, rz);
 

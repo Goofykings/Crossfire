@@ -1,6 +1,8 @@
 import type { PlayerState, Snapshot } from '../../shared/protocol';
 import { weaponIcon } from './WeaponIcons';
 import { teammates } from '../../shared/combat';
+import { pointsOrder } from '../../shared/scoring';
+import { formatScore, matchCountdown } from './matchFormatting';
 
 export function scoreboardRelationship(snapshot: Snapshot, selfId: string, player: PlayerState): 'friendly' | 'opponent' {
   if (player.id === selfId) return 'friendly';
@@ -8,8 +10,7 @@ export function scoreboardRelationship(snapshot: Snapshot, selfId: string, playe
   return teammates(snapshot.match.mode, self?.team ?? null, player.team) ? 'friendly' : 'opponent';
 }
 
-export const scoreOrder = (a: PlayerState, b: PlayerState): number => b.kills - a.kills || a.deaths - b.deaths
-  || a.name.localeCompare(b.name) || a.id.localeCompare(b.id);
+export const scoreOrder = pointsOrder;
 
 export function scoreboardGroups(snapshot: Snapshot): { label: string; players: PlayerState[] }[] {
   if (snapshot.match.mode === 'teams') return (['blue', 'red'] as const).map((team) => ({
@@ -42,9 +43,8 @@ export class Scoreboard {
   update(snapshot: Snapshot | null, selfId: string, serverNow: number): void {
     const mode = snapshot?.match.mode;
     const end = snapshot?.match.endsAt;
-    const seconds = end == null ? null : Math.max(0, Math.ceil((end - serverNow) / 1000));
-    this.header.textContent = `${mode === 'teams' ? 'TEAMS' : mode === 'ffa' ? 'FREE FOR ALL' : 'Mode unavailable'} · ${seconds === null ? '--:--' : `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`}`;
-    const signature = JSON.stringify([selfId, snapshot?.match, snapshot?.players.map((p) => [p.id, p.name, p.kills, p.deaths, p.team, p.weapon])]);
+    this.header.textContent = `${mode === 'teams' ? 'TEAMS' : mode === 'ffa' ? 'FREE FOR ALL' : 'Mode unavailable'} · ${matchCountdown(end ?? null, serverNow)}`;
+    const signature = JSON.stringify([selfId, snapshot?.match, snapshot?.players.map((p) => [p.id, p.name, p.score, p.kills, p.deaths, p.team, p.weapon])]);
     if (signature === this.signature) return;
     this.signature = signature;
     this.body.replaceChildren();
@@ -53,7 +53,7 @@ export class Scoreboard {
       if (group.label) { const heading = document.createElement('h3'); heading.textContent = group.label; this.body.appendChild(heading); }
       const table = document.createElement('table');
       const head = table.createTHead().insertRow();
-      for (const label of ['PLAYER', 'WEAPON', 'KILLS', 'DEATHS']) { const th = document.createElement('th'); th.textContent = label; th.scope = 'col'; head.appendChild(th); }
+      for (const label of ['PLAYER', 'WEAPON', 'SCORE', 'KILLS', 'DEATHS']) { const th = document.createElement('th'); th.textContent = label; th.scope = 'col'; head.appendChild(th); }
       const body = table.createTBody();
       for (const p of group.players) {
         const row = body.insertRow();
@@ -63,6 +63,7 @@ export class Scoreboard {
         name.className = `score-name-${snapshot ? scoreboardRelationship(snapshot, selfId, p) : 'opponent'}`;
         name.textContent = p.name;
         row.insertCell().innerHTML = weaponIcon(p.weapon);
+        const score = row.insertCell(); score.textContent = formatScore(p.score); score.title = `${p.score} points`; score.dataset.score = String(p.score);
         for (const value of [p.kills, p.deaths]) row.insertCell().textContent = String(value);
       }
       this.body.appendChild(table);

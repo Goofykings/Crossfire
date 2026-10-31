@@ -1,0 +1,14 @@
+{
+  "name": "crossfire-dedicated-scaffold",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "esbuild src/index.ts --bundle --platform=node --format=esm --packages=external --outfile=dist/index.mjs",
+    "start": "node dist/index.mjs",
+    "dev": "npm run build && npm start",
+    "test": "npm run typecheck && npm run build && node --test tests/*.mjs"
+  },
+  "dependencies": { "ws": "8.22.0" },
+  "devDependencies": { "@types/node": "24.19.2", "@types/ws": "8.18.1", "esbuild": "0.28.2", "typescript": "7.0.2" }
+}

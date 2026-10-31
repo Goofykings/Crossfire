@@ -1,5 +1,62 @@
 # CLAUDE.md: notes for future sessions
 
+## Polish Phase 3 (2026-10-31)
+
+See docs/POLISH_PHASE3.md and PROGRESS.md. RoundResults renders the frozen
+server roster, never current-round stats. Keep full numeric ordering, relative
+name colors, last approved weapon silhouettes, original team kill totals and
+cross-team MVP. Result.players and Standing.weapon are optional additive v10
+fields for older durable summaries; missing history must remain unavailable.
+No additional protocol bump. Freeze all spawned participants before resets,
+including leavers. Results actions share a one-shot guard and reuse the existing
+room/loadout callbacks. Keep staged CSS animations and reduced-motion handling.
+Use tools/polish-phase2-test.mjs <url> ffa|teams --phase3 for actual local Chrome
+multiplayer/results checks. Public v9 still needs matching authorized releases;
+no deployment or live validation was performed here.
+
+## Polish Phase 2 (2026-10-31)
+
+Local protocol is v10; the public health check still reported v9. No deployment
+was made. Publish matching Worker/frontend builds only when authorized. See
+docs/POLISH_PHASE2.md. shared/scoring.ts defines integer elimination/headshot/
+combo points, expiry, deterministic rank and winner/MVP rules. The Worker owns
+all awards and persists sessions, team totals, round-ledger and round-result
+together. Keep team wins based on elimination totals, not individual points.
+Freeze results before resetting the unchanged 600-second room schedule.
+Navigation disconnect(false) preserves the resume token; explicit Leave
+disconnect() forgets it. Do not restore refresh-as-Leave or drop scores on resume.
+Results acknowledge into the existing map/spawn flow; reconnect during loading
+must release an interrupted roundLoad promise before retrying. Timers use the
+server deadline; leaderboard abbreviations truncate without changing totals.
+Use tools/polish-phase2-test.mjs for actual local FFA/Teams browser checks.
+
+## Polish Phase 1 (2026-10-31)
+
+WeaponView owns the final hip/ADS/action transform; WeaponMotion supplies the
+single cosmetic layer. DampedSpring integrates by elapsed time. Full ADS removes
+decorative lateral offsets/rotations so recoil follows the optical axis. Keep
+fire/landing impulses event-driven and preserve Weapon's gameplay state machine.
+PlayerCamera smooths grounded height both ways without accumulating fixed-tick
+step offsets; safeViewEye clamps it below ceilings. Respect reduced motion.
+No sprint/manual-crouch control was added. The preceding wall fix removed
+avoidWalls entirely; never restore wall-driven gun retraction/hiding. Its shared
+weapon clearance uses the equipped authoritative weapon without a protocol bump,
+and requires matching frontend/Worker releases when authorized. Overlaps caused
+solely by in-place turns/leans, swaps or close spawns remain a known limitation.
+See PROGRESS.md and tools/polish-{phase1,multiplayer}-test.mjs for verification.
+
+## Dedicated-server preparation (2026-10-31)
+
+Cloudflare remains the default. Provider and URL validation lives in
+src/network/backendConfig.ts; custom requires VITE_CUSTOM_MULTIPLAYER_URL and
+must never fall back to the Worker. The existing VITE_MULTIPLAYER_URL overrides
+the Worker default. server-dedicated is an incomplete Node/WebSocket scaffold:
+it validates the shared v9 protocol and returns server_incomplete, never fake
+players or snapshots. The Worker retains its Durable Object and existing routes.
+Pure health regeneration is now shared; the authoritative room state, session
+persistence and Cloudflare lifecycle still need a real Node port. See
+docs/DEDICATED_SERVER.md before changing providers. No deployment was made.
+
 ## Phase 2 maps (2026-10-31)
 
 Implemented; see docs/PHASE2_MAPS.md and the newest PROGRESS.md entry. Retain

@@ -25,9 +25,10 @@ class SocketFixture {
 }
 const controller = new PlayerController(new CollisionWorld());
 const player = (): PlayerState => ({ id: 'transport-unit', name: 'Unit fixture', motion: controller.capture(),
+  score: 0, comboCount: 0, comboUntil: null, lastPlayedRound: 0, lastPlayedTeam: null,
   ack: 0, alive: true, health: 100, combat: { gun: new Weapon(WEAPONS[0]).capture(), triggerHeld: false, reloadHeld: false, aimHeld: false },
   life: 1, weapon: 'rifle', kills: 0, deaths: 0, team: null, death: null });
-const snapshot = (p: PlayerState): Snapshot => ({ room: 'public-main', mapId: 'european-town', roundId: 0,
+const snapshot = (p: PlayerState): Snapshot => ({ result: null, room: 'public-main', mapId: 'european-town', roundId: 0,
   mapVersion: 'fixture', serverTime: Date.now(), match: { mode: 'ffa', endsAt: Date.now() + 600000, teamScores: null }, players: [p] });
 let client: MultiplayerClient | undefined;
 afterEach(() => { client?.disconnect(); client = undefined; vi.useRealTimers(); vi.unstubAllGlobals(); });
@@ -38,20 +39,31 @@ async function connect(documentFixture?: object) {
   client = new MultiplayerClient('ws://127.0.0.1:8787/ws');
   const ready = client.connect(), socket = SocketFixture.latest, p = player();
   socket.onopen?.();
-  socket.receive({ v: 9, type: 'welcome', selfId: p.id, resumeToken: 'a'.repeat(64), resumed: false, snapshot: snapshot(p) });
+  socket.receive({ v: 10, type: 'welcome', selfId: p.id, resumeToken: 'a'.repeat(64), resumed: false, snapshot: snapshot(p) });
   await ready;
   return { socket, p, client };
 }
 const frames = (s: SocketFixture) => s.sent.filter((m) => m.type === 'input').flatMap((m) => m.frames!);
+it('preserves the resume credential on navigation, while explicit Leave forgets it', async () => {
+  const values = new Map<string, string>();
+  vi.stubGlobal('sessionStorage', { getItem: (k: string) => values.get(k) ?? null,
+    setItem: (k: string, v: string) => values.set(k, v), removeItem: (k: string) => values.delete(k) });
+  const { client, socket } = await connect();
+  client.disconnect(false);
+  expect([...values.values()]).toContain('a'.repeat(64));
+  expect(socket.sent.some((m) => m.type === 'leave')).toBe(false);
+  vi.advanceTimersByTime(10000); expect(SocketFixture.instances).toHaveLength(1);
+  client.disconnect(); expect(values.size).toBe(0);
+});
 it('sends real chat messages and reports server rate limits', async () => {
   const { socket, client } = await connect(), received: string[] = [], errors: string[] = [];
   client.onChat = (m) => received.push(`${m.name}: ${m.text}`);
   client.onChatError = (m) => errors.push(m);
   expect(client.sendChat('  hello  ')).toBe(true);
-  expect(socket.sent.at(-1)).toMatchObject({ v: 9, type: 'chat', text: 'hello' });
+  expect(socket.sent.at(-1)).toMatchObject({ v: 10, type: 'chat', text: 'hello' });
   expect(client.sendChat('   ')).toBe(false);
-  socket.receive({ v: 9, type: 'chat', id: 'other', name: 'Other', text: 'hello' });
-  socket.receive({ v: 9, type: 'error', code: 'chat_rate', message: 'Please wait', fatal: false });
+  socket.receive({ v: 10, type: 'chat', id: 'other', name: 'Other', text: 'hello' });
+  socket.receive({ v: 10, type: 'error', code: 'chat_rate', message: 'Please wait', fatal: false });
   expect(received).toEqual(['Other: hello']); expect(errors).toEqual(['Please wait']);
 });
 it('stays connected with continuous input and 250ms acknowledgements while the socket is healthy', async () => {
@@ -64,7 +76,7 @@ it('stays connected with continuous input and 250ms acknowledgements while the s
     const m = JSON.parse(raw);
     if (m.type === 'input') {
       const ack = m.frames.at(-1).seq;
-      setTimeout(() => { p.ack = ack; socket.receive({ v: 9, type: 'snapshot', snapshot: snapshot(p) }); }, 250);
+      setTimeout(() => { p.ack = ack; socket.receive({ v: 10, type: 'snapshot', snapshot: snapshot(p) }); }, 250);
     }
   };
   for (let i = 0; i < 15 * 120; i++) {
@@ -80,15 +92,15 @@ it('delivers a confirmed elimination before its dead snapshot, once, and rejects
   const order: string[] = [];
   client.onElimination = () => order.push('death');
   client.onSnapshot = () => order.push('snapshot');
-  const elimination = { id: 'death-1', victimLife: 1, direction: { x: 0, y: 0, z: 1 }, roundId: 0,
+  const elimination = { award: { base: 100, headshot: 0, combo: 0, comboCount: 1, total: 100 }, id: 'death-1', victimLife: 1, direction: { x: 0, y: 0, z: 1 }, roundId: 0,
     victimId: p.id, victimName: p.name, killerId: 'other', killerName: 'Other', weapon: 'rifle', head: false,
     at: 1000, respawnAt: 4000, killerTeam: null, victimTeam: null };
-  socket.receive({ v: 9, type: 'elimination', elimination });
-  socket.receive({ v: 9, type: 'elimination', elimination });
+  socket.receive({ v: 10, type: 'elimination', elimination });
+  socket.receive({ v: 10, type: 'elimination', elimination });
   expect(order).toEqual(['death', 'snapshot']);
   p.life = 2; p.alive = true; p.health = 100;
-  socket.receive({ v: 9, type: 'snapshot', snapshot: snapshot(p) }); order.length = 0;
-  socket.receive({ v: 9, type: 'elimination', elimination: { ...elimination, id: 'late-death' } });
+  socket.receive({ v: 10, type: 'snapshot', snapshot: snapshot(p) }); order.length = 0;
+  socket.receive({ v: 10, type: 'elimination', elimination: { ...elimination, id: 'late-death' } });
   expect(order).toEqual([]); expect(client.latest?.players[0].alive).toBe(true);
 });
 it('bounds catch-up batches and outstanding input to the server queue capacity', async () => {
@@ -96,11 +108,11 @@ it('bounds catch-up batches and outstanding input to the server queue capacity',
   for (let i = 0; i < 80; i++) client.fixedInput(controller, { ...NO_INTENT, z: 1 });
   vi.advanceTimersByTime(500);
   expect(frames(socket)).toHaveLength(24);
-  p.ack = 12; socket.receive({ v: 9, type: 'snapshot', snapshot: snapshot(p) });
+  p.ack = 12; socket.receive({ v: 10, type: 'snapshot', snapshot: snapshot(p) });
   vi.advanceTimersByTime(100);
   expect(frames(socket)).toHaveLength(48);
   expect(frames(socket).at(-1)?.seq).toBe(48);
-  p.ack = 36; socket.receive({ v: 9, type: 'snapshot', snapshot: snapshot(p) });
+  p.ack = 36; socket.receive({ v: 10, type: 'snapshot', snapshot: snapshot(p) });
   vi.advanceTimersByTime(100);
   expect(frames(socket)).toHaveLength(72);
   expect(socket.sent.filter((m) => m.type === 'input').every((m) => m.frames!.length <= 12)).toBe(true);
@@ -111,7 +123,7 @@ it('resets the sending window for a new authoritative life and discards old queu
   for (let i = 0; i < 60; i++) client.fixedInput(controller, { ...NO_INTENT, z: 1 });
   vi.advanceTimersByTime(100);
   p.ack = 12; p.life = 2;
-  socket.receive({ v: 9, type: 'snapshot', snapshot: snapshot(p) });
+  socket.receive({ v: 10, type: 'snapshot', snapshot: snapshot(p) });
   const before = frames(socket).length;
   for (let i = 0; i < 12; i++) client.fixedInput(controller, { ...NO_INTENT, z: 1 });
   vi.advanceTimersByTime(50);
@@ -122,13 +134,13 @@ it('applies bounded input backpressure without closing a socket receiving valid 
   for (let i = 0; i < 130; i++) client.fixedInput(controller, { ...NO_INTENT, aim: true });
   vi.advanceTimersByTime(500);
   for (let i = 0; i < 5; i++) {
-    socket.receive({ v: 9, type: 'pong', at: Date.now() - 250, serverTime: Date.now() });
+    socket.receive({ v: 10, type: 'pong', at: Date.now() - 250, serverTime: Date.now() });
     vi.advanceTimersByTime(2000);
     client.fixedInput(controller, { ...NO_INTENT, aim: true });
   }
   expect(client.state).toBe('connected'); expect(client.inspect().pending).toBe(120);
   expect(client.inspect().events.some((e) => e.event === 'input_backpressure')).toBe(true);
-  p.ack = 24; socket.receive({ v: 9, type: 'snapshot', snapshot: snapshot(p) });
+  p.ack = 24; socket.receive({ v: 10, type: 'snapshot', snapshot: snapshot(p) });
   vi.advanceTimersByTime(100);
   expect(frames(socket).at(-1)!.seq).toBeGreaterThan(24);
   expect(client.inspect().closes).toBe(0);
@@ -137,7 +149,7 @@ it('uses all valid traffic for liveness even when pong delivery is delayed', asy
   const { socket, p, client } = await connect();
   for (let i = 0; i < 12; i++) {
     vi.advanceTimersByTime(1000);
-    socket.receive({ v: 9, type: 'snapshot', snapshot: snapshot(p) });
+    socket.receive({ v: 10, type: 'snapshot', snapshot: snapshot(p) });
   }
   expect(client.state).toBe('connected'); expect(client.inspect().closes).toBe(0);
   expect(client.inspect().lastPong).toBe(0);
@@ -168,7 +180,7 @@ it('bounds rapid connection flapping even when every retry receives a welcome', 
     vi.advanceTimersByTime(3000);
     const socket = SocketFixture.latest;
     socket.onopen?.();
-    socket.receive({ v: 9, type: 'welcome', selfId: p.id, resumeToken: 'a'.repeat(64), resumed: true, snapshot: snapshot(p) });
+    socket.receive({ v: 10, type: 'welcome', selfId: p.id, resumeToken: 'a'.repeat(64), resumed: true, snapshot: snapshot(p) });
     expect(client.state).toBe('connected');
   }
   expect(client.state).toBe('error'); expect(SocketFixture.instances).toHaveLength(6);
@@ -207,7 +219,7 @@ it('probes on visibility resume without prematurely warning, and removes its lis
   doc.hidden = false; listeners.forEach((fn) => fn());
   vi.advanceTimersByTime(1000);
   expect(client.state).toBe('connected');
-  socket.receive({ v: 9, type: 'pong', at: Date.now() - 1000, serverTime: Date.now() });
+  socket.receive({ v: 10, type: 'pong', at: Date.now() - 1000, serverTime: Date.now() });
   expect(client.inspect().lastPong).toBe(Date.now());
   client.disconnect();
   expect(listeners.size).toBe(0); expect(vi.getTimerCount()).toBe(0);

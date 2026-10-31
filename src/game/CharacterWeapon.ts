@@ -6,11 +6,19 @@ import type { WeaponId } from '../weapons/Weapon';
 import { RIG_CONFIGS } from '../weapons/WeaponView';
 import type { CharacterInstance } from './CharacterAsset';
 
+// The generated rig's hand bone points along local +Y. Its glove backs are
+// mirrored about X because the source character is built in an A-pose.
+const HAND_BACK_X = .766044;
+const HAND_BACK_Z = .642788;
+const WRIST_TO_PALM = .05;
+const PALM_SURFACE_OFFSET = .025;
+
 /** Local preview-only pose, expressed in character and weapon coordinates. */
 export interface CharacterHoldPose {
   offset: [number, number, number]; yaw: number; pitch: number;
   elbows: [[number, number, number], [number, number, number]];
-  hands: [[number, number, number], [number, number, number]];
+  hands: [{ fingers: [number, number, number]; back: [number, number, number] },
+    { fingers: [number, number, number]; back: [number, number, number] }];
 }
 
 /** Scene-local copies of the same GLBs used by the first-person weapon view. */
@@ -121,7 +129,14 @@ export class CharacterWeapon {
     for (const [index, arm] of this.armRig.entries()) {
       arm.upper.computeWorldMatrix(true); arm.forearm.computeWorldMatrix(true); arm.hand.computeWorldMatrix(true);
       const shoulder = arm.upper.getAbsolutePosition().clone(), elbow = arm.forearm.getAbsolutePosition().clone();
-      const wrist = arm.hand.getAbsolutePosition().clone(), target = arm.target.getAbsolutePosition().clone();
+      const wrist = arm.hand.getAbsolutePosition().clone();
+      // Grip anchors lie inside the weapon. Place the wrist behind the palm,
+      // and its back slightly outside the grip, instead of planting the wrist
+      // itself in the centre of the handle.
+      const fingers = Vector3.TransformNormal(Vector3.FromArray(pose.hands[index].fingers), this.root.getWorldMatrix()).normalize();
+      const back = Vector3.TransformNormal(Vector3.FromArray(pose.hands[index].back), this.root.getWorldMatrix()).normalize();
+      const target = arm.target.getAbsolutePosition().add(back.scale(PALM_SURFACE_OFFSET))
+        .subtractInPlace(fingers.scale(WRIST_TO_PALM));
       const upperLength = Vector3.Distance(shoulder, elbow), lowerLength = Vector3.Distance(elbow, wrist);
       const delta = target.subtract(shoulder), distance = Math.min(delta.length(), upperLength + lowerLength - .001);
       if (distance < .001) continue;
@@ -136,12 +151,30 @@ export class CharacterWeapon {
       rotateToward(arm.forearm, arm.hand.getAbsolutePosition().subtract(actualElbow), target.subtract(actualElbow));
       arm.hand.computeWorldMatrix(true);
       const handDirection = Vector3.TransformNormal(Vector3.Up(), arm.hand.getWorldMatrix());
-      const wantedHand = Vector3.TransformNormal(Vector3.FromArray(pose.hands[index]), this.root.getWorldMatrix());
-      rotateToward(arm.hand, handDirection, wantedHand);
+      rotateToward(arm.hand, handDirection, fingers.clone());
+      // The exported hands have mirrored rest axes. Align the back of each
+      // glove separately to constrain roll around the finger direction too.
+      const sign = index === 0 ? 1 : -1;
+      const handBack = Vector3.TransformNormal(new Vector3(sign * HAND_BACK_X, 0, HAND_BACK_Z), arm.hand.getWorldMatrix());
+      const project = (v: Vector3) => v.subtract(fingers.scale(Vector3.Dot(v, fingers))).normalize();
+      const currentBack = project(handBack), wantedBack = project(back);
+      const angle = Math.atan2(Vector3.Dot(Vector3.Cross(currentBack, wantedBack), fingers), Vector3.Dot(currentBack, wantedBack));
+      arm.hand.rotate(fingers, angle, Space.WORLD);
+      arm.hand.computeWorldMatrix(true);
     }
   }
   inspect() { return { id: this.id, ads: this.ads, pitch: this.pitch, meshes: this.meshes.length,
     instances: this.character.root.getChildTransformNodes(true).filter((n) => /^held:(rifle|smg|shotgun|sniper)$/.test(n.name)).length,
-    grips: this.grips.map((g) => g.getAbsolutePosition().asArray()) }; }
+    grips: this.grips.map((g) => g.getAbsolutePosition().asArray()),
+    homeHands: this.homePose ? this.armRig.map((arm, index) => {
+      const matrix = arm.hand.computeWorldMatrix(true), sign = index === 0 ? 1 : -1;
+      const fingers = Vector3.TransformNormal(Vector3.Up(), matrix).normalize();
+      const back = Vector3.TransformNormal(new Vector3(sign * HAND_BACK_X, 0, HAND_BACK_Z), matrix).normalize();
+      const desiredFingers = Vector3.TransformNormal(Vector3.FromArray(this.homePose!.hands[index].fingers), this.root.getWorldMatrix()).normalize();
+      const desiredBack = Vector3.TransformNormal(Vector3.FromArray(this.homePose!.hands[index].back), this.root.getWorldMatrix()).normalize();
+      return { contact: arm.hand.getAbsolutePosition().add(fingers.scale(WRIST_TO_PALM))
+        .subtractInPlace(back.scale(PALM_SURFACE_OFFSET)).asArray(),
+        fingers: fingers.asArray(), back: back.asArray(), desiredFingers: desiredFingers.asArray(), desiredBack: desiredBack.asArray() };
+    }) : null }; }
   dispose(): void { this.restore(); for (const pole of this.poles) pole.dispose(); this.entries.dispose(); this.root.dispose(); }
 }

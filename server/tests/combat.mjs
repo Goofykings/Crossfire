@@ -9,19 +9,20 @@ import { test } from 'node:test';
 import { Miniflare, convertV4MiniflareOptions, Log, LogLevel } from 'miniflare';
 import WebSocket from 'ws';
 
-for (const mode of ['ffa', 'teams']) test(`Authoritative player combat: ${mode}`, { timeout: 90000 }, async (t) => {
+for (const mode of (process.env.CROSSFIRE_SCORING_ONLY ? ['ffa'] : ['ffa', 'teams'])) test(`Authoritative player combat: ${mode}`, { timeout: 90000 }, async (t) => {
   const origin = 'http://localhost:5173';
-  const mf = new Miniflare(convertV4MiniflareOptions({ name: `combat-${mode}`,
+  const options = convertV4MiniflareOptions({ name: `combat-${mode}`,
     modules: [{ type: 'ESModule', path: fileURLToPath(new URL('runtime-fixture.mjs', import.meta.url)) },
       { type: 'ESModule', path: fileURLToPath(new URL('../dist/index.js', import.meta.url)) }],
     compatibilityDate: '2026-10-25', host: '127.0.0.1', port: 0,
     resourcePersistencePath: fs.mkdtempSync(fileURLToPath(new URL('../.wrangler/combat-', import.meta.url))),
     durableObjects: { ROOM: { className: 'PublicRoom', useSQLite: true } },
     bindings: { ALLOWED_ORIGINS: origin, MATCH_MODE: mode }, log: new Log(LogLevel.ERROR),
-  }));
-  const base = (await mf.ready).href;
-  const ns = await mf.getDurableObjectNamespace('ROOM');
-  const stub = ns.get(ns.idFromName('public-main'));
+  });
+  let mf = new Miniflare(options);
+  let base = (await mf.ready).href;
+  let ns = await mf.getDurableObjectNamespace('ROOM');
+  let stub = ns.get(ns.idFromName('public-main'));
   const clients = [];
   t.afterEach(async () => {
     for (const c of clients) if (c.ws.readyState === WebSocket.OPEN) c.send({ type: 'leave' });
@@ -45,7 +46,7 @@ for (const mode of ['ffa', 'teams']) test(`Authoritative player combat: ${mode}`
     ws.on('message', (raw) => { const m = JSON.parse(String(raw)); c.messages.push(m); if (m.snapshot) c.snapshot = m.snapshot; });
     ws.on('error', () => {});
     await new Promise((resolve, reject) => { ws.once('open', resolve); ws.once('error', reject); });
-    c.send = (m) => ws.send(JSON.stringify({ v: 9, ...m }));
+    c.send = (m) => ws.send(JSON.stringify({ v: 10, ...m }));
     c.send({ type: 'join', name: `Combat ${clients.length}`, ...(resumeToken ? { resumeToken } : {}) });
     const welcome = await wait(c, (m) => m.type === 'welcome');
     c.id = welcome.selfId; c.token = welcome.resumeToken;
@@ -91,6 +92,52 @@ for (const mode of ['ffa', 'teams']) test(`Authoritative player combat: ${mode}`
     return result;
   }
   try {
+    if (mode === 'ffa') await t.test('real headshot combos, duplicate protection, resume and frozen round results', async () => {
+      let a = await open('sniper');
+      const dead = [];
+      for (let i = 0; i < 3; i++) {
+        const b = await open(); dead.push(b);
+        await place(a, b); await aim(a, b, 1.6);
+        const mark = a.messages.length;
+        await shot(a, b, 1.6);
+        const e = (await wait(a, (m) => m.type === 'elimination' && m.elimination.victimId === b.id, mark)).elimination;
+        assert.equal(e.award.total, 150 + 20 * i); assert.equal(e.award.comboCount, i + 1);
+        const state = await stub.snapshotForTest();
+        const saved = state.players.find((p) => p.id === a.id);
+        const replay = await stub.replayDeadTransitionForTest(b.id, a.id);
+        assert.equal(replay.players.find((p) => p.id === a.id).score, saved.score);
+        assert.equal(replay.players.find((p) => p.id === a.id).comboUntil, saved.comboUntil);
+        if (i < 2) await delay(1100);
+      }
+      assert.equal(me(a).score, 510);
+      const comboUntil = me(a).comboUntil;
+      const original = a; original.ws.close(); await delay(80); a = await open('sniper', original.token);
+      assert.equal(me(a).score, 510); assert.equal(me(a).comboCount, 3); assert.equal(me(a).comboUntil, comboUntil);
+      const enemy = await open('sniper'); await place(enemy, a); await aim(enemy, a, 1.6); await shot(enemy, a, 1.6);
+      await wait(a, (m) => m.type === 'snapshot' && m.snapshot.players.some((p) => p.id === a.id && !p.alive));
+      assert.equal(me(a).comboCount, 0); assert.equal(me(a).score, 510);
+      const finished = JSON.parse(JSON.stringify(await stub.advanceMapForTest())), result = finished.result;
+      assert.equal(result.winner.id, a.id); assert.equal(result.mvp.id, a.id); assert.equal(result.mvp.score, 510); assert.equal(result.draw, false);
+      assert.equal(result.players.find((p) => p.id === a.id).score, 510);
+      assert.equal(result.players.find((p) => p.id === a.id).weapon, 'sniper');
+      assert.ok(dead.every((c) => result.players.some((p) => p.id === c.id)), 'completed roster retains all real opponents');
+      assert.ok(finished.players.every((p) => p.score === 0 && p.comboCount === 0));
+      await stub.alarmForTest(); assert.deepEqual((await stub.snapshotForTest()).result, result);
+      // A complete runtime restart exercises durable results without retaining
+      // an RPC capability that prevents Miniflare's hibernation-only eviction.
+      for (const c of clients) if (c.ws.readyState === WebSocket.OPEN) c.ws.close();
+      await delay(100);
+      stub[Symbol.dispose]?.();
+      await mf.dispose(); mf = new Miniflare(options); base = (await mf.ready).href;
+      ns = await mf.getDurableObjectNamespace('ROOM');
+      stub = ns.get(ns.idFromName('public-main'));
+      assert.deepEqual((await stub.snapshotForTest()).result, result);
+      const resumed = await open('sniper', a.token, false);
+      assert.deepEqual(resumed.snapshot.result, result); assert.equal(me(resumed).score, 0);
+      for (const c of [a, resumed, enemy, ...dead]) await leave(c);
+      let next = finished; while (next.mapId !== 'european-town') next = await stub.advanceMapForTest();
+    });
+    if (process.env.CROSSFIRE_SCORING_ONLY) return;
     for (const [weapon, expected] of [['rifle', 25], ['smg', 11], ['sniper', 75], ['shotgun', 100]]) {
       await t.test(`${weapon}: actual opponents lose weapon-specific health on both clients`, async () => {
         const a = await open(weapon), b = await open();
@@ -99,6 +146,7 @@ for (const mode of ['ffa', 'teams']) test(`Authoritative player combat: ${mode}`
         const result = await shot(a, b);
         assert.equal(result.hits.length, 1); assert.equal(result.hits[0].id, b.id);
         assert.equal(result.hits[0].amount, expected); assert.equal(result.hits[0].head, false);
+        assert.equal(me(a).score, expected === 100 ? 100 : 0, 'only lethal hits award points');
         const direction = result.hits[0].direction;
         assert.ok(Math.abs(Math.hypot(direction.x, direction.y, direction.z) - 1) < .001);
         const dx = b.position[0] - a.position[0], dy = b.position[1] + .9 - a.position[1] - 1.64, dz = b.position[2] - a.position[2];
@@ -151,6 +199,7 @@ for (const mode of ['ffa', 'teams']) test(`Authoritative player combat: ${mode}`
       assert.equal(killed.hits[0].health, 0); assert.equal(killed.hits[0].killed, true); assert.equal(killed.hits[0].head, true);
       const elimination = await wait(victim, (m) => m.type === 'elimination', mark);
       assert.equal(elimination.elimination.killerId, sniper.id);
+      assert.equal(elimination.elimination.award.total, 150);
       assert.equal(elimination.elimination.victimLife, me(victim).life);
       assert.equal(typeof elimination.elimination.id, 'string');
       assert.deepEqual(elimination.elimination.direction, killed.hits[0].direction);
@@ -168,14 +217,14 @@ for (const mode of ['ffa', 'teams']) test(`Authoritative player combat: ${mode}`
       await spawn(victim, 'smg'); assert.equal(me(victim).life, life + 1); assert.equal(me(victim).deaths, 1);
       assert.equal(me(victim).combat.gun.ammo, 32);
       // Real resume after earned nonzero scores must retain the entire life/loadout.
-      const saved = [sniper, victim].map((c) => ({ id: c.id, kills: me(c).kills, deaths: me(c).deaths,
+      const saved = [sniper, victim].map((c) => ({ id: c.id, score: me(c).score, kills: me(c).kills, deaths: me(c).deaths,
         health: me(c).health, life: me(c).life, team: me(c).team, weapon: me(c).weapon, ammo: me(c).combat.gun.ammo,
         endsAt: c.snapshot.match.endsAt, scores: c.snapshot.match.teamScores }));
       const restored = [];
       for (const [i, c] of [sniper, victim].entries()) {
         c.ws.close(); await delay(100);
         const r = await open(c === sniper ? 'sniper' : 'smg', c.token); restored.push(r);
-        assert.deepEqual({ id: r.id, kills: me(r).kills, deaths: me(r).deaths, health: me(r).health,
+        assert.deepEqual({ id: r.id, score: me(r).score, kills: me(r).kills, deaths: me(r).deaths, health: me(r).health,
           life: me(r).life, team: me(r).team, weapon: me(r).weapon, ammo: me(r).combat.gun.ammo,
           endsAt: r.snapshot.match.endsAt, scores: r.snapshot.match.teamScores }, saved[i]);
       }

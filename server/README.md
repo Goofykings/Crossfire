@@ -1,6 +1,16 @@
 # Crossfire multiplayer backend
 
-Phase 1 uses **protocol v8** for shared slide-jump physics, weapon balance and room chat. The Worker validates input, derives lean viewpoints and hitboxes, and assigns chat sender names. `/health` reports version 8. Publish matching frontend and Worker builds together when authorized; earlier protocol descriptions below are historical.
+The local Worker and frontend use **protocol v10** for authoritative points,
+combos and frozen winner/MVP results. The public `/health` endpoint still
+reported **v9** on 2026-10-31; nothing was deployed. Publish matching frontend
+and Worker builds together when authorized. See [scoring/results rules and
+verification](../docs/POLISH_PHASE2.md). Earlier protocol descriptions below
+are historical.
+
+Cloudflare remains the default provider. Provider variables, the public Worker
+fallback, and the incomplete future Node.js host are documented in
+[dedicated server preparation](../docs/DEDICATED_SERVER.md); those current
+instructions supersede older missing-URL descriptions below.
 
 Separate TypeScript Cloudflare Worker, SQLite-backed Durable Object and WebSocket backend. No deployment or account is needed for local development. The existing Vite configuration and GitHub Pages workflow are unchanged.
 
@@ -94,13 +104,13 @@ Initial room/session capacity is 16 with a bounded pending-handshake limit. Two 
 
 `wrangler.jsonc` declares the `ROOM` binding and SQLite class export. `ALLOWED_ORIGINS` is an exact comma-separated origin list. Development ports 5173/5180 and production-subpath test port 4176 are included. Configure any other frontend origin explicitly, without a repository path; no wildcard is used. `/ws` requires an allowed Origin and a WebSocket upgrade. `/presence` allows read-only non-browser HTTP requests and sends CORS headers only for allowed browser origins.
 
-The public frontend variable is `VITE_MULTIPLAYER_URL` (root `.env.example`). Set it before Vite starts or builds: local loopback `ws://`, public `wss://`. A missing URL shows Offline on home and a configuration error on Play. Explicit practice remains available.
+`VITE_MULTIPLAYER_PROVIDER` defaults to `cloudflare`; `VITE_MULTIPLAYER_URL` overrides the public Worker URL and may use loopback `ws://` for local development. With no override, the existing public Worker URL is used. `custom` requires its own `VITE_CUSTOM_MULTIPLAYER_URL`; see [provider and dedicated server configuration](../docs/DEDICATED_SERVER.md). Explicit practice remains available.
 
 That earlier focused task excluded sliding, weapon-model changes, map expansion, target removal and Extreme/FPS work. Subsequent authorized updates implemented sliding, Teams and combat; a dedicated match-results phase and Extreme Quality remain future work. Existing weapon models are preserved.
 
 ## Public configuration (no deployment performed)
 
-Keep GitHub Pages serving only `dist/`. Before a separately approved backend deployment, set the Worker `ALLOWED_ORIGINS` to the exact Pages origin (no repository path), retain only intended development origins, deploy the existing Worker/SQLite Durable Object configuration, and verify `/health`, `/presence` and two real browsers against `/ws`. Set the repository Actions variable `VITE_MULTIPLAYER_URL` to the deployed `wss://<worker-host>/ws` and rebuild the Pages frontend; the existing workflow already reads it. Never put Cloudflare credentials in frontend configuration. No public endpoint has been established or tested here. A missing URL yields Offline on home and a real configuration error on Play.
+Keep GitHub Pages serving only `dist/`. Before a separately approved backend deployment, retain the Worker `ALLOWED_ORIGINS` for the exact Pages origin (no repository path), deploy the existing Worker/SQLite Durable Object configuration, and verify `/health`, `/presence` and two real browsers against `/ws`. The Actions variable `VITE_MULTIPLAYER_URL` can override the existing public Worker URL; an empty value uses the default. Never put Cloudflare credentials in frontend configuration. The public Worker accepted a protocol-v9 join and clean leave in the 2026-10-31 preparation check; that brief test did not exercise a public match.
 
 ## Rotation validation and runtime references
 

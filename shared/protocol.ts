@@ -2,8 +2,9 @@ import { validMap, type MapId } from './maps';
 import type { MoveIntent, ControllerState, Vec3 } from '../src/player/PlayerController';
 import type { WeaponId, WeaponState } from '../src/weapons/Weapon';
 import type { CombatIntent } from './combat';
+import { pointsOrder, type ScoreAward, type RoundResult, type RoundStanding } from './scoring';
 
-export const PROTOCOL_VERSION = 9;
+export const PROTOCOL_VERSION = 10;
 export const validWeapon = (x: unknown): x is WeaponId => x === 'rifle' || x === 'shotgun' || x === 'sniper' || x === 'smg';
 export const PUBLIC_ROOM = 'public-main';
 export const INPUT_BATCH_LIMIT = 12;
@@ -26,12 +27,18 @@ export interface ShotResult {
   hits: { id: string; life: number; amount: number; health: number; head: boolean; killed: boolean; direction: Vec3 }[];
 }
 export interface Elimination {
+  award: ScoreAward | null;
   id: string; victimLife: number; direction: Vec3 | null;
   roundId: number; victimId: string; victimName: string; killerId: string | null;
   killerName: string | null; weapon: WeaponId | null; head: boolean;
   at: number; respawnAt: number; killerTeam: 'blue' | 'red' | null; victimTeam: 'blue' | 'red' | null;
 }
 export interface PlayerState {
+  score: number;
+  comboCount: number;
+  comboUntil: number | null;
+  lastPlayedRound: number | null;
+  lastPlayedTeam: 'blue' | 'red' | null;
   id: string;
   name: string;
   motion: ControllerState;
@@ -48,6 +55,7 @@ export interface PlayerState {
   death: Elimination | null;
 }
 export interface Snapshot {
+  result: RoundResult | null;
   room: typeof PUBLIC_ROOM;
   mapId: MapId;
   roundId: number;
@@ -57,22 +65,22 @@ export interface Snapshot {
   match: { mode: 'ffa' | 'teams' | null; endsAt: number | null; teamScores: { blue: number; red: number } | null };
 }
 export type ClientMessage =
-  | { v: 9; type: 'join'; name: string; resumeToken?: string }
-  | { v: 9; type: 'spawn'; roundId: number; mapVersion: string; weapon: WeaponId; requestId: string }
-  | { v: 9; type: 'input'; roundId: number; mapVersion: string; frames: InputFrame[] }
-  | { v: 9; type: 'ping'; at: number }
-  | { v: 9; type: 'chat'; text: string }
-  | { v: 9; type: 'leave' };
+  | { v: typeof PROTOCOL_VERSION; type: 'join'; name: string; resumeToken?: string }
+  | { v: typeof PROTOCOL_VERSION; type: 'spawn'; roundId: number; mapVersion: string; weapon: WeaponId; requestId: string }
+  | { v: typeof PROTOCOL_VERSION; type: 'input'; roundId: number; mapVersion: string; frames: InputFrame[] }
+  | { v: typeof PROTOCOL_VERSION; type: 'ping'; at: number }
+  | { v: typeof PROTOCOL_VERSION; type: 'chat'; text: string }
+  | { v: typeof PROTOCOL_VERSION; type: 'leave' };
 export type ServerMessage =
-  | { v: 9; type: 'chat'; id: string; name: string; text: string }
-  | { v: 9; type: 'shot'; shot: ShotResult }
-  | { v: 9; type: 'elimination'; elimination: Elimination }
-  | { v: 9; type: 'welcome'; selfId: string; resumeToken: string; resumed: boolean; snapshot: Snapshot }
-  | { v: 9; type: 'spawned'; requestId: string; snapshot: Snapshot }
-  | { v: 9; type: 'snapshot'; snapshot: Snapshot }
-  | { v: 9; type: 'left'; id: string }
-  | { v: 9; type: 'pong'; at: number; serverTime: number }
-  | { v: 9; type: 'error'; code: string; message: string; fatal: boolean };
+  | { v: typeof PROTOCOL_VERSION; type: 'chat'; id: string; name: string; text: string }
+  | { v: typeof PROTOCOL_VERSION; type: 'shot'; shot: ShotResult }
+  | { v: typeof PROTOCOL_VERSION; type: 'elimination'; elimination: Elimination }
+  | { v: typeof PROTOCOL_VERSION; type: 'welcome'; selfId: string; resumeToken: string; resumed: boolean; snapshot: Snapshot }
+  | { v: typeof PROTOCOL_VERSION; type: 'spawned'; requestId: string; snapshot: Snapshot }
+  | { v: typeof PROTOCOL_VERSION; type: 'snapshot'; snapshot: Snapshot }
+  | { v: typeof PROTOCOL_VERSION; type: 'left'; id: string }
+  | { v: typeof PROTOCOL_VERSION; type: 'pong'; at: number; serverTime: number }
+  | { v: typeof PROTOCOL_VERSION; type: 'error'; code: string; message: string; fatal: boolean };
 
 const record = (x: unknown): x is Record<string, unknown> => !!x && typeof x === 'object' && !Array.isArray(x);
 const finite = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x);
@@ -80,6 +88,38 @@ const direction = (x: unknown): boolean => record(x) && keys(x, ['x', 'y', 'z'])
   && finite(x.x) && finite(x.y) && finite(x.z) && Math.abs(Math.hypot(x.x, x.y, x.z) - 1) < .001;
 const keys = (x: Record<string, unknown>, allowed: string[]) => Object.keys(x).every((k) => allowed.includes(k));
 const team = (x: unknown) => x === null || x === 'blue' || x === 'red';
+const natural = (x: unknown): x is number => Number.isSafeInteger(x) && (x as number) >= 0;
+function validStanding(x: unknown): boolean {
+  return record(x) && typeof x.id === 'string' && x.id.length <= 64 && typeof x.name === 'string' && x.name.length <= 24
+    && team(x.team) && natural(x.score) && natural(x.kills) && natural(x.deaths)
+    && (x.weapon === undefined || x.weapon === null || validWeapon(x.weapon));
+}
+export function validResult(x: unknown): x is RoundResult {
+  if (!record(x) || !natural(x.roundId) || !validMap(x.mapId) || !['ffa', 'teams'].includes(x.mode as string)
+    || !natural(x.endedAt) || typeof x.draw !== 'boolean' || !team(x.winningTeam)
+    || !(x.winner === null || validStanding(x.winner)) || !(x.mvp === null || validStanding(x.mvp))) return false;
+  if (x.players !== undefined) {
+    if (!Array.isArray(x.players) || !x.players.every(validStanding)) return false;
+    const players = x.players as RoundStanding[];
+    if (new Set(players.map((p) => p.id)).size !== players.length) return false;
+    // A result must agree with its frozen participants, never the next round's roster.
+    const ranked = [...players].sort(pointsOrder);
+    const same = (a: unknown, b: typeof players[number] | undefined) => a === null ? b === undefined
+      : record(a) && !!b && ['id', 'name', 'team', 'score', 'kills', 'deaths'].every((k) => a[k] === b[k as keyof typeof b]);
+    if (!same(x.mvp, ranked[0])) return false;
+    if (x.mode === 'ffa' && (x.draw !== (!ranked[0] || (ranked.length > 1 && ranked[0].score === ranked[1].score))
+      || (!x.draw && !same(x.winner, ranked[0])))) return false;
+  }
+  if (x.mode === 'ffa') return x.teamScores === null && x.winningTeam === null
+    && (x.draw ? x.winner === null : record(x.winner) && record(x.mvp) && x.winner.id === x.mvp.id && x.winner.score === x.mvp.score);
+  return x.winner === null && record(x.teamScores) && natural(x.teamScores.blue) && natural(x.teamScores.red)
+    && (x.draw ? x.winningTeam === null && x.teamScores.blue === x.teamScores.red
+      : x.winningTeam === (x.teamScores.blue > x.teamScores.red ? 'blue' : 'red') && x.teamScores.blue !== x.teamScores.red);
+}
+function validAward(x: unknown, head: boolean): boolean {
+  return record(x) && x.base === 100 && x.headshot === (head ? 50 : 0) && natural(x.comboCount) && x.comboCount > 0
+    && x.combo === 20 * (x.comboCount - 1) && natural(x.total) && x.total === x.base + (x.headshot as number) + (x.combo as number);
+}
 export function validElimination(e: unknown): e is Elimination {
   return record(e) && typeof e.id === 'string' && e.id.length > 0 && e.id.length <= 64
     && Number.isSafeInteger(e.victimLife) && (e.victimLife as number) > 0 && (e.direction === null || direction(e.direction))
@@ -87,7 +127,8 @@ export function validElimination(e: unknown): e is Elimination {
     && (e.killerId === null || typeof e.killerId === 'string') && (e.killerName === null || typeof e.killerName === 'string')
     && (e.weapon === null || validWeapon(e.weapon)) && typeof e.head === 'boolean'
     && Number.isSafeInteger(e.at) && (e.at as number) >= 0 && e.respawnAt === (e.at as number) + RESPAWN_DELAY_MS
-    && team(e.killerTeam) && team(e.victimTeam);
+    && team(e.killerTeam) && team(e.victimTeam)
+    && (e.award === null || (e.killerId !== null && e.killerId !== e.victimId && validAward(e.award, e.head as boolean)));
 }
 
 export function validFrame(x: unknown): x is InputFrame {
@@ -182,6 +223,9 @@ export function parseServerMessage(text: string): ServerMessage | null {
   const s = x.snapshot;
   if (!record(s) || s.room !== PUBLIC_ROOM || !validMap(s.mapId) || !Number.isSafeInteger(s.roundId) || (s.roundId as number) < 0 || typeof s.mapVersion !== 'string' || !finite(s.serverTime)
     || !Array.isArray(s.players) || s.players.length > 16 || !s.players.every((p) => record(p) && typeof p.id === 'string'
+      && natural(p.score) && natural(p.comboCount) && (p.comboUntil === null || natural(p.comboUntil))
+      && (p.comboCount === 0 ? p.comboUntil === null : p.alive === true && p.comboUntil !== null)
+      && (p.lastPlayedRound === null || natural(p.lastPlayedRound)) && team(p.lastPlayedTeam)
       && typeof p.name === 'string' && Number.isSafeInteger(p.ack) && validMotion(p.motion)
       && typeof p.alive === 'boolean' && Number.isSafeInteger(p.life) && (p.life as number) >= 0
       && finite(p.health) && p.health >= 0 && p.health <= 100 && (p.alive ? p.health > 0 : p.health === 0)
@@ -192,6 +236,7 @@ export function parseServerMessage(text: string): ServerMessage | null {
       && Number.isSafeInteger(p.kills) && (p.kills as number) >= 0 && Number.isSafeInteger(p.deaths) && (p.deaths as number) >= 0
       && team(p.team) && (p.death === null || (validElimination(p.death) && !p.alive && p.death.victimId === p.id
         && p.death.victimLife === p.life && p.death.roundId <= (s.roundId as number))))) return null;
+  if (!(s.result === null || (validResult(s.result) && s.result.roundId < (s.roundId as number)))) return null;
   const m = s.match;
   if (!record(m) || ![null, 'ffa', 'teams'].includes(m.mode as null | string) || !(m.endsAt === null || finite(m.endsAt))
     || !(m.teamScores === null || (record(m.teamScores) && ['blue', 'red'].every((k) => Number.isSafeInteger((m.teamScores as Record<string, unknown>)[k])

@@ -1,5 +1,17 @@
 # Multiplayer architecture and migration plan
 
+Polish Phase 2 uses **local protocol v10** for authoritative points/combos,
+the point-ranked leaderboard, timer HUD and persisted winner/MVP results.
+The 600-second schedule and team elimination win condition remain unchanged.
+The public health endpoint still reported v9 on 2026-10-31; no deployment was
+made. See [scoring and results](POLISH_PHASE2.md) for migration and validation.
+
+Dedicated-server preparation: the last observed production protocol is v9. Cloudflare remains the
+default provider, and `server-dedicated/` is an intentionally incomplete Node
+transport scaffold. See [dedicated server preparation](DEDICATED_SERVER.md) for
+the current provider settings, shared-rule boundary, migration work and tests.
+The older stage and protocol descriptions below are historical.
+
 Phase 1 uses protocol v8 for shared slide-jump physics, weapon balance and room chat. Matching frontend and Worker builds are required. Earlier protocol descriptions below are historical.
 
 Current combat/visibility update (2026-10-29): **protocol v6** retains server-owned shared weapon simulation,
