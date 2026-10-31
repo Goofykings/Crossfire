@@ -693,7 +693,7 @@ export class Game {
 
     const zoom = 1 + (this.weapon.stats.adsFovScale - 1) * this.weapon.ads;
     const events: WeaponEvent[] = [];
-    // weapon switching: number keys, Q (previous weapon), mouse wheel
+    // weapon switching: number keys and mouse wheel
     for (let k = 0; k < this.loadout.weapons.length; k++) {
       if (input.wasPressed(`weapon${k + 1}` as 'weapon1')) this.loadout.select(k, events);
     }
@@ -712,6 +712,7 @@ export class Game {
     // fixed ticks. Send a neutral release tick before the new held press.
     if (input.wasPressed('slide') && player.slideHeld) this.slideReleasePending = true;
     it.aim = input.isDown('aim');
+    it.lean = ((input.isDown('leanRight') ? 1 : 0) - (input.isDown('leanLeft') ? 1 : 0)) as -1 | 0 | 1;
     let jumpEdge = input.wasPressed('jump');
     let fireEdge = input.wasPressed('fire');
     let reloadEdge = input.wasPressed('reload');
@@ -724,7 +725,7 @@ export class Game {
       it.jumpPressed = jumpEdge;
       const wasGrounded = player.grounded;
       player.fixedUpdate(FIXED_DT, it);
-      this.network?.fixedInput(player, it, { trigger: input.isDown('fire'), reload: input.isDown('reload') });
+      this.network?.fixedInput(player, it, { trigger: input.isDown('fire'), reload: input.isDown('reload'), ...rig.aimAngles(this.scope) });
       rig.onTick();
       if (jumpEdge && wasGrounded && !player.grounded && player.velocity.y > 0) this.sound('jump', 0.35);
       if (player.landedSpeed > 4) this.sound('land', Math.min(0.8, player.landedSpeed * 0.07));
@@ -756,6 +757,7 @@ export class Game {
     rig.update(dt, alpha, s.fov, zoom, this.scope);
     const shown = this.viewOverride ? ({ ...this.viewOverride, stats: w.stats } as unknown as Weapon) : w;
     this.weaponView?.update(dt, shown, { sprinting: false, bobX: rig.bobX, bobY: rig.bobY, crouch: player.crouch });
+    this.weaponView?.avoidWalls(map.world, dt);
     this.weaponView?.setHidden(this.scope > 0.98);
     this.ui.setScope(this.scope);
 
@@ -810,6 +812,7 @@ export class Game {
     this.stats.shots++;
     this.sound(`${st.id}_shot` as SoundName, st.id === 'rifle' ? 0.5 : 0.62);
     this.weaponView?.fire();
+    const angles = this.cameraRig?.aimAngles(this.scope) ?? { aimYaw: this.player!.yaw, aimPitch: this.player!.pitch };
     this.cameraRig?.addRecoil(st.recoilPitch * (1 - w.ads * 0.4), st.recoilYaw);
     // self-loading rifle: the case flies out with every shot (pump and bolt guns eject when worked)
     if (st.cycleTime === 0) this.ejectCase();
@@ -817,8 +820,8 @@ export class Game {
     // Environment impacts are cosmetic prediction. Only server shot results may
     // produce multiplayer player damage, scores or hit markers.
     const origin = cam.globalPosition.clone();
-    const fwd = cam.getDirection(new Vector3(0, 0, -1)).normalize();
-    const aim = applySpread({ x: fwd.x, y: fwd.y, z: fwd.z }, spreadDeg);
+    const cp = Math.cos(angles.aimPitch);
+    const aim = applySpread({ x: -Math.sin(angles.aimYaw) * cp, y: Math.sin(angles.aimPitch), z: -Math.cos(angles.aimYaw) * cp }, spreadDeg);
     const shot = { weapon: st.id, pellets: st.pellets, hits: 0, damage: 0, head: false, target: '' };
     for (let k = 0; k < st.pellets; k++) {
       const dir = st.pellets > 1 ? applySpread(aim, st.pelletSpread) : aim;
@@ -961,6 +964,19 @@ export class Game {
       player: () => (this.player ? { ...this.player.position, grounded: this.player.grounded } : null),
       motion: () => (this.player ? { ...this.player.capture(), height: this.player.height,
         eyeHeight: this.player.eyeHeight, cameraY: this.ctx.camera.position.y } : null),
+      leanView: () => {
+        const camera = this.ctx.camera;
+        camera.computeWorldMatrix();
+        const muzzle = this.weaponView?.muzzleWorld();
+        const p = camera.globalPosition;
+        return { camera: p.asArray(), rotation: camera.rotationQuaternion?.asArray(),
+          forward: camera.getDirection(new Vector3(0, 0, -1)).asArray(),
+          eye: this.player?.leanEye(), body: this.player?.position, lean: this.player?.lean,
+          weaponParented: this.weaponView?.root.parent === camera, muzzle: muzzle?.asArray(),
+          weaponPullback: this.weaponView?.root.position.z,
+          cameraBlocked: this.map?.world.overlapsCylinder(p.x, p.z, .1, p.y - .1, p.y + .1),
+          muzzleBlocked: muzzle && this.map?.world.overlapsCylinder(muzzle.x, muzzle.z, .1, muzzle.y - .1, muzzle.y + .1) };
+      },
       characterAsset: () => this.remotePlayers.characters.inspect(),
       homeCharacter: () => this.homeCharacter.inspect(),
       silhouetteStats: () => this.remotePlayers.silhouetteStats(),

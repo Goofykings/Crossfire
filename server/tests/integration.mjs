@@ -34,7 +34,7 @@ test('Public room: real Workers runtime and real WebSocket clients', { timeout: 
     ws.on('error', () => {});
     const client = {
       ws, messages, welcome: null,
-      send: (m) => ws.send(JSON.stringify({ v: 6, ...(['spawn', 'input'].includes(m.type) ? { roundId: client.welcome?.snapshot.roundId ?? 0 } : {}), ...m })),
+      send: (m) => ws.send(JSON.stringify({ v: 7, ...(['spawn', 'input'].includes(m.type) ? { roundId: client.welcome?.snapshot.roundId ?? 0 } : {}), ...m })),
       async wait(predicate, from = 0) {
         const until = Date.now() + 5000;
         while (Date.now() < until) {

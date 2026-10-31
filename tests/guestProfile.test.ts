@@ -53,7 +53,7 @@ describe('local guest profile', () => {
     expect(Array.from(normalizeUsername('😀'.repeat(30))!)).toHaveLength(24);
   });
   it('never accepts local guest IDs or client-selected session IDs in the join protocol', () => {
-    const join = { v: 6, type: 'join', name: 'Alice' };
+    const join = { v: 7, type: 'join', name: 'Alice' };
     expect(parseClientMessage(JSON.stringify(join))).toEqual(join);
     for (const fields of [{ guestId: crypto.randomUUID() }, { id: crypto.randomUUID() }, { sessionId: crypto.randomUUID() }]) {
       expect(parseClientMessage(JSON.stringify({ ...join, ...fields }))).toBeNull();

@@ -12,6 +12,7 @@ interface Avatar {
   root: TransformNode; look: TransformNode; samples: Sample[]; seen: number;
   meshes: Mesh[]; label: HTMLDivElement; character: CharacterInstance | null;
   friendly: boolean; visible: boolean; clearFor: number; height: number;
+  lean: number;
   life: number; death?: { elapsed: number; started: number; direction: Elimination['direction']; rotation: Quaternion; baseY: number; materials: Material[]; textures: Set<BaseTexture> };
 }
 
@@ -35,8 +36,9 @@ export class RemotePlayers {
     this.material.diffuseColor = new Color3(0.65, 0.5, 0.28);
     this.material.emissiveColor = new Color3(0.08, 0.06, 0.03);
     // Read actual animated bone positions after the engine evaluates this frame.
+    scene.onBeforeAnimationsObservable.add(() => { for (const a of this.avatars.values()) a.character?.restoreLean(); });
     scene.onAfterAnimationsObservable.add(() => {
-      for (const a of this.avatars.values()) this.presentation(a, this.dt);
+      for (const a of this.avatars.values()) { a.character?.applyLean(); this.presentation(a, this.dt); }
       this.silhouettes?.update(this.outlinesEnabled && this.presenting);
     });
   }
@@ -110,7 +112,7 @@ export class RemotePlayers {
         label.className = 'remote-player-label'; label.dataset.playerId = player.id; label.hidden = true;
         this.labels.append(label);
         a = { root, look, samples: [], seen: performance.now(), label, character,
-          meshes, friendly: false, visible: false, clearFor: 0, height: 1.8, life: player.life };
+          meshes, friendly: false, visible: false, clearFor: 0, height: 1.8, lean: 0, life: player.life };
         this.avatars.set(player.id, a);
       }
       a.friendly = teammates(s.match.mode, self?.team ?? null, player.team);
@@ -146,6 +148,14 @@ export class RemotePlayers {
       a.root.rotation.y = m.yaw + Math.atan2(Math.sin(n.yaw - m.yaw), Math.cos(n.yaw - m.yaw)) * k;
       a.look.rotation.x = m.pitch + (n.pitch - m.pitch) * k;
       const crouch = m.crouch + (n.crouch - m.crouch) * k;
+      a.lean = m.lean + (n.lean - m.lean) * k;
+      a.character?.setLean(a.lean);
+      if (!a.character) {
+        const body = a.meshes[0];
+        body.rotation.z = -a.lean * .12;
+        body.position.x = a.lean * .06;
+        a.look.position.x = a.lean * .28;
+      }
       a.height = 1.8 - crouch * .65;
       a.root.scaling.y = a.character ? 1 : a.height / 1.8;
       a.character?.update({ crouch, grounded: k < .5 ? m.grounded : n.grounded,
@@ -202,7 +212,7 @@ export class RemotePlayers {
 
   inspect() {
     return [...this.avatars].map(([id, a]) => ({ id, x: a.root.position.x, y: a.root.position.y, z: a.root.position.z,
-      yaw: a.root.rotation.y, height: a.height, friendly: a.friendly, visible: a.visible,
+      yaw: a.root.rotation.y, height: a.height, lean: a.lean, friendly: a.friendly, visible: a.visible,
       labelVisible: !a.label.hidden && !this.labels.hidden, outline: !a.death && a.visible && (this.silhouettes?.has(a.meshes) ?? false),
       death: a.death ? { elapsed: a.death.elapsed, ...deathPose(a.death.elapsed, a.death.direction),
         alpha: a.meshes[0].material?.alpha, rotation: a.root.rotationQuaternion?.asArray() } : null,

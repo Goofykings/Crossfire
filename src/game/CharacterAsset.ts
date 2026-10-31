@@ -1,9 +1,10 @@
-import { BoundingInfo, Mesh, TransformNode, Vector3, type AssetContainer, type Scene, type InstantiatedEntries, type AnimationGroup } from '@babylonjs/core';
+import { BoundingInfo, Mesh, Quaternion, Space, TransformNode, Vector3, type AssetContainer, type Scene, type InstantiatedEntries, type AnimationGroup } from '@babylonjs/core';
 import { assetUrl } from '../core/assets';
 import { loadContainer } from '../core/loadContainer';
 import { abortable } from '../core/cancellation';
 import { PlayerAnimator, type CharacterClip, type CharacterMotion } from './PlayerAnimation';
 import exported from '../../public/assets/characters/player.json';
+import { LEAN_ANGLE } from '../../shared/lean';
 
 export type { CharacterClip } from './PlayerAnimation';
 export interface CharacterAssetDefinition {
@@ -25,6 +26,9 @@ export interface CharacterInstance {
   meshes: Mesh[];
   entries: InstantiatedEntries;
   update(motion: CharacterMotion, dt: number): void;
+  setLean(amount: number): void;
+  restoreLean(): void;
+  applyLean(): void;
   visibilityPoints(): Vector3[];
   headPosition(): Vector3 | undefined;
   inspect(): ReturnType<PlayerAnimator['inspect']> & { geometry: number[]; materials: number[]; bones: number;
@@ -98,19 +102,42 @@ export class CharacterAssetLibrary {
     for (const mesh of meshes) {
       mesh.isPickable = false; mesh.renderingGroupId = 0;
       // Offline measured union of all posed vertices, not costly per-frame CPU skinning.
-      mesh.setBoundingInfo(new BoundingInfo(Vector3.FromArray(definition.bounds.min), Vector3.FromArray(definition.bounds.max)));
+      const min = Vector3.FromArray(definition.bounds.min), max = Vector3.FromArray(definition.bounds.max);
+      min.x -= .4; max.x += .4; min.y -= .1; max.y += .1;
+      mesh.setBoundingInfo(new BoundingInfo(min, max));
     }
     const groups = Object.fromEntries(Object.entries(definition.clips).map(([clip, name]) =>
       [clip, entries.animationGroups[this.container!.animationGroups.findIndex((g) => g.name === name)]])) as Record<CharacterClip, AnimationGroup>;
     const animator = new PlayerAnimator(groups, definition.durations);
     const bones = entries.skeletons[0].bones;
     const byName = new Map(bones.map((b) => [b.name, b]));
+    const spine = byName.get('spine')?.getTransformNode(), chest = byName.get('chest')?.getTransformNode();
+    const saved = new Map<TransformNode, { rotation: Quaternion; position: Vector3 }>();
+    let lean = 0;
+    const restoreLean = () => {
+      for (const [node, pose] of saved) { node.rotationQuaternion?.copyFrom(pose.rotation); node.position.copyFrom(pose.position); }
+      saved.clear();
+    };
+    const applyLean = () => {
+      if (Math.abs(lean) < .0001 || !spine || !chest) return;
+      const yaw = parent.rotation.y;
+      const axis = new Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
+      for (const [node, weight] of [[spine, .45], [chest, .55]] as const) {
+        node.rotationQuaternion ??= Quaternion.Identity();
+        saved.set(node, { rotation: node.rotationQuaternion.clone(), position: node.position.clone() });
+        if (node === spine) node.position.x += lean * .08 / scale;
+        node.parent?.computeWorldMatrix(true);
+        node.rotate(axis, lean * LEAN_ANGLE * weight, Space.WORLD);
+        node.computeWorldMatrix(true);
+      }
+    };
     const point = (name: string): Vector3 | undefined => {
       const bone = byName.get(name), node = bone?.getTransformNode();
       if (node) return node.getAbsolutePosition().clone();
       return bone?.getAbsolutePosition(meshes[0]);
     };
     return { root, meshes, entries, update: (motion, dt) => animator.update(motion, dt),
+      setLean: (amount) => { lean = Math.max(-1, Math.min(1, amount)); }, restoreLean, applyLean,
       visibilityPoints: () => ['head', 'chest', 'pelvis', 'upper_arm_l', 'upper_arm_r', 'hand_l', 'hand_r', 'foot_l', 'foot_r']
         .map(point).filter((p): p is Vector3 => !!p),
       headPosition: () => point('head')?.addInPlace(new Vector3(0, .28, 0)),

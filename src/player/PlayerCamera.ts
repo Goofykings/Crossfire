@@ -1,6 +1,7 @@
 import { Quaternion } from '@babylonjs/core';
 import type { RenderContext } from '../rendering/RenderContext';
 import type { PlayerController, Vec3 } from './PlayerController';
+import { LEAN_ANGLE, LEAN_OFFSET, leanOffset } from '../../shared/lean';
 
 const DEG = Math.PI / 180;
 /** Radians of yaw per mouse count at sensitivity 1. */
@@ -61,6 +62,17 @@ export class PlayerCamera {
     this.fov = fov;
   }
 
+  /** The exact forward aim used by the next rendered reticle and shot. */
+  aimAngles(scopeSway = 0): { aimYaw: number; aimPitch: number } {
+    const p = this.player;
+    const steady = p.crouch > .5 ? .45 : 1;
+    const sy = Math.sin(this.swayTime * .85) * .0016 * scopeSway * steady;
+    const sp = Math.sin(this.swayTime * 1.7 + 1.1) * .0011 * scopeSway * steady;
+    const yaw = p.yaw + Math.max(-.34, Math.min(.34, this.kickYaw + sy));
+    return { aimYaw: Math.atan2(Math.sin(yaw), Math.cos(yaw)),
+      aimPitch: Math.max(-Math.PI / 2, Math.min(Math.PI / 2, p.pitch + Math.max(-.34, Math.min(.34, this.kickPitch + sp)))) };
+  }
+
   /**
    * `scopeSway` (0..1): the slow figure-of-eight drift of a magnified scope held by a breathing shooter. It moves the
    * view itself, so shots go where the reticle is.
@@ -91,14 +103,16 @@ export class PlayerCamera {
     const cam = this.ctx.camera;
     const heightBlend = p.prevCrouch + (p.crouch - p.prevCrouch) * alpha;
     const eye = p.cfg.standEye + (p.cfg.crouchEye - p.cfg.standEye) * heightBlend + this.stepOffset + this.bobY + this.dip * 0.1;
-    cam.position.set(pos.x + this.bobX * Math.cos(p.yaw), pos.y + eye, pos.z - this.bobX * Math.sin(p.yaw));
-    const roll = this.bobX * 0.35;
+    const lean = p.prevLean + (p.lean - p.prevLean) * alpha;
+    // Include bob in the sweep so visual motion cannot nudge the camera through a wall.
+    const safe = p.safeViewLean(pos, lean + this.bobX / LEAN_OFFSET, eye);
+    const offset = leanOffset(p.yaw, safe);
+    cam.position.set(pos.x + offset.x, pos.y + eye, pos.z + offset.z);
+    const roll = this.bobX * 0.35 - lean * LEAN_ANGLE;
     cam.rotationQuaternion ??= Quaternion.Identity();
     this.swayTime += dt;
-    const steady = p.crouch > 0.5 ? 0.45 : 1;
-    const sy = Math.sin(this.swayTime * 0.85) * 0.0016 * scopeSway * steady;
-    const sp = Math.sin(this.swayTime * 1.7 + 1.1) * 0.0011 * scopeSway * steady;
-    Quaternion.RotationYawPitchRollToRef(p.yaw + this.kickYaw + sy, p.pitch + this.kickPitch + sp, roll, cam.rotationQuaternion);
+    const aim = this.aimAngles(scopeSway);
+    Quaternion.RotationYawPitchRollToRef(aim.aimYaw, aim.aimPitch, roll, cam.rotationQuaternion);
     const targetFov = baseFov * zoom;
     this.fov += (targetFov - this.fov) * Math.min(1, dt * 18);
     this.ctx.setFov(this.fov);

@@ -38,7 +38,7 @@ async function connect(documentFixture?: object) {
   client = new MultiplayerClient('ws://127.0.0.1:8787/ws');
   const ready = client.connect(), socket = SocketFixture.latest, p = player();
   socket.onopen?.();
-  socket.receive({ v: 6, type: 'welcome', selfId: p.id, resumeToken: 'a'.repeat(64), resumed: false, snapshot: snapshot(p) });
+  socket.receive({ v: 7, type: 'welcome', selfId: p.id, resumeToken: 'a'.repeat(64), resumed: false, snapshot: snapshot(p) });
   await ready;
   return { socket, p, client };
 }
@@ -53,7 +53,7 @@ it('stays connected with continuous input and 250ms acknowledgements while the s
     const m = JSON.parse(raw);
     if (m.type === 'input') {
       const ack = m.frames.at(-1).seq;
-      setTimeout(() => { p.ack = ack; socket.receive({ v: 6, type: 'snapshot', snapshot: snapshot(p) }); }, 250);
+      setTimeout(() => { p.ack = ack; socket.receive({ v: 7, type: 'snapshot', snapshot: snapshot(p) }); }, 250);
     }
   };
   for (let i = 0; i < 15 * 120; i++) {
@@ -71,12 +71,12 @@ it('delivers a confirmed elimination before its dead snapshot, once, and rejects
   client.onSnapshot = () => order.push('snapshot');
   const elimination = { id: 'death-1', victimLife: 1, direction: { x: 0, y: 0, z: 1 }, roundId: 0,
     victimId: p.id, victimName: p.name, killerId: 'other', killerName: 'Other', weapon: 'rifle', head: false };
-  socket.receive({ v: 6, type: 'elimination', elimination });
-  socket.receive({ v: 6, type: 'elimination', elimination });
+  socket.receive({ v: 7, type: 'elimination', elimination });
+  socket.receive({ v: 7, type: 'elimination', elimination });
   expect(order).toEqual(['death', 'snapshot']);
   p.life = 2; p.alive = true; p.health = 100;
-  socket.receive({ v: 6, type: 'snapshot', snapshot: snapshot(p) }); order.length = 0;
-  socket.receive({ v: 6, type: 'elimination', elimination: { ...elimination, id: 'late-death' } });
+  socket.receive({ v: 7, type: 'snapshot', snapshot: snapshot(p) }); order.length = 0;
+  socket.receive({ v: 7, type: 'elimination', elimination: { ...elimination, id: 'late-death' } });
   expect(order).toEqual([]); expect(client.latest?.players[0].alive).toBe(true);
 });
 it('bounds catch-up batches and outstanding input to the server queue capacity', async () => {
@@ -84,11 +84,11 @@ it('bounds catch-up batches and outstanding input to the server queue capacity',
   for (let i = 0; i < 80; i++) client.fixedInput(controller, { ...NO_INTENT, z: 1 });
   vi.advanceTimersByTime(500);
   expect(frames(socket)).toHaveLength(24);
-  p.ack = 12; socket.receive({ v: 6, type: 'snapshot', snapshot: snapshot(p) });
+  p.ack = 12; socket.receive({ v: 7, type: 'snapshot', snapshot: snapshot(p) });
   vi.advanceTimersByTime(100);
   expect(frames(socket)).toHaveLength(48);
   expect(frames(socket).at(-1)?.seq).toBe(48);
-  p.ack = 36; socket.receive({ v: 6, type: 'snapshot', snapshot: snapshot(p) });
+  p.ack = 36; socket.receive({ v: 7, type: 'snapshot', snapshot: snapshot(p) });
   vi.advanceTimersByTime(100);
   expect(frames(socket)).toHaveLength(72);
   expect(socket.sent.filter((m) => m.type === 'input').every((m) => m.frames!.length <= 12)).toBe(true);
@@ -99,7 +99,7 @@ it('resets the sending window for a new authoritative life and discards old queu
   for (let i = 0; i < 60; i++) client.fixedInput(controller, { ...NO_INTENT, z: 1 });
   vi.advanceTimersByTime(100);
   p.ack = 12; p.life = 2;
-  socket.receive({ v: 6, type: 'snapshot', snapshot: snapshot(p) });
+  socket.receive({ v: 7, type: 'snapshot', snapshot: snapshot(p) });
   const before = frames(socket).length;
   for (let i = 0; i < 12; i++) client.fixedInput(controller, { ...NO_INTENT, z: 1 });
   vi.advanceTimersByTime(50);
@@ -110,13 +110,13 @@ it('applies bounded input backpressure without closing a socket receiving valid 
   for (let i = 0; i < 130; i++) client.fixedInput(controller, { ...NO_INTENT, aim: true });
   vi.advanceTimersByTime(500);
   for (let i = 0; i < 5; i++) {
-    socket.receive({ v: 6, type: 'pong', at: Date.now() - 250, serverTime: Date.now() });
+    socket.receive({ v: 7, type: 'pong', at: Date.now() - 250, serverTime: Date.now() });
     vi.advanceTimersByTime(2000);
     client.fixedInput(controller, { ...NO_INTENT, aim: true });
   }
   expect(client.state).toBe('connected'); expect(client.inspect().pending).toBe(120);
   expect(client.inspect().events.some((e) => e.event === 'input_backpressure')).toBe(true);
-  p.ack = 24; socket.receive({ v: 6, type: 'snapshot', snapshot: snapshot(p) });
+  p.ack = 24; socket.receive({ v: 7, type: 'snapshot', snapshot: snapshot(p) });
   vi.advanceTimersByTime(100);
   expect(frames(socket).at(-1)!.seq).toBeGreaterThan(24);
   expect(client.inspect().closes).toBe(0);
@@ -125,7 +125,7 @@ it('uses all valid traffic for liveness even when pong delivery is delayed', asy
   const { socket, p, client } = await connect();
   for (let i = 0; i < 12; i++) {
     vi.advanceTimersByTime(1000);
-    socket.receive({ v: 6, type: 'snapshot', snapshot: snapshot(p) });
+    socket.receive({ v: 7, type: 'snapshot', snapshot: snapshot(p) });
   }
   expect(client.state).toBe('connected'); expect(client.inspect().closes).toBe(0);
   expect(client.inspect().lastPong).toBe(0);
@@ -156,7 +156,7 @@ it('bounds rapid connection flapping even when every retry receives a welcome', 
     vi.advanceTimersByTime(3000);
     const socket = SocketFixture.latest;
     socket.onopen?.();
-    socket.receive({ v: 6, type: 'welcome', selfId: p.id, resumeToken: 'a'.repeat(64), resumed: true, snapshot: snapshot(p) });
+    socket.receive({ v: 7, type: 'welcome', selfId: p.id, resumeToken: 'a'.repeat(64), resumed: true, snapshot: snapshot(p) });
     expect(client.state).toBe('connected');
   }
   expect(client.state).toBe('error'); expect(SocketFixture.instances).toHaveLength(6);
@@ -195,7 +195,7 @@ it('probes on visibility resume without prematurely warning, and removes its lis
   doc.hidden = false; listeners.forEach((fn) => fn());
   vi.advanceTimersByTime(1000);
   expect(client.state).toBe('connected');
-  socket.receive({ v: 6, type: 'pong', at: Date.now() - 1000, serverTime: Date.now() });
+  socket.receive({ v: 7, type: 'pong', at: Date.now() - 1000, serverTime: Date.now() });
   expect(client.inspect().lastPong).toBe(Date.now());
   client.disconnect();
   expect(listeners.size).toBe(0); expect(vi.getTimerCount()).toBe(0);

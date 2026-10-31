@@ -16,6 +16,7 @@ import {
 import { assetUrl } from '../core/assets';
 import type { MaterialLibrary } from '../rendering/MaterialLibrary';
 import type { RenderContext } from '../rendering/RenderContext';
+import type { CollisionWorld } from '../physics/CollisionWorld';
 import type { CasingType, Effects } from './Effects';
 import type { Weapon, WeaponAction, WeaponId } from './Weapon';
 
@@ -146,6 +147,7 @@ export class WeaponView {
   private kickVel = 0;
   private sprint = 0;
   private hidden = false;
+  private wallHidden = false;
   /** Every weapon mesh: excluded from the sun by the game. */
   readonly meshes: AbstractMesh[] = [];
   /** Last frame's pose, for tests. */
@@ -288,7 +290,7 @@ export class WeaponView {
     this.current?.root.setEnabled(false);
     this.current?.flash.setEnabled(false);
     this.current = rig;
-    rig.root.setEnabled(!this.hidden);
+    rig.root.setEnabled(!this.hidden && !this.wallHidden);
   }
 
   get currentId(): WeaponId | null {
@@ -307,7 +309,7 @@ export class WeaponView {
     if (!rig) return;
     this.kickVel += 7.5 * rig.cfg.kick;
     this.flashTimer = 0.045;
-    rig.flash.setEnabled(!this.hidden);
+    rig.flash.setEnabled(!this.hidden && !this.wallHidden);
     rig.flash.rotationQuaternion = Quaternion.RotationAxis(Vector3.Forward(), Math.random() * Math.PI * 2);
     rig.flash.scaling.setAll(0.85 + Math.random() * 0.35);
     if (this.flashLight) {
@@ -349,8 +351,35 @@ export class WeaponView {
   setHidden(hidden: boolean): void {
     if (hidden === this.hidden) return;
     this.hidden = hidden;
-    this.current?.root.setEnabled(!hidden);
+    this.current?.root.setEnabled(!hidden && !this.wallHidden);
     if (hidden) this.current?.flash.setEnabled(false);
+  }
+
+  /** Pull the view model back if its muzzle path intersects physical cover. */
+  avoidWalls(world: CollisionWorld, dt: number): void {
+    if (!this.current) return;
+    this.root.position.z = Math.max(0, this.root.position.z - dt * 2.5);
+    this.ctx.camera.computeWorldMatrix();
+    const eye = this.ctx.camera.globalPosition;
+    const blocked = () => {
+      this.root.computeWorldMatrix(true);
+      const muzzle = this.muzzleWorld(), delta = muzzle.subtract(eye), length = delta.length();
+      if (length < .01) return false;
+      const steps = Math.ceil(length / .04);
+      for (let i = 1; i <= steps; i++) {
+        const point = eye.add(delta.scale(i / steps));
+        if (world.overlapsCylinder(point.x, point.z, .10, point.y - .1, point.y + .1)) return true;
+      }
+      return false;
+    };
+    let obstructed = blocked();
+    for (let i = 0; obstructed && i < 14; i++) {
+      this.root.position.z += .06;
+      obstructed = blocked();
+    }
+    this.wallHidden = obstructed;
+    this.current.root.setEnabled(!this.hidden && !this.wallHidden);
+    if (this.wallHidden) this.current.flash.setEnabled(false);
   }
 
   update(

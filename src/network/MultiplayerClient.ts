@@ -68,6 +68,7 @@ export class MultiplayerClient {
   private lastPitch = NaN;
   private lastSlide = false;
   private lastAim = false;
+  private lastLean = 0;
   private lastCombat: CombatIntent = { ...NO_COMBAT };
   private life = -1;
   private round = -1;
@@ -136,6 +137,7 @@ export class MultiplayerClient {
     this.lastYaw = this.lastPitch = NaN;
     this.lastSlide = false;
     this.lastAim = false;
+    this.lastLean = 0;
     this.lastCombat = { ...NO_COMBAT };
     const socket = new WebSocket(this.url);
     this.socket = socket;
@@ -148,7 +150,7 @@ export class MultiplayerClient {
     socket.onopen = () => {
       if (this.socket !== socket) return;
       this.opens++; this.trace('open');
-      this.send({ v: 6, type: 'join', name: typeof this.name === 'function' ? this.name() : this.name, ...(this.token ? { resumeToken: this.token } : {}) });
+      this.send({ v: 7, type: 'join', name: typeof this.name === 'function' ? this.name() : this.name, ...(this.token ? { resumeToken: this.token } : {}) });
     };
     socket.onmessage = (event) => {
       if (this.socket !== socket || typeof event.data !== 'string') return;
@@ -156,8 +158,8 @@ export class MultiplayerClient {
       if (!m) {
         let version: unknown = null;
         try { version = JSON.parse(event.data).v; } catch { /* Malformed JSON. */ }
-        this.trace('protocol_rejected', { expected: 6, received: typeof version === 'number' ? version : null });
-        this.fail('Invalid message from multiplayer server (expected protocol v6). Rebuild matching frontend and backend.');
+        this.trace('protocol_rejected', { expected: 7, received: typeof version === 'number' ? version : null });
+        this.fail('Invalid message from multiplayer server (expected protocol v7). Rebuild matching frontend and backend.');
         socket.close(4002, 'protocol_error'); return;
       }
       this.lastMessage = Date.now();
@@ -298,7 +300,7 @@ export class MultiplayerClient {
           Math.max(0, this.inputWindow - (this.sentSequence - ack)));
         if (count) {
           const frames = this.unsent.splice(0, count);
-          this.send({ v: 6, type: 'input', roundId: this.latest.roundId, mapVersion: this.latest.mapVersion, frames });
+          this.send({ v: 7, type: 'input', roundId: this.latest.roundId, mapVersion: this.latest.mapVersion, frames });
           this.sentSequence = frames[frames.length - 1].seq;
           this.sentAt.set(this.sentSequence, now);
         }
@@ -308,7 +310,7 @@ export class MultiplayerClient {
   }
   private ping(): void {
     this.lastPing = Date.now(); this.trace('ping', { sentAt: this.lastPing, lastPong: this.lastPong });
-    this.send({ v: 6, type: 'ping', at: this.lastPing });
+    this.send({ v: 7, type: 'ping', at: this.lastPing });
   }
   private stopTimers(): void {
     for (const t of [this.flushTimer, this.pingTimer]) window.clearInterval(t);
@@ -327,7 +329,8 @@ export class MultiplayerClient {
     // neutral input still settles gravity/friction, and heartbeats maintain liveness.
     if (player.grounded && Math.hypot(player.velocity.x, player.velocity.y, player.velocity.z) < 0.001
       && player.crouch === 0 && !player.sliding && player.slideCooldown === 0 && !this.lastSlide && !intent.slide && !intent.jumpPressed && intent.x === 0 && intent.z === 0
-      && !intent.aim && !this.lastAim && !combat.trigger && !combat.reload && !this.lastCombat.trigger && !this.lastCombat.reload
+      && !intent.aim && !this.lastAim && !intent.lean && !this.lastLean && player.lean === 0
+      && !combat.trigger && !combat.reload && !this.lastCombat.trigger && !this.lastCombat.reload
       && yaw === this.lastYaw && player.pitch === this.lastPitch) return;
     if (this.pending.length >= 120) {
       if (Date.now() - this.lastBackpressure >= 1000) {
@@ -342,6 +345,7 @@ export class MultiplayerClient {
     // An idle Shift release must reach the server before another press can be an edge.
     this.lastSlide = intent.slide;
     this.lastAim = intent.aim;
+    this.lastLean = intent.lean ?? 0;
     this.lastCombat = { ...combat };
     const frame: InputFrame = { seq: ++this.sequence, yaw, pitch: player.pitch, intent: { ...intent }, combat: { ...combat } };
     this.pending.push(frame);
@@ -381,7 +385,7 @@ export class MultiplayerClient {
     this.cancelSpawn('Left match');
     this.stopped = true;
     this.trace('intentional_leave');
-    this.send({ v: 6, type: 'leave' });
+    this.send({ v: 7, type: 'leave' });
     if (this.socket) this.socket.onopen = this.socket.onmessage = this.socket.onerror = null;
     this.socket?.close(1000, 'left');
     this.socket = null;
@@ -403,7 +407,7 @@ export class MultiplayerClient {
     const id = crypto.randomUUID();
     return new Promise((resolve, reject) => {
       this.spawning = { id, resolve, reject, timeout: window.setTimeout(() => this.cancelSpawn('Spawn request timed out. Try again.'), 5000) };
-      this.send({ v: 6, type: 'spawn', requestId: id, weapon, roundId: this.latest!.roundId, mapVersion: this.latest!.mapVersion });
+      this.send({ v: 7, type: 'spawn', requestId: id, weapon, roundId: this.latest!.roundId, mapVersion: this.latest!.mapVersion });
     });
   }
 

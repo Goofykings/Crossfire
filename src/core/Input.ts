@@ -8,6 +8,8 @@ export type Action =
   | 'back'
   | 'left'
   | 'right'
+  | 'leanLeft'
+  | 'leanRight'
   | 'slide'
   | 'jump'
   | 'reload'
@@ -42,7 +44,8 @@ const KEY_BINDINGS: Record<string, Action> = {
   Numpad1: 'weapon1',
   Numpad2: 'weapon2',
   Numpad3: 'weapon3',
-  KeyQ: 'lastWeapon',
+  KeyQ: 'leanLeft',
+  KeyE: 'leanRight',
   // held: shows the leaderboard (keydown is prevented while playing, so focus never moves)
   Tab: 'leaderboard',
   F3: 'toggleFps',

@@ -3,7 +3,7 @@ import type { MoveIntent, ControllerState, Vec3 } from '../src/player/PlayerCont
 import type { WeaponId, WeaponState } from '../src/weapons/Weapon';
 import type { CombatIntent } from './combat';
 
-export const PROTOCOL_VERSION = 6;
+export const PROTOCOL_VERSION = 7;
 export const validWeapon = (x: unknown): x is WeaponId => x === 'rifle' || x === 'shotgun' || x === 'sniper' || x === 'smg';
 export const PUBLIC_ROOM = 'public-main';
 export const INPUT_BATCH_LIMIT = 12;
@@ -53,20 +53,20 @@ export interface Snapshot {
   match: { mode: 'ffa' | 'teams' | null; endsAt: number | null; teamScores: { blue: number; red: number } | null };
 }
 export type ClientMessage =
-  | { v: 6; type: 'join'; name: string; resumeToken?: string }
-  | { v: 6; type: 'spawn'; roundId: number; mapVersion: string; weapon: WeaponId; requestId: string }
-  | { v: 6; type: 'input'; roundId: number; mapVersion: string; frames: InputFrame[] }
-  | { v: 6; type: 'ping'; at: number }
-  | { v: 6; type: 'leave' };
+  | { v: 7; type: 'join'; name: string; resumeToken?: string }
+  | { v: 7; type: 'spawn'; roundId: number; mapVersion: string; weapon: WeaponId; requestId: string }
+  | { v: 7; type: 'input'; roundId: number; mapVersion: string; frames: InputFrame[] }
+  | { v: 7; type: 'ping'; at: number }
+  | { v: 7; type: 'leave' };
 export type ServerMessage =
-  | { v: 6; type: 'shot'; shot: ShotResult }
-  | { v: 6; type: 'elimination'; elimination: Elimination }
-  | { v: 6; type: 'welcome'; selfId: string; resumeToken: string; resumed: boolean; snapshot: Snapshot }
-  | { v: 6; type: 'spawned'; requestId: string; snapshot: Snapshot }
-  | { v: 6; type: 'snapshot'; snapshot: Snapshot }
-  | { v: 6; type: 'left'; id: string }
-  | { v: 6; type: 'pong'; at: number; serverTime: number }
-  | { v: 6; type: 'error'; code: string; message: string; fatal: boolean };
+  | { v: 7; type: 'shot'; shot: ShotResult }
+  | { v: 7; type: 'elimination'; elimination: Elimination }
+  | { v: 7; type: 'welcome'; selfId: string; resumeToken: string; resumed: boolean; snapshot: Snapshot }
+  | { v: 7; type: 'spawned'; requestId: string; snapshot: Snapshot }
+  | { v: 7; type: 'snapshot'; snapshot: Snapshot }
+  | { v: 7; type: 'left'; id: string }
+  | { v: 7; type: 'pong'; at: number; serverTime: number }
+  | { v: 7; type: 'error'; code: string; message: string; fatal: boolean };
 
 const record = (x: unknown): x is Record<string, unknown> => !!x && typeof x === 'object' && !Array.isArray(x);
 const finite = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x);
@@ -76,12 +76,19 @@ const keys = (x: Record<string, unknown>, allowed: string[]) => Object.keys(x).e
 
 export function validFrame(x: unknown): x is InputFrame {
   if (!record(x) || !keys(x, ['seq', 'yaw', 'pitch', 'intent', 'combat'])) return false;
-  if (!record(x.combat) || !keys(x.combat, ['trigger', 'reload'])
+  if (!record(x.combat) || !keys(x.combat, ['trigger', 'reload', 'aimYaw', 'aimPitch'])
     || typeof x.combat.trigger !== 'boolean' || typeof x.combat.reload !== 'boolean') return false;
   if (!Number.isSafeInteger(x.seq) || (x.seq as number) < 1 || !finite(x.yaw) || Math.abs(x.yaw) > Math.PI
     || !finite(x.pitch) || Math.abs(x.pitch) > Math.PI / 2 || !record(x.intent)) return false;
   const i = x.intent;
-  return keys(i, ['x', 'z', 'slide', 'aim', 'jumpPressed']) && finite(i.x) && Math.abs(i.x) <= 1
+  const c = x.combat;
+  if (c.aimYaw !== undefined || c.aimPitch !== undefined) {
+    if (!finite(c.aimYaw) || Math.abs(c.aimYaw) > Math.PI || !finite(c.aimPitch) || Math.abs(c.aimPitch) > Math.PI / 2
+      || Math.abs(Math.atan2(Math.sin(c.aimYaw - x.yaw), Math.cos(c.aimYaw - x.yaw))) > .35
+      || Math.abs(c.aimPitch - x.pitch) > .35) return false;
+  }
+  return keys(i, ['x', 'z', 'slide', 'aim', 'jumpPressed', 'lean']) && finite(i.x) && Math.abs(i.x) <= 1
+    && (i.lean === undefined || i.lean === -1 || i.lean === 0 || i.lean === 1)
     && finite(i.z) && Math.abs(i.z) <= 1 && ['slide', 'aim', 'jumpPressed'].every((k) => typeof i[k] === 'boolean');
 }
 
@@ -110,7 +117,8 @@ export function validMotion(x: unknown): x is ControllerState {
   for (const k of ['position', 'velocity']) {
     if (!record(x[k]) || !['x', 'y', 'z'].every((c) => finite((x[k] as Record<string, unknown>)[c]))) return false;
   }
-  return ['yaw', 'pitch', 'crouch', 'airTime', 'jumpBufferTimer', 'slideRemaining', 'slideCooldown', 'slideYaw'].every((k) => finite(x[k]))
+  return ['yaw', 'pitch', 'crouch', 'airTime', 'jumpBufferTimer', 'slideRemaining', 'slideCooldown', 'slideYaw', 'lean'].every((k) => finite(x[k]))
+    && Math.abs(x.lean as number) <= 1
     && typeof x.slideHeld === 'boolean' && (x.crouch as number) >= 0 && (x.crouch as number) <= 1
     && (x.slideRemaining as number) >= 0 && (x.slideRemaining as number) <= 1
     && (x.slideCooldown as number) >= 0 && (x.slideCooldown as number) <= 1

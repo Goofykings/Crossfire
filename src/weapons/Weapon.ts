@@ -522,7 +522,7 @@ export class Loadout {
     this.select((((from + step) % n) + n) % n, events);
   }
 
-  /** Back to the weapon held before this one (Q). */
+  /** Back to the weapon held before this one. */
   selectPrevious(events: WeaponEvent[] = []): void {
     this.select(this.previous, events);
   }

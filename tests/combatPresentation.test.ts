@@ -43,12 +43,12 @@ it('falls along the world-space incoming ray and fades completely in half a seco
 const elimination = { id: 'death-unit', victimLife: 2, direction: { x: 0, y: 0, z: 1 }, roundId: 1,
   victimId: 'victim', victimName: 'Victim', killerId: 'killer', killerName: 'Killer', weapon: 'rifle', head: false };
 it('validates actual server direction vectors and rejects old or client-invented combat events', () => {
-  const message = { v: 6, type: 'elimination', elimination };
+  const message = { v: 7, type: 'elimination', elimination };
   expect(parseServerMessage(JSON.stringify(message))).toEqual(message);
   expect(parseServerMessage(JSON.stringify({ ...message, v: 5 }))).toBeNull();
   for (const direction of [{ x: 0, y: 0, z: 0 }, { x: 99, y: 0, z: 1 }, { x: null, y: 0, z: 1 }, { x: 0, z: 1 }]) {
     expect(parseServerMessage(JSON.stringify({ ...message, elimination: { ...elimination, direction } }))).toBeNull();
   }
   expect(parseClientMessage(JSON.stringify(message))).toBeNull();
-  expect(parseClientMessage(JSON.stringify({ v: 6, type: 'damage', direction: { x: 0, y: 0, z: 1 }, amount: 100 }))).toBeNull();
+  expect(parseClientMessage(JSON.stringify({ v: 7, type: 'damage', direction: { x: 0, y: 0, z: 1 }, amount: 100 }))).toBeNull();
 });

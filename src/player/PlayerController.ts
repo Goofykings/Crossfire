@@ -1,5 +1,6 @@
 import { MOVEMENT, type MovementConfig } from '../config/constants';
 import type { CollisionWorld, CylinderContact } from '../physics/CollisionWorld';
+import { LEAN_RATE, leanOffset, safeLean } from '../../shared/lean';
 
 /** Per-tick intent, produced by the input layer (or a network packet in the future). */
 export interface MoveIntent {
@@ -12,6 +13,8 @@ export interface MoveIntent {
   aim: boolean;
   /** True on the tick the jump key went down (edge, not level). */
   jumpPressed: boolean;
+  /** Held direction, never a client-assigned position. */
+  lean?: -1 | 0 | 1;
 }
 
 export const NO_INTENT: MoveIntent = { x: 0, z: 0, slide: false, aim: false, jumpPressed: false };
@@ -37,6 +40,7 @@ export interface ControllerState {
   airTime: number;
   jumpBufferTimer: number;
   jumpedThisAirborne: boolean;
+  lean: number;
 }
 
 /**
@@ -60,6 +64,8 @@ export class PlayerController {
   /** 0 = standing, 1 = fully crouched. */
   crouch = 0;
   prevCrouch = 0;
+  lean = 0;
+  prevLean = 0;
   slideRemaining = 0;
   slideCooldown = 0;
   slideHeld = false;
@@ -97,7 +103,7 @@ export class PlayerController {
     return { position: { ...this.position }, velocity: { ...this.velocity }, yaw: this.yaw, pitch: this.pitch,
       grounded: this.grounded, crouch: this.crouch, airTime: this.airTime, jumpBufferTimer: this.jumpBufferTimer,
       slideRemaining: this.slideRemaining, slideCooldown: this.slideCooldown, slideHeld: this.slideHeld, slideYaw: this.slideYaw,
-      jumpedThisAirborne: this.jumpedThisAirborne };
+      jumpedThisAirborne: this.jumpedThisAirborne, lean: this.lean };
   }
 
   restore(s: ControllerState): void {
@@ -109,6 +115,7 @@ export class PlayerController {
     this.grounded = s.grounded;
     this.crouch = s.crouch;
     this.prevCrouch = s.crouch;
+    this.lean = this.prevLean = s.lean ?? 0;
     this.slideRemaining = s.slideRemaining;
     this.slideCooldown = s.slideCooldown;
     this.slideHeld = s.slideHeld;
@@ -133,6 +140,7 @@ export class PlayerController {
     this.pitch = 0;
     this.crouch = 0;
     this.prevCrouch = 0;
+    this.lean = this.prevLean = 0;
     this.slideRemaining = this.slideCooldown = this.slideYaw = 0;
     this.slideHeld = false;
     this.jumpedThisAirborne = false;
@@ -172,6 +180,7 @@ export class PlayerController {
     this.stepUpDelta = 0;
     this.landedSpeed = 0;
     this.prevCrouch = this.crouch;
+    this.prevLean = this.lean;
 
     if (!this.sliding) this.slideCooldown = Math.max(0, this.slideCooldown - dt);
     const pressed = intent.slide && !this.slideHeld;
@@ -286,10 +295,25 @@ export class PlayerController {
       this.airTime += dt;
     }
 
+    const leanTarget = this.grounded && !this.sliding && !intent.jumpPressed ? (intent.lean ?? 0) : 0;
+    const nextLean = this.lean + (leanTarget - this.lean) * (1 - Math.exp(-LEAN_RATE * dt));
+    this.lean = safeLean(this.world, p, this.yaw, this.eyeHeight, nextLean);
+    if (Math.abs(this.lean) < .0001) this.lean = 0;
+
     if (p.y < c.killY) {
       // fell out of the world: caller decides where to respawn; stop the fall meanwhile
       v.x = v.y = v.z = 0;
     }
+  }
+
+  /** Collision-limited eye origin, shared by the authoritative server and prediction. */
+  leanEye(): Vec3 {
+    const offset = leanOffset(this.yaw, this.lean);
+    return { x: this.position.x + offset.x, y: this.position.y + this.eyeHeight, z: this.position.z + offset.z };
+  }
+
+  safeViewLean(position: Vec3, amount: number, eyeHeight: number): number {
+    return safeLean(this.world, position, this.yaw, eyeHeight, amount);
   }
 
   private substep(dt: number, wasGrounded: boolean): void {

@@ -51,6 +51,7 @@ interface Entry {
   rateAt: number;
   rateCount: number;
   gun: Weapon | null;
+  leanHeld: -1 | 0 | 1;
 }
 
 const positive = (s: string, fallback: number) => Number.isFinite(+s) && +s > 0 ? +s : fallback;
@@ -150,6 +151,8 @@ export class PublicRoom extends DurableObject<Bindings> {
     if (session.regenAt === undefined) session.regenAt = session.alive && session.health < PLAYER_MAX_HEALTH ? Date.now() + REGEN_DELAY_MS : null;
     session.combat ??= { gun: null, triggerHeld: false, reloadHeld: false, aimHeld: false };
     session.team = this.mode === 'teams' ? session.team ?? this.chooseTeam() : null;
+    // Stored protocol-v6 sessions have no lean state; keep their lives intact.
+    if (session.motion && session.motion.lean === undefined) session.motion.lean = 0;
     const controller = new PlayerController(this.activeMap.world);
     const changedRound = session.roundId !== this.round.id;
     if (changedRound || !validMotion(session.motion)) {
@@ -166,7 +169,7 @@ export class PublicRoom extends DurableObject<Bindings> {
     const stats = WEAPONS.find((w) => w.id === session.weapon);
     const gun = stats ? new Weapon(stats) : null;
     if (gun && validGun(session.combat.gun)) gun.restore(session.combat.gun);
-    return { session, controller, gun, queue: [], received: session.ack, lastSeen: Date.now(), rateAt: Date.now(), rateCount: 0 };
+    return { session, controller, gun, queue: [], received: session.ack, lastSeen: Date.now(), rateAt: Date.now(), rateCount: 0, leanHeld: 0 };
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -207,7 +210,7 @@ export class PublicRoom extends DurableObject<Bindings> {
 
   private error(socket: WebSocket, code: string, message: string, fatal = false): void {
     this.trace('protocol_error', { id: this.current(socket)?.session.id, code, fatal });
-    this.send(socket, { v: 6, type: 'error', code, message, fatal });
+    this.send(socket, { v: 7, type: 'error', code, message, fatal });
     if (fatal) { void this.disconnect(socket); socket.close(1008, code); }
   }
 
@@ -235,7 +238,7 @@ export class PublicRoom extends DurableObject<Bindings> {
     e.lastSeen = now;
     if ((message.type === 'input' || message.type === 'spawn') && message.roundId !== this.round.id) {
       this.error(socket, 'round_changed', 'The map changed. Wait for the new map to load.');
-      this.send(socket, { v: 6, type: 'snapshot', snapshot: this.snapshot() });
+      this.send(socket, { v: 7, type: 'snapshot', snapshot: this.snapshot() });
       return;
     }
     if (message.type === 'leave') {
@@ -244,7 +247,7 @@ export class PublicRoom extends DurableObject<Bindings> {
     } else if (message.type === 'ping') {
       this.trace('heartbeat', { id: e.session.id, sentAt: message.at, receivedAt: now, lastSeen: e.lastSeen });
       this.attach(e);
-      this.send(socket, { v: 6, type: 'pong', at: message.at, serverTime: now });
+      this.send(socket, { v: 7, type: 'pong', at: message.at, serverTime: now });
       this.broadcast();
       await this.scheduleCleanup();
     } else if (message.type === 'spawn') {
@@ -257,6 +260,7 @@ export class PublicRoom extends DurableObject<Bindings> {
       })));
       if (!spawn) { this.error(socket, 'spawn_busy', 'No clear spawn available. Try again.'); return; }
       e.controller.teleport({ x: spawn.pos[0], y: spawn.pos[1], z: spawn.pos[2] }, spawn.heading);
+      e.leanHeld = 0;
       e.session.alive = true;
       e.session.health = PLAYER_MAX_HEALTH;
       e.session.regenAt = null;
@@ -268,7 +272,7 @@ export class PublicRoom extends DurableObject<Bindings> {
       e.received = e.session.ack;
       this.attach(e);
       await this.persist();
-      this.send(socket, { v: 6, type: 'spawned', requestId: message.requestId, snapshot: this.snapshot() });
+      this.send(socket, { v: 7, type: 'spawned', requestId: message.requestId, snapshot: this.snapshot() });
       this.broadcast();
       this.start();
     } else {
@@ -316,7 +320,7 @@ export class PublicRoom extends DurableObject<Bindings> {
     this.trace('join', { id: e.session.id, resumed, generation: e.session.generation, replaced: !!old && old !== socket });
     if (old && old !== socket) old.close(4001, 'session_replaced');
     await this.persist();
-    this.send(socket, { v: 6, type: 'welcome', selfId: e.session.id, resumeToken: e.session.token, resumed, snapshot: this.snapshot() });
+    this.send(socket, { v: 7, type: 'welcome', selfId: e.session.id, resumeToken: e.session.token, resumed, snapshot: this.snapshot() });
     this.broadcast();
     await this.scheduleCleanup();
     this.start();
@@ -376,7 +380,7 @@ export class PublicRoom extends DurableObject<Bindings> {
   }
 
   private broadcast(): void {
-    const message: ServerMessage = { v: 6, type: 'snapshot', snapshot: this.snapshot() };
+    const message: ServerMessage = { v: 7, type: 'snapshot', snapshot: this.snapshot() };
     for (const e of this.players.values()) if (e.socket) this.send(e.socket, message);
   }
 
@@ -396,17 +400,18 @@ export class PublicRoom extends DurableObject<Bindings> {
       killer.session.kills++;
       if (this.mode === 'teams' && killer.session.team) this.scores[killer.session.team]++;
     }
-    this.publish({ v: 6, type: 'elimination', elimination: { id: crypto.randomUUID(), victimLife: victim.session.life,
+    this.publish({ v: 7, type: 'elimination', elimination: { id: crypto.randomUUID(), victimLife: victim.session.life,
       direction, roundId: this.round.id, victimId: victim.session.id,
       victimName: victim.session.name, killerId: killer?.session.id ?? null, killerName: killer?.session.name ?? null,
       weapon: killer?.session.weapon ?? null, head } });
   }
 
-  private fire(e: Entry, spread: number): boolean {
+  private fire(e: Entry, spread: number, control: InputFrame['combat']): boolean {
     const gun = e.gun!;
     const p = e.controller;
-    const origin = { x: p.position.x, y: p.position.y + p.eyeHeight, z: p.position.z };
-    const aim = applySpread(p.lookDirection(), spread);
+    const origin = p.leanEye();
+    const yaw = control.aimYaw ?? p.yaw, pitch = control.aimPitch ?? p.pitch, cp = Math.cos(pitch);
+    const aim = applySpread({ x: -Math.sin(yaw) * cp, y: Math.sin(pitch), z: -Math.cos(yaw) * cp }, spread);
     const result: ShotResult = { id: crypto.randomUUID(), roundId: this.round.id, shooterId: e.session.id, weapon: gun.stats.id, hits: [] };
     for (let k = 0; k < gun.stats.pellets; k++) {
       const dir = gun.stats.pellets > 1 ? applySpread(aim, gun.stats.pelletSpread) : aim;
@@ -439,7 +444,7 @@ export class PublicRoom extends DurableObject<Bindings> {
       } else result.hits.push({ id: target.session.id, life: target.session.life, direction: { ...dir }, amount: before - target.session.health, health: target.session.health,
         head: nearest.zone === 'head', killed: !target.session.alive });
     }
-    this.publish({ v: 6, type: 'shot', shot: result });
+    this.publish({ v: 7, type: 'shot', shot: result });
     return result.hits.length > 0;
   }
 
@@ -461,8 +466,8 @@ export class PublicRoom extends DurableObject<Bindings> {
         if (!e.socket || !e.session.alive) continue;
         const frame = e.queue.shift();
         frames.set(e, frame);
-        if (frame) { e.controller.yaw = frame.yaw; e.controller.pitch = frame.pitch; e.session.ack = frame.seq; }
-        e.controller.fixedUpdate(FIXED_DT, frame?.intent ?? { ...NO_INTENT, slide: e.controller.slideHeld });
+        if (frame) { e.controller.yaw = frame.yaw; e.controller.pitch = frame.pitch; e.session.ack = frame.seq; e.leanHeld = frame.intent.lean ?? 0; }
+        e.controller.fixedUpdate(FIXED_DT, frame?.intent ?? { ...NO_INTENT, slide: e.controller.slideHeld, lean: e.leanHeld });
         if (e.controller.position.y < MOVEMENT.killY) {
           this.eliminate(e, null);
           eliminated = true;
@@ -480,7 +485,7 @@ export class PublicRoom extends DurableObject<Bindings> {
           aim: frame?.intent.aim ?? combat.aimHeld, moveFactor: e.controller.horizontalSpeed / MOVEMENT.weaponMoveReference,
           airborne: !e.controller.grounded, sprinting: false });
         if (frame) { combat.triggerHeld = intent.trigger; combat.reloadHeld = intent.reload; combat.aimHeld = frame.intent.aim; }
-        for (const event of events) if (event.type === 'fire') eliminated = this.fire(e, event.spread) || eliminated;
+        for (const event of events) if (event.type === 'fire') eliminated = this.fire(e, event.spread, intent) || eliminated;
       }
       this.accumulator -= FIXED_DT;
     }
@@ -512,7 +517,7 @@ export class PublicRoom extends DurableObject<Bindings> {
     e.queue.length = 0;
     e.session.expiresAt = Date.now() + this.grace;
     if (forget) this.players.delete(e.session.id);
-    for (const p of this.players.values()) if (p.socket) this.send(p.socket, { v: 6, type: 'left', id: e.session.id });
+    for (const p of this.players.values()) if (p.socket) this.send(p.socket, { v: 7, type: 'left', id: e.session.id });
     await this.persist();
     this.broadcast();
     await this.scheduleCleanup();

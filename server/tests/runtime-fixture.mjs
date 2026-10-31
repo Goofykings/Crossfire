@@ -30,6 +30,44 @@ export class PublicRoom extends ProductionRoom {
     }
     throw new Error('No clear four-direction sightline in actual map geometry');
   }
+  async leanArenaForTest() {
+    const w = this.activeMap.world;
+    for (let x = -20; x <= 20; x += 2) for (let z = -20; z <= 18; z += 2) {
+      const y = w.groundHeight(x, z, .24, 2);
+      const otherY = w.groundHeight(x + .4, z + 3.5, .24, 2);
+      if (!Number.isFinite(y) || Math.abs(otherY - y) > .01) continue;
+      if (w.overlapsCylinder(x, z, .65, y + .42, y + 1.85)
+        || w.overlapsCylinder(x + .4, z + 3.5, .34, y + .42, y + 1.8)) continue;
+      if (w.raycast(x + .4, y + 1.64, z + 3.5, 0, 0, -1, 3.5)) continue;
+      return { victim: [x, y, z], shooter: [x + .4, y, z + 3.5] };
+    }
+    throw new Error('No clear arena for actual leaned-head hit testing');
+  }
+  async shotWallForTest(id) {
+    const e = this.players.get(id);
+    if (!e?.session.alive) throw new Error('Requires a real spawned session');
+    const p = e.controller, o = p.leanEye(), d = p.lookDirection();
+    const hit = this.activeMap.world.raycast(o.x, o.y, o.z, d.x, d.y, d.z, e.gun.stats.range);
+    return hit ? { tag: hit.collider.tag, distance: hit.distance, origin: o, lean: p.lean } : null;
+  }
+  async leanWallForTest() {
+    const w = this.activeMap.world;
+    for (const c of w.colliders.values()) {
+      if (!c.tag.startsWith('wall:') || c.hy < 1) continue;
+      const shortX = c.hx < c.hz, nx = shortX ? c.cos : c.sin, nz = shortX ? -c.sin : c.cos;
+      const gap = (shortX ? c.hx : c.hz) + .37;
+      for (const side of [-1, 1]) {
+        const x = c.cx + nx * gap * side, z = c.cz + nz * gap * side;
+        const y = w.groundHeight(x, z, .24, 2);
+        if (!Number.isFinite(y) || w.overlapsCylinder(x, z, .34, y + .42, y + 1.8)) continue;
+        const dx = -nx * side, dz = -nz * side;
+        if (!w.raycast(x, y + 1.64, z, dx, 0, dz, .5)) continue;
+        const heading = Math.atan2(dx, -dz) * 180 / Math.PI;
+        return { position: [x, y, z], heading, wall: c.tag };
+      }
+    }
+    throw new Error('No clear position beside a real map wall');
+  }
   async placeForCombatTest(id, pos, heading = 0) {
     const e = this.players.get(id);
     if (!e?.session.alive) throw new Error('Requires a real, server-spawned WebSocket session');

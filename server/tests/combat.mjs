@@ -45,7 +45,7 @@ for (const mode of ['ffa', 'teams']) test(`Authoritative player combat: ${mode}`
     ws.on('message', (raw) => { const m = JSON.parse(String(raw)); c.messages.push(m); if (m.snapshot) c.snapshot = m.snapshot; });
     ws.on('error', () => {});
     await new Promise((resolve, reject) => { ws.once('open', resolve); ws.once('error', reject); });
-    c.send = (m) => ws.send(JSON.stringify({ v: 6, ...m }));
+    c.send = (m) => ws.send(JSON.stringify({ v: 7, ...m }));
     c.send({ type: 'join', name: `Combat ${clients.length}`, ...(resumeToken ? { resumeToken } : {}) });
     const welcome = await wait(c, (m) => m.type === 'welcome');
     c.id = welcome.selfId; c.token = welcome.resumeToken;
@@ -157,6 +157,50 @@ for (const mode of ['ffa', 'teams']) test(`Authoritative player combat: ${mode}`
       assert.ok(arena.wall.startsWith('wall:'));
       await place(a, b, arena.pair); await aim(a, b);
       assert.deepEqual((await shot(a, b)).hits, []);
+      assert.equal(me(b).health, 100);
+      await leave(a); await leave(b);
+    });
+    await t.test('real synchronized leaning exposes the server-confirmed head hitbox', async () => {
+      const a = await open(), b = await open();
+      const arena = await stub.leanArenaForTest();
+      await place(a, b, [arena.shooter, arena.victim]);
+      await aim(a, b, 1.6);
+      const straight = (trigger = false) => {
+        const f = frame(a, b, 1.6, trigger);
+        f.yaw = 0; f.pitch = Math.atan2(-.04, 3.5);
+        return f;
+      };
+      let mark = a.messages.length;
+      send(a, [straight(true), ...Array.from({ length: 5 }, () => straight())]);
+      assert.deepEqual((await wait(a, (m) => m.type === 'shot' && m.shot.shooterId === a.id, mark)).shot.hits, []);
+      for (let i = 0; i < 7; i++) {
+        const frames = Array.from({ length: 6 }, () => {
+          const f = frame(b, a); f.yaw = 0; f.pitch = 0; f.intent.lean = 1; return f;
+        });
+        send(b, frames); await delay(50);
+      }
+      for (const c of [a, b]) await wait(c, (m) => m.type === 'snapshot' && m.snapshot.players.some((p) => p.id === b.id && p.motion.lean > .95));
+      assert.ok(Math.abs(me(b).motion.position.x - arena.victim[0]) < .01, 'lean does not move authoritative feet');
+      mark = a.messages.length;
+      send(a, [straight(true), ...Array.from({ length: 5 }, () => straight())]);
+      const result = (await wait(a, (m) => m.type === 'shot' && m.shot.shooterId === a.id, mark)).shot;
+      assert.equal(result.hits[0]?.id, b.id); assert.equal(result.hits[0]?.head, true);
+      assert.equal(result.hits[0]?.amount, 37.5);
+      await leave(a); await leave(b);
+    });
+    await t.test('a leaned shooter cannot fire through a real map wall', async () => {
+      const a = await open('sniper'), b = await open();
+      const arena = await stub.wallArenaForTest();
+      await place(a, b, arena.pair); await aim(a, b);
+      for (let i = 0; i < 7; i++) {
+        send(a, Array.from({ length: 6 }, () => { const f = frame(a, b); f.intent.lean = 1; return f; }));
+        await delay(50);
+      }
+      await wait(a, (m) => m.type === 'snapshot' && m.snapshot.players.some((p) => p.id === a.id && p.motion.lean > .9));
+      assert.ok((await stub.shotWallForTest(a.id))?.tag.startsWith('wall:'));
+      const mark = a.messages.length;
+      send(a, [Object.assign(frame(a, b, .9, true), { intent: { x: 0, z: 0, slide: false, aim: true, jumpPressed: false, lean: 1 } })]);
+      assert.deepEqual((await wait(a, (m) => m.type === 'shot' && m.shot.shooterId === a.id, mark)).shot.hits, []);
       assert.equal(me(b).health, 100);
       await leave(a); await leave(b);
     });

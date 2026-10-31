@@ -66,7 +66,7 @@ try {
       const c = { ws, messages: [], snapshot: null, id: '', seq: 0, position: null }; sockets.push(c);
       ws.on('message', (raw) => { const m = JSON.parse(String(raw)); c.messages.push(m); if (m.snapshot) c.snapshot = m.snapshot; }); ws.on('error', () => {});
       await new Promise((resolve, reject) => { ws.once('open', resolve); ws.once('error', reject); });
-      c.send = (m) => ws.send(JSON.stringify({ v: 6, ...m }));
+      c.send = (m) => ws.send(JSON.stringify({ v: 7, ...m }));
       c.send({ type: 'join', name });
       const welcome = await until(() => c.messages.find((m) => m.type === 'welcome'), 'Node join');
       c.id = welcome.selfId;
