@@ -1,3 +1,26 @@
+# CI fix - headless map validation without Pillow
+
+Updated 2026-11-01. Inspected the actual failure in
+[GitHub Actions run 41353123986](https://github.com/Goofykings/Crossfire/actions/runs/41353123986).
+`npm test` failed because `check-update-phase2.py` imports `layout_industrial`,
+which imported Pillow through `layoutkit.py` even though validation renders no
+images. Pillow exists locally but is absent on the GitHub runner.
+
+- Moved the Pillow import into `LayoutKit.render`; layout/collision validation
+  now needs only Python's standard library. PNG authoring still uses Pillow.
+- The existing regression test now invokes Python with `-I -S -B`, disabling
+  site-packages so local Pillow installations cannot mask this CI failure.
+- Reproduced the missing-PIL error before the fix; the same isolated check now
+  passes. All **366 tests**, production build/typecheck and asset validation
+  (**198 entries / 214 materials**) passed. A real PNG rendering smoke check
+  also passed with Pillow available.
+
+Changed `tools/layoutkit.py`, `tests/updatePhase2.test.ts` and this log. No game
+behavior/assets, dependency installation or deployment workflow changes were
+needed. No commit, push, deployment or remote Actions rerun was performed.
+
+---
+
 # Update Phase 4 - interactive environment and final quality pass
 
 Updated 2026-11-01. Completed and tested locally. Existing uncommitted Phases

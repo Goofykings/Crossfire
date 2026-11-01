@@ -23,8 +23,6 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from PIL import Image, ImageDraw
-
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "blender" / "scripts" / "lib"))
 
@@ -532,6 +530,9 @@ class LayoutKit:
 
     # --- plan image -----------------------------------------------------------------------------------
     def render(self, path: Path, buildings, walls=(), props=(), targets=(), terraces=(), scale: int = 12, colors=None):
+        # Pillow is only needed for PNG authoring, not layout/collision validation in CI.
+        from PIL import Image, ImageDraw
+
         n, O = self.n, self.OUTER
         colors = colors or {}
         img = Image.new("RGB", (n * scale, n * scale), (28, 30, 36))

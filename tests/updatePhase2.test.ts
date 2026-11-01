@@ -22,7 +22,8 @@ const at = (l: NonNullable<MapLayout['ladders']>[number], weapon: PlayerControll
 };
 
 it('keeps editable solids, normals, hollow pipe ends and regenerated collision consistent', () => {
-  expect(execFileSync('python',['-I','-B','tools/check-update-phase2.py'],{encoding:'utf8'})).toContain('pass');
+  // Disable site-packages to catch accidental dependencies on locally installed Pillow, etc.
+  expect(execFileSync('python',['-I','-S','-B','tools/check-update-phase2.py'],{encoding:'utf8'})).toContain('pass');
 },30000);
 
 describe.each(layout.ladders ?? [])('$id authoritative ladder', l => {
