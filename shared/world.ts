@@ -1,11 +1,15 @@
+import type { EnvironmentDefinition } from './environment';
 import { CollisionWorld } from '../src/physics/CollisionWorld';
 import type { CollisionFile, MapLayout, PropCatalog } from '../src/maps/types';
 
 /** Same generated solids in Workers and Babylon; targets are added separately in practice only. */
-export function createMapWorld(collision: CollisionFile, layout: MapLayout, catalog: PropCatalog): CollisionWorld {
+export function createMapWorld(collision: CollisionFile, layout: MapLayout, catalog: PropCatalog, environment?:EnvironmentDefinition): CollisionWorld {
   const world = new CollisionWorld();
+  world.ladders.push(...(layout.ladders ?? []));
   world.addMany(collision.boxes);
-  for (const p of [...layout.props, ...layout.obstacles]) {
+  for (const [index,p] of [...layout.props, ...layout.obstacles].entries()) {
+    const replacement=environment?.replaceProps.find(r=>r.index===index);
+    if(replacement){world.addMany(replacement.boxes);continue;}
     const size = catalog.props[p.type]?.collider;
     if (!size) continue;
     const [w, h, d] = size;
@@ -14,8 +18,8 @@ export function createMapWorld(collision: CollisionFile, layout: MapLayout, cata
   return world;
 }
 
-export function mapVersion(collision: CollisionFile, layout: MapLayout, catalog: PropCatalog): string {
-  const data = JSON.stringify([collision, layout, catalog]);
+export function mapVersion(collision: CollisionFile, layout: MapLayout, catalog: PropCatalog, environment?:EnvironmentDefinition): string {
+  const data = JSON.stringify([collision, layout, catalog, ...(environment?[environment]:[])]);
   let hash = 2166136261;
   for (let i = 0; i < data.length; i++) hash = Math.imul(hash ^ data.charCodeAt(i), 16777619);
   return `town-${(hash >>> 0).toString(16)}`;

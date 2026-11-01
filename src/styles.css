@@ -154,6 +154,7 @@ button:disabled { cursor: default; opacity: 0.45; }
 #weapons .weapon-back { width: 110px; justify-content: center; margin: 0; }
 .remote-player-labels { position: absolute; inset: 0; z-index: 10; overflow: hidden; pointer-events: none; }
 .remote-player-labels[hidden], .remote-player-label[hidden] { display: none; }
+.remote-player-labels.spectator-scoped { clip-path: circle(23vmax at 50% 50%); }
 .remote-player-label { position: absolute; transform: translate(-50%, -100%); max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; line-height: 1.3; color: #ff6660; text-shadow: 0 1px 3px #000, 0 0 5px #000; }
 .remote-player-label[data-relationship="teammate"] { color: #72adff; }
 .damage-edges { position: absolute; inset: 0; z-index: 32; pointer-events: none; opacity: 0;
@@ -203,9 +204,15 @@ button:disabled { cursor: default; opacity: 0.45; }
 @keyframes elimination-notice { 0% { opacity: 0; translate: 0 5px; } 10%, 78% { opacity: 1; translate: 0 0; } 100% { opacity: 0; translate: 0 -3px; } }
 .match-hud { position: absolute; left: 50%; top: 18px; transform: translateX(-50%); z-index: 30; display: flex; align-items: center; pointer-events: none; color: #f4f7fc; text-shadow: 0 2px 5px #000; font-variant-numeric: tabular-nums; }
 .match-hud[hidden], .match-team[hidden] { display: none; }
-.match-clock { display: flex; flex-direction: column; align-items: center; min-width: 7em; }
+.match-clock { position: relative; display: flex; flex-direction: column; align-items: center; min-width: 7em; }
 .match-clock small { color: #aab4c1; font-size: .65em; letter-spacing: .16em; line-height: 1.5; }
 .match-clock strong { font-size: 1.8em; line-height: 1.15; min-width: 5ch; text-align: center; }
+.match-final { position: absolute; top: calc(100% + 8px); left: 50%; translate: -50% 0; font-size: 2.7em; font-weight: 850; line-height: 1; color: #fff; text-shadow: 0 2px 9px #000c; }
+.match-final[hidden] { display: none; }
+.match-final.tick-a { animation: final-count-a 240ms ease-out; } .match-final.tick-b { animation: final-count-b 240ms ease-out; }
+@keyframes final-count-a { from { opacity: .65; transform: scale(1.12); } to { opacity: 1; transform: scale(1); } }
+@keyframes final-count-b { from { opacity: .65; transform: scale(1.12); } to { opacity: 1; transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .match-final.tick-a, .match-final.tick-b { animation: none; } }
 .match-team { min-width: 3.5em; text-align: center; padding: .45em .9em; font-size: 1.35em; font-weight: 700; }
 .match-team.blue { color: #a8ceff; background: linear-gradient(90deg, transparent, #3477b544); }
 .match-team.red { color: #ffacac; background: linear-gradient(90deg, #b7474744, transparent); }
@@ -258,7 +265,7 @@ button:disabled { cursor: default; opacity: 0.45; }
 @keyframes elimination-still { 0%, 100% { opacity: 0; } 10%, 78% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .elimination-confirmation.active { animation-name: elimination-still; } }
 #spectate { background: linear-gradient(#080d1566, transparent 25%, transparent 65%, #080d15bb); }
-.spectate-by { position: absolute; top: 7%; left: 50%; transform: translateX(-50%); font-size: .9em; white-space: nowrap; max-width: calc(100vw - 32px); }
+.spectate-by { position: absolute; top: 8.5em; left: 50%; transform: translateX(-50%); font-size: .9em; white-space: nowrap; max-width: calc(100vw - 32px); }
 .spectate-by strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .spectate-by::before, .spectate-by::after { flex-shrink: 0; }
 .spectate-bottom { position: absolute; left: 50%; bottom: 5%; transform: translateX(-50%); text-align: center; }
@@ -269,6 +276,7 @@ button:disabled { cursor: default; opacity: 0.45; }
 .spectate-controls { position: absolute; bottom: 5%; right: 2%; display: flex; flex-direction: column; align-items: stretch; gap: .45em; min-width: 11em; }
 .spectate-controls .btn { padding: .5em .8em; font-size: .7em; }
 .spectate-weapon { display: flex; flex-direction: column; align-items: center; font-size: .8em; font-weight: 700; gap: .2em; }
+.spectate-weapon small { color: #b9c4d2; font-size: .7em; letter-spacing: .1em; }
 @media (max-width: 650px) { .spectate-controls { bottom: 1%; right: 1%; min-width: 7.5em; } .spectate-controls .btn { font-size: .6em; } .spectate-bottom { bottom: 2%; } .respawn-button { min-width: 9em; } .spectate-by::before, .spectate-by::after { width: 2em; } }
 .scoreboard h3 { margin-top: 20px; font-size: 0.8em; }
 @media (max-width: 480px) { .weapon-grid { gap: 8px; } .weapon-card span { font-size: 0.75em; } .scoreboard { padding: 12px; } }
@@ -446,11 +454,12 @@ button:disabled { cursor: default; opacity: 0.45; }
 .control-bind:hover, .control-reset:hover, .control-reset-all:hover { border-color: #79b7ff; }
 .control-reset { font-size: .8em; opacity: .8; }
 .control-reset-all { margin-top: .8em; }
-.match-chat { position: absolute; left: 1.5em; bottom: 6em; width: min(25em, 80vw); pointer-events: auto; }
+.match-chat { position: absolute; left: 1.5em; bottom: 8em; width: min(25em, 80vw); pointer-events: auto; }
 .match-chat[hidden] { display: none; }
-.chat-hint { position: absolute; left: 1.5em; bottom: 5.3em; display: flex; align-items: center; gap: .4em; color: #ffffffa8; font-size: .75em; pointer-events: none; }
+.chat-hint { position: absolute; left: 1.5em; bottom: 9em; display: flex; align-items: center; gap: .4em; color: #ffffffa8; font-size: .75em; pointer-events: none; }
 .chat-hint svg { width: 1.2em; height: 1.2em; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linejoin: round; }
-.chat-feed { position: absolute; left: 1.5em; bottom: 6.4em; width: min(25em, 80vw); font-size: .85em; overflow-wrap: anywhere; pointer-events: none; text-shadow: 0 1px 3px #000; }
+.chat-feed { position: absolute; left: 1.5em; bottom: 9em; width: min(25em, 80vw); font-size: .85em; overflow-wrap: anywhere; pointer-events: none; text-shadow: 0 1px 3px #000; }
+#hud:has(.match-chat:not([hidden])) .chat-hint, #hud:has(.match-chat:not([hidden])) .chat-feed { visibility: hidden; }
 .chat-feed-message { animation: chat-fade 10s forwards; }
 @keyframes chat-fade { 0%, 65% { opacity: 1; } 100% { opacity: 0; } }
 .chat-log { max-height: 10em; overflow: auto; background: rgba(0,0,0,.55); padding: .4em .6em; font-size: .9em; overflow-wrap: anywhere; }
@@ -915,6 +924,9 @@ button:disabled { cursor: default; opacity: 0.45; }
 #pause .menu-buttons {
   margin-top: 1.2em;
 }
+#pause .btn.primary, #pause .btn.leave-match { font-size: 1.05em; padding: .9em 1.1em; }
+#pause .btn.leave-match { color: #fff; background: #a5353d; border-color: transparent; }
+#pause .btn.leave-match:hover, #pause .btn.leave-match:focus-visible { background: #c5454f; }
 
 #settings {
   color-scheme: dark;
@@ -1429,3 +1441,10 @@ button:disabled { cursor: default; opacity: 0.45; }
 @media (max-width: 720px) {
   .profile-setting .username-input, .profile-note { grid-column: 1 / -1; }
 }
+
+/* Grenade inventory shares the existing ammunition baseline. */
+.combat-ammo-row { display:flex; align-items:center; justify-content:flex-end; gap:22px; }
+.grenade-count { display:flex; align-items:center; gap:7px; padding:5px; color:inherit; background:none; border:0; font:600 23px var(--mono); pointer-events:auto; cursor:pointer; }
+.grenade-count .grenade-icon { width:23px; height:29px; }
+.grenade-count:disabled { opacity:.4; cursor:default; }
+.grenade-count:focus-visible { outline:2px solid #66b9ff; outline-offset:4px; }

@@ -10,6 +10,10 @@ def finish_layout(layout, catalog):
     idx = LayoutIndex(layout)
     boxes = map_collision(layout)["boxes"]
     reserved = [r["rect"] for r in layout.get("upperRoutes", [])]
+    for ladder in layout.get('ladders', []):
+        x,z=ladder['wall']; nx,nz=ladder['out']
+        reserved.append([min(x,x+nx*2.8)-.9,min(z,z+nz*2.8)-.9,
+                         max(x,x+nx*2.8)+.9,max(z,z+nz*2.8)+.9])
     portals = [c["rect"] for c in layout["ground"]["covered"] if c["kind"] in ('doorway', 'passage')]
     doors = []
     import building_spec as bs

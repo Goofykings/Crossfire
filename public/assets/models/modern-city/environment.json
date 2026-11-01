@@ -1,0 +1,33 @@
+{
+ "version": 1,
+ "bodies": [
+  {
+   "id": "loose-0",
+   "asset": "loose_crate",
+   "position": [
+    -3,
+    0.161,
+    3.7
+   ],
+   "radius": 0.23,
+   "halfHeight": 0.16,
+   "mass": 1.2,
+   "yaw": 0.0
+  },
+  {
+   "id": "loose-1",
+   "asset": "loose_barrel",
+   "position": [
+    -19.3,
+    0.201,
+    -7
+   ],
+   "radius": 0.2,
+   "halfHeight": 0.2,
+   "mass": 2.5,
+   "yaw": 0.15
+  }
+ ],
+ "signs": [],
+ "replaceProps": []
+}

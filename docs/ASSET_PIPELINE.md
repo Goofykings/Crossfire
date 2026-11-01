@@ -13,6 +13,12 @@ blender/scripts/generate_all.py ──> GLBs, collision.json, materials.json, .b
 
 ## Running Blender
 
+Update Phase 4 adds the `environment` stage for the shared interactive props and
+editable `blender/source/environment.blend`. Regenerate
+`materials,environment,props,town,industrial,city` together after changing bins,
+sign pivots or placements/collision. Maps export `environment.json` and separate
+selected sign panels from static mounts. See [Phase 4](UPDATE_PHASE4_ENVIRONMENT.md).
+
 ```bash
 npm run assets                                 # textures + audio + all Blender stages (~90 s)
 npm run assets -- --only town                  # stages: materials, props, weapon, library, kit, town

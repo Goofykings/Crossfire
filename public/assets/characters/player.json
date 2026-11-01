@@ -9,7 +9,8 @@
     "JUMP_START": "JUMP_START",
     "JUMP_LOOP": "JUMP_LOOP",
     "JUMP_LAND": "JUMP_LAND",
-    "SLIDE": "SLIDE"
+    "SLIDE": "SLIDE",
+    "CROUCH": "CROUCH"
   },
   "durations": {
     "IDLE": 2.4,
@@ -17,7 +18,8 @@
     "JUMP_START": 0.2,
     "JUMP_LOOP": 0.8,
     "JUMP_LAND": 0.3,
-    "SLIDE": 1.0
+    "SLIDE": 1.0,
+    "CROUCH": 0.8
   },
   "bones": [
     "root",
@@ -69,6 +71,10 @@
     "SLIDE": [
       0.0,
       1.1431
+    ],
+    "CROUCH": [
+      -0.0,
+      1.1492
     ]
   },
   "bounds": {

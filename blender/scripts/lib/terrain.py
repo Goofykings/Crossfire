@@ -11,6 +11,7 @@ import random
 import building_spec as bs
 from collision_gen import stair_rects
 from meshkit import MeshData
+from arch_geometry import profile
 
 ZONE_PRIORITY = {"spawn": 6, "plaza": 5, "court": 4, "terrace": 3, "sidewalk": 2.5, "yard": 2, "street": 1, "alley": 1}
 
@@ -294,10 +295,8 @@ class TerrainBuilder:
         R = (span * span / 4 + rise * rise) / (2 * rise)
         cy = apex - R
         cm = (ga + gb) / 2
-        a0 = math.atan2(spring - cy, ga - cm)
-        a1 = math.atan2(spring - cy, gb - cm)
         N = 10
-        arc = [(cm + R * math.cos(a0 + (a1 - a0) * i / N), cy + R * math.sin(a0 + (a1 - a0) * i / N)) for i in range(N + 1)]
+        arc = profile(ga, gb, spring, apex, N)
 
         def W(a, y, c):
             return (a, y, c) if along_x else (c, y, a)
@@ -357,14 +356,9 @@ class TerrainBuilder:
             rise = min(1.0, span * 0.28)
             apex = spring + rise
             top = apex + 0.75
-            R = (span * span / 4 + rise * rise) / (2 * rise)
-            cy = apex - R
             cm = (ga + gb) / 2
-            a0 = math.atan2(spring - cy, ga - cm)
-            a1 = math.atan2(spring - cy, gb - cm)
             N = 12
-            arc = [(cm + R * math.cos(a0 + (a1 - a0) * i / N), cy + R * math.sin(a0 + (a1 - a0) * i / N))
-                   for i in range(N + 1)]
+            arc = profile(ga, gb, spring, apex, N)
 
             def W(aa, y, c):
                 return (aa, y, c) if along_x else (c, y, aa)

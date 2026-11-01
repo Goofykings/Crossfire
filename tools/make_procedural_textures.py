@@ -617,6 +617,11 @@ def fabric() -> None:
 
 def weapon_textures() -> None:
     WEAPONS.mkdir(parents=True, exist_ok=True)
+    # The shared metal ORM's blue channel is near zero. Preserve its AO and
+    # roughness detail, but give firearm metal an actual metallic channel.
+    with Image.open(SHARED / "metal_orm.jpg") as source:
+        ao, roughness, _ = source.convert("RGB").split()
+        Image.merge("RGB", (ao, roughness, Image.new("L", source.size, 255))).save(WEAPONS / "gun_metal_orm.png")
     reticle_holo()
     fabric()
 

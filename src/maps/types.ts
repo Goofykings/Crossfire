@@ -96,6 +96,7 @@ export interface MapLayout {
   ground: { baseHeight: number; zones: GroundZone[]; covered: { id: string; kind: string; rect: Rect }[] };
   terraces: Terrace[];
   upperRoutes?: (Terrace & { style: 'gallery' | 'catwalk' | 'sky_passage' })[];
+  ladders?: LadderRegion[];
   navigation?: {
     version: number;
     groundRoutes: { id: string; kind: string; rect: Rect }[];
@@ -114,6 +115,7 @@ export interface MapLayout {
 }
 
 export interface MapAssetIndex {
+  environment?:string;
   map: string;
   models: string[];
   collision: string;
@@ -134,6 +136,15 @@ export interface CollisionFile {
   version: number;
   map: string;
   boxes: { c: Vec3Tuple; h: Vec3Tuple; yaw: number; tag: string }[];
+}
+
+/** Authored server-owned climb shaft; out is the unit wall-to-player normal. */
+export interface LadderRegion {
+  id: string;
+  wall: [number, number];
+  out: [number, number];
+  bottom: number;
+  top: number;
 }
 
 /** Lighting/atmosphere for a map. */

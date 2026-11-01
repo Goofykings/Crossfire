@@ -1,5 +1,18 @@
 # Multiplayer architecture and migration plan
 
+Current update (2026-11-01): local **protocol v12** adds bounded server-owned
+interactive prop state, 10 Hz changed-pose frames and full welcome/spawn recovery.
+No client prop force/hit commands. See [Update Phase 4](UPDATE_PHASE4_ENVIRONMENT.md).
+Hosting and the future dedicated-server boundary remain unchanged. Matching
+frontend/assets and Worker releases require authorization; no public v12
+validation was performed. Older entries below are historical.
+
+Previous update (2026-10-31): local **protocol v11** added server-authoritative
+grenades and shared held crouch. See [UPDATE_PHASE3_GRENADES.md](UPDATE_PHASE3_GRENADES.md).
+The historical stage notes below remain; hosting/room architecture is unchanged.
+No public v11 deployment or live connection validation has been performed.
+
+
 Polish Phase 2 uses **local protocol v10** for authoritative points/combos,
 the point-ranked leaderboard, timer HUD and persisted winner/MVP results.
 The 600-second schedule and team elimination win condition remain unchanged.

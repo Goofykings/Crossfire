@@ -10,6 +10,8 @@
  *   world.z = -local.x * sin(yaw) + local.z * cos(yaw)
  */
 
+import type { LadderRegion } from '../maps/types';
+
 export interface BoxDesc {
   c: [number, number, number];
   h: [number, number, number];
@@ -68,6 +70,7 @@ function cellKey(ix: number, iz: number): number {
 }
 
 export class CollisionWorld {
+  readonly ladders: LadderRegion[] = [];
   private readonly colliders = new Map<number, Collider>();
   private readonly grid = new Map<number, Collider[]>();
   private nextId = 1;
@@ -124,6 +127,7 @@ export class CollisionWorld {
   }
 
   clear(): void {
+    this.ladders.length = 0;
     this.colliders.clear();
     this.grid.clear();
   }

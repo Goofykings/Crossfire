@@ -13,5 +13,6 @@
   "terrain.glb"
  ],
  "collision": "collision.json",
- "collisionDebug": "collision_debug.glb"
+ "collisionDebug": "collision_debug.glb",
+ "environment": "environment.json"
 }

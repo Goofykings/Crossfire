@@ -53,6 +53,18 @@ describe.each(MAP_IDS)('map %s assets', (id) => {
 });
 
 describe('generated assets', () => {
+  it('keeps firearm metal, polymer and original colors separated across all four weapon models', () => {
+    const defs = materials as Record<string, { orm?: string; metallic?: number; tint?: number[] }>;
+    expect(defs.gun_black.orm).toBe('assets/textures/weapons/gun_metal_orm.png');
+    expect(defs.gun_steel.orm).toBe(defs.gun_black.orm);
+    expect(defs.gun_black.metallic).toBeGreaterThan(.5); expect(defs.gun_steel.metallic).toBeGreaterThan(.8);
+    expect(defs.gun_polymer.metallic).toBe(0); expect(defs.gun_fde.tint).toEqual([.34, .27, .18]);
+    for (const id of ['rifle', 'shotgun', 'sniper', 'smg']) {
+      const names = glbJson(`public/assets/models/shared/weapons/${id}.glb`).materials?.map((m) => m.name) ?? [];
+      expect(names).toContain('gun_steel');
+      expect(names.some((name) => name === 'gun_black' || name === 'gun_polymer')).toBe(true);
+    }
+  });
   it('ships every European Town model referenced by the asset index', () => {
     expect(index.models.length).toBeGreaterThan(5);
     for (const f of index.models) {

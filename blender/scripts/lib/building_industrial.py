@@ -132,7 +132,7 @@ class IndustrialBuildingGenerator(BuildingGenerator):
         ys = sorted({y0, y1, *[y for y in (*bands, *self.splits()) if y0 < y < y1], *([y1 - 0.6] if y1 - 0.6 > y0 else [])})
         for j in range(len(ys) - 1):
             mat = self.mat_at((ys[j] + ys[j + 1]) / 2)
-            self.md.quad(self.P(e, s0, ys[j]), self.P(e, s1, ys[j]), self.P(e, s1, ys[j + 1]), self.P(e, s0, ys[j + 1]), mat)
+            self.wall_panel(e, s0, s1, ys[j], ys[j + 1], mat)
 
     def roof_kinds(self, edges):
         r = self.b["roof"]
@@ -302,7 +302,7 @@ class IndustrialBuildingGenerator(BuildingGenerator):
                     continue
                 pts = [(sa, ya), (sb, ya), (sb, yb), (sa, yb)]
                 P = [self.P(e, s, y) for s, y in pts]
-                md.face(P, self.mat_at(ym), col=[color(p, s, y) for p, (s, y) in zip(P, pts)])
+                self.wall_panel(e, sa, sb, ya, yb, self.mat_at(ym), col=[color(p, s, y) for p, (s, y) in zip(P, pts)])
         for o in holes:
             if o.kind == "passage":
                 continue
@@ -403,7 +403,10 @@ class IndustrialBuildingGenerator(BuildingGenerator):
             for _ in range(5):
                 s = rnd.uniform(r0 + 0.8, r1 - 0.8)
                 if clear(s - 0.5, s + 0.5, 2.4, H):
-                    self.place(f"iladder_{round(H, 2)}", lambda: ki.roof_ladder(H), e, s, self.ground(e, s))
+                    # Industrial gameplay ladders are authored with shared traversal
+                    # and landing solids; keep this random stream stable for dressing.
+                    if self.index.layout.get('style') != 'industrial':
+                        self.place(f"iladder_{round(H, 2)}", lambda: ki.roof_ladder(H), e, s, self.ground(e, s))
                     busy.append((s - 0.6, s + 0.6, 2.4, H))
                     break
         # a horizontal service pipe with brackets
@@ -483,6 +486,9 @@ class IndustrialBuildingGenerator(BuildingGenerator):
 
     # --- roofs ---------------------------------------------------------------------------------------
     def build_roof(self, edges, exposure):
+        if self.b.get('serviceRoof'):
+            # The shared terrain/physics parts author this accessible deck and plant.
+            return
         b = self.b
         md = self.md
         rnd = self.rnd

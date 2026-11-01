@@ -5,7 +5,7 @@ import { leanOffset } from './lean';
 
 export type MatchMode = 'ffa' | 'teams';
 export type PlayerTeam = 'blue' | 'red' | null;
-export interface CombatIntent { trigger: boolean; reload: boolean; aimYaw?: number; aimPitch?: number }
+export interface CombatIntent { trigger: boolean; reload: boolean; grenade?: boolean; aimYaw?: number; aimPitch?: number }
 export const NO_COMBAT: CombatIntent = { trigger: false, reload: false };
 
 /** Teams are relative to the viewer; an unassigned participant is never a teammate. */

@@ -179,11 +179,13 @@ def market_stall(seed=0) -> MeshData:
     md.box(-w / 2 + 0.1, 0.0, -d / 2 + 0.05, w / 2 - 0.1, 0.85, -d / 2 + 0.75, "wood_weathered")
     for i in range(3):
         cx = -w / 2 + 0.5 + i * (w - 1.0) / 2
-        md.box(cx - 0.36, 0.85, -d / 2 + 0.1, cx + 0.36, 1.02, -d / 2 + 0.7, "wood_crate")
-        md.face([(cx - 0.33, 1.03, -d / 2 + 0.13), (cx - 0.33, 1.03, -d / 2 + 0.67), (cx + 0.33, 1.03, -d / 2 + 0.67),
-                 (cx + 0.33, 1.03, -d / 2 + 0.13)], "produce",
-                uv=[((i % 2) * 0.5, (i // 2) * 0.5), ((i % 2) * 0.5, (i // 2) * 0.5 + 0.5),
-                    ((i % 2) * 0.5 + 0.5, (i // 2) * 0.5 + 0.5), ((i % 2) * 0.5 + 0.5, (i // 2) * 0.5)])
+        # Real open wooden bins replace the two interactive produce cards.
+        md.box(cx-.36,.93,-.7,cx+.36,.97,-.1,'wood_crate')
+        for side in [-1,1]:
+            md.box(cx+side*.3475-.0125,.85,-.7,cx+side*.3475+.0125,1.02,-.1,'wood_crate')
+            md.box(cx-.36,.85,-.4+side*.2875-.0125,cx+.36,1.02,-.4+side*.2875+.0125,'wood_crate')
+        if i==2:
+            for k in range(3): md.sphere((cx+(k-1)*.18,1.035,-.4),.065,'paint_yellow',rings=5,segments=8)
     # back shelf crates
     md.merge(crate(0.55, seed + 4), Transform(-0.7, 0, d / 2 - 0.35, 0.1))
     md.merge(barrel(0.7, 0.24, seed + 5), Transform(0.75, 0, d / 2 - 0.35))

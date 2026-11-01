@@ -13,6 +13,7 @@ import json
 import math
 
 import building_spec as bs
+from arch_geometry import slices
 
 EPS = 1e-6
 
@@ -73,7 +74,7 @@ def building_boxes(b):
     for p in b.get("passages", []):
         px0, pz0, px1, pz1 = p["rect"]
         axis = bs.passage_axis(b, p)
-        _, _, clear = bs.passage_profile(p)
+        _, clear, _ = bs.passage_profile(p)
         if axis == "x":
             holes.append(aabb(px0 - 0.1, -1.0, pz0, px1 + 0.1, clear, pz1))
         else:
@@ -94,6 +95,15 @@ def building_boxes(b):
         holes.append(aabb(cxr[0], -1.0, czr[0], cxr[1], top + 1, czr[1]))
     boxes = subtract_all(boxes, holes)
     out = [to_obb(bx, tag) for bx in boxes]
+    for p in b.get('passages', []):
+        if p.get('style', 'arch') != 'arch':
+            continue
+        px0,pz0,px1,pz1 = p['rect']
+        spring,apex,_ = bs.passage_profile(p)
+        along_x = bs.passage_axis(b,p) == 'x'
+        for lo,hi,bottom,top_y in slices(pz0 if along_x else px0, pz1 if along_x else px1, spring,apex,apex):
+            bx = aabb(px0,bottom,lo,px1,top_y,hi) if along_x else aabb(lo,bottom,pz0,hi,top_y,pz1)
+            out.append(to_obb(bx,tag))
     if ch:
         k, c, pa, pb = ch
         # 45-degree box whose outer face lies on the chamfer line, reaching inward
@@ -137,7 +147,15 @@ def wall_boxes(w):
     for g in w.get("gates", []):
         gx0, gz0, gx1, gz1 = g["rect"]
         holes.append(aabb(gx0 - 0.05, -1.0, gz0 - 0.05, gx1 + 0.05, bs.GATE_CLEAR, gz1 + 0.05))
-    return [to_obb(b, tag) for b in subtract_all(boxes, holes)]
+    out = [to_obb(b, tag) for b in subtract_all(boxes, holes)]
+    if w.get('style') not in ('fence','railing','concrete','pillar','brick'):
+        along_x = x1-x0 >= z1-z0
+        for g in w.get('gates', []):
+            gx0,gz0,gx1,gz1=g['rect']
+            lo,hi=(gx0,gx1) if along_x else (gz0,gz1)
+            for a,b,y,top in slices(lo,hi,bs.GATE_CLEAR-.6,bs.GATE_CLEAR,bs.GATE_CLEAR,10):
+                out.append(to_obb(aabb(a,y,z0,b,top,z1) if along_x else aabb(x0,y,a,x1,top,b),tag))
+    return out
 
 
 def stair_rects(t):
@@ -184,7 +202,16 @@ def terrace_boxes(t):
 
 def arch_boxes(a):
     x0, z0, x1, z1 = a["rect"]
-    return [to_obb(aabb(x0, a["spring"], z0, x1, a["spring"] + 1.5, z1), f"arch:{a['id']}")]
+    tag = f"arch:{a['id']}"
+    spring = a['spring']
+    if a.get('style') in ('canopy', 'pipes'):
+        height = .57 if a['style'] == 'canopy' else .75
+        return [to_obb(aabb(x0,spring,z0,x1,spring+height,z1),tag)]
+    along_x = a['axis'] == 'x'
+    lo,hi = (x0,x1) if along_x else (z0,z1)
+    apex = spring + min(1.,(hi-lo)*.28)
+    return [to_obb(aabb(aa,y,z0,bb,top,z1) if along_x else aabb(x0,y,aa,x1,top,bb),tag)
+            for aa,bb,y,top in slices(lo,hi,spring,apex,apex+.75)]
 
 
 def railing_boxes(t):
@@ -219,6 +246,9 @@ def map_collision(layout: dict) -> dict:
         boxes.extend(railing_boxes(t))
     for a in layout.get("arches", []):
         boxes.extend(arch_boxes(a))
+    from industrial_roofs import parts
+    for box,_,part in parts(layout):
+        boxes.append(to_obb(box, f'roof:{part}'))
     from upper_routes import route_parts
     for route in layout.get("upperRoutes", []):
         for box, _, part in route_parts(route):

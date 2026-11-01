@@ -101,9 +101,11 @@ try {
   await hold('jump', true); const jumping = await sample(100); await hold('jump', false);
   check(jumping.some((s) => !s.body.grounded && s.body.slideRemaining === 0
     && Math.hypot(s.body.velocity.x, s.body.velocity.z) > momentum - .5), 'jump cancels slide while retaining momentum');
+  check(jumping.some((s) => s.body.velocity.y > 0 && s.w.view.motion.rise > .08), 'real jump blends the weapon upward while rising');
   await hold('forward', false); await hold('slide', false);
   const landing = await sample(1600);
   check(landing.some((s) => s.w.view.motion.landing > .003), 'actual jump landing triggers a downward weapon response');
+  check(landing.at(-1).w.view.motion.rise < .001, 'jump weapon rise settles after landing');
   check(!await page.$eval('.slide-lines', (e) => e.classList.contains('active')), 'slide cancellation fades speed lines');
   await reset(); await hold('forward', true); await delay(100); await hold('slide', true); await delay(200);
   await hold('forward', false); await hold('slide', false); await hold('aim', true);

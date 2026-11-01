@@ -1,3 +1,304 @@
+# Update Phase 4 - interactive environment and final quality pass
+
+Updated 2026-11-01. Completed and tested locally. Existing uncommitted Phases
+1-3 were preserved. No commit, push, deployment, hosting or endpoint change.
+The separate gun-model import request was set aside by the user; existing guns
+and the supplied BlenderKit files remain unchanged.
+
+- Town's existing fruit stall now has open wooden bins, six individual 3D apples
+  and three static yellow fruits, preserving its placement and architectural
+  style. Fixed the old solid stall collider that enclosed empty space/produce;
+  collision now follows the actual counter, posts, bins, roof and rear props.
+- Actual validated server weapon rays apply bounded, mass-dependent impulses
+  before their closest solid/player hit. Swept primitive collisions, low bounce,
+  damping, neighbouring apple contacts, a 3.2 m/s cap and sleep let objects settle.
+  Small decorative props never block players, provide moving cover or grant
+  points. No arbitrary client prop forces, hit claims or positions are accepted.
+- Two small loose crates/barrels per map, away from spawns and structural cover.
+  Two existing Town sign panels swing on damped, limited top-edge hinges; fixed
+  brackets/hooks stay in place, wall clearance stays valid and signs return to
+  rest. Other signs and large structures remain static.
+- Runtime-neutral shared simulation, bounded 60 Hz substeps, at most 12 bodies
+  and 2 signs (actual Town 8+2, Industrial/City 2 each), shared geometry/material
+  instances and sleeping. No new physics dependency. Resting props perform no
+  substeps, send no transform traffic and avoid repeated rendering transforms.
+- Worker-owned motion; protocol **v12** sends full welcome/spawn poses and only
+  changed poses at 10 Hz plus a terminal sleep update. Frontend interpolation,
+  stale-frame filtering and cached recovery preserve moved props on resume;
+  round changes clear old objects. Room storage retains poses. Practice uses
+  the same simulation locally. No player movement/combat controls were changed.
+- Blender source `blender/source/environment.blend` plus 11 shared GLBs: apple
+  (118 triangles), small crate (180), barrel (430), eight existing sign-atlas
+  variants (12 each). Each map exports shared definitions and index references.
+  Regenerated selected prop/map artifacts and manifests. The reusable building
+  library stage also passed an isolated 16-variant Blender export without
+  replacing its production files.
+
+Verification: **366 frontend/shared tests** (38 files), **54 Worker checks**
+(real local workerd/TCP clients), **7 dedicated-scaffold checks**, frontend and
+Worker typechecks, production build, source/map/collision validation and asset
+verification (**198 manifest entries / 214 materials**) passed. Strict protocol,
+all four weapon impulses, occlusion, speed/bounce/sleep, neighbouring contacts,
+hinge limits/rest, frame-rate independence, placement, resume and round cleanup
+are covered. Earlier movement, leaning, weapons, ladders, scoring, regen and
+grenade tests remain green.
+
+Two real Chrome clients passed development and the production build at
+**/crossfire/**: actual confirmed apple/sign/loose-prop shots, identical settled
+poses, rendered interpolation convergence, no idle transform messages, resume
+without duplicate props, all three map transitions and no asset/browser errors.
+Production offline practice passed actual apple shooting/settling. The existing
+Phase 3 production browser regression passed crouch/remote stance, real grenade
+damage/score/spectating, fresh flash after a slow frame, one positional explosion
+cue per client, cleanup, respawn, mouse/keyboard throw and resume inventory.
+Screenshots of bins, signs and all maps were inspected. Test navigation was
+corrected to acknowledge round results and account for existing autoplay spawn.
+Artifacts are under ignored `test-results/update-phase4*` and
+`test-results/update-phase3-final-regression/`.
+
+Performance observations: final low-quality, 0.6-scale headless desktop samples
+were approximately 60 FPS; Town/Industrial/City recorded 53/66/111 draw calls,
+with zero active props after settlement. These are local observations without a
+before/after hardware benchmark. No physical Chromebook or public Cloudflare
+test was performed. Upright crate/barrel primitives do not simulate arbitrary
+tumbling/stacking; abrupt process failure can rewind cosmetic motion by the
+approximately one-second persistence cadence. Existing Vite bundle-size warning
+remains. No other outstanding Phase 4 defects were found in the checks above.
+
+Files: `shared/environment.ts` (new), `shared/grenades.ts`, `shared/protocol.ts`,
+`shared/world.ts`; Worker `src/index.ts`, `src/world.ts`, test fixture/new
+`tests/environment.mjs` and package test command; frontend
+`src/game/EnvironmentProps.ts` (new), `Game.ts`, `network/MultiplayerClient.ts`,
+`maps/MapManager.ts`/`types.ts`; Blender generator, new
+`lib/interactive_environment.py`, `lib/kit.py`/`props.py`/`materials.py`; generated
+assets/source/metadata/manifests; new `tests/environment.test.ts`, transport/map
+tests and protocol fixture version updates; `tools/update-phase4-test.mjs`,
+CLAUDE/architecture/server/asset-pipeline notes and
+[implementation, commands and limits](docs/UPDATE_PHASE4_ENVIRONMENT.md).
+
+Release requirement: matching **frontend/assets and Cloudflare Worker v12**
+must be released together when authorized. Existing URL, ALLOWED_ORIGINS,
+`.env.local`, GitHub Pages base and dedicated-server preparation are preserved.
+The dedicated scaffold remains explicitly incomplete. Public multiplayer was
+not validated or deployed. Phase 4 is complete; no further development stage
+was started.
+
+---
+
+# Update Phase 3 - grenades, held crouch and multiplayer integration
+
+Updated 2026-10-31. Completed and tested locally. Existing uncommitted Phase 1/2 changes
+were preserved. No commit,
+push, deployment, endpoint or hosting change was made.
+
+- One configurable grenade per life, no regeneration, respawn reset; silhouette
+  and count immediately left of ammo, with an accessible mouse throw button.
+  New defaults are R throw, F reload, Left Control hold crouch. Legacy factory
+  controls migrate; custom controls retain their keys and new actions find unused
+  bindings. Existing conflict handling/settings persistence is preserved.
+- Original 892-triangle PBR grenade with optimized GLB and editable Blender source.
+  Short weapon throw motion; collision-safe server launch, gravity, swept OBB
+  bounces, friction/settling, thin-wall protection and elapsed 2-second fuse.
+- Worker-authoritative 100-HP maximum / 1.8-m linear radial damage, actual
+  explosion-time poses and wall occlusion. Inventory/projectiles/explosions and
+  awards persist atomically before publication; resume cannot replenish a life.
+  Grenade kills retain normal scores, combos, team totals, feed, spectating and
+  match results without headshot bonuses. Posthumous credit, friendly-fire rules,
+  damage regeneration resets and old-round cleanup are handled.
+- Shared GLB plus one capped 128-quad cosmetic batch for brief trails, flash,
+  smoke and debris, with complete leave/map/results cleanup. Original synthesized
+  positional explosion audio uses bounded voices and master + new SFX gain.
+  Monotonic creation times prevent a slow preceding frame from skipping a new
+  flash. Event/snapshot/reconnect deduplication prevents repeated explosion cues.
+  Grenade hit statistics stay separate from firearm accuracy.
+- Held crouch shares collision, prediction/replay and server validation; smooth
+  1.15-m body / 1.02-m eye, 2.4-m/s walking, quiet footsteps and headroom checks.
+  Existing outward hip posture cancels fully in ADS. Exported CROUCH animation
+  (measured 1.1492 m) replaces the inappropriate slide pose for manual crouching.
+- Local protocol **v11** adds validated crouch/grenade controls, inventory,
+  projectiles/history/events and grenade elimination icons. Existing malformed
+  message/version rejection remains. Matching frontend/assets and Worker releases
+  will be required when authorized; no public Cloudflare v11 test was performed.
+
+Verification: all **352 frontend/shared tests** (37 files), **53 Worker checks**
+(real workerd/TCP clients), **7 dedicated-scaffold compatibility checks**, frontend
+and Worker typechecks, production build and asset verification (**183 manifest
+entries / 213 materials**) passed. Two real Chrome contexts passed dev checks and
+the final production build served at **/crossfire/**, including actual grenade
+kills/feed/spectating, keyboard and mouse throws, crouch animation, one positional
+explosion cue per client, cleanup, respawn and resume. Screenshots were inspected.
+The browser harness was corrected to poll authoritative transitions and keep
+screenshots/reconnect setup out of the two-second blast-positioning window.
+No physical Chromebook performance test or live public Cloudflare test was run.
+
+See [docs/UPDATE_PHASE3_GRENADES.md](docs/UPDATE_PHASE3_GRENADES.md) for balance,
+implementation, exact PowerShell commands, tests and limitations. Phase 3 is the
+only new development scope; stop after final verification. No later phase was
+implemented.
+
+---
+
+# Update Phase 2 — map geometry, ladders, rooftops and Industrial props
+
+Updated 2026-10-31. Completed and tested locally. This is the newer **Update
+Phase 2** brief, separate from the earlier compact-layout Phase 2 below. The
+existing uncommitted Phase 1 work was inspected and preserved. Baseline frontend
+typecheck and all 316 existing tests passed before these changes. No commit,
+push, deployment or hosting change was performed.
+
+- Added a 12 cm inward skin to the shared Town/Industrial/City facade generators,
+  preserving exterior geometry, UVs, colors, physical footprints and existing
+  interior/reveal surfaces. Terrain masonry already had thickness. Kept normal
+  backface culling and removed redundant per-cell caps after overlap tests caught
+  sill/lintel flicker during development.
+- Corrected **Town B22's east/west arched arcade**: its 3.2 m visible crown had a
+  flat 2.6 m collision ceiling. Curved collision now follows the same planar
+  profiles used by Blender. The suspended Town arches and stone gate spandrels
+  retain real masonry collision; Industrial/City overhead envelopes fit their
+  structures. Narrow conservative slices overlap at export-rounding seams.
+  Existing ground-level passages passed the baseline; the confirmed defect was
+  incorrect headroom. Actual jumps now reach **1.061 m** through B22 in both
+  directions without hitting the old invisible slab.
+- Replaced unreachable random Industrial ladder decorations (previously starting
+  2.6 m above ground) with three authored ground-to-roof service ladders. Hold the
+  configured forward action to ascend, release to hold height, backward to
+  descend, and Jump to leave outward. Existing shared fixed-step collision bounds
+  motion, ceilings and top/bottom exits. The 1.65 m stand-off climb line preserves
+  the longest weapon's normal clearance; its top shaft does not cross the landing.
+  Climbing derives from trusted map regions and existing input/snapshots/replay,
+  with no new client position field, protocol change or per-player timer.
+- Made **I31/I32/I34** connected low 4.5 m service decks, with three alternative
+  access/exit approaches inside the existing map. Kept all ground footprints and
+  lower routes. Added HVAC, fan, vent/pipe and utility-box plant off the main path.
+  Deck/landing/rail/plant collision shares the authoring definitions; actual kit
+  vertices are checked against their collision envelopes, including the HVAC
+  duct, louvres and fan caps. Dressing reserves the ladder approaches.
+- Fixed reversed arbitrary-axis tube cap winding. The pipe bundle now has proper
+  annular end rims and inward-facing bore surfaces at both ends, preserving its
+  placement, materials and existing gameplay collider. Regenerated affected map
+  and prop GLBs, all three collision/debug exports, four editable `.blend` files,
+  asset manifest and Industrial authoring plans. Removed only bytecode-cache
+  changes generated during this work.
+
+Final verification: **338 frontend tests in 35 files and all 51 backend tests
+pass**, along with frontend/backend typechecks, production Vite build, Worker
+dry-run build and **181-entry / 213-material** asset verification. Source checks
+reproduce Industrial layout and all three collision files. Existing geometry
+overlap, spawn, movement, slide/jump/lean, combat, health, scoring, round and
+session tests pass.
+
+Local Chrome testing passed with two actual clients in development and the
+production **`/crossfire/`** build. Verified rebound forward/back keys, all three
+ladders, release/descending/top exits, server/prediction height agreement, remote
+vertical rendering and genuine mid-ladder reconnection preserving identity,
+life, health and height without duplicate avatars. The final matched frontend /
+Worker run is in `test-results/update-phase2-final/`. Inspected close-ups of both
+pipe ends, service roofs/plant, remote climbing, Town/City walls and B22 from both
+entrances. Existing three-map production browser regression also passed both
+stair ends and walking/sliding/jumping through established ground flanks, saved
+settings and asset/error checks. No missing assets or uncaught browser errors.
+
+Remote climbing retains the existing airborne animation; no dedicated climbing
+clip was added. Human small-match testing remains appropriate for rooftop
+balance. Live Cloudflare / public Pages validation was not performed. Publish
+matching frontend assets **and** the rebuilt Worker together when authorized;
+strict map-version validation and protocol **v10** remain intact. Existing
+Blender cache/deprecation and Vite bundle warnings remain, and the pre-existing
+untracked Blender add-on under `public/assets/weapons/blenderkit` was untouched.
+
+See [implementation details and exact PowerShell commands](docs/UPDATE_PHASE2_GEOMETRY.md).
+Stopped after this phase; no later stage was started.
+
+# Update Phase 1 — spectating, multiplayer audio, weapons and HUD
+
+Updated 2026-10-31. Completed locally; no commit, push, deployment, hosting
+switch, server gameplay change or multiplayer protocol change. This entry is
+the newer update, separate from the earlier three-stage polish update below.
+
+Spectating now reuses the existing camera-mounted WeaponView for the actual
+server-confirmed killer's weapon and synchronized weapon state. Remote ADS is
+interpolated with the existing motion snapshots; FOV and the sniper scope
+transition with it. The spectator follows the actual remote look direction,
+sees no local-player gun, and hides the view-model/returns FOV when the target
+is unavailable. The respawn loadout is labeled NEXT SPAWN to distinguish it
+from the weapon being observed. A sniper spectator's remote name tags are
+clipped to the scope opening: visual inspection caught a tag that previously
+appeared over the black surround. Existing permitted target selection and
+occlusion checks remain intact; no new network information was introduced.
+
+Valid, deduplicated existing server shot events now play the matching local
+weapon WAV through a Web Audio 3D panner and the existing master-volume gain.
+The default falloff is 3–70 world units in AudioManager.spatialFalloff. Four
+active remote voices are bounded; the oldest tail fades before a new shot so
+rapid fire is not silently dropped. Local prediction does not double-play the
+local player's shot; scoped/spectating audio follows the camera. Position is
+estimated from the latest existing synchronized shooter snapshot, so it is
+approximately one snapshot behind and a shot whose shooter is no longer in
+that snapshot is skipped rather than assigned a fabricated origin. The game
+currently has master volume only, not a separate sound-effects slider. Detailed
+positional audio diagnostics are retained only in automated autoplay sessions.
+
+Inspected blender/source/weapon.blend and smg.blend, their procedural sources,
+and all four in-game gun views. Found that the shared metal ORM blue channel
+averages about 2/255, making the authored firearm metal factors nearly zero.
+Added a reproducible weapon-specific ORM with the same AO/roughness channels
+and a true metallic channel; refined steel/black-metal and polymer roughness
+and normal strength. Original colors, texture/skin inputs, UVs, mesh geometry,
+and attachments are retained. The texture generator and Blender material
+manifest source generate the same runtime definitions; the four GLBs are not
+replaced. No visible hands are introduced. No unverified geometry rewrites.
+
+The existing time-based weapon-motion layer now gently follows positive jump
+velocity and eases back through the original landing spring. Full ADS still
+preserves the sight axis and reduced-motion preference still reduces cosmetic
+movement. Chat prompt/feed/input are raised, with prompt/feed hidden while the
+chat input is open. Pause Resume remains blue and Leave Match is red with the
+same dimensions and hover behavior. The separate larger final countdown is
+derived from the existing authoritative deadline and synchronized clock, shows
+10 through 1, and has no timer of its own or reconnect reset.
+
+Verification:
+- 316 frontend tests passed; frontend TypeScript and production Vite build
+  passed. Asset verification passed for 181 manifest entries, 213 materials,
+  three maps and all referenced textures. The preexisting large-chunk warning
+  remains.
+- Worker typecheck, Wrangler dry-run build and all 50 local real-runtime tests
+  passed. The test-only fixture can move the real round deadline; production
+  Worker and shared wire protocol remain unchanged at local v10.
+- Real local multiplayer Chrome checks ran in Vite dev and again against the
+  production build under /crossfire/. Two independent browsers and real Worker
+  WebSocket shooters exercised all four observed guns, ADS entry/release,
+  sniper scope, live look changes, shooter departures, spectator sound, actual
+  server shot delivery and different weapon classes. Left/right real source
+  positions and a 20 m source were checked; offline Web Audio rendering
+  measured stereo direction and near/far attenuation. A transport unit test
+  verifies duplicate/stale/invalid shots cannot trigger duplicate playback.
+- Countdown was observed 10 through 1, positioned below the main clock, and
+  reconnected with its original real server deadline. Chat/health placement
+  was checked at 800x600, 1024x600, 1280x720 and 1920x1080. A real chat
+  message and keyboard prompt were checked. Pause button colors and dimensions
+  were measured. Screenshots of all spectator guns, scope and countdown were
+  visually inspected under ignored test-results/update-phase1/.
+- Existing real-browser checks passed all four guns' ADS, recoil and wall
+  clearance, plus slide/jump, landing, crouched ADS, reduced motion and stairs;
+  an added actual-jump check verifies rise and eventual settling. No browser
+  errors were recorded. The initial pause-color check ran during its CSS hover
+  transition; moving the pointer away and waiting for the transition produced
+  the expected measured colors and a passing final run.
+
+The public Cloudflare deployment was not tested or changed. This phase needs
+the frontend/assets published when authorized; it does not itself require a
+Worker release. The earlier local/public protocol version discrepancy should
+still be checked before any release. Existing weapon proximity/turning overlap
+limitations and the large Babylon bundle warning remain. No physical audio
+device or Chromebook was used; Web Audio was measured in Chrome and responsive
+layouts were checked at Chromebook-sized viewports.
+
+An unrelated untracked public/assets/weapons/blenderkit directory appeared
+during this session and was left untouched. It contains 181 files (~69.7 MB);
+the local Vite production build copied it into dist because it is under public.
+Review those files before including them in a commit or publishing a local build.
+
 # Polish update — Phase 3: results presentation and final verification
 
 Updated: 2026-10-31. Complete locally. No commit, push, deployment, hosting

@@ -1,10 +1,12 @@
+import { validEnvironmentFrame, type EnvironmentFrame } from './environment';
 import { validMap, type MapId } from './maps';
 import type { MoveIntent, ControllerState, Vec3 } from '../src/player/PlayerController';
 import type { WeaponId, WeaponState } from '../src/weapons/Weapon';
 import type { CombatIntent } from './combat';
 import { pointsOrder, type ScoreAward, type RoundResult, type RoundStanding } from './scoring';
+import { GRENADE, type GrenadeState, type GrenadeEvent, type GrenadeExplosion } from './grenades';
 
-export const PROTOCOL_VERSION = 10;
+export const PROTOCOL_VERSION = 12;
 export const validWeapon = (x: unknown): x is WeaponId => x === 'rifle' || x === 'shotgun' || x === 'sniper' || x === 'smg';
 export const PUBLIC_ROOM = 'public-main';
 export const INPUT_BATCH_LIMIT = 12;
@@ -21,7 +23,7 @@ export interface InputFrame {
   intent: MoveIntent;
   combat: CombatIntent;
 }
-export interface CombatState { gun: WeaponState | null; triggerHeld: boolean; reloadHeld: boolean; aimHeld: boolean }
+export interface CombatState { gun: WeaponState | null; triggerHeld: boolean; reloadHeld: boolean; aimHeld: boolean; grenadeHeld: boolean }
 export interface ShotResult {
   id: string; roundId: number; shooterId: string; weapon: WeaponId;
   hits: { id: string; life: number; amount: number; health: number; head: boolean; killed: boolean; direction: Vec3 }[];
@@ -30,10 +32,11 @@ export interface Elimination {
   award: ScoreAward | null;
   id: string; victimLife: number; direction: Vec3 | null;
   roundId: number; victimId: string; victimName: string; killerId: string | null;
-  killerName: string | null; weapon: WeaponId | null; head: boolean;
+  killerName: string | null; weapon: WeaponId | 'grenade' | null; head: boolean;
   at: number; respawnAt: number; killerTeam: 'blue' | 'red' | null; victimTeam: 'blue' | 'red' | null;
 }
 export interface PlayerState {
+  grenades: number;
   score: number;
   comboCount: number;
   comboUntil: number | null;
@@ -55,6 +58,9 @@ export interface PlayerState {
   death: Elimination | null;
 }
 export interface Snapshot {
+  environment?:EnvironmentFrame;
+  grenades: GrenadeState[];
+  explosions: GrenadeExplosion[];
   result: RoundResult | null;
   room: typeof PUBLIC_ROOM;
   mapId: MapId;
@@ -72,6 +78,8 @@ export type ClientMessage =
   | { v: typeof PROTOCOL_VERSION; type: 'chat'; text: string }
   | { v: typeof PROTOCOL_VERSION; type: 'leave' };
 export type ServerMessage =
+  | { v:typeof PROTOCOL_VERSION;type:'environment';frame:EnvironmentFrame }
+  | { v: typeof PROTOCOL_VERSION; type: 'grenade'; event: GrenadeEvent }
   | { v: typeof PROTOCOL_VERSION; type: 'chat'; id: string; name: string; text: string }
   | { v: typeof PROTOCOL_VERSION; type: 'shot'; shot: ShotResult }
   | { v: typeof PROTOCOL_VERSION; type: 'elimination'; elimination: Elimination }
@@ -125,7 +133,8 @@ export function validElimination(e: unknown): e is Elimination {
     && Number.isSafeInteger(e.victimLife) && (e.victimLife as number) > 0 && (e.direction === null || direction(e.direction))
     && Number.isSafeInteger(e.roundId) && (e.roundId as number) >= 0 && typeof e.victimId === 'string' && typeof e.victimName === 'string'
     && (e.killerId === null || typeof e.killerId === 'string') && (e.killerName === null || typeof e.killerName === 'string')
-    && (e.weapon === null || validWeapon(e.weapon)) && typeof e.head === 'boolean'
+    && (e.weapon === null || validWeapon(e.weapon) || e.weapon === 'grenade') && typeof e.head === 'boolean'
+    && (e.weapon !== 'grenade' || e.head === false)
     && Number.isSafeInteger(e.at) && (e.at as number) >= 0 && e.respawnAt === (e.at as number) + RESPAWN_DELAY_MS
     && team(e.killerTeam) && team(e.victimTeam)
     && (e.award === null || (e.killerId !== null && e.killerId !== e.victimId && validAward(e.award, e.head as boolean)));
@@ -133,7 +142,7 @@ export function validElimination(e: unknown): e is Elimination {
 
 export function validFrame(x: unknown): x is InputFrame {
   if (!record(x) || !keys(x, ['seq', 'yaw', 'pitch', 'intent', 'combat'])) return false;
-  if (!record(x.combat) || !keys(x.combat, ['trigger', 'reload', 'aimYaw', 'aimPitch'])
+  if (!record(x.combat) || !keys(x.combat, ['trigger', 'reload', 'grenade', 'aimYaw', 'aimPitch'])
     || typeof x.combat.trigger !== 'boolean' || typeof x.combat.reload !== 'boolean') return false;
   if (!Number.isSafeInteger(x.seq) || (x.seq as number) < 1 || !finite(x.yaw) || Math.abs(x.yaw) > Math.PI
     || !finite(x.pitch) || Math.abs(x.pitch) > Math.PI / 2 || !record(x.intent)) return false;
@@ -144,7 +153,8 @@ export function validFrame(x: unknown): x is InputFrame {
       || Math.abs(Math.atan2(Math.sin(c.aimYaw - x.yaw), Math.cos(c.aimYaw - x.yaw))) > .35
       || Math.abs(c.aimPitch - x.pitch) > .35) return false;
   }
-  return keys(i, ['x', 'z', 'slide', 'aim', 'jumpPressed', 'lean']) && finite(i.x) && Math.abs(i.x) <= 1
+  return (c.grenade === undefined || typeof c.grenade === 'boolean') && (i.crouch === undefined || typeof i.crouch === 'boolean')
+    && keys(i, ['x', 'z', 'slide', 'crouch', 'aim', 'jumpPressed', 'lean']) && finite(i.x) && Math.abs(i.x) <= 1
     && (i.lean === undefined || i.lean === -1 || i.lean === 0 || i.lean === 1)
     && finite(i.z) && Math.abs(i.z) <= 1 && ['slide', 'aim', 'jumpPressed'].every((k) => typeof i[k] === 'boolean');
 }
@@ -199,6 +209,12 @@ export function parseServerMessage(text: string): ServerMessage | null {
   let x: unknown;
   try { x = JSON.parse(text); } catch { return null; }
   if (!record(x) || x.v !== PROTOCOL_VERSION) return null;
+  if(x.type==='environment')return keys(x,['v','type','frame'])&&validEnvironmentFrame(x.frame)?x as unknown as ServerMessage:null;
+  if (x.type === 'grenade') {
+    const e=x.event;
+    return keys(x,['v','type','event']) && record(e) && (e.kind==='throw' ? keys(e,['kind','id','projectile']) && typeof e.id==='string' && e.id===`throw:${record(e.projectile)?e.projectile.id:''}` && validGrenade(e.projectile)
+      : e.kind==='explode' && validExplosion(e)) ? x as unknown as ServerMessage : null;
+  }
   if (x.type === 'chat') return keys(x, ['v', 'type', 'id', 'name', 'text']) && typeof x.id === 'string' && x.id.length <= 64
     && typeof x.name === 'string' && x.name.length <= 24 && typeof x.text === 'string' && x.text.length > 0 && x.text.length <= 200
     && !/[\u0000-\u001f\u007f]/.test(x.text) ? x as unknown as ServerMessage : null;
@@ -221,8 +237,12 @@ export function parseServerMessage(text: string): ServerMessage | null {
   if (x.type === 'spawned' && typeof x.requestId !== 'string') return null;
   if (x.type === 'welcome' && (typeof x.selfId !== 'string' || typeof x.resumeToken !== 'string' || typeof x.resumed !== 'boolean')) return null;
   const s = x.snapshot;
-  if (!record(s) || s.room !== PUBLIC_ROOM || !validMap(s.mapId) || !Number.isSafeInteger(s.roundId) || (s.roundId as number) < 0 || typeof s.mapVersion !== 'string' || !finite(s.serverTime)
+  if (!record(s) || (s.environment!==undefined&&!validEnvironmentFrame(s.environment)) || s.room !== PUBLIC_ROOM || !validMap(s.mapId) || !Number.isSafeInteger(s.roundId) || (s.roundId as number) < 0 || typeof s.mapVersion !== 'string' || !finite(s.serverTime)
+    || !Array.isArray(s.grenades) || s.grenades.length>32 || !s.grenades.every(g=>validGrenade(g)&&g.roundId===s.roundId)
+    || new Set(s.grenades.map(g=>(g as GrenadeState).id)).size!==s.grenades.length
+    || !Array.isArray(s.explosions) || s.explosions.length>64 || !s.explosions.every(e=>validExplosion(e)&&e.roundId===s.roundId)
     || !Array.isArray(s.players) || s.players.length > 16 || !s.players.every((p) => record(p) && typeof p.id === 'string'
+      && natural(p.grenades) && p.grenades<=GRENADE.perLife
       && natural(p.score) && natural(p.comboCount) && (p.comboUntil === null || natural(p.comboUntil))
       && (p.comboCount === 0 ? p.comboUntil === null : p.alive === true && p.comboUntil !== null)
       && (p.lastPlayedRound === null || natural(p.lastPlayedRound)) && team(p.lastPlayedTeam)
@@ -231,6 +251,7 @@ export function parseServerMessage(text: string): ServerMessage | null {
       && finite(p.health) && p.health >= 0 && p.health <= 100 && (p.alive ? p.health > 0 : p.health === 0)
       && record(p.combat) && typeof p.combat.triggerHeld === 'boolean' && typeof p.combat.reloadHeld === 'boolean'
       && typeof p.combat.aimHeld === 'boolean'
+      && typeof p.combat.grenadeHeld === 'boolean'
       && (p.combat.gun === null ? !p.alive : validGun(p.combat.gun))
       && (p.weapon === null || validWeapon(p.weapon)) && (!p.alive || p.weapon !== null)
       && Number.isSafeInteger(p.kills) && (p.kills as number) >= 0 && Number.isSafeInteger(p.deaths) && (p.deaths as number) >= 0
@@ -242,4 +263,20 @@ export function parseServerMessage(text: string): ServerMessage | null {
     || !(m.teamScores === null || (record(m.teamScores) && ['blue', 'red'].every((k) => Number.isSafeInteger((m.teamScores as Record<string, unknown>)[k])
       && ((m.teamScores as Record<string, unknown>)[k] as number) >= 0)))) return null;
   return x as unknown as ServerMessage;
+}
+
+const vector = (x: unknown): x is Vec3 => record(x) && keys(x,['x','y','z']) && ['x','y','z'].every(k=>finite(x[k])&&Math.abs(x[k] as number)<1000);
+const identifier = (x: unknown): x is string => typeof x==='string' && x.length>0 && x.length<=64;
+export function validGrenade(x: unknown): x is GrenadeState {
+  return record(x) && keys(x,['id','ownerId','ownerLife','roundId','at','explodeAt','updatedAt','position','velocity'])
+    && identifier(x.id)&&identifier(x.ownerId)&&natural(x.ownerLife)&&x.ownerLife>0&&natural(x.roundId)
+    && natural(x.at)&&x.explodeAt===x.at+GRENADE.fuseMs&&finite(x.updatedAt)&&x.updatedAt>=x.at&&x.updatedAt<=x.explodeAt
+    && vector(x.position)&&vector(x.velocity);
+}
+export function validExplosion(x: unknown): x is GrenadeExplosion {
+  return record(x)&&keys(x,['kind','id','grenadeId','ownerId','ownerLife','roundId','at','position','hits'])&&identifier(x.id)&&identifier(x.grenadeId)&&x.id===`blast:${x.grenadeId}`&&identifier(x.ownerId)
+    && natural(x.ownerLife)&&x.ownerLife>0&&natural(x.roundId)&&natural(x.at)&&vector(x.position)
+    && Array.isArray(x.hits)&&x.hits.length<=16&&x.hits.every(h=>record(h)&&identifier(h.id)&&natural(h.life)&&h.life>0
+      && finite(h.amount)&&h.amount>0&&h.amount<=GRENADE.damage&&finite(h.health)&&h.health>=0&&h.health<=100
+      && typeof h.killed==='boolean'&&h.killed===(h.health===0)&&direction(h.direction))&&new Set(x.hits.map(h=>h.id)).size===x.hits.length;
 }

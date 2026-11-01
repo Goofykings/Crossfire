@@ -54,6 +54,29 @@ describe('layered weapon motion', () => {
     expect(Math.abs(m.debug.landing)).toBeLessThan(.00001);
   });
 
+  it('eases upwards during ascent and blends back into the existing landing spring', () => {
+    const m = new WeaponMotion(), baseline = new WeaponMotion();
+    const rising = { ...idle, grounded: false, verticalSpeed: 6 };
+    const first = m.update(1 / 60, rising).y - baseline.update(1 / 60, idle).y;
+    expect(first).toBeGreaterThan(0); expect(first).toBeLessThan(.004);
+    advance(m, .4, rising); advance(baseline, .4);
+    expect(m.pose.y - baseline.pose.y).toBeGreaterThan(.01);
+    advance(m, .5, { ...idle, grounded: false, verticalSpeed: -4 }); advance(baseline, .5);
+    m.land(6.6); const heights: number[] = [];
+    for (let i = 0; i < 240; i++) heights.push(m.update(1 / 120, idle).y - baseline.update(1 / 120, idle).y);
+    expect(Math.min(...heights)).toBeLessThan(-.005);
+    expect(Math.abs(m.debug.rise)).toBeLessThan(.00001);
+    expect(Math.abs(m.debug.landing)).toBeLessThan(.00001);
+    const ads = new WeaponMotion(); advance(ads, .4, { ...rising, ads: 1 }); expect(ads.pose.y).toBe(0);
+  });
+
+  it('uses elapsed time for the rise blend at different frame rates', () => {
+    const values = [30, 60, 144].map((fps) => {
+      const m = new WeaponMotion(); advance(m, .5, { ...idle, grounded: false, verticalSpeed: 4 }, fps); return m.debug.rise;
+    });
+    expect(values[0]).toBeCloseTo(values[1], 10); expect(values[1]).toBeCloseTo(values[2], 10);
+  });
+
   it('has consistent recoil/landing recovery at 30, 60 and 144 FPS and survives long frames', () => {
     const run = (fps: number) => {
       const m = new WeaponMotion(); m.fire(2); m.land(7);

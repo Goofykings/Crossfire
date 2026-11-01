@@ -420,7 +420,20 @@ def pipe_bundle() -> MeshData:
     for i, (dy, zs) in enumerate(rows):
         for z in zs:
             mat = "galvanized" if (i + int(z * 10)) % 2 else "steel_red"
-            md.tube((-1.5, 0.28 + dy, z), (1.5, 0.28 + dy, z), 0.13, mat, segments=12)
+            y = .28 + dy
+            md.tube((-1.5,y,z), (1.5,y,z), .13, mat, segments=12, caps=False)
+            inner = MeshData()
+            inner.tube((-1.5,y,z), (1.5,y,z), .10, mat, segments=12, caps=False)
+            # Open bore, inward-facing lining, and non-overlapping annular end rims.
+            inner.faces = [f[::-1] for f in inner.faces]
+            inner.face_uv = [uv[::-1] for uv in inner.face_uv]
+            md.merge(inner)
+            for x,sgn in ((-1.5,-1),(1.5,1)):
+                for k in range(12):
+                    a,b = 2*math.pi*k/12,2*math.pi*(k+1)/12
+                    rim = [(x,y+math.sin(t)*r,z+math.cos(t)*r)
+                           for t,r in ((a,.13),(b,.13),(b,.10),(a,.10))]
+                    md.face_toward(rim,mat,(sgn,0,0))
     return md
 
 

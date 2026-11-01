@@ -8,6 +8,7 @@ export interface MotionInput {
   crouch: number;
   ads: number;
   sprinting: boolean;
+  verticalSpeed?: number;
   reducedMotion?: boolean;
 }
 
@@ -18,12 +19,13 @@ export class WeaponMotion {
   private walk = 0;
   private slide = 0;
   private crouch = 0;
+  private rise = 0;
   private swayX = 0;
   private swayY = 0;
   private readonly recoil = new DampedSpring(30, .78);
   private readonly landing = new DampedSpring(19, .58);
   readonly pose = { x: 0, y: 0, z: 0, pitch: 0, yaw: 0, roll: 0 };
-  readonly debug = { idle: 0, walk: 0, slide: 0, recoil: 0, landing: 0, shots: 0 };
+  readonly debug = { idle: 0, walk: 0, slide: 0, recoil: 0, landing: 0, rise: 0, shots: 0 };
 
   addSway(dx: number, dy: number): void {
     this.swayX = Math.max(-.035, Math.min(.035, this.swayX - dx * .00009));
@@ -42,9 +44,9 @@ export class WeaponMotion {
 
   reset(): void {
     this.recoil.reset(); this.landing.reset();
-    this.swayX = this.swayY = this.walk = this.slide = this.crouch = 0;
+    this.swayX = this.swayY = this.walk = this.slide = this.crouch = this.rise = 0;
     Object.assign(this.pose, { x: 0, y: 0, z: 0, pitch: 0, yaw: 0, roll: 0 });
-    Object.assign(this.debug, { idle: 0, walk: 0, slide: 0, recoil: 0, landing: 0, shots: 0 });
+    Object.assign(this.debug, { idle: 0, walk: 0, slide: 0, recoil: 0, landing: 0, rise: 0, shots: 0 });
   }
 
   update(dt: number, input: MotionInput): typeof this.pose {
@@ -55,6 +57,8 @@ export class WeaponMotion {
     this.walk = target + (this.walk - target) * decay;
     this.slide = Number(sliding) + (this.slide - Number(sliding)) * Math.exp(-dt * 16);
     this.crouch = input.crouch + (this.crouch - input.crouch) * Math.exp(-dt * 16);
+    const targetRise = grounded ? 0 : Math.min(1, Math.max(0, input.verticalSpeed ?? 0) / 6);
+    this.rise = targetRise + (this.rise - targetRise) * Math.exp(-dt * 9);
     this.time = (this.time + dt) % 420;
     // Same distance-based rhythm as the existing 2.1 m footstep stride.
     this.phase = (this.phase + speed * dt * Math.PI / 2.1) % (Math.PI * 2);
@@ -72,13 +76,13 @@ export class WeaponMotion {
     const pose = this.pose;
     pose.x = .0035 * Math.sin(breath) * idle + .015 * Math.cos(this.phase) * bob + this.swayX * hip;
     pose.y = .0025 * Math.cos(breath * 2) * idle - .009 * Math.cos(this.phase * 2) * bob
-      + this.swayY * hip - .01 * posture - .018 * slide - landing * hip * decorative;
+      + this.swayY * hip - .01 * posture - .018 * slide + .014 * this.rise * hip * decorative - landing * hip * decorative;
     pose.z = recoil * (1 - .25 * ads);
     pose.pitch = recoil * .8 * hip + this.swayY * hip + landing * .4 * hip * decorative;
     pose.yaw = this.swayX * hip + .055 * posture;
     pose.roll = .006 * Math.sin(breath) * idle + .018 * Math.cos(this.phase) * bob
       + this.swayX * hip - .065 * posture + .045 * slide;
-    Object.assign(this.debug, { idle, walk: this.walk, slide: this.slide, recoil, landing });
+    Object.assign(this.debug, { idle, walk: this.walk, slide: this.slide, recoil, landing, rise: this.rise });
     return pose;
   }
 }

@@ -72,6 +72,7 @@ export class UI {
   private finishGuestSetup: () => void = () => {};
 
   // callbacks set by the game
+  onGrenade: () => void = () => {};
   onPlay: () => void = () => {};
   onStart: () => void = () => {};
   onResume: () => void = () => {};
@@ -92,6 +93,7 @@ export class UI {
   private healthValue!: HTMLElement;
   private healthBar!: HTMLElement;
   private slideLines!: HTMLElement;
+  private grenadeButton!: HTMLButtonElement;
   private ammoBox!: HTMLElement;
   private ammoValue!: HTMLElement;
   private ammoReserve!: HTMLElement;
@@ -99,6 +101,7 @@ export class UI {
   private weaponSlots!: HTMLElement;
   private slotNames = '';
   private scope!: HTMLElement;
+  private spectatorScope!: HTMLElement;
   private fpsBox!: HTMLElement;
   /** The FPS readout element (read by the debug API). */
   get fpsElement(): HTMLElement {
@@ -125,6 +128,7 @@ export class UI {
   private spectateWeapon!: HTMLElement;
   private spectateError!: HTMLElement;
   private spectateKiller: string | null | undefined;
+  private spectateObservedWeapon: WeaponId | null | undefined;
   private spectateConnectionLost = false;
   private spectateBusy = false;
   private weaponSelectionReturn: 'start' | 'spectate' = 'start';
@@ -355,7 +359,7 @@ export class UI {
   get spawnPending(): boolean { return this.spawnButton.disabled; }
 
   private refreshSelection(): void {
-    if (this.spectateWeapon) this.spectateWeapon.innerHTML = `<span>${this.labels[this.pendingWeapon]}</span>${weaponIcon(this.pendingWeapon)}`;
+    if (this.spectateWeapon) this.spectateWeapon.innerHTML = `<small>NEXT SPAWN</small><span>${this.labels[this.pendingWeapon]}</span>${weaponIcon(this.pendingWeapon)}`;
     this.selectedName.textContent = this.labels[this.pendingWeapon];
     const url = this.previews.get(this.pendingWeapon);
     this.selectedPreview.hidden = !url;
@@ -368,6 +372,8 @@ export class UI {
 
   private buildSpectate(): void {
     const s = this.screen('spectate');
+    this.spectatorScope = el('div', 'scope', SCOPE_SVG);
+    s.appendChild(this.spectatorScope);
     this.spectateBy = el('div', 'spectate-by');
     const bottom = el('div', 'spectate-bottom');
     this.spectateName = el('div', 'spectate-name');
@@ -385,13 +391,14 @@ export class UI {
     this.refreshSelection();
   }
 
-  setSpectate(name: string | null, remainingMs: number, connected: boolean): void {
-    if (name !== this.spectateKiller) {
+  setSpectate(name: string | null, remainingMs: number, connected: boolean, weapon: WeaponId | null = null): void {
+    if (name !== this.spectateKiller || weapon !== this.spectateObservedWeapon) {
       this.spectateKiller = name;
+      this.spectateObservedWeapon = weapon;
       const heading = el('strong'); heading.textContent = 'ELIMINATED BY';
       const player = el('span'); player.textContent = name ?? 'Environment';
       this.spectateBy.replaceChildren(heading, player);
-      this.spectateName.textContent = name ? `Spectating: ${name}` : 'Spectating: unavailable';
+      this.spectateName.textContent = name ? `Spectating: ${name}${weapon ? ` · ${this.labels[weapon]}` : ''}` : 'Spectating: unavailable';
     }
     if (!connected) { this.spectateConnectionLost = true; this.spectateError.textContent = 'Reconnecting…'; }
     else if (this.spectateConnectionLost) { this.spectateConnectionLost = false; this.spectateError.textContent = ''; }
@@ -479,7 +486,12 @@ export class UI {
     this.reloadBar = el('div', 'reload-bar');
     this.reloadBar.appendChild(el('div'));
     this.weaponSlots = el('div', 'weapon-slots');
-    br.appendChild(this.ammoBox);
+    const ammoRow = el('div', 'combat-ammo-row');
+    this.grenadeButton = el('button', 'grenade-count'); this.grenadeButton.type = 'button';
+    this.grenadeButton.innerHTML = weaponIcon('grenade') + '<span>0</span>';
+    this.grenadeButton.addEventListener('mousedown', (e) => e.preventDefault());
+    this.grenadeButton.addEventListener('click', () => this.onGrenade());
+    ammoRow.append(this.grenadeButton, this.ammoBox); br.appendChild(ammoRow);
     br.appendChild(this.reloadBar);
     br.appendChild(this.weaponName);
     br.appendChild(this.weaponSlots);
@@ -521,7 +533,7 @@ export class UI {
     b.appendChild(
       this.button('Settings', '', '', () => this.openSettings('pause')),
     );
-    b.appendChild(this.button('Leave Match', '', '', () => this.onQuit()));
+    b.appendChild(this.button('Leave Match', '', 'leave-match', () => this.onQuit()));
     card.appendChild(b);
     s.appendChild(card);
   }
@@ -641,7 +653,8 @@ export class UI {
       {
         key: 'sound',
         title: 'Sound',
-        rows: [['masterVolume', this.rangeRow('masterVolume', 'Master volume', 0.01, pct)]],
+        rows: [['masterVolume', this.rangeRow('masterVolume', 'Master volume', 0.01, pct)],
+            ['sfxVolume', this.rangeRow('sfxVolume', 'Sound effects', 0.01, pct)]],
       },
       {
         key: 'graphics',
@@ -995,8 +1008,17 @@ export class UI {
 
   /** Scope overlay (sniper fully aimed): `amount` 0..1 fades it in as the scope reaches the eye. */
   setScope(amount: number): void {
-    this.scope.style.opacity = String(amount);
-    this.scope.classList.toggle('visible', amount > 0.001);
+    for (const scope of [this.scope, this.spectatorScope]) {
+      scope.style.opacity = String(amount);
+      scope.classList.toggle('visible', amount > 0.001);
+    }
+  }
+
+  setGrenades(count: number): void {
+    this.grenadeButton.querySelector('span')!.textContent = String(count);
+    this.grenadeButton.disabled = count === 0;
+    this.grenadeButton.setAttribute('aria-label', `Throw grenade (${count} remaining)`);
+    this.grenadeButton.title = `Throw grenade: ${bindingName(this.draft.value.keyBindings.grenade[0])}`;
   }
 
   setAmmo(ammo: number, reserve: number, magazine: number, reloading: boolean, progress: number): void {

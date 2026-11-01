@@ -21,6 +21,7 @@ from catalog import FLOOR_HEIGHT_GROUND, FLOOR_HEIGHT_UPPER, PALETTES
 from materials import wall_material
 from meshkit import MeshData, Transform, ccw, grime_fn
 from roof import Roof
+from arch_geometry import profile
 
 PLASTER_WALLS = ("plaster", "plaster_red", "plaster_worn")
 
@@ -246,8 +247,18 @@ class BuildingGenerator:
     def wall_rect(self, e: Edge, s0, s1, y0, y1, bands=(0.6, 1.4)):
         ys = sorted({y0, y1, *[y for y in bands if y0 < y < y1], *([y1 - 0.6] if y1 - 0.6 > y0 else [])})
         for j in range(len(ys) - 1):
-            self.md.quad(self.P(e, s0, ys[j]), self.P(e, s1, ys[j]), self.P(e, s1, ys[j + 1]), self.P(e, s0, ys[j + 1]),
-                         self.wall)
+            self.wall_panel(e, s0, s1, ys[j], ys[j + 1], self.wall)
+
+    def wall_panel(self, e, s0, s1, y0, y1, mat, col=None):
+        """Solid inward masonry skin; never enlarge the physical footprint or close a hole."""
+        front = [self.P(e, s0, y0), self.P(e, s1, y0), self.P(e, s1, y1), self.P(e, s0, y1)]
+        back = [self.P(e, s0, y0, .12), self.P(e, s1, y0, .12),
+                self.P(e, s1, y1, .12), self.P(e, s0, y1, .12)]
+        self.md.face(front, mat, col=col)
+        self.md.face(back[::-1], mat)
+        # Adjacent cells share their edges. Existing opening reveals, corners,
+        # ground and roof close the skin; per-cell caps would duplicate the
+        # existing sills/lintels and introduce coplanar flicker.
 
     def plan_openings(self, e: Edge, open_runs):
         b = self.b
@@ -396,7 +407,7 @@ class BuildingGenerator:
                     continue
                 pts = [(sa, ya), (sb, ya), (sb, yb), (sa, yb)]
                 P = [self.P(e, s, y) for s, y in pts]
-                md.face(P, self.wall, col=[color(p, s, y) for p, (s, y) in zip(P, pts)])
+                self.wall_panel(e, sa, sb, ya, yb, self.wall, col=[color(p, s, y) for p, (s, y) in zip(P, pts)])
         for o in holes:
             if o.kind == "passage":
                 if o.style == "arch":
@@ -436,16 +447,7 @@ class BuildingGenerator:
 
     @staticmethod
     def arc_points(s0, s1, spring, apex, n):
-        span = s1 - s0
-        rise = apex - spring
-        if rise <= 1e-3:
-            return [(s0 + span * i / n, spring) for i in range(n + 1)]
-        R = (span * span / 4 + rise * rise) / (2 * rise)
-        cy = apex - R
-        cx = (s0 + s1) / 2
-        a0 = math.atan2(spring - cy, s0 - cx)
-        a1 = math.atan2(spring - cy, s1 - cx)
-        return [(cx + R * math.cos(a0 + (a1 - a0) * i / n), cy + R * math.sin(a0 + (a1 - a0) * i / n)) for i in range(n + 1)]
+        return profile(s0, s1, spring, apex, n)
 
     def voussoirs(self, e: Edge, o: Opening, pts):
         """Ring of stone blocks proud of the wall around an arch."""

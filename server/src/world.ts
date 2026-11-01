@@ -1,3 +1,7 @@
+import townEnvironment from '../../public/assets/models/european-town/environment.json';
+import industrialEnvironment from '../../public/assets/models/industrial-complex/environment.json';
+import cityEnvironment from '../../public/assets/models/modern-city/environment.json';
+import type { EnvironmentDefinition } from '../../shared/environment';
 import townCollision from '../../public/assets/models/european-town/collision.json';
 import industrialCollision from '../../public/assets/models/industrial-complex/collision.json';
 import cityCollision from '../../public/assets/models/modern-city/collision.json';
@@ -11,14 +15,14 @@ import { createMapWorld, mapVersion } from '../../shared/world';
 import type { MapId } from '../../shared/maps';
 export { MOVEMENT } from '../../src/config/constants';
 
-function makeWorld(collision: CollisionFile, data: unknown) {
+function makeWorld(collision: CollisionFile, data: unknown, environment:EnvironmentDefinition) {
   const layout = data as MapLayout;
-  return { layout, world: createMapWorld(collision, layout, catalog as unknown as PropCatalog),
-    revision: mapVersion(collision, layout, catalog as unknown as PropCatalog) };
+  return { layout, environment, world: createMapWorld(collision, layout, catalog as unknown as PropCatalog,environment),
+    revision: mapVersion(collision, layout, catalog as unknown as PropCatalog,environment) };
 }
 
 export const WORLDS = {
-  'european-town': makeWorld(townCollision as CollisionFile, townLayout),
-  'industrial-complex': makeWorld(industrialCollision as CollisionFile, industrialLayout),
-  'modern-city': makeWorld(cityCollision as CollisionFile, cityLayout),
+  'european-town': makeWorld(townCollision as CollisionFile, townLayout,townEnvironment as EnvironmentDefinition),
+  'industrial-complex': makeWorld(industrialCollision as CollisionFile, industrialLayout,industrialEnvironment as EnvironmentDefinition),
+  'modern-city': makeWorld(cityCollision as CollisionFile, cityLayout,cityEnvironment as EnvironmentDefinition),
 } satisfies Record<MapId, ReturnType<typeof makeWorld>>;

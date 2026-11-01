@@ -40,6 +40,15 @@ def render(map_id):
         pts=next(n['waypoints'] for n in l['navigation']['upperRoutes'] if n['id']==r['id'])
         d.line([xy(p[0],p[2]) for p in pts],fill='#7de9ff',width=3)
         x,y=xy(r['rect'][0],r['rect'][1]); d.text((x+5,y+5),r['id'],fill='#ffffff')
+    for b in l['buildings']:
+        if b.get('serviceRoof'):
+            rect(b['rect'],outline='#e9b2ff',width=3)
+    for ladder in l.get('ladders',[]):
+        x,z=ladder['wall'];nx,nz=ladder['out']
+        a,b=xy(x,z),xy(x+nx*1.65,z+nz*1.65)
+        d.line([a,b],fill='#f0bcff',width=4)
+        d.ellipse((b[0]-5,b[1]-5,b[0]+5,b[1]+5),outline='#ffffff',width=2)
+        d.text((b[0]+7,b[1]),ladder['id'],fill='#f0bcff')
     flank={'european-town':'market_room','industrial-complex':'goods_office','modern-city':'diner_service'}[map_id]
     for route in l['ground']['covered']:
         if route['id']==flank:

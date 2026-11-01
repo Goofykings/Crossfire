@@ -46,7 +46,7 @@ for (const mode of (process.env.CROSSFIRE_SCORING_ONLY ? ['ffa'] : ['ffa', 'team
     ws.on('message', (raw) => { const m = JSON.parse(String(raw)); c.messages.push(m); if (m.snapshot) c.snapshot = m.snapshot; });
     ws.on('error', () => {});
     await new Promise((resolve, reject) => { ws.once('open', resolve); ws.once('error', reject); });
-    c.send = (m) => ws.send(JSON.stringify({ v: 10, ...m }));
+    c.send = (m) => ws.send(JSON.stringify({ v: 12, ...m }));
     c.send({ type: 'join', name: `Combat ${clients.length}`, ...(resumeToken ? { resumeToken } : {}) });
     const welcome = await wait(c, (m) => m.type === 'welcome');
     c.id = welcome.selfId; c.token = welcome.resumeToken;

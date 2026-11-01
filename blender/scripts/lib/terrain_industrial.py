@@ -36,6 +36,8 @@ class IndustrialTerrain(TerrainBuilder):
         self.terraces(md)
         self.stairs(md)
         self.upper_routes(md)
+        from industrial_roofs import build
+        build(md, self.L)
         self.railings(md)
         self.walls(md)
         self.arches(md)

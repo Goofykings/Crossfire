@@ -283,25 +283,28 @@ def balcony(w: float, depth: float) -> MeshData:
     return m
 
 
-def hanging_sign(index: int) -> MeshData:
+def hanging_sign(index: int, board=True, mount=True) -> MeshData:
     """Wrought-iron bracket projecting from the wall with a painted board. Origin at the wall bracket."""
     m = MeshData()
-    m.box(-0.02, -0.02, -0.95, 0.02, 0.02, 0.0, "iron")
-    m.tube((0.0, -0.55, 0.0), (0.0, 0.0, -0.62), 0.012, "iron", segments=5)
-    m.box(-0.06, -0.12, -0.02, 0.06, 0.12, 0.0, "iron", skip=("pz",))
-    cu, cv = (index % 2) * 0.5, 1.0 - (index // 2 + 1) * 0.25
-    # board hangs perpendicular to the wall (visible from along the street)
-    for side in (-1, 1):
-        x = 0.022 * side
-        if side > 0:
-            pts = [(x, -0.62, -0.16), (x, -0.62, -0.9), (x, -0.08, -0.9), (x, -0.08, -0.16)]
-        else:
-            pts = [(x, -0.62, -0.9), (x, -0.62, -0.16), (x, -0.08, -0.16), (x, -0.08, -0.9)]
-        uv = [(cu, cv), (cu + 0.5, cv), (cu + 0.5, cv + 0.25), (cu, cv + 0.25)]
-        m.face(pts, "shop_sign", uv=uv)
-    m.box(-0.02, -0.64, -0.92, 0.02, -0.06, -0.14, "frame_dark", skip=("nx", "px"))
-    for zz in (-0.25, -0.8):
-        m.box(-0.006, -0.08, zz - 0.006, 0.006, 0.0, zz + 0.006, "iron")
+    if mount:
+        m.box(-0.02, -0.02, -0.95, 0.02, 0.02, 0.0, "iron")
+        m.tube((0.0, -0.55, 0.0), (0.0, 0.0, -0.62), 0.012, "iron", segments=5)
+        m.box(-0.06, -0.12, -0.02, 0.06, 0.12, 0.0, "iron", skip=("pz",))
+    if board:
+        cu, cv = (index % 2) * 0.5, 1.0 - (index // 2 + 1) * 0.25
+        # board hangs perpendicular to the wall (visible from along the street)
+        for side in (-1, 1):
+            x = 0.022 * side
+            if side > 0:
+                pts = [(x, -0.62, -0.16), (x, -0.62, -0.9), (x, -0.08, -0.9), (x, -0.08, -0.16)]
+            else:
+                pts = [(x, -0.62, -0.9), (x, -0.62, -0.16), (x, -0.08, -0.16), (x, -0.08, -0.9)]
+            uv = [(cu, cv), (cu + 0.5, cv), (cu + 0.5, cv + 0.25), (cu, cv + 0.25)]
+            m.face(pts, "shop_sign", uv=uv)
+        m.box(-0.02, -0.64, -0.92, 0.02, -0.06, -0.14, "frame_dark", skip=("nx", "px"))
+    if mount:
+        for zz in (-0.25, -0.8):
+            m.box(-0.006, -0.08, zz - 0.006, 0.006, 0.0, zz + 0.006, "iron")
     return m
 
 

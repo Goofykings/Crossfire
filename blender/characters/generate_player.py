@@ -24,7 +24,7 @@ import char_geometry as geo
 
 OUT = ROOT / "public/assets/characters"
 FPS = 30
-CLIPS = {"IDLE": 2.4, "RUN": 0.8, "JUMP_START": 0.2, "JUMP_LOOP": 0.8, "JUMP_LAND": 0.3, "SLIDE": 1.0}
+CLIPS = {"IDLE": 2.4, "RUN": 0.8, "JUMP_START": 0.2, "JUMP_LOOP": 0.8, "JUMP_LAND": 0.3, "SLIDE": 1.0, "CROUCH": .8}
 # Deliberately distinct skin/fabric/gear materials; a single embedded atlas pair is shared.
 COLORS = [(.65, .47, .35), (.24, .265, .27), (.20, .23, .22), (.105, .125, .13),
           (.15, .17, .17), (.085, .10, .105), (.11, .12, .12), (.15, .17, .17),
@@ -155,6 +155,11 @@ def set_pose(rig, clip, t):
         crouch = math.sin(math.pi * t) ** .7
         thighs, knees = [crouch * 32] * 2, [-crouch * 64] * 2
         lean, arms, elbows = -crouch * 12, [crouch * 20] * 2, [15 + crouch * 20] * 2
+    elif clip == 'CROUCH':
+        # Balanced low stance, knees forward and feet planted; mild in-place shuffle.
+        thighs, knees = [78 + breath, 78 - breath], [-150 - breath, -150 + breath]
+        lean, neck = -10, 7
+        arms, elbows = [12, 12], [32, 32]
     elif clip == 'SLIDE':
         # A low seated slide: one leg extended, the other folded; hips stay over feet.
         thighs, knees = [94, 94], [-20, -145]
@@ -207,7 +212,7 @@ def animate(obj, rig, data):
             for bone in rig.pose.bones:
                 bone.keyframe_insert(data_path='location', frame=frame, group=bone.name)
                 bone.keyframe_insert(data_path='rotation_quaternion', frame=frame, group=bone.name)
-        # Register each actual action on a muted NLA track, so ACTIONS exports all six.
+        # Register each actual action on a muted NLA track, so ACTIONS exports all actions.
         track = rig.animation_data.nla_tracks.new(); track.name = clip; track.mute = True
         track.strips.new(clip, 0, action)
         extents[clip] = [round(v, 4) for v in clip_bounds]
@@ -268,8 +273,8 @@ def register_assets(data):
     manifest_file = ROOT / 'public/assets/asset-manifest.json'
     manifest = json.loads(manifest_file.read_text(encoding='utf8'))
     descriptions = {
-        'blender/characters/player.blend': ('character-source', 'Editable humanoid mesh, 18-joint rig and six in-place actions'),
-        'assets/characters/player.glb': ('player-character', 'Skinned multiplayer humanoid; six clips, embedded shared PBR atlas pair'),
+        'blender/characters/player.blend': ('character-source', 'Editable humanoid mesh, 18-joint rig and seven in-place actions'),
+        'assets/characters/player.glb': ('player-character', 'Skinned multiplayer humanoid; seven clips, embedded shared PBR atlas pair'),
         'assets/characters/player.json': ('character-metadata', 'Measured export scale, pose bounds, clip names/durations and rig'),
         'assets/characters/player-albedo.png': ('character-texture', 'Original 256px skin/fabric/gear atlas, embedded in player.glb'),
         'assets/characters/player-orm.png': ('character-texture', 'Shared 256px roughness/metallic atlas, embedded in player.glb'),

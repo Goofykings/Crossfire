@@ -1,6 +1,14 @@
 # Crossfire multiplayer backend
 
-The local Worker and frontend use **protocol v10** for authoritative points,
+Update Phase 4 (2026-11-01): current local **protocol v12** adds authoritative
+small environmental props. Real weapon rays apply impulses; active props publish
+changed poses at 10 Hz, resting props send no transform traffic. Welcome/spawn
+restores poses and rounds reset objects. See [Phase 4](../docs/UPDATE_PHASE4_ENVIRONMENT.md).
+Matching frontend/assets and Worker releases require authorization. No public
+v12 validation or deployment. Older entries below are historical.
+
+The preceding Phase 3 used **protocol v11** for
+[grenades and held crouch](../docs/UPDATE_PHASE3_GRENADES.md), plus authoritative points,
 combos and frozen winner/MVP results. The public `/health` endpoint still
 reported **v9** on 2026-10-31; nothing was deployed. Publish matching frontend
 and Worker builds together when authorized. See [scoring/results rules and

@@ -140,6 +140,8 @@ export class WeaponView {
   private reticle: StandardMaterial | null = null;
   private readonly containers: AssetContainer[] = [];
   private flashTimer = 0;
+  private throwTime = 0;
+  throwGrenade(): void { this.throwTime = .36; }
   readonly motion = new WeaponMotion();
   private hidden = false;
   /** Every weapon mesh: excluded from the sun by the game. */
@@ -341,6 +343,7 @@ export class WeaponView {
 
   setVisible(v: boolean): void {
     this.root.setEnabled(v);
+    if (!v) this.throwTime = 0;
   }
 
   /** Hide the weapon (scoped sniper view) without stopping the animation. */
@@ -359,6 +362,8 @@ export class WeaponView {
     const rig = this.current;
     if (!rig) return;
     const pose = this.pose(rig, w);
+    this.throwTime = Math.max(0, this.throwTime - dt);
+    const throwLower = Math.sin(Math.PI * (1 - this.throwTime / .36)) * .20;
     const ads = smooth(w.ads);
     const motion = this.motion.update(dt, { ...s, ads });
     const sight = rig.anchors.get('sight') ?? Vector3.Zero();
@@ -366,7 +371,7 @@ export class WeaponView {
     const adsPos = new Vector3(-sight.x, -sight.y, -rig.cfg.eye - sight.z);
     const pos = Vector3.Lerp(hip, adsPos, ads);
     pos.x += motion.x;
-    pos.y += motion.y;
+    pos.y += motion.y - throwLower;
     pos.z += motion.z;
     const hr = rig.cfg.hipRot;
     let rx = motion.pitch + hr[0] * (1 - ads);
@@ -399,7 +404,7 @@ export class WeaponView {
     Object.assign(this.debug, {
       action: w.action,
       progress: w.progress,
-      lower: -pose.weapon[1],
+      lower: -pose.weapon[1] + throwLower,
       pump: pose.pump,
       bolt: pose.bolt,
     });

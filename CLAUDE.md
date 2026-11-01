@@ -1,5 +1,71 @@
 # CLAUDE.md: notes for future sessions
 
+## Update Phase 4: interactive environment (2026-11-01)
+
+Current local protocol is **v12**, superseding the historical v11 entry below.
+See docs/UPDATE_PHASE4_ENVIRONMENT.md and PROGRESS.md. shared/environment.ts owns
+bounded room physics/sleep. Town: six apples, two loose props, two actual sign
+panels; other maps two loose props. Worker forces derive from actual weapon rays
+before the nearest world/player hit, never client prop claims. Props are
+decorative, not cover or player blockers. Full welcome/spawn poses and 10 Hz
+changed poses plus final sleep updates support interpolation/resume. Preserve
+shared stall collider refinements/environment data in world revision hashing.
+interactive_environment.py authors meshes/pivots/placements. Sign mounts stay
+static and hinges preserve wall clearance. No heavy physics engine. The grenade
+sweep's optional half-height preserves grenade defaults. User set the gun-model
+import aside; keep current weapons. Matching v12 frontend/assets/Worker releases
+require authorization. No deployment or public validation. Stop after this phase.
+
+## Update Phase 3: grenades and crouch (2026-10-31)
+
+Current local protocol is **v11**, superseding older historical v10 notes below.
+See docs/UPDATE_PHASE3_GRENADES.md and the newest PROGRESS.md entry. Shared
+`grenades.ts` owns one-per-life inventory balance, 2-second elapsed fuse, swept
+sphere/OBB physics and 100 HP / 1.8 m occluded radial damage. Worker consumes only
+validated held input and derives origin/velocity from its controller. Grenade
+simulation commits inventory/projectiles/explosion history/damage/scores together
+before broadcasting; retain session revision precedence over old attachments.
+Never grant stock on reconnect or duplicate an explosion across event/history.
+Posthumous kills score but dead sessions cannot retain a live combo timer.
+
+Hold crouch is optional MoveIntent.crouch through the existing shared controller,
+not a second movement system. It shares headroom, lowered height, quiet footsteps
+and hip-only posture. Character export now has seven real clips; CROUCH is a
+1.1492-m low stance distinct from SLIDE. Regenerate with the existing Blender
+character script; preserve all previous improved weapon grip/preview logic.
+Grenade visuals use a shared GLB and bounded cosmetic batch, positional SFX and
+complete map/leave cleanup. Keep firearm accuracy separate from grenade hits.
+
+No deployment, commit or live Cloudflare validation was performed. Matching
+frontend/Worker v11 releases require authorization; `.env.local` and hosting
+configuration remain unchanged. Do not automatically start a later phase.
+
+
+## Update Phase 2 geometry and ladders (2026-10-31)
+
+See docs/UPDATE_PHASE2_GEOMETRY.md and the newest PROGRESS.md entry. Industrial
+now authors three ground-to-roof ladders and connected 4.5 m service decks on
+I31/I32/I34 through industrial_roofs.py. Layout ladder regions enter the existing
+CollisionWorld; PlayerController derives climbing each tick from trusted regions
+and existing movement intent. Existing snapshots/replay synchronize it; protocol
+stays v10. Do not add separate frontend ladder physics or a client camera position
+packet. Keep the 1.65 m stand-off climb line/clear top shaft: it accommodates the
+unchanged longest weapon and avoids climbing through the landing slab.
+
+Facade skins have 12 cm inward thickness; existing reveals/roofs close the skin.
+Do not cap every facade cell: those caps duplicate sills/lintels and cause flicker.
+Shared arch_geometry.py drives curved visual profiles and conservative collision;
+Town B22's east/west arcade had an incorrect flat 2.6 m ceiling under its 3.2 m
+crown. Retain the actual masonry collision. Pipe-bundle bores/rims and generic
+tube cap winding are corrected in the procedural sources. Regenerate affected
+map/prop GLBs and editable blends with factory-startup Blender; avoid writing
+tracked Python bytecode caches. industrial_roofs.parts includes HVAC duct/grille
+overhangs as well as decks, landings, rails, fans, vents and boxes. Source tests
+compare actual equipment vertices to those collision envelopes.
+
+Frontend assets and Worker require matching map revisions when publishing is
+authorized. Local verification does not constitute public Cloudflare validation.
+
 ## Polish Phase 3 (2026-10-31)
 
 See docs/POLISH_PHASE3.md and PROGRESS.md. RoundResults renders the frozen

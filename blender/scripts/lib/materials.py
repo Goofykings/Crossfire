@@ -106,14 +106,15 @@ MATERIALS: dict[str, dict] = {
     # the silhouette is not symmetric: load it unflipped like the sign atlases
     "target_face": {"albedo": PROC_DIR + "target_face.png", "tile": 1.0, "roughness": 0.62, "metallic": 0.15, "atlas": True},
     # --- first-person firearms and hands (blender/scripts/lib/weapon.py, hands.py) --------------------------------
-    "gun_black": {"tex": "metal", "albedo": None, "tile": 0.22, "tint": [0.05, 0.052, 0.056], "roughness": 0.55,
-                  "metallic": 0.7, "normal": 0.35},
-    "gun_steel": {"tex": "metal", "albedo": None, "tile": 0.22, "tint": [0.085, 0.087, 0.092], "roughness": 0.4,
-                  "metallic": 0.92, "normal": 0.3},
-    "gun_polymer": {"tex": "concrete_smooth", "albedo": None, "tile": 0.3, "tint": [0.042, 0.042, 0.044], "roughness": 0.78,
-                    "metallic": 0.0, "normal": 0.25},
-    "gun_fde": {"tex": "concrete_smooth", "albedo": None, "tile": 0.3, "tint": [0.34, 0.27, 0.18], "roughness": 0.74,
-                "metallic": 0.0, "normal": 0.25},
+    "fruit_apple": {"albedo": None, "tint": [.55,.045,.018], "roughness": .65, "metallic": 0},
+    "gun_black": {"tex": "metal", "albedo": None, "orm": WEAPON_DIR + "gun_metal_orm.png", "tile": 0.22, "tint": [0.05, 0.052, 0.056], "roughness": 0.75,
+                  "metallic": 0.7, "normal": 0.22},
+    "gun_steel": {"tex": "metal", "albedo": None, "orm": WEAPON_DIR + "gun_metal_orm.png", "tile": 0.22, "tint": [0.085, 0.087, 0.092], "roughness": 0.65,
+                  "metallic": 0.92, "normal": 0.2},
+    "gun_polymer": {"tex": "concrete_smooth", "albedo": None, "tile": 0.3, "tint": [0.042, 0.042, 0.044], "roughness": 0.85,
+                    "metallic": 0.0, "normal": 0.16},
+    "gun_fde": {"tex": "concrete_smooth", "albedo": None, "tile": 0.3, "tint": [0.34, 0.27, 0.18], "roughness": 0.82,
+                "metallic": 0.0, "normal": 0.18},
     "gun_wood": {"tex": "wood_dark", "tile": 0.4, "tint": [0.78, 0.52, 0.32], "roughness": 0.42, "metallic": 0.0, "normal": 0.5},
     "gun_rubber": {"tint": [0.028, 0.028, 0.028], "roughness": 0.95, "metallic": 0.0},
     "gun_glass": {"tint": [0.1, 0.16, 0.17], "roughness": 0.03, "metallic": 0.4, "alpha": 0.16},
@@ -296,8 +297,9 @@ def texture_files(name: str) -> dict:
     if "tex" in m:
         d = m.get("tex_dir", TEX_DIR)
         out = {"albedo": f"{d}{m['tex']}_albedo.jpg", "normal": f"{d}{m['tex']}_normal.jpg", "orm": f"{d}{m['tex']}_orm.jpg"}
-    if "albedo" in m:
-        out["albedo"] = m["albedo"]
+    for key in ("albedo", "orm"):
+        if key in m:
+            out[key] = m[key]
     return out
 
 

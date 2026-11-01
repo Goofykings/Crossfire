@@ -10,6 +10,7 @@ Stages (default: all except previews)
     industrial the same outputs for the Industrial Complex (models/industrial-complex/, industrial-complex.blend)
     city       the same outputs for the Modern City (models/modern-city/, modern-city.blend)
     props      models/shared/props/*.glb, blender/source/props.blend
+    environment models/shared/environment/*.glb, blender/source/environment.blend
     weapon     models/shared/weapons/{rifle,shotgun,sniper,smg,hands,casings}.glb, blender/source/weapon.blend
     library    models/shared/buildings/*.glb (8 building types x 2 variants), building_library.blend
     kit        models/shared/kit/*.glb, blender/source/modular_kit.blend
@@ -179,6 +180,34 @@ def stage_materials():
     log("materials ->", path)
 
 
+def stage_environment():
+    import interactive_environment as interactive
+    exporter.reset_scene()
+    col=exporter.collection('Interactive environment')
+    for i,(name,build) in enumerate(interactive.assets().items()):
+        obj=build().to_object(name,col,smooth_angle=30)
+        path=SHARED/'environment'/f'{name}.glb'
+        exporter.export_glb([obj],path)
+        record(path,'interactive-prop',f'Original low-poly interactive {name}',[obj],script='lib/interactive_environment.py')
+        obj.location=(i%5,-i//5,0)
+    setup_world()
+    exporter.save_blend(SOURCE/'environment.blend')
+    record(SOURCE/'environment.blend','blend','Editable apples, loose props and hinged shop panels')
+
+
+def stage_grenade():
+    import grenade
+    exporter.reset_scene()
+    col=exporter.collection('Grenade')
+    obj=grenade.build().to_object('grenade',col,smooth_angle=30)
+    path=SHARED/'weapons'/'grenade.glb'
+    exporter.export_glb([obj],path)
+    record(path,'weapon','Original 13 cm Crossfire grenade, segmented shell, fuse, lever and pull ring',[obj],script='lib/grenade.py')
+    setup_world()
+    exporter.save_blend(SOURCE/'grenade.blend')
+    record(SOURCE/'grenade.blend','blend','Editable original grenade source')
+
+
 def stage_map(key: str, previews: bool):
     cfg = MAP_STAGES[key]
     out_dir = MODELS / cfg["id"]
@@ -190,6 +219,10 @@ def stage_map(key: str, previews: bool):
     layout = json.loads(layout_path.read_text(encoding="utf-8"))
     index = LayoutIndex(layout)
     gen, terrain_cls = make_generators(layout.get("style", cfg["style"]), index)
+    import interactive_environment as interactive
+    coll=collision_gen.map_collision(layout)
+    catalog=json.loads((SHARED/'props'/'props.json').read_text(encoding='utf8'))
+    environment=interactive.map_data(layout,coll,catalog)
     groups = building_groups(layout)
     town_col = exporter.collection(cfg["title"])
     bcol = exporter.collection("Buildings", town_col)
@@ -200,6 +233,7 @@ def stage_map(key: str, previews: bool):
         objs = []
         for b in group:
             md, placements = gen.generate(b)
+            interactive.separate_signs(placements,environment,b['id'])
             x0, z0, x1, z1 = b["rect"]
             objs += realize(md, placements, b["id"], col, ((x0 + x1) / 2, 0.0, (z0 + z1) / 2))
         path = out_dir / "buildings" / f"{name}.glb"
@@ -268,6 +302,9 @@ def stage_map(key: str, previews: bool):
     for src in tmeshes.values():
         bpy.data.objects.remove(src)
 
+    environment_path=out_dir/'environment.json'
+    environment_path.write_text(json.dumps(environment,indent=1),encoding='utf8')
+    record(environment_path,'interactive-definitions','Shared authored prop bodies, sign hinges and precise stall collision',script='lib/interactive_environment.py')
     index_path = out_dir / "map-assets.json"
     # A compact layout can produce fewer blocks. Remove only this generator's
     # obsolete block outputs; otherwise Pages would still ship the old outskirts.
@@ -283,6 +320,7 @@ def stage_map(key: str, previews: bool):
         "models": block_files + ["terrain.glb"],
         "collision": "collision.json",
         "collisionDebug": "collision_debug.glb",
+        "environment": "environment.json",
     }, indent=1), encoding="utf-8")
     record(index_path, "map-index", "List of model files the runtime loads for this map")
 
@@ -547,7 +585,7 @@ def main():
     previews = "--previews" in argv or (only is not None and "previews" in only)
     bmat.set_public_dir(PUBLIC)
     t0 = time.time()
-    stages = [("materials", stage_materials), ("props", stage_props), ("weapon", stage_weapon),
+    stages = [("materials", stage_materials), ("props", stage_props), ("weapon", stage_weapon), ("grenade",stage_grenade), ("environment",stage_environment),
               ("library", stage_library), ("kit", stage_kit)]
     for name, fn in stages:
         if only is None or name in only:

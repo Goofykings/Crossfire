@@ -1,3 +1,5 @@
+import { EnvironmentProps } from '../game/EnvironmentProps';
+import { EMPTY_ENVIRONMENT, type EnvironmentDefinition } from '../../shared/environment';
 import { loadContainer } from '../core/loadContainer';
 import { abortable } from '../core/cancellation';
 import {
@@ -37,6 +39,7 @@ export interface MapStats {
 }
 
 export interface LoadedMap {
+  readonly props:EnvironmentProps;
   readonly revision: string;
   readonly def: MapDefinition;
   readonly world: CollisionWorld;
@@ -87,6 +90,7 @@ export class MapManager {
       const collision = await fetchJson<CollisionFile>(base + index.collision, active);
       this.propCatalog ??= await fetchJson<PropCatalog>(assetUrl('assets/models/shared/props/props.json'), active);
       const catalog = this.propCatalog;
+      const interactive=index.environment?await fetchJson<EnvironmentDefinition>(base+index.environment,active):EMPTY_ENVIRONMENT;
 
       active.throwIfAborted();
       const environment = new Environment(scene, def.environment);
@@ -131,7 +135,7 @@ export class MapManager {
       onProgress(0.7, 'Placing props');
 
       // --- props --------------------------------------------------------------------------------
-      const world = createMapWorld(collision, def.layout, catalog);
+      const world = createMapWorld(collision, def.layout, catalog,interactive);
       cleanup.push(() => world.clear());
       const placements: PropPlacement[] = [...def.layout.props, ...def.layout.obstacles];
       const byType = new Map<string, PropPlacement[]>();
@@ -162,6 +166,8 @@ export class MapManager {
           propInstances += place.length;
         }
       }
+      const props=new EnvironmentProps(scene,interactive,world);cleanup.push(()=>props.dispose());
+      await props.load(this.materials,active);
       onProgress(0.8, 'Baking geometry');
       const batched = batcher.build();
       // the source GLB meshes are no longer needed
@@ -220,7 +226,8 @@ export class MapManager {
         colliders: world.size,
       };
       const map: LoadedMap = {
-        revision: mapVersion(collision, def.layout, catalog),
+        props,
+        revision: mapVersion(collision, def.layout, catalog,interactive),
         def,
         world,
         targets,
@@ -248,6 +255,7 @@ export class MapManager {
           for (const m of debugMeshes) m.setEnabled(debugVisible);
         },
         dispose: () => {
+          props.dispose();
           targets.dispose();
           for (const l of lights) l.dispose();
           for (const m of created) m.dispose(false, false);

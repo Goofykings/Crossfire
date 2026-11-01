@@ -22,6 +22,7 @@ export interface MoveIntent {
   jumpPressed: boolean;
   /** Held direction, never a client-assigned position. */
   lean?: -1 | 0 | 1;
+  crouch?: boolean;
 }
 
 export const NO_INTENT: MoveIntent = { x: 0, z: 0, slide: false, aim: false, jumpPressed: false };
@@ -81,6 +82,8 @@ export class PlayerController {
   private slideYaw = 0;
 
   get sliding(): boolean { return this.slideRemaining > 0; }
+  /** Derived from trusted map geometry and the existing snapshot; no new client position field. */
+  get climbing(): boolean { return !this.grounded && !this.jumpedThisAirborne && !!this.ladderRegion(); }
   /** Seconds since the player last stood on ground (for coyote time). */
   private airTime = 0;
   private jumpBufferTimer = 0;
@@ -203,8 +206,8 @@ export class PlayerController {
       this.slideRemaining = c.slideDuration;
     }
 
-    // The lowered body remains blocked under cover after a slide; no separate crouch action.
-    let crouchTarget = this.sliding ? 1 : 0;
+    // Held crouch and slides share the same lowered collider and headroom checks.
+    let crouchTarget = this.sliding || intent.crouch ? 1 : 0;
     if (crouchTarget < this.crouch) {
       // only stand up if there is head room for the taller body
       const standTop = p.y + c.standHeight;
@@ -268,13 +271,15 @@ export class PlayerController {
       }
     }
 
+    const climbing = this.ladderMotion(intent);
+
     // --- jumping ------------------------------------------------------------------------------
     if (intent.jumpPressed) this.jumpBufferTimer = c.jumpBuffer;
     else this.jumpBufferTimer = Math.max(0, this.jumpBufferTimer - dt);
     const jumpCancelsSlide = this.sliding && intent.jumpPressed && !this.jumpedThisAirborne;
     // A slide can carry the player off an edge; its one jump remains available
     // until that slide ends, without enabling a second jump in the same airtime.
-    const canJump = (this.grounded || this.airTime < c.coyoteTime || jumpCancelsSlide) && !this.jumpedThisAirborne;
+    const canJump = !climbing && (this.grounded || this.airTime < c.coyoteTime || jumpCancelsSlide) && !this.jumpedThisAirborne;
     if (this.jumpBufferTimer > 0 && canJump && (jumpCancelsSlide || (this.crouch < 0.5 && !this.sliding))) {
       if (jumpCancelsSlide) {
         // Keep the velocity earned by the slide; normal air control caps any
@@ -289,7 +294,7 @@ export class PlayerController {
     }
 
     // --- gravity ------------------------------------------------------------------------------
-    if (!this.grounded) v.y -= c.gravity * dt;
+    if (!this.grounded && !climbing) v.y -= c.gravity * dt;
 
     // --- integrate with substeps --------------------------------------------------------------
     const travel = Math.hypot(v.x, v.z) * dt + Math.abs(v.y) * dt;
@@ -322,6 +327,50 @@ export class PlayerController {
       // fell out of the world: caller decides where to respawn; stop the fall meanwhile
       v.x = v.y = v.z = 0;
     }
+  }
+
+  private ladderRegion() {
+    const p = this.position;
+    return this.world.ladders.find((l) => {
+      const dx = p.x - l.wall[0], dz = p.z - l.wall[1];
+      const outward = dx * l.out[0] + dz * l.out[1];
+      const across = dx * l.out[1] - dz * l.out[0];
+      return Math.abs(across) < .5 && outward > 1.3 && outward < 2.08
+        && p.y >= l.bottom - .08 && p.y <= l.top + .09;
+    });
+  }
+
+  private ladderMotion(intent: MoveIntent): boolean {
+    const l = this.ladderRegion();
+    if (!l || this.sliding || this.jumpedThisAirborne || Math.abs(intent.x) > .4) return false;
+    const p = this.position, v = this.velocity, f = this.forward();
+    const facing = -(f.x * l.out[0] + f.z * l.out[1]) > .45;
+    const bottom = p.y <= l.bottom + .04, top = p.y >= l.top - .01;
+    if (this.grounded && (bottom ? intent.z <= 0 || !facing : intent.z >= 0 || !facing)) return false;
+    if (intent.jumpPressed) {
+      v.x = l.out[0] * this.cfg.walkSpeed;
+      v.z = l.out[1] * this.cfg.walkSpeed;
+      v.y = this.cfg.jumpSpeed;
+      this.grounded = false;
+      this.jumpedThisAirborne = true;
+      this.jumpBufferTimer = 0;
+      return false;
+    }
+    const dx = p.x - l.wall[0], dz = p.z - l.wall[1];
+    const outward = dx*l.out[0] + dz*l.out[1];
+    const across = dx*l.out[1] - dz*l.out[0];
+    // Step off the landing before descending; at the crown forward naturally
+    // walks onto it. The shaft itself stays clear of the landing/ceiling slab.
+    const exitingTop = top && intent.z > .01;
+    const clearingLanding = top && intent.z < -.01 && outward < 1.64;
+    const along = exitingTop ? -2 : clearingLanding || (bottom && intent.z < 0) ? 2
+      : Math.max(-1.8, Math.min(1.8, (1.65 - outward) * 8));
+    const side = Math.max(-1.8, Math.min(1.8, -across * 8));
+    v.x = l.out[0]*along + l.out[1]*side;
+    v.z = l.out[1]*along - l.out[0]*side;
+    v.y = clearingLanding ? 0 : intent.z > .01 ? Math.min(2.4, Math.max(0, (l.top + .08 - p.y) * 12))
+      : intent.z < -.01 ? -2.4 : 0;
+    return true;
   }
 
   /** Collision-limited eye origin, shared by the authoritative server and prediction. */

@@ -1,8 +1,10 @@
+import type { EnvironmentFrame } from '../../shared/environment';
 import { FIXED_DT } from '../config/constants';
 import type { MoveIntent, PlayerController } from '../player/PlayerController';
 import type { Weapon, WeaponId } from '../weapons/Weapon';
 import { MOVEMENT } from '../config/constants';
 import { NO_COMBAT, type CombatIntent } from '../../shared/combat';
+import type { GrenadeEvent } from '../../shared/grenades';
 import { multiplayerEndpoint } from './endpoint';
 import { PROTOCOL_VERSION, INPUT_BATCH_LIMIT, NETWORK_HZ, parseServerMessage, type ClientMessage, type InputFrame,
   type ServerMessage, type Snapshot, type ShotResult, type Elimination } from '../../shared/protocol';
@@ -16,10 +18,22 @@ export class MultiplayerClient {
   state: ConnectionState = 'idle';
   selfId = '';
   latest: Snapshot | null = null;
+  environment:EnvironmentFrame|null=null;
+  onEnvironment:(frame:EnvironmentFrame)=>void=()=>{};
+  private acceptEnvironment(f:EnvironmentFrame):void {
+    if(f.roundId!==this.latest?.roundId||f.mapVersion!==this.latest.mapVersion)return;
+    if(!f.full&&this.environment&&f.seq<=this.environment.seq)return;
+    const states=f.full?f.states:[...(this.environment?.states??[]).filter(s=>!f.states.some(n=>n.id===s.id)),...f.states];
+    this.environment={...f,full:true,states};this.onEnvironment(f);
+  }
   clockOffset = 0;
   onSnapshot: (snapshot: Snapshot) => void = () => {};
   onShot: (shot: ShotResult) => void = () => {};
   onElimination: (event: Elimination) => void = () => {};
+  onGrenade: (event: GrenadeEvent) => void = () => {};
+  private grenadeHistory(snapshot: Snapshot): void {
+    for (const explosion of snapshot.explosions) if (this.firstCombatEvent(explosion.id)) this.onGrenade({ kind: 'explode', ...explosion });
+  }
   onChat: (message: Extract<ServerMessage, { type: 'chat' }>) => void = () => {};
   onChatError: (message: string) => void = () => {};
   private readonly combatEvents = new Set<string>();
@@ -189,14 +203,19 @@ export class MultiplayerClient {
         this.trace('welcome', { resumed: m.resumed, id: m.selfId });
         this.clockOffset = m.snapshot.serverTime - Date.now();
         this.latest = m.snapshot;
+        if(this.environment?.roundId!==m.snapshot.roundId)this.environment=null;
+        if(m.snapshot.environment)this.acceptEnvironment(m.snapshot.environment);
         this.setState('connected');
         this.startTimers();
         this.resolve?.(m);
         this.resolve = this.reject = null;
         this.onSnapshot(m.snapshot);
+        this.grenadeHistory(m.snapshot);
       } else if (m.type === 'snapshot' || m.type === 'spawned') {
         if (m.snapshot.roundId !== this.round) this.cancelSpawn('The map changed. Select a loadout after loading.');
         this.latest = m.snapshot;
+        if(this.environment?.roundId!==m.snapshot.roundId)this.environment=null;
+        if(m.snapshot.environment)this.acceptEnvironment(m.snapshot.environment);
         const self = m.snapshot.players.find((p) => p.id === this.selfId);
         const ack = self?.ack ?? 0;
         if (!self?.alive || self.life !== this.life || m.snapshot.roundId !== this.round) {
@@ -220,12 +239,17 @@ export class MultiplayerClient {
         }
         this.lastAck = ack;
         this.onSnapshot(m.snapshot);
+        this.grenadeHistory(m.snapshot);
         if (m.type === 'spawned' && this.spawning?.id === m.requestId) {
           const pending = this.spawning;
           this.spawning = null;
           window.clearTimeout(pending.timeout);
           pending.resolve(m.snapshot);
         }
+      } else if(m.type==='environment'){this.acceptEnvironment(m.frame);
+      } else if (m.type === 'grenade') {
+        const round = m.event.kind === 'throw' ? m.event.projectile.roundId : m.event.roundId;
+        if (round === this.latest?.roundId && this.firstCombatEvent(m.event.id)) this.onGrenade(m.event);
       } else if (m.type === 'chat') {
         this.onChat(m);
       } else if (m.type === 'shot') {
@@ -340,9 +364,9 @@ export class MultiplayerClient {
     // No need to stream 120 identical standing frames per second. The room's
     // neutral input still settles gravity/friction, and heartbeats maintain liveness.
     if (player.grounded && Math.hypot(player.velocity.x, player.velocity.y, player.velocity.z) < 0.001
-      && player.crouch === 0 && !player.sliding && player.slideCooldown === 0 && !this.lastSlide && !intent.slide && !intent.jumpPressed && intent.x === 0 && intent.z === 0
+      && player.crouch === 0 && !intent.crouch && !player.sliding && player.slideCooldown === 0 && !this.lastSlide && !intent.slide && !intent.jumpPressed && intent.x === 0 && intent.z === 0
       && !intent.aim && !this.lastAim && !intent.lean && !this.lastLean && player.lean === 0
-      && !combat.trigger && !combat.reload && !this.lastCombat.trigger && !this.lastCombat.reload
+      && !combat.grenade && !this.lastCombat.grenade && !combat.trigger && !combat.reload && !this.lastCombat.trigger && !this.lastCombat.reload
       && yaw === this.lastYaw && player.pitch === this.lastPitch) return;
     if (this.pending.length >= 120) {
       if (Date.now() - this.lastBackpressure >= 1000) {
@@ -406,7 +430,7 @@ export class MultiplayerClient {
     this.stopTimers();
     if (forget) this.token = '';
     this.saveToken();
-    this.latest = null;
+    this.latest = null;this.environment=null;
     this.pending = [];
     this.unsent = [];
     this.reject?.(new Error('Connection cancelled'));

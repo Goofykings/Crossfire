@@ -218,8 +218,9 @@ class MeshData:
             u0, u1 = circ * i / segments, circ * (i + 1) / segments
             self.face([ra[i], rb[i], rb[j], ra[j]], mat, uv=[(u0, 0), (u0, L), (u1, L), (u1, 0)], **kw)
         if caps:
-            self.face(list(reversed(ra)), mat, **kw)
-            self.face(list(rb), mat, **kw)
+            # This frame winds rings toward -d (unlike cylinder's XZ rings).
+            self.face(list(ra), mat, **kw)
+            self.face(list(reversed(rb)), mat, **kw)
 
     def sphere(self, center: Vec, radius: float, mat: str, rings: int = 6, segments: int = 10,
                squash: float = 1.0, **kw) -> None:

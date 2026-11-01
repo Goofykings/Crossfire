@@ -633,6 +633,17 @@
    "metallic": 0.15,
    "atlas": true
   },
+  "fruit_apple": {
+   "tile": 1.0,
+   "tint": [
+    0.55,
+    0.045,
+    0.018
+   ],
+   "albedo": null,
+   "roughness": 0.65,
+   "metallic": 0
+  },
   "gun_black": {
    "tile": 0.22,
    "tint": [
@@ -642,10 +653,10 @@
    ],
    "albedo": null,
    "normal": "assets/textures/shared/metal_normal.jpg",
-   "orm": "assets/textures/shared/metal_orm.jpg",
-   "roughness": 0.55,
+   "orm": "assets/textures/weapons/gun_metal_orm.png",
+   "roughness": 0.75,
    "metallic": 0.7,
-   "normal_strength": 0.35
+   "normal_strength": 0.22
   },
   "gun_steel": {
    "tile": 0.22,
@@ -656,10 +667,10 @@
    ],
    "albedo": null,
    "normal": "assets/textures/shared/metal_normal.jpg",
-   "orm": "assets/textures/shared/metal_orm.jpg",
-   "roughness": 0.4,
+   "orm": "assets/textures/weapons/gun_metal_orm.png",
+   "roughness": 0.65,
    "metallic": 0.92,
-   "normal_strength": 0.3
+   "normal_strength": 0.2
   },
   "gun_polymer": {
    "tile": 0.3,
@@ -671,9 +682,9 @@
    "albedo": null,
    "normal": "assets/textures/shared/concrete_smooth_normal.jpg",
    "orm": "assets/textures/shared/concrete_smooth_orm.jpg",
-   "roughness": 0.78,
+   "roughness": 0.85,
    "metallic": 0.0,
-   "normal_strength": 0.25
+   "normal_strength": 0.16
   },
   "gun_fde": {
    "tile": 0.3,
@@ -685,9 +696,9 @@
    "albedo": null,
    "normal": "assets/textures/shared/concrete_smooth_normal.jpg",
    "orm": "assets/textures/shared/concrete_smooth_orm.jpg",
-   "roughness": 0.74,
+   "roughness": 0.82,
    "metallic": 0.0,
-   "normal_strength": 0.25
+   "normal_strength": 0.18
   },
   "gun_wood": {
    "tile": 0.4,

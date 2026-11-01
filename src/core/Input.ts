@@ -12,6 +12,8 @@ export type Action =
   | 'leanLeft'
   | 'leanRight'
   | 'slide'
+  | 'crouch'
+  | 'grenade'
   | 'jump'
   | 'reload'
   | 'fire'

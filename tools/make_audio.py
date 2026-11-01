@@ -309,7 +309,15 @@ def smg_shot() -> list[float]:
     return mix(crack, body, 0, 0.75)
 
 
+def grenade_explosion() -> list[float]:
+    duration = .65
+    boom = apply(tone(lambda t: max(28, 110 - t * 145), duration), env(int(duration * RATE), .001, 8, 1.2))
+    blast = apply(lowpass(noise(duration, 996), 1800), env(int(duration * RATE), .001, 9, 1.4))
+    return mix(blast, boom, 0, .8)
+
+
 def main() -> None:
+    write("grenade_explosion.wav", grenade_explosion(), .85)
     write("smg_shot.wav", smg_shot(), 0.8)
     write("rifle_shot.wav", rifle_shot(), 0.92)
     write("shotgun_shot.wav", shotgun_shot(), 0.95)

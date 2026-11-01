@@ -449,6 +449,8 @@ def build():
         {'id':'utility_divider_s','rect':[15.92,-9,16.08,-7.8], 'height':2.2,
          'style':'fence','gates':[], 'purpose':'utility equipment / storage yard divider'},
     ]
+    from industrial_roofs import author
+    author(layout)
     finish_layout(layout, PROPS)
     layout["spawns"] = ffa_spawns(layout, PROPS)
     return kit, layout

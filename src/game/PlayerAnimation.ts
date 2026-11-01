@@ -1,7 +1,7 @@
 import type { AnimationGroup } from '@babylonjs/core';
 import type { ControllerState, Vec3 } from '../player/PlayerController';
 
-export type CharacterClip = 'IDLE' | 'RUN' | 'JUMP_START' | 'JUMP_LOOP' | 'JUMP_LAND' | 'SLIDE';
+export type CharacterClip = 'IDLE' | 'RUN' | 'JUMP_START' | 'JUMP_LOOP' | 'JUMP_LAND' | 'SLIDE' | 'CROUCH';
 export type CharacterMotion = Pick<ControllerState, 'velocity' | 'grounded' | 'slideRemaining' | 'crouch'>;
 
 /** Match the position interpolation even when a sparse input batch finishes with
@@ -25,7 +25,8 @@ export class PlayerAnimationState {
     const speed = Math.hypot(m.velocity.x, m.velocity.z);
     this.moving = speed > (this.moving ? .18 : .4);
     let next: CharacterClip;
-    if (m.slideRemaining > 0 || m.crouch > .55) next = 'SLIDE';
+    if (m.slideRemaining > 0) next = 'SLIDE';
+    else if (m.crouch > .55) next = 'CROUCH';
     else if (!m.grounded) {
       if (this.grounded === true && m.velocity.y > 0) next = 'JUMP_START';
       else if (this.clip === 'JUMP_START' && this.elapsed < this.durations.JUMP_START && m.velocity.y > 0) next = 'JUMP_START';

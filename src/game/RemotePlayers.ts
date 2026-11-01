@@ -8,7 +8,7 @@ import { deathPose } from './CombatPresentation';
 import { PlayerSilhouettes } from '../rendering/PlayerSilhouettes';
 import { CharacterWeaponLibrary, type CharacterWeapon } from './CharacterWeapon';
 import type { MaterialLibrary } from '../rendering/MaterialLibrary';
-import type { WeaponId } from '../weapons/Weapon';
+import type { WeaponId, WeaponState } from '../weapons/Weapon';
 import { MOVEMENT } from '../config/constants';
 import { LEAN_ANGLE, leanOffset } from '../../shared/lean';
 
@@ -19,6 +19,7 @@ interface Avatar {
   friendly: boolean; visible: boolean; clearFor: number; height: number;
   lean: number;
   weapon: CharacterWeapon | null;
+  weaponAds: number;
   life: number; death?: { elapsed: number; started: number; direction: Elimination['direction']; rotation: Quaternion; baseY: number; materials: Material[]; textures: Set<BaseTexture> };
 }
 
@@ -66,6 +67,8 @@ export class RemotePlayers {
   silhouetteInterior() { return this.silhouettes?.interiorPixels() ?? Promise.resolve([]); }
   visibilityStats() { return this.visibilityWorld?.inspect() ?? null; }
   setPresentationVisible(visible: boolean): void { this.presenting = visible; this.labels.hidden = !visible; }
+  /** A scoped spectator may see labels only through the visible scope opening. */
+  setSpectatorScope(scoped: boolean): void { this.labels.classList.toggle('spectator-scoped', scoped); }
   setSpectated(id: string | null): void {
     if (this.spectatedId === id) return;
     this.spectatedId = id;
@@ -74,15 +77,21 @@ export class RemotePlayers {
       if (playerId === id) { a.label.hidden = true; this.silhouettes?.remove(a.meshes); }
     }
   }
-  spectatePose(id: string): { position: Vector3; rotation: Quaternion } | null {
+  spectatePose(id: string): { position: Vector3; rotation: Quaternion; weapon: WeaponId; gun: WeaponState;
+    speed: number; verticalSpeed: number; grounded: boolean; sliding: boolean; crouch: number } | null {
     const a = this.avatars.get(id);
     if (!a || a.death || !a.samples.length) return null;
+    const player = a.samples.at(-1)!.player;
+    if (!player.weapon || !player.combat.gun) return null;
     const crouch = Math.max(0, Math.min(1, (1.8 - a.height) / .65));
     const offset = leanOffset(a.root.rotation.y, a.lean);
     return { position: new Vector3(a.root.position.x + offset.x,
       a.root.position.y + MOVEMENT.standEye + (MOVEMENT.crouchEye - MOVEMENT.standEye) * crouch,
       a.root.position.z + offset.z),
-      rotation: Quaternion.RotationYawPitchRoll(a.root.rotation.y, a.look.rotation.x, -a.lean * LEAN_ANGLE) };
+      rotation: Quaternion.RotationYawPitchRoll(a.root.rotation.y, a.look.rotation.x, -a.lean * LEAN_ANGLE),
+      weapon: player.weapon, gun: { ...player.combat.gun, ads: a.weaponAds },
+      speed: Math.hypot(player.motion.velocity.x, player.motion.velocity.z), verticalSpeed: player.motion.velocity.y,
+      grounded: player.motion.grounded, sliding: player.motion.slideRemaining > 0, crouch };
   }
   setOutlinesEnabled(enabled: boolean): void { this.outlinesEnabled = enabled; }
   private remove(a: Avatar): void {
@@ -142,7 +151,7 @@ export class RemotePlayers {
         label.className = 'remote-player-label'; label.dataset.playerId = player.id; label.hidden = true;
         this.labels.append(label);
         a = { root, look, samples: [], seen: performance.now(), label, character,
-          meshes, weapon: null, friendly: false, visible: false, clearFor: 0, height: 1.8, lean: 0, life: player.life };
+          meshes, weapon: null, weaponAds: player.combat.gun?.ads ?? 0, friendly: false, visible: false, clearFor: 0, height: 1.8, lean: 0, life: player.life };
         this.avatars.set(player.id, a);
         root.setEnabled(player.id !== this.spectatedId);
       }
@@ -183,6 +192,7 @@ export class RemotePlayers {
       a.root.rotation.y = m.yaw + Math.atan2(Math.sin(n.yaw - m.yaw), Math.cos(n.yaw - m.yaw)) * k;
       a.look.rotation.x = m.pitch + (n.pitch - m.pitch) * k;
       const ads = (older.player.combat.gun?.ads ?? 0) + ((newer.player.combat.gun?.ads ?? 0) - (older.player.combat.gun?.ads ?? 0)) * k;
+      a.weaponAds = ads;
       a.weapon?.setPose(a.look.rotation.x, ads);
       const crouch = m.crouch + (n.crouch - m.crouch) * k;
       a.lean = m.lean + (n.lean - m.lean) * k;
@@ -258,6 +268,6 @@ export class RemotePlayers {
   }
   clear(): void {
     for (const a of this.avatars.values()) this.remove(a);
-    this.avatars.clear(); this.silhouettes?.update(false);
+    this.avatars.clear(); this.labels.classList.remove('spectator-scoped'); this.silhouettes?.update(false);
   }
 }

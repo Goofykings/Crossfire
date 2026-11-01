@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { MAP_IDS } from '../shared/maps';
+import type { EnvironmentDefinition } from '../shared/environment';
 import { createMapWorld, mapVersion } from '../shared/world';
 import { FIXED_DT, MOVEMENT } from '../src/config/constants';
 import type { CollisionFile, MapLayout, PropCatalog } from '../src/maps/types';
@@ -12,14 +13,15 @@ const catalog = JSON.parse(readFileSync('public/assets/models/shared/props/props
 describe.each(MAP_IDS)('%s compact routes', (id) => {
   const layout = JSON.parse(readFileSync(`src/maps/${id}/layout.json`,'utf8')) as MapLayout;
   const collision = JSON.parse(readFileSync(`public/assets/models/${id}/collision.json`,'utf8')) as CollisionFile;
-  const world = createMapWorld(collision, layout, catalog);
+  const environment=JSON.parse(readFileSync(`public/assets/models/${id}/environment.json`,'utf8')) as EnvironmentDefinition;
+  const world = createMapWorld(collision, layout, catalog,environment);
   it('reduces each playable dimension by 15–25%, with matching backend revisions', () => {
     const old = id === 'european-town' ? 66 : 68;
     for (const size of [layout.playArea[2]-layout.playArea[0],layout.playArea[3]-layout.playArea[1]]) {
       expect(size / old).toBeGreaterThanOrEqual(.75);
       expect(size / old).toBeLessThanOrEqual(.85);
     }
-    expect(WORLDS[id].revision).toBe(mapVersion(collision,layout,catalog));
+    expect(WORLDS[id].revision).toBe(mapVersion(collision,layout,catalog,environment));
     expect(layout.navigation?.groundRoutes.length).toBeGreaterThan(15);
   });
   it('walks upstairs, across a real upper floor and downstairs in both directions', () => {

@@ -12,6 +12,7 @@ export interface Settings {
   fov: number;
   /** 0..1 */
   masterVolume: number;
+  sfxVolume: number;
   graphicsQuality: GraphicsQuality;
   shadowQuality: ShadowQuality;
   /** Render resolution relative to the display's device pixels (0.5..1). */
@@ -25,6 +26,7 @@ export const DEFAULT_SETTINGS: Settings = {
   invertY: false,
   fov: 90,
   masterVolume: 0.7,
+  sfxVolume: 1,
   graphicsQuality: 'medium',
   shadowQuality: 'medium',
   resolutionScale: 1,
@@ -36,6 +38,7 @@ export const SETTING_LIMITS = {
   mouseSensitivity: [0.1, 5],
   fov: [70, 110],
   masterVolume: [0, 1],
+  sfxVolume: [0, 1],
   resolutionScale: [0.5, 1],
 } as const;
 
@@ -61,6 +64,7 @@ export function sanitizeSettings(raw: unknown): Settings {
   num('mouseSensitivity');
   num('fov');
   num('masterVolume');
+  num('sfxVolume');
   num('resolutionScale');
   if (typeof r.invertY === 'boolean') s.invertY = r.invertY;
   if (typeof r.showFps === 'boolean') s.showFps = r.showFps;
