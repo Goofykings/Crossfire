@@ -1,5 +1,21 @@
 # CLAUDE.md: notes for future sessions
 
+## Coordinated deployment (2026-11-02)
+
+See docs/DEPLOYMENT.md. Main releases now check both packages, run the real
+frontend transport against workerd, build/stage Pages, deploy the existing Worker
+through the official Wrangler action, verify /health protocol + full release SHA,
+then recheck and publish Pages. Keep workflow-wide `pages` concurrency with
+cancel-in-progress false; never cancel between backend and frontend. A stale
+main check runs before production changes. Protocol/schema stays shared v12;
+RELEASE_SHA is additive health metadata, not a second protocol constant.
+Repository secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID must be set by
+the owner. No credentials in VITE variables/artifacts. Preserve Worker config,
+namespace/state, origin allowlist, frontend defaults and Pages base. Custom
+hosting needs its own release adapter; current Cloudflare CI fails explicitly
+if custom is selected. Deploying two services is not atomic; old tabs may need
+refresh. No commit, push, cloud deployment or remote workflow execution here.
+
 ## Update Phase 4: interactive environment (2026-11-01)
 
 Current local protocol is **v12**, superseding the historical v11 entry below.

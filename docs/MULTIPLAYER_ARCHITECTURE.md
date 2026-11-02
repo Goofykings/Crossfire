@@ -1,5 +1,11 @@
 # Multiplayer architecture and migration plan
 
+Deployment update (2026-11-02): [coordinated CI/CD](DEPLOYMENT.md) builds and tests
+both packages, checks actual frontend/Worker message compatibility, deploys the
+existing Worker, verifies protocol + Git release SHA and only then publishes
+Pages. Shared protocol remains v12; health release metadata is additive.
+Repository secrets are required. No production deployment was performed here.
+
 Current update (2026-11-01): local **protocol v12** adds bounded server-owned
 interactive prop state, 10 Hz changed-pose frames and full welcome/spawn recovery.
 No client prop force/hit commands. See [Update Phase 4](UPDATE_PHASE4_ENVIRONMENT.md).

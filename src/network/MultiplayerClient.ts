@@ -175,7 +175,9 @@ export class MultiplayerClient {
         let version: unknown = null;
         try { version = JSON.parse(event.data).v; } catch { /* Malformed JSON. */ }
         this.trace('protocol_rejected', { expected: PROTOCOL_VERSION, received: typeof version === 'number' ? version : null });
-        this.fail(`Multiplayer protocol mismatch or invalid message: server v${typeof version === 'number' ? version : '?'}, client v${PROTOCOL_VERSION}. Publish matching frontend and backend.`);
+        this.fail(typeof version === 'number' && version !== PROTOCOL_VERSION
+          ? `Multiplayer update in progress: server v${version}, client v${PROTOCOL_VERSION}. Refresh this page in a moment. If it persists, report these versions.`
+          : `Invalid multiplayer message for client v${PROTOCOL_VERSION}. Try again; if it persists, report this connection error.`);
         socket.close(4002, 'protocol_error'); return;
       }
       this.lastMessage = Date.now();

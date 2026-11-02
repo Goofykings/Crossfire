@@ -24,6 +24,7 @@ interface Bindings {
   MATCH_MODE?: string;
   NETWORK_DEBUG?: string;
   COMBO_WINDOW_MS?: string;
+  RELEASE_SHA?: string;
 }
 interface Session extends ScoreState {
   crouchHeld?: boolean;
@@ -74,7 +75,8 @@ export default {
   async fetch(request: Request, env: Bindings): Promise<Response> {
     const url = new URL(request.url);
     if (request.method === 'GET' && url.pathname === '/health') {
-      return Response.json({ ok: true, service: 'crossfire-multiplayer', stage: 2, protocol: PROTOCOL_VERSION, room: PUBLIC_ROOM });
+      return Response.json({ ok: true, service: 'crossfire-multiplayer', stage: 2, protocol: PROTOCOL_VERSION,
+        room: PUBLIC_ROOM, release: env.RELEASE_SHA ?? 'local' }, { headers: { 'Cache-Control': 'no-store' } });
     }
     if (url.pathname !== '/ws' && url.pathname !== '/presence') return new Response('Not found', { status: 404 });
     if (request.method !== 'GET') return new Response('Method not allowed', { status: 405 });

@@ -1,6 +1,6 @@
-# Build Crossfire and publish it to GitHub Pages.
+# Check and deploy one matching Worker + GitHub Pages release.
 # Generated assets (GLB, textures, audio) are committed, so CI does not need Blender.
-name: Deploy to GitHub Pages
+name: Deploy Crossfire
 
 on:
   push:
@@ -14,11 +14,20 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  # Never cancel between updating the Worker and publishing its frontend.
+  cancel-in-progress: false
+
+env:
+  VITE_MULTIPLAYER_PROVIDER: ${{ vars.VITE_MULTIPLAYER_PROVIDER }}
+  VITE_MULTIPLAYER_URL: ${{ vars.VITE_MULTIPLAYER_URL }}
+  VITE_CUSTOM_MULTIPLAYER_URL: ${{ vars.VITE_CUSTOM_MULTIPLAYER_URL }}
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      protocol: ${{ steps.release.outputs.protocol }}
+      health-url: ${{ steps.release.outputs.health-url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -26,12 +35,49 @@ jobs:
         with:
           node-version: 24
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            server/package-lock.json
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Check release branch and credentials
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ "$GITHUB_REF" != refs/heads/main ]; then
+            echo '::error::Production releases must run from main. Choose main in Run workflow.'
+            exit 1
+          fi
+          node tools/prepare-release.mjs credentials
 
       - name: Install
         run: npm ci
 
+      - name: Install backend dependencies
+        run: npm ci --prefix server
+
+      - name: Prepare release configuration
+        id: release
+        run: node tools/prepare-release.mjs
+
       - name: Unit tests
         run: npm test
+
+      - name: Deployment gate tests
+        run: npm run test:deployment
+
+      - name: Backend typecheck
+        run: npm run typecheck --prefix server
+
+      - name: Backend build and integration tests
+        run: npm test --prefix server
+
+      - name: Shared protocol compatibility with the real frontend client
+        run: npm run test:protocol
 
       - name: Verify generated assets
         run: npm run assets:verify
@@ -41,15 +87,40 @@ jobs:
         env:
           # "./" works for any repository name. Set e.g. "/my-repo/" to force absolute URLs.
           BASE_PATH: ./
-          VITE_MULTIPLAYER_PROVIDER: ${{ vars.VITE_MULTIPLAYER_PROVIDER }}
-          VITE_MULTIPLAYER_URL: ${{ vars.VITE_MULTIPLAYER_URL }}
-          VITE_CUSTOM_MULTIPLAYER_URL: ${{ vars.VITE_CUSTOM_MULTIPLAYER_URL }}
+
+      - name: Record frontend release
+        run: node tools/prepare-release.mjs manifest
 
       - uses: actions/configure-pages@v5
 
+      # Stage the artifact before changing the live backend; this does not publish Pages.
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
+
+      - name: Reject a stale release before changing production
+        run: |
+          latest=$(git ls-remote origin refs/heads/main | cut -f1)
+          if [ "$latest" != "$GITHUB_SHA" ]; then
+            echo '::error::A newer commit is on main. Run the workflow for the latest main commit.'
+            exit 1
+          fi
+
+      - name: Deploy existing Cloudflare Worker
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: server
+          wranglerVersion: ${{ steps.release.outputs.wrangler-version }}
+          command: deploy --var RELEASE_SHA:${{ github.sha }}
+
+      - name: Verify deployed Worker protocol and release
+        run: node tools/verify-release.mjs
+        env:
+          MULTIPLAYER_HEALTH_URL: ${{ steps.release.outputs.health-url }}
+          EXPECTED_PROTOCOL: ${{ steps.release.outputs.protocol }}
+          EXPECTED_RELEASE: ${{ github.sha }}
 
   deploy:
     needs: build
@@ -58,5 +129,17 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Recheck Worker before publishing Pages
+        run: node tools/verify-release.mjs
+        env:
+          MULTIPLAYER_HEALTH_URL: ${{ needs.build.outputs.health-url }}
+          EXPECTED_PROTOCOL: ${{ needs.build.outputs.protocol }}
+          EXPECTED_RELEASE: ${{ github.sha }}
+
       - id: deployment
         uses: actions/deploy-pages@v4

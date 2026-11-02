@@ -1,3 +1,65 @@
+# Coordinated multiplayer and Pages deployment
+
+Updated 2026-11-02. Implemented locally; no commit, push, Cloudflare deployment,
+Pages publication or remote workflow execution was performed.
+
+- Existing two-job Pages workflow now installs/checks frontend and backend,
+  verifies actual shared-protocol interoperability, builds/stages frontend assets,
+  deploys the existing Worker through official `cloudflare/wrangler-action@v4`,
+  then gates Pages on a successful public health check. A second health check
+  runs immediately before Pages publication. Failed backend deploys/verification
+  leave the existing Pages deployment published.
+- Workflow-wide `pages` concurrency now uses `cancel-in-progress: false` to
+  prevent interruption between services. A pre-deployment main-SHA check rejects
+  stale reruns. Newer pushes queue rather than canceling a half-finished release.
+- `shared/protocol.ts` remains the sole version/schema source, v12 unchanged.
+  The real browser transport runs in Node against production workerd/TCP sockets
+  for join/spawn/input/orientation/chat/resume, validating actual wire messages
+  and rejecting wrong versions and illegal same-version schemas. No fake players
+  or simulated successful multiplayer response was introduced.
+- `/health` adds an optional deployment commit `release` and `no-store`; CI
+  stamps `RELEASE_SHA` through Wrangler without replacing the existing config.
+  Verification checks healthy service/room, protocol and exact commit, with
+  bounded retries for propagation/network failures. A public frontend
+  `release.json` records the matching metadata. Generated metadata is ignored.
+- Required repository secrets are `CLOUDFLARE_API_TOKEN` and
+  `CLOUDFLARE_ACCOUNT_ID`. Preflight reports missing secret names without logging
+  values. Vite's actual production env precedence and existing provider resolver
+  are reused. Explicit custom hosting fails this Cloudflare deployment clearly;
+  future/local custom support remains unchanged.
+- Connection errors distinguish a version/update mismatch from a malformed
+  same-version message, with refresh/report guidance and strict rejection retained.
+- Worker name/URL, Durable Object class/binding/state, ALLOWED_ORIGINS, existing
+  VITE handling, `.env.local`, Pages base and GitHub permissions remain unchanged.
+  No namespace deletion, state clearing or gameplay changes.
+
+Validation passed: **367 frontend/shared tests**, **54 Worker integration checks**,
+**1 actual frontend/Worker compatibility test**, **6 deployment gate tests**,
+**7 dedicated-scaffold checks**, frontend/Worker typechecks and builds, asset
+verification (**198 entries / 214 materials**), metadata preparation and diff
+checks. Official actionlint **1.7.12**, downloaded into ignored test-results and
+verified against its published SHA-256 checksum, accepted the workflow. A Worker
+deployment **dry run** using the exact release variable preserved ROOM,
+ALLOWED_ORIGINS and timer bindings. Vite SSR validation tools disable dev sockets,
+watchers and dependency discovery; no fixed-port listener is required.
+
+Manual setup, release flow, PowerShell recovery, troubleshooting and paired
+rollback are documented in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). Owner must
+add/confirm the repository secrets and keep Pages Source set to GitHub Actions.
+Credential validity and actual cloud publication have not been tested. Two
+services cannot deploy atomically: incompatible old tabs may need refresh and a
+post-Worker failure may require finishing Pages or restoring the matching Worker.
+Persistent state is never rolled back/deleted automatically.
+
+Exact files changed: `.github/workflows/deploy.yml`, `.gitignore`, `package.json`,
+`server/src/index.ts`, `src/network/MultiplayerClient.ts`,
+`tests/multiplayerTransport.test.ts`, new `server/tests/protocol.mjs`,
+`tools/prepare-release.mjs`, `tools/verify-release.mjs`, `tools/release-config.ts`,
+`tools/tests/release.test.mjs`; `docs/DEPLOYMENT.md`,
+`docs/MULTIPLAYER_ARCHITECTURE.md`, `server/README.md`, `CLAUDE.md` and this log.
+
+---
+
 # CI fix - headless map validation without Pillow
 
 Updated 2026-11-01. Inspected the actual failure in

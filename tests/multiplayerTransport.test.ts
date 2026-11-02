@@ -3,7 +3,7 @@ import { MultiplayerClient } from '../src/network/MultiplayerClient';
 import { PlayerController, NO_INTENT } from '../src/player/PlayerController';
 import { CollisionWorld } from '../src/physics/CollisionWorld';
 import { Weapon, WEAPONS } from '../src/weapons/Weapon';
-import type { PlayerState, Snapshot } from '../shared/protocol';
+import { PROTOCOL_VERSION, type PlayerState, type Snapshot } from '../shared/protocol';
 
 // Explicit transport unit fixture. Operational multiplayer is tested separately
 // with actual Worker/TCP sockets and independent browsers.
@@ -218,9 +218,17 @@ it('bounds rapid connection flapping even when every retry receives a welcome', 
 });
 it('does not retry a protocol mismatch or a replaced session', async () => {
   const { socket, client } = await connect();
+  let warning='';client.onState=(_state,message)=>{warning=message??'';};
   socket.receive({ v: 5, type: 'pong', at: Date.now(), serverTime: Date.now() });
   expect(client.state).toBe('error');
+  expect(warning).toContain(`server v5, client v${PROTOCOL_VERSION}`);expect(warning).toContain('Refresh this page');
   vi.advanceTimersByTime(60000); expect(SocketFixture.instances).toHaveLength(1);
+});
+it('reports an invalid same-version message without pretending the versions differ',async()=>{
+  const {socket,client}=await connect();let warning='';client.onState=(_state,message)=>{warning=message??'';};
+  socket.receive({v:PROTOCOL_VERSION,type:'snapshot',snapshot:{players:[]}});
+  expect(client.state).toBe('error');expect(warning).toContain('Invalid multiplayer message');
+  expect(warning).not.toContain('update in progress');vi.advanceTimersByTime(60000);expect(SocketFixture.instances).toHaveLength(1);
 });
 it('does not fight another tab that replaced its session', async () => {
   const { socket, client } = await connect(); socket.close(4001, 'session_replaced');

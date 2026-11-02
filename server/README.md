@@ -1,5 +1,12 @@
 # Crossfire multiplayer backend
 
+Deployment is now coordinated with GitHub Pages. See
+[deployment setup, secrets, verification and rollback](../docs/DEPLOYMENT.md).
+The official Wrangler action deploys this existing Worker before Pages and
+checks `/health` against the shared protocol and commit `release` SHA. No
+Durable Object or origin configuration was replaced. Local health uses
+`release: "local"`; published releases set `RELEASE_SHA` through Wrangler.
+
 Update Phase 4 (2026-11-01): current local **protocol v12** adds authoritative
 small environmental props. Real weapon rays apply impulses; active props publish
 changed poses at 10 Hz, resting props send no transform traffic. Welcome/spawn
