@@ -19,8 +19,10 @@ Use Cloudflare's **Edit Cloudflare Workers** token template, scoped to the
 existing account and only the resources it needs. See the
 [official authentication/action instructions](https://developers.cloudflare.com/workers/ci-cd/external-cicd/github-actions/).
 Use repository secrets: the backend deployment occurs in the build job, before
-the separate `github-pages` environment job. Missing/blank secrets fail before
-installation or production changes, with their names and setup instructions.
+the separate `github-pages` environment job. Missing/blank secrets block
+production changes, with their names and setup instructions.
+The credential check runs after tests/builds but before production changes;
+missing-secret failures appear as explicit errors on the Actions summary.
 Values are never printed by the preflight or written into frontend artifacts.
 Never put tokens, passwords or administration credentials into `VITE_*` values.
 
@@ -59,14 +61,16 @@ Existing ignored texture caches and Blender backups remain local.
 ## Automatic sequence
 
 1. On a push to `main`, or **Actions > Deploy Crossfire > Run workflow > main**,
-   check the branch and required secrets. Install locked root/server dependencies
+   check the branch. Install locked root/server dependencies
    with `npm ci`; use Node 24 and Python 3.13 for the existing map-source checks.
 2. Run frontend tests, release-gate tests, backend typecheck and actual
    workerd/TCP integration tests, then the protocol compatibility test.
 3. Verify assets and build the frontend. Stage its Pages artifact, including
    public `release.json` containing the protocol, full Git SHA and health URL.
    Staging an artifact does not change the live site.
-4. Reject an obsolete commit if `main` has advanced before production changes.
+4. Check required Cloudflare secrets, then reject an obsolete commit if `main`
+   has advanced before production changes. Missing credentials do not skip tests;
+   they still prevent Worker and Pages deployment.
 5. Use **`cloudflare/wrangler-action@v4`**, in `server/`, with the exact Wrangler
    version already pinned in `server/package.json`. Deploy the existing Worker
    with `RELEASE_SHA` set to this commit. Wrangler config, Worker name/URL,

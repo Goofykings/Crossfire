@@ -1,10 +1,20 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {createServer as httpServer} from 'node:http';
+import {spawnSync} from 'node:child_process';
 import {checkCredentials,releaseConfig} from '../prepare-release.mjs';
 import {healthProblem,verifyRelease} from '../verify-release.mjs';
 
 const revision='a'.repeat(40),health={ok:true,service:'crossfire-multiplayer',room:'public-main',protocol:12,release:revision};
+test('credential CLI emits an actionable GitHub annotation and still blocks deployment',()=>{
+  const result=spawnSync(process.execPath,['tools/prepare-release.mjs','credentials'],{
+    encoding:'utf8',env:{...process.env,GITHUB_ACTIONS:'true',CLOUDFLARE_API_TOKEN:'',CLOUDFLARE_ACCOUNT_ID:''}});
+  assert.equal(result.status,1);assert.match(result.stderr,/::error::Missing GitHub Actions secrets: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID/);
+  assert.match(result.stderr,/Settings > Secrets and variables > Actions/);
+  const partial=spawnSync(process.execPath,['tools/prepare-release.mjs','credentials'],{
+    encoding:'utf8',env:{...process.env,GITHUB_ACTIONS:'true',CLOUDFLARE_API_TOKEN:'private-token',CLOUDFLARE_ACCOUNT_ID:''}});
+  assert.equal(partial.status,1);assert.ok(!partial.stderr.includes('private-token'));
+});
 test('missing credential errors identify names without exposing values',()=>{
   assert.throws(()=>checkCredentials({}),/CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID/);
   assert.throws(()=>checkCredentials({CLOUDFLARE_API_TOKEN:'private-token'}),e=>e.message.includes('CLOUDFLARE_ACCOUNT_ID')&&!e.message.includes('private-token'));

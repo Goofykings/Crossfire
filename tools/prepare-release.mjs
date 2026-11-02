@@ -38,4 +38,11 @@ async function main(){
     console.log(`Prepared protocol v${expected.protocol}, release ${expected.release}.`);
   }finally{await vite.close();}
 }
-if(process.argv[1]&&fileURLToPath(import.meta.url)===process.argv[1])main().catch(e=>{console.error(e.message);process.exitCode=1;});
+if(process.argv[1]&&fileURLToPath(import.meta.url)===process.argv[1])main().catch(e=>{
+  const message=String(e.message);
+  // Make configuration failures visible on the Actions summary, not just inside logs.
+  console.error(process.env.GITHUB_ACTIONS==='true'
+    ? `::error::${message.replaceAll('%','%25').replaceAll('\r','%0D').replaceAll('\n','%0A')}`
+    : message);
+  process.exitCode=1;
+});

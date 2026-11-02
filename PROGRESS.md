@@ -1,3 +1,30 @@
+# CI follow-up - distinguish tests from missing deployment credentials
+
+Updated 2026-11-02. Inspected
+[run 41493458383](https://github.com/Goofykings/Crossfire/actions/runs/41493458383)
+for commit f6a081d. It failed at the release branch/credential preflight; npm
+installation and unit tests were skipped. The push was on main, and the
+credential-check script is present in the commit. All **367 tests** passed
+locally. The external configuration check must still be satisfied by setting
+the required repository secrets; no secret values were requested or logged.
+
+- Moved Cloudflare credential validation after tests/build/artifact staging and
+  before either production service is changed. Missing deployment credentials
+  no longer prevent running npm test; they still block both deployments.
+- Preflight errors now emit escaped GitHub `::error::` annotations so missing
+  secret names and setup instructions appear on the Actions summary.
+- Added an actual CLI regression test for nonzero status, actionable annotation
+  and no token leakage. All **7 deployment tests** and actionlint passed.
+- Updated deployment documentation. Owner must add/confirm repository secrets
+  `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` under repository Settings >
+  Secrets and variables > Actions, not only the github-pages environment.
+
+Files changed: `.github/workflows/deploy.yml`, `tools/prepare-release.mjs`,
+`tools/tests/release.test.mjs`, `docs/DEPLOYMENT.md` and this log. No gameplay,
+protocol, commit, push, deployment or remote workflow rerun was performed.
+
+---
+
 # Coordinated multiplayer and Pages deployment
 
 Updated 2026-11-02. Implemented locally; no commit, push, Cloudflare deployment,

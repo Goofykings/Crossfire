@@ -43,16 +43,12 @@ jobs:
         with:
           python-version: '3.13'
 
-      - name: Check release branch and credentials
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Check release branch
         run: |
           if [ "$GITHUB_REF" != refs/heads/main ]; then
             echo '::error::Production releases must run from main. Choose main in Run workflow.'
             exit 1
           fi
-          node tools/prepare-release.mjs credentials
 
       - name: Install
         run: npm ci
@@ -97,6 +93,12 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
+
+      - name: Check Cloudflare deployment credentials
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node tools/prepare-release.mjs credentials
 
       - name: Reject a stale release before changing production
         run: |
