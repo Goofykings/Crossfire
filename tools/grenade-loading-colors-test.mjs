@@ -57,10 +57,16 @@ try {
         }
         if(armed&&exploded)paused=true;
       });
-      window.__awardEvents=[];window.__spawnRequests=[];
+      window.__awardEvents=[];window.__spawnRequests=[];window.__joinEvents=[];window.__grenadeEvents=[];window.__screens=[];window.__selectionReady=[];
+      new MutationObserver(()=>{
+        const screen=document.body?.dataset.screen;
+        if(screen&&window.__screens.at(-1)!==screen)window.__screens.push(screen);
+        if(screen==='weapons')window.__selectionReady.push({ready:window.__crossfire?.loadingState().networkReady,
+          previews:[...document.querySelectorAll('#weapons .weapon-art img')].filter(i=>i.complete&&i.naturalWidth>0).length});
+      }).observe(document,{subtree:true,attributes:true,attributeFilter:['data-screen']});
       new MutationObserver(records=>{for(const record of records)for(const node of record.addedNodes)if(node.nodeType===1&&node.classList.contains('grenade-reward'))window.__awardEvents.push({at:Date.now(),text:node.textContent,animation:getComputedStyle(node).animationDuration,left:parseFloat(node.style.left)});}).observe(document,{subtree:true,childList:true});
       const Socket=window.WebSocket;
-      window.WebSocket=class extends Socket{constructor(url,protocols){super(new URL(String(url)).pathname==='/ws'?new URL('/ws',backend).href.replace('http:','ws:'):url,protocols);this.addEventListener('message',e=>{try{const m=JSON.parse(e.data);if(armed&&m.type==='grenade'&&m.event.kind==='explode')exploded=true;}catch{}});}send(data){const m=JSON.parse(data);if(m.type==='spawn')window.__spawnRequests.push(m);return super.send(data);}};
+      window.WebSocket=class extends Socket{constructor(url,protocols){super(new URL(String(url)).pathname==='/ws'?new URL('/ws',backend).href.replace('http:','ws:'):url,protocols);this.addEventListener('message',e=>{try{const m=JSON.parse(e.data);if(m.type==='system')window.__joinEvents.push(m);if(m.type==='pong')window.__lastClockOffset=m.serverTime-(m.at+Date.now())/2;if(m.type==='grenade')window.__grenadeEvents.push({receivedAt:Date.now(),presentationAge:m.event.at===undefined?null:Date.now()+(window.__lastClockOffset??0)-m.event.at,event:m.event});if(armed&&m.type==='grenade'&&m.event.kind==='explode')exploded=true;}catch{}});}send(data){const m=JSON.parse(data);if(m.type==='spawn')window.__spawnRequests.push(m);return super.send(data);}};
       const fetch=window.fetch;
       window.fetch=(input,init)=>fetch(['/presence','/profile'].includes(new URL(String(input),location.href).pathname) ? new URL(new URL(String(input),location.href).pathname, backend):input,init);
     },backend,process.argv.includes('--capture-fx'));
@@ -75,9 +81,12 @@ try {
     }
     if(blockWeapons){
       await until(()=>held.weapons.length>0,'delayed required gun request',90000);
-      await page.waitForSelector('#weapons.visible',{timeout:90000});
-      await page.click('#weapons .weapon-card[data-weapon="rifle"]');await delay(300);
-      check(await page.evaluate(()=>document.body.dataset.screen==='loading'&&window.__spawnRequests.length===0&&!window.__crossfire.loadingState().networkReady),'early selection waits behind loading screen for delayed gun');
+      await delay(300);
+      check(await page.evaluate(()=>document.body.dataset.screen==='loading'&&!document.querySelector('#weapons.visible')&&window.__spawnRequests.length===0&&!window.__crossfire.loadingState().networkReady),'delayed gun keeps selection hidden and prevents spawn');
+      const before=await page.evaluate(()=>window.__crossfire.network());
+      await room.dropSocketForTest(before.selfId);
+      await until(()=>page.evaluate(opens=>{const n=window.__crossfire.network();return n.state==='connected'&&n.diagnostics.opens>opens;},before.diagnostics.opens),'genuine transport drop resumes while required asset is delayed',60000);
+      check(await page.evaluate(id=>document.body.dataset.screen==='loading'&&window.__spawnRequests.length===0&&window.__crossfire.network().selfId===id,before.selfId),'loading reconnect preserves identity and never exposes incomplete world');
       blockWeapons=false;for(const r of held.weapons)await r.continue();
       await until(()=>held.textures.length>0,'delayed weapon texture',90000);await delay(250);
       check(await page.evaluate(()=>document.body.dataset.screen==='loading'&&window.__spawnRequests.length===0),'weapon texture readiness blocks authoritative spawn');
@@ -90,14 +99,39 @@ try {
     await page.waitForFunction(()=>window.__crossfire.ready()||document.querySelector('#weapons.visible .weapon-card:not(:disabled)'),{timeout:240000});
     if(!await page.evaluate(()=>window.__crossfire.ready()))await page.click('#weapons .weapon-card[data-weapon="rifle"]');
     await page.waitForFunction(()=>window.__crossfire.ready(),{timeout:60000});
+    check(await page.evaluate(()=>window.__selectionReady.length>0&&window.__selectionReady.every(s=>s.ready&&s.previews===4)),'selection only opens with authoritative map and all four decoded previews ready');
+    check(await page.evaluate(()=>{const screens=window.__screens;return !screens.slice(screens.lastIndexOf('weapons')+1).includes('loading');}),'selection-to-spawn never returns to loading');
     page.id=await page.evaluate(()=>window.__crossfire.network().selfId);return page;
   }
   const a=await open('Grenadier'),b=await open('Crouch Observer');
+  await until(()=>a.evaluate(ids=>ids.every(id=>window.__joinEvents.some(e=>e.id===`join:${id}`)),[a.id,b.id]),'both genuine server joins');
+  check(await a.evaluate(()=>new Set(window.__joinEvents.map(e=>e.id)).size===window.__joinEvents.length),'each session entry has one unique announcement');
+  check(await a.evaluate(()=>[...document.querySelectorAll('.chat-log .chat-system')].some(e=>e.textContent==='Server: Crouch Observer joined.')),'sanitized server join appears in normal chat');
+  const gray=await a.$eval('.chat-log .chat-system',e=>({body:getComputedStyle(e).color,label:getComputedStyle(e.querySelector('strong')).color}));
+  check(gray.body==='rgb(169, 173, 179)'&&gray.label==='rgb(197, 200, 204)','server message uses neutral gray with brighter Server label');
+  const joinsBefore=await a.evaluate(()=>window.__joinEvents.length);
   const net=p=>p.evaluate(()=>window.__crossfire.network());
   const me=async p=>{const n=await net(p);return n.snapshot.players.find(q=>q.id===p.id);};
   await a.evaluate(()=>window.__crossfire.setSetting({graphicsQuality:'medium',reducedEffects:false}));
   await delay(350);
   check(!(await a.evaluate(()=>window.__crossfire.grenades())).reduced&&(await b.evaluate(()=>window.__crossfire.grenades())).reduced,'normal and reduced-effects clients coexist');
+  if(process.argv.includes('--loading-only')) {
+    const before=await net(b),old=before.snapshot.players.find(p=>p.id===b.id);
+    await b.reload({waitUntil:'domcontentloaded',timeout:240000});
+    await b.waitForFunction(()=>window.__crossfire?.ready(),{timeout:240000});
+    const after=await net(b),current=after.snapshot.players.find(p=>p.id===b.id);
+    check(after.selfId===b.id&&current.life===old.life&&current.weapon===old.weapon&&current.health===old.health,'real browser refresh resumes the existing authoritative life');
+    check(await b.evaluate(()=>window.__spawnRequests.length===0),'refresh of a living session sends no duplicate spawn');
+    await delay(300);
+    check(await a.evaluate(n=>window.__joinEvents.length===n,joinsBefore),'other browser receives no duplicate join after actual refresh');
+    check(new Set(after.snapshot.players.map(p=>p.id)).size===after.snapshot.players.length&&after.snapshot.players.length===2,'refresh keeps exactly two unique players');
+    await a.bringToFront();await a.keyboard.down('Enter');await delay(150);await a.keyboard.up('Enter');
+    await a.waitForSelector('.match-chat:not([hidden])');await a.type('.chat-form input','Public chat after refresh');await a.keyboard.press('Enter');
+    await until(()=>b.$$eval('.chat-log .chat-player',rows=>rows.some(e=>e.textContent==='Grenadier: Public chat after refresh')),'normal chat survives trusted system messages and refresh');
+    check(true,'normal public chat still reaches the other real client');
+    check(errors.length===0,`no browser or asset errors (${errors.length})`);
+    fs.writeFileSync(`${out}/results.json`,JSON.stringify({checks,errors},null,2));
+  } else {
   const arena=await room.directionalArenaForTest();
   await room.placeForCombatTest(a.id,arena.center);await room.placeForCombatTest(b.id,arena.observer);
   await delay(500);await a.bringToFront();await a.keyboard.down('Control');await delay(550);
@@ -124,9 +158,7 @@ try {
   await until(async()=>!(await me(b)).alive,'actual radial elimination');
   await until(async()=>(await a.evaluate(()=>window.__crossfire.grenades())).particles>0,'brief explosion particles',2000);
   const blastVisual=await a.evaluate(()=>window.__crossfire.grenades());
-  check(blastVisual.particles<=128&&(!process.argv.includes('--capture-fx')||blastVisual.samples.some(p=>p.flash&&p.size>=.75*Math.sqrt(10))),
-    'tenfold flash area uses the existing bounded particle batch');
-  if(process.argv.includes('--capture-fx'))check(blastVisual.samples.some(p=>p.flash&&p.color[3]>.5),'new flash survives a slow preceding frame');
+  check(blastVisual.particles<=128&&blastVisual.burst.budget===4&&blastVisual.burst.additiveParticles===48,'smoke and layered burst use bounded pools');
   await a.screenshot({path:`${out}/explosion.png`});
   await a.evaluate(()=>window.__grenadeCapture.resume());
   await until(async()=>(await b.evaluate(()=>window.__crossfire.state()))==='spectating','grenade enters spectating');
@@ -174,6 +206,7 @@ try {
   const beforeResume=await net(a);await a.evaluate(()=>window.__crossfire.networkReconnect());
   await until(async()=>{const n=await net(a);return n.state==='connected'&&n.diagnostics.opens>beforeResume.diagnostics.opens;},'resume with existing cloud');
   check((await a.evaluate(()=>window.__awardEvents)).length===1,'ordinary snapshots and resume do not replay +1');
+  check(await a.evaluate(n=>window.__joinEvents.length===n,joinsBefore),'resume does not repeat join announcements');
   // Observe real rendered frames: sequential screenshots/IPC may finish after
   // the seven-second effect, so never expect an expired current cloud to exist.
   const samples=()=>a.evaluate(id=>window.__smokeSamples.filter(c=>c.id===id),cloud.id);
@@ -224,11 +257,12 @@ try {
   await until(async()=>(await net(a)).snapshot.grenades.length===0,'released grenade finishes after owner leaves');
   check(errors.length===0,`no browser or asset errors (${errors.length})`);
   fs.writeFileSync(`${out}/results.json`,JSON.stringify({checks,smokeSamples:await samples(),lowered,peer,throwing,dead,clean,blastVisual,errors},null,2));
+  }
 } catch(error) {
   const failures=[];
   for(const [i,page] of (await browser?.pages()??[]).entries()) {
     if(!await page.evaluate(()=>!!window.__crossfire).catch(()=>false))continue;
-    failures.push(await page.evaluate(()=>({motion:window.__crossfire.motion(),network:window.__crossfire.network(),state:window.__crossfire.state(),grenades:window.__crossfire.grenades()})));
+    failures.push(await page.evaluate(()=>({stats:window.__crossfire.stats(),events:window.__grenadeEvents,motion:window.__crossfire.motion(),network:window.__crossfire.network(),state:window.__crossfire.state(),grenades:window.__crossfire.grenades()})));
     await page.screenshot({path:`${out}/failure-${i}.png`}).catch(()=>{});
   }
   fs.writeFileSync(`${out}/failure.json`,JSON.stringify(failures,null,2));throw error;

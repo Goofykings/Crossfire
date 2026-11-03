@@ -1,3 +1,4 @@
+import { readinessDeadline } from '../core/assetReadiness';
 import { ChallengesPanel } from './ChallengesPanel';
 import { assetUrl } from '../core/assets';
 import { CrosshairMotion } from './CrosshairMotion';
@@ -88,6 +89,7 @@ export class UI {
   private chatLog!: HTMLElement;
   private chatInput!: HTMLInputElement;
   private chatFeed!: HTMLElement;
+  private pendingChat: HTMLElement[] = [];
   private chatHint!: HTMLElement;
 
   // HUD elements
@@ -425,11 +427,13 @@ export class UI {
     if (busy) this.respawnButton.disabled = true;
   }
 
-  setWeaponPreview(id: WeaponId, url: string): void {
-    this.previews.set(id, url);
+  async setWeaponPreview(id: WeaponId, url: string, signal?: AbortSignal): Promise<void> {
     const img = el('img');
     img.src = url;
     img.alt = this.labels[id];
+    await readinessDeadline(img.decode().catch(() => { throw new Error(`Weapon preview failed: ${id}`); }), signal, `Weapon preview timed out: ${id}`);
+    signal?.throwIfAborted();
+    this.previews.set(id, url);
     this.weaponCards.get(id)?.querySelector('.weapon-art')?.replaceChildren(img);
     this.refreshSelection();
   }
@@ -947,8 +951,9 @@ export class UI {
       this.setSlideEffect(false, 0, 0);
       this.chatOpen = false; this.chatBox.hidden = true; this.chatInput.blur();
     }
-    if (screen === 'menu' || screen === 'loading' || screen === 'error') {
-      this.damage?.clear();
+    if (screen === 'menu' || screen === 'loading' || screen === 'error') this.damage?.clear();
+    if (screen === 'menu' || screen === 'error') {
+      this.pendingChat.length = 0;
       this.chatLog.replaceChildren(); this.chatFeed.replaceChildren();
     }
     this.currentScreen = screen;
@@ -971,6 +976,7 @@ export class UI {
     for (const [id, s] of this.screens) {
       s.classList.toggle('visible', id === screen || (overlayHud && id === 'hud') || (homeSettings && id === 'menu'));
     }
+    if (screen === 'hud') for (const message of this.pendingChat.splice(0)) this.displayChat(message);
     if (screen === 'settings') this.syncSettings();
   }
 
@@ -991,13 +997,20 @@ export class UI {
     if (!this.chatOpen) return;
     this.chatOpen = false; this.chatBox.hidden = true; this.chatInput.blur(); this.onChatClose();
   }
-  addChat(name: string, text: string): void {
-    const line = el('div'); const sender = el('strong'); sender.textContent = `${name}: `;
+  addChat(name: string, text: string, system = false): void {
+    const line = el('div', system ? 'chat-system' : 'chat-player');
+    const sender = el('strong'); sender.textContent = `${!system && name.toLowerCase() === 'server' ? 'Server (player)' : name}: `;
     line.append(sender, document.createTextNode(text)); this.chatLog.appendChild(line);
     while (this.chatLog.childElementCount > 30) this.chatLog.firstElementChild?.remove();
     this.chatLog.scrollTop = this.chatLog.scrollHeight;
     const recent = line.cloneNode(true) as HTMLElement;
-    recent.className = 'chat-feed-message';
+    recent.classList.add('chat-feed-message');
+    if (['loading', 'weapons', 'start'].includes(this.currentScreen)) {
+      this.pendingChat.push(recent);
+      if (this.pendingChat.length > 5) this.pendingChat.shift();
+    } else this.displayChat(recent);
+  }
+  private displayChat(recent: HTMLElement): void {
     this.chatFeed.appendChild(recent);
     while (this.chatFeed.childElementCount > 5) this.chatFeed.firstElementChild?.remove();
     window.setTimeout(() => recent.remove(), 10000);

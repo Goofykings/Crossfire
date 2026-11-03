@@ -1,3 +1,4 @@
+import { normalizeUsername } from './username';
 import { validCareerView, type CareerView } from './challenges';
 import { validEnvironmentFrame, type EnvironmentFrame } from './environment';
 import { validMap, type MapId } from './maps';
@@ -7,7 +8,7 @@ import type { CombatIntent } from './combat';
 import { pointsOrder, type ScoreAward, type RoundResult, type RoundStanding } from './scoring';
 import { GRENADE, type GrenadeState, type GrenadeEvent, type GrenadeExplosion } from './grenades';
 
-export const PROTOCOL_VERSION = 14;
+export const PROTOCOL_VERSION = 15;
 export const validWeapon = (x: unknown): x is WeaponId => x === 'rifle' || x === 'shotgun' || x === 'sniper' || x === 'smg';
 export const PUBLIC_ROOM = 'public-main';
 export const INPUT_BATCH_LIMIT = 12;
@@ -79,6 +80,7 @@ export type ClientMessage =
   | { v: typeof PROTOCOL_VERSION; type: 'chat'; text: string }
   | { v: typeof PROTOCOL_VERSION; type: 'leave' };
 export type ServerMessage =
+  | { v: typeof PROTOCOL_VERSION; type: 'system'; kind: 'player_joined'; id: string; name: string }
   | { v: typeof PROTOCOL_VERSION; type: 'career'; profile: CareerView }
   | { v:typeof PROTOCOL_VERSION;type:'environment';frame:EnvironmentFrame }
   | { v: typeof PROTOCOL_VERSION; type: 'grenade'; event: GrenadeEvent }
@@ -212,6 +214,9 @@ export function parseServerMessage(text: string): ServerMessage | null {
   let x: unknown;
   try { x = JSON.parse(text); } catch { return null; }
   if (!record(x) || x.v !== PROTOCOL_VERSION) return null;
+  if (x.type === 'system') return keys(x, ['v', 'type', 'kind', 'id', 'name'])
+    && x.kind === 'player_joined' && typeof x.id === 'string' && /^join:[0-9a-f-]{36}$/.test(x.id)
+    && typeof x.name === 'string' && normalizeUsername(x.name) === x.name ? x as unknown as ServerMessage : null;
   if (x.type === 'career') return keys(x, ['v', 'type', 'profile']) && validCareerView(x.profile) ? x as unknown as ServerMessage : null;
   if(x.type==='environment')return keys(x,['v','type','frame'])&&validEnvironmentFrame(x.frame)?x as unknown as ServerMessage:null;
   if (x.type === 'grenade') {

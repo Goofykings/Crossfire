@@ -1,3 +1,69 @@
+# Explosion VFX, seamless loading and trusted server join chat
+
+Completed locally 2026-11-03. Stopped at this request. No commit, push or deployment.
+Implementation, complete changed-file list, QA commands and release guidance:
+[docs/EXPLOSION_LOADING_CHAT.md](docs/EXPLOSION_LOADING_CHAT.md).
+
+- Added a pooled white/yellow additive flash, layered orange/red fire with a
+  brighter core, sparks, expanding transparent rings and two brief shadowless
+  local lights. Four-burst cap; inactive batches are disabled and unused sprites
+  have zero area. Reduced mode uses fewer lobes/sparks. Light mesh references
+  are released on clear. Uses confirmed server explosion positions/timestamps.
+- Preserved grenade physics, damage/radius, five-second dense smoke, two-second
+  smoke fade, spatial fog/visibility, explosion history and multiplayer timing.
+- Supersedes earlier early-selection behavior: Loading now remains visible until
+  authoritative state/map revision, map/collision, textures/materials/shaders,
+  all four weapons, character assets and all four decoded previews are ready.
+  Selection sends the existing authoritative spawn request directly; no second
+  loading screen/map rebuild. Controls require spawn approval. Cancellation,
+  critical failure/Retry, reconnect, spectating and respawn are preserved.
+- Added strict shared protocol v15 server-only system/player_joined messages.
+  The Worker announces new persisted sessions once using sanitized names and
+  session-derived event IDs. Resume, actual browser refresh and snapshots do not
+  reannounce. The frontend has bounded event dedupe, gray chat rows and a small
+  loading-time feed queue. Player chat cannot forge system frames; a player
+  named Server is labeled Server (player). Existing chat limits/rate checks stay.
+
+Validation completed:
+
+- Plain `npm test`: **481 passing / 46 files**. Frontend typecheck and final
+  production build pass. Focused VFX/protocol/cleanup rerun: **7 passing**.
+- Cloudflare typecheck and dry-run build pass. Full backend rerun: **59 passing**,
+  including FFA/Teams grenade damage, scoring, regeneration, traversal and resume.
+- Actual frontend/Worker protocol gate: **1 passing**, including sanitized joins,
+  new-transport persisted resume, no duplicate announcements, strict schemas,
+  incompatible versions and forged system-message rejection.
+- Deployment gate tests: **7 passing**. Dedicated scaffold typecheck/build/tests:
+  **7 passing**. Existing CI/Worker configuration, URLs, secrets, origins,
+  Durable Objects and map revisions unchanged.
+- Production build served under `/crossfire/`, two real Chrome contexts + local
+  workerd: **18 focused delayed-load/reconnect/refresh/chat checks** and **16
+  texture-failure/Retry/refresh/chat checks**, both with zero browser/asset errors.
+- Normal non-autoplay UI: **28 checks**, including all four manual weapon choices,
+  one connection/spawn per entry, Back cancellation, partial-magazine reload,
+  persistent bindings and Controls at three resolutions. Its existing scroll
+  assertion now waits for actual browser scrolling instead of assuming 220ms.
+- Extended first-frame-capture browser grenade run: **38 checks**, zero browser/
+  asset errors. Verified actual damage/100-point award, local statistics, feed,
+  leaderboard, audio, smoke timing, inventory, resume dedupe and respawn.
+- **16 deterministic Babylon renders** across eight ages and normal/reduced modes;
+  inspected actual flash/fire/ring/sparks/smoke images and the production game's
+  confirmed grenade explosion render. `test-results/explosion-renders/` and
+  `test-results/explosion-loading-capture/explosion.png` contain the captures.
+- Initial concurrent/cold local runs had frontend timeouts, a backend healing
+  timing-window failure, and an unpaused browser local-statistics timeout at
+  roughly 2 FPS. Final default frontend/full backend runs passed unchanged;
+  the same browser statistics assertions passed with first-frame capture.
+  No health/scoring logic or assertions were relaxed to make them pass.
+
+Limitations/release: local testing only; public Cloudflare was not contacted or
+updated. Fixed resource budgets and reduced mode were tested; no low-end-device
+FPS benchmark was performed. Requires coordinated frontend + Worker deployment
+for v15 through the existing CI health/version/revision gate. Two-service releases
+are not atomic; already-open older clients must refresh. No deployment performed.
+
+---
+
 # Daily/weekly challenges, durable guest gems and home polish
 
 Completed locally 2026-11-03. Stopped at this request. No commit, push or deployment.

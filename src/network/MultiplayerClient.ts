@@ -37,6 +37,8 @@ export class MultiplayerClient {
     for (const explosion of snapshot.explosions) if (this.firstCombatEvent(explosion.id)) this.onGrenade({ kind: 'explode', ...explosion });
   }
   onChat: (message: Extract<ServerMessage, { type: 'chat' }>) => void = () => {};
+  onSystem: (message: Extract<ServerMessage, { type: 'system' }>) => void = () => {};
+  private readonly systemEvents = new Set<string>();
   onChatError: (message: string) => void = () => {};
   private readonly combatEvents = new Set<string>();
   private firstCombatEvent(id: string): boolean {
@@ -255,6 +257,12 @@ export class MultiplayerClient {
       } else if (m.type === 'grenade') {
         const round = m.event.kind === 'throw' ? m.event.projectile.roundId : m.event.roundId;
         if (round === this.latest?.roundId && this.firstCombatEvent(m.event.id)) this.onGrenade(m.event);
+      } else if (m.type === 'system') {
+        if (!this.systemEvents.has(m.id)) {
+          this.systemEvents.add(m.id);
+          if (this.systemEvents.size > 256) this.systemEvents.delete(this.systemEvents.values().next().value!);
+          this.onSystem(m);
+        }
       } else if (m.type === 'chat') {
         this.onChat(m);
       } else if (m.type === 'shot') {

@@ -1,0 +1,21 @@
+<!doctype html>
+<html><head><title>Explosion render fixture</title><style>html,body,canvas{margin:0;width:100%;height:100%;overflow:hidden}</style></head>
+<body><canvas id="render"></canvas><script type="module">
+import { Engine, Scene, FreeCamera, Vector3, Color3, Color4, HemisphericLight, DirectionalLight, MeshBuilder, StandardMaterial } from '@babylonjs/core';
+import { GrenadeView } from '../src/weapons/GrenadeView';
+import { CollisionWorld } from '../src/physics/CollisionWorld';
+import { meshesReady } from '../src/core/assetReadiness';
+const engine = new Engine(document.querySelector('canvas'),true,{preserveDrawingBuffer:true});
+const scene = new Scene(engine);scene.clearColor=new Color4(.48,.67,.85,1);
+const camera=new FreeCamera('camera',new Vector3(5,3.5,-7),scene);camera.setTarget(new Vector3(0,1,0));camera.minZ=.1;
+const fill=new HemisphericLight('sky',Vector3.Up(),scene);fill.intensity=.7;
+const sun=new DirectionalLight('sun',new Vector3(-1,-2,1),scene);sun.intensity=.9;
+const material=new StandardMaterial('rough concrete',scene);material.diffuseColor=new Color3(.35,.35,.32);material.specularColor=Color3.Black();
+const floor=MeshBuilder.CreateGround('floor',{width:30,height:30},scene);floor.material=material;
+const wall=MeshBuilder.CreateBox('wall',{width:8,height:3,depth:.3},scene);wall.position.set(0,1.5,3);wall.material=material;
+const effect=new GrenadeView(scene),world=new CollisionWorld();
+await meshesReady(scene.meshes);
+const event={id:'render-fixture',grenadeId:'fixture',ownerId:'fixture',ownerLife:1,roundId:1,at:1000,position:{x:0,y:.1,z:0},hits:[]};
+const lab={async frame(age,reduced=false){effect.clear();effect.setReduced(reduced);effect.explode(event,1000+age);effect.update(0,1000+age,world);await meshesReady(scene.meshes);scene.render();return effect.inspect();}};
+await lab.frame(1000);window.lab=lab;
+</script></body></html>

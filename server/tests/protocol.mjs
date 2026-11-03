@@ -10,7 +10,7 @@ import {verifyRelease} from '../../tools/verify-release.mjs';
 
 test('real frontend transport is compatible with the production Worker messages',{timeout:30000},async()=>{
   const origin='http://localhost:5173',revision='a'.repeat(40),sent=[],received=[],clients=[],sockets=[];
-  const original={window:globalThis.window,WebSocket:globalThis.WebSocket};
+  const original={window:globalThis.window,WebSocket:globalThis.WebSocket,sessionStorage:globalThis.sessionStorage};
   const vite=await createServer({configFile:false,server:{middlewareMode:true,hmr:false,ws:false,watch:null},optimizeDeps:{noDiscovery:true},appType:'custom'});
   const mf=new Miniflare(convertV4MiniflareOptions({name:'protocol-compatibility',
     modules:[{type:'ESModule',path:fileURLToPath(new URL('../dist/index.js',import.meta.url))}],
@@ -31,8 +31,14 @@ test('real frontend transport is compatible with the production Worker messages'
       send(raw,...args){sent.push(raw);super.send(raw,...args);}
     }
     globalThis.window=globalThis;globalThis.WebSocket=BrowserSocket;
-    const a=new MultiplayerClient(url,'Release client A'),b=new MultiplayerClient(url,'Release client B');clients.push(a,b);
-    await Promise.all([a.connect(),b.connect()]);assert.notEqual(a.selfId,b.selfId);
+    const stored=new Map();globalThis.sessionStorage={getItem:k=>stored.get(k)??null,setItem:(k,v)=>stored.set(k,v),removeItem:k=>stored.delete(k)};
+    const a=new MultiplayerClient(url,' <Release client A> ',{profileScope:()=> 'a'}),b=new MultiplayerClient(url,'Release client B',{profileScope:()=> 'b'});clients.push(a,b);
+    const joins=[];a.onSystem=m=>joins.push(m);
+    await a.connect();await b.connect();assert.notEqual(a.selfId,b.selfId);
+    await until(()=>joins.length===2,'Every genuine entry must announce to connected browsers');
+    assert.deepEqual(joins.map(m=>m.name),['Release client A','Release client B']);
+    assert.equal(joins[1].id,`join:${b.selfId}`);
+    assert.equal(a.latest.players.find(p=>p.id===a.selfId).alive,false,'Joining must not spawn before selection');
     assert.equal(a.latest.room,protocol.PUBLIC_ROOM);assert.ok(a.environment?.full);
     await Promise.all([a.spawn('rifle'),b.spawn('smg')]);
     for(const c of [a,b]){
@@ -51,6 +57,14 @@ test('real frontend transport is compatible with the production Worker messages'
     assert.ok(sent.some(raw=>JSON.parse(raw).type==='input'));assert.ok(received.some(raw=>JSON.parse(raw).type==='spawned'));
     const selfId=a.selfId;a.disconnect(false);await a.connect();assert.equal(a.selfId,selfId,'Real frontend resume retains server identity');
     assert.equal(a.latest.players.find(p=>p.id===selfId).weapon,'rifle');
+    await delay(150);assert.equal(joins.length,2,'Resuming/refreshing the same session must not announce twice');
+    const observer=[];b.onSystem=m=>observer.push(m);
+    a.disconnect(false);await a.connect();await delay(150);
+    assert.equal(observer.length,0,'Other peers must not see a join on repeated resume');
+    a.disconnect(false);
+    const refreshed=new MultiplayerClient(url,'Release client A',{profileScope:()=> 'a'});clients.push(refreshed);
+    await refreshed.connect();assert.equal(refreshed.selfId,selfId,'A new browser transport restores the persisted resume token');
+    await delay(150);assert.equal(observer.length,0,'Rapid refresh must not reannounce a session');
     const invalid=new WebSocket(url,{origin});sockets.push(invalid);const rejected=[];
     invalid.on('message',raw=>rejected.push(JSON.parse(String(raw))));
     await new Promise((resolve,reject)=>{invalid.once('open',resolve);invalid.once('error',reject);});
@@ -63,9 +77,15 @@ test('real frontend transport is compatible with the production Worker messages'
     await new Promise((resolve,reject)=>{malformed.once('open',resolve);malformed.once('error',reject);});
     malformed.send(JSON.stringify({v:protocol.PROTOCOL_VERSION,type:'join',name:'Invalid schema',health:100}));
     await until(()=>errors.some(m=>m.type==='error'&&m.fatal),'Worker must reject incompatible schemas even at the same version');
+    const forged=new WebSocket(url,{origin});sockets.push(forged);const denied=[];
+    forged.on('message',raw=>denied.push(JSON.parse(String(raw))));
+    await new Promise((resolve,reject)=>{forged.once('open',resolve);forged.once('error',reject);});
+    forged.send(JSON.stringify({v:protocol.PROTOCOL_VERSION,type:'system',kind:'player_joined',id:joins[0].id,name:'Server'}));
+    await until(()=>denied.some(m=>m.type==='error'&&m.fatal),'Worker rejects client-forged system messages');
+    assert.equal(observer.length,0);
   }finally{
     for(const c of clients)c.disconnect();for(const s of sockets)s.terminate();
-    globalThis.window=original.window;globalThis.WebSocket=original.WebSocket;
+    globalThis.window=original.window;globalThis.WebSocket=original.WebSocket;globalThis.sessionStorage=original.sessionStorage;
     await mf.dispose();await vite.close();
   }
 });

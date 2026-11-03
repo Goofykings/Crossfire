@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import { FreeCamera, NullEngine, Scene, Vector3 } from '@babylonjs/core';
+import { Constants, FreeCamera, NullEngine, Scene, Vector3 } from '@babylonjs/core';
 import { GrenadeView } from '../src/weapons/GrenadeView';
 import { CollisionWorld } from '../src/physics/CollisionWorld';
 
@@ -14,13 +14,33 @@ it('shows a just-received flash even after a slow frame, then cleans up by its a
       position:{x:0,y:.065,z:0},hits:[]});
     clock.mockReturnValue(10005);
     view.update(.2,10005,world); // Most of this frame elapsed BEFORE the event arrived.
-    const flashes=view.inspect().samples.filter(p=>p.flash);
-    expect(flashes).toHaveLength(2);
-    for(const p of flashes){expect(p.age).toBeCloseTo(.005);expect(p.color![3]).toBeGreaterThan(.7);}
+    const flash=view.inspect().burst.active[0];
+    expect(flash.age).toBeCloseTo(.005);
+    expect(flash.flash).toBeGreaterThan(.7);
+    expect(scene.getMaterialByName('explosion-additive')!.alphaMode).toBe(Constants.ALPHA_ADD);
+    expect(scene.lights.some(l=>l.intensity>0)).toBe(true);
     clock.mockReturnValue(10100);view.update(.2,10100,world);
-    expect(view.inspect().samples.filter(p=>p.flash)).toHaveLength(2);
+    expect(view.inspect().burst.active[0].flash).toBe(0);
+    expect(view.inspect().burst.active[0].fire).toBeGreaterThan(0);
     clock.mockReturnValue(10810);view.update(.001,10810,world);
     expect(view.inspect().particles).toBe(0); // Expire even if the simulation dt is clamped.
+    expect(view.inspect().burst.active).toHaveLength(0);
+    expect(view.inspect().clouds).toHaveLength(1);
+    for(let i=0;i<20;i++)view.explode({id:`burst:${i}`,grenadeId:`g:${i}`,ownerId:'fixture',ownerLife:1,roundId:0,at:10810,position:{x:0,y:0,z:0},hits:[]},10810);
+    view.update(0,10810,world);
+    expect(view.inspect().burst.active).toHaveLength(4);
+    expect(scene.lights).toHaveLength(2);
+    expect(scene.lights.every(l=>!l.shadowEnabled)).toBe(true);
+    view.setReduced(true);view.update(0,10930,world);
+    expect(view.inspect().burst.visibleFire).toBe(16);
+    expect(view.inspect().burst.visibleGlow).toBe(24);
+    view.setReduced(false);view.update(0,10930,world);
+    expect(view.inspect().burst.visibleFire).toBe(32);
+    expect(view.inspect().burst.visibleGlow).toBe(48);
     view.clear();expect(view.inspect().projectiles).toBe(0);
+    expect(view.inspect().burst.visibleFire).toBe(0);
+    expect(view.inspect().burst.visibleGlow).toBe(0);
+    expect(scene.lights.every(l=>l.includedOnlyMeshes.length===0)).toBe(true);
+    expect(view.inspect().burst.active).toHaveLength(0);
   } finally {view.dispose();engine.dispose();}
 });

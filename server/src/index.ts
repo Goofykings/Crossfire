@@ -442,6 +442,9 @@ export class PublicRoom extends DurableObject<Bindings> {
     if (old && old !== socket) old.close(4001, 'session_replaced');
     await this.persist();
     this.send(socket, { v: PROTOCOL_VERSION, type: 'welcome', selfId: e.session.id, resumeToken: e.session.token, resumed, snapshot: this.snapshot(true) });
+    // The persisted session/resume credential is the once-only announcement marker.
+    // Socket replacement, refresh, hibernation and round snapshots never replay it.
+    if (!resumed) this.publish({ v: PROTOCOL_VERSION, type: 'system', kind: 'player_joined', id: `join:${e.session.id}`, name: e.session.name });
     this.broadcast();
     await this.scheduleCleanup();
     this.start();

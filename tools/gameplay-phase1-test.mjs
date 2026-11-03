@@ -56,7 +56,8 @@ try {
       return {panel:rect(panel),head:rect(head),foot:rect(foot),scroll:panel.scrollTop,height:panel.clientHeight,total:panel.scrollHeight};
     });
     const before=await geometry();check(before.head.top>=0&&before.foot.bottom<=height&&before.height>35,`${width}x${height}: settings heading and footer fit`);
-    await a.hover('#panel-controls');await a.mouse.wheel({deltaY:3000});await delay(220);
+    await a.hover('#panel-controls');await a.mouse.wheel({deltaY:3000});
+    await until(async()=> (await geometry()).scroll>before.scroll,'browser applies controls wheel scrolling',10000);
     const after=await geometry();check(after.scroll>before.scroll&&after.foot.top===before.foot.top,`${width}x${height}: controls scroll independently`);
     await a.$eval('.control-reset-all',e=>e.scrollIntoView({block:'center'}));
     const reset=await a.$eval('.control-reset-all',e=>{const r=e.getBoundingClientRect();return {top:r.top,bottom:r.bottom};});
@@ -71,8 +72,8 @@ try {
   await a.click('[aria-label="Reset Reload"]');await a.click('.settings-foot .primary');
   check((await a.evaluate(()=>window.__crossfire.settings())).keyBindings.reload[0]==='KeyR','individual reset restores R reload');
   await a.click('.settings-foot .btn:nth-last-child(2)');
-  await a.click('#menu .home-actions .primary');await a.waitForSelector('#weapons.visible',{timeout:60000});
-  await a.click('.weapon-back');await until(()=>a.evaluate(()=>window.__crossfire.state()==='menu'),'cancel early loadout selection');
+  await a.click('#menu .home-actions .primary');await a.waitForSelector('#weapons.visible',{timeout:240000});
+  await a.click('.weapon-back');await until(()=>a.evaluate(()=>window.__crossfire.state()==='menu'),'cancel prepared loadout selection');
   await delay(300);
   check(await a.evaluate(()=>window.__transport.spawns.length===0&&window.__transport.sockets.every(s=>s.readyState>=2)),
     'Back cancels loading and the real connection without spawning');

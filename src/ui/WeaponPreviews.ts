@@ -1,3 +1,4 @@
+import { meshesReady } from '../core/assetReadiness';
 import { loadContainer } from '../core/loadContainer';
 import { abortable } from '../core/cancellation';
 import { ArcRotateCamera, Color3, Color4, DirectionalLight, Engine, HemisphericLight, Scene, Vector3 } from '@babylonjs/core';
@@ -7,7 +8,7 @@ import { RIG_CONFIGS } from '../weapons/WeaponView';
 import type { WeaponId } from '../weapons/Weapon';
 
 /** Render the existing assets once, then release the preview GPU resources. */
-export async function weaponPreviews(onPreview: (id: WeaponId, url: string) => void, signal?: AbortSignal): Promise<void> {
+export async function weaponPreviews(onPreview: (id: WeaponId, url: string) => Promise<void>, signal?: AbortSignal): Promise<void> {
   const canvas = document.createElement('canvas');
   canvas.width = 960;
   canvas.height = 460;
@@ -38,10 +39,11 @@ export async function weaponPreviews(onPreview: (id: WeaponId, url: string) => v
       const size = bounds.max.subtract(bounds.min);
       camera.setTarget(bounds.min.add(bounds.max).scale(0.5));
       camera.radius = Math.max(size.y, size.z / engine.getAspectRatio(camera), size.x / engine.getAspectRatio(camera)) / (2 * Math.tan(camera.fov / 2)) * 1.3;
-      await abortable(scene.whenReadyAsync(), signal);
+      await materials.ready(signal);
+      await meshesReady(container.meshes, signal);
       signal?.throwIfAborted();
       scene.render();
-      onPreview(cfg.id, canvas.toDataURL('image/png'));
+      await abortable(onPreview(cfg.id, canvas.toDataURL('image/png')), signal);
       container.dispose();
     }
   } finally { scene.dispose(); engine.dispose(); }

@@ -297,7 +297,7 @@ export class Game {
       signal?.throwIfAborted();
       this.ui.setLoading(0, 'Loading weapon materials');
       await this.materials.ready(signal);
-      await weaponPreviews((id, url) => this.ui.setWeaponPreview(id, url), signal);
+      await weaponPreviews((id, url) => this.ui.setWeaponPreview(id, url, signal), signal);
       signal?.throwIfAborted();
       this.ui.setWeaponName(this.weapon.stats.name);
     })().catch((error) => {
@@ -413,6 +413,9 @@ export class Game {
           if (signal.aborted || this.network !== network) return;
           this.ui.addChat(message.name, message.text);
         };
+        network.onSystem = message => {
+          if (!signal.aborted && this.network === network) this.ui.addChat('Server', `${message.name} joined.`, true);
+        };
         network.onChatError = (message) => { if (!signal.aborted && this.network === network) this.ui.showToast(message, 'warn'); };
         network.onShot = (shot) => {
           if (signal.aborted || this.network !== network) return;
@@ -503,13 +506,7 @@ export class Game {
       this.weaponView?.setVisible(false);
       this.ui.setScope(0);
       this.remotePlayers.clear();
-      const joining = network.latest?.players.find((p) => p.id === network.selfId);
-      if (joining && !joining.alive && !joining.death) {
-        // Offer the loadout as soon as the connection is established. Assets
-        // continue loading in parallel; choosing early waits for this same load.
-        this.ui.setSpawnState(joining.life > 0);
-        this.ui.openWeaponSelection();
-      } else this.ui.show('loading');
+      this.ui.show('loading');
       await this.prepareGameAssets(signal);
       signal.throwIfAborted();
       while (network.state === 'connected' && network.latest && this.network === network) {
@@ -651,15 +648,6 @@ export class Game {
   }
 
   private async spawnSelected(): Promise<void> {
-    if (this.state === 'loading' && this.ui.currentScreen === 'weapons' && !this.ui.spawnPending) {
-      this.ui.show('loading');
-      const network = this.network, signal = this.joinAbort?.signal;
-      this.ui.setSpawnState(false, true);
-      try { await this.prepareNetworkMap(); }
-      catch { return; } // The existing join/map owner presents load failures.
-      if (signal?.aborted || this.network !== network || !this.networkReady) return;
-      return this.spawnSelected();
-    }
     const spectating = this.state === 'spectating';
     if (spectating ? this.ui.currentScreen !== 'spectate' : this.state !== 'start'
       || (this.ui.currentScreen !== 'start' && this.ui.currentScreen !== 'weapons') || this.ui.spawnPending) return;

@@ -1,3 +1,15 @@
+## Explosion, readiness and join chat (2026-11-03)
+
+Current shared protocol is v15; see docs/EXPLOSION_LOADING_CHAT.md and latest
+PROGRESS.md. This supersedes earlier early-weapon-selection requirements: keep
+Loading until map/assets/materials/shaders and all four decoded previews are ready.
+Only then show selection; send the existing authoritative spawn request on choice.
+Server-only system/player_joined frames announce new persisted sessions once;
+resumes/refreshes never announce. Keep system rows distinct from player chat.
+ExplosionBurst is presentation-only, bounded and uses authoritative event age;
+keep existing smoke timing, damage and collision unchanged. Both services need a
+coordinated release through existing CI. No deployment was performed locally.
+
 ## Daily/weekly challenges and guest wallets (2026-11-03)
 
 Current protocol is v14; see docs/CHALLENGES.md and newest PROGRESS.md. Shared

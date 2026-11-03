@@ -1,3 +1,4 @@
+import { ExplosionBurst } from './ExplosionBurst';
 import { Color3, Color4, Scene as BabylonScene, MeshBuilder, SolidParticleSystem, StandardMaterial, Texture, TransformNode,
   Vector3, type AssetContainer, type Scene } from '@babylonjs/core';
 import { assetUrl } from '../core/assets';
@@ -8,8 +9,9 @@ import { GRENADE_SMOKE_MS } from '../../shared/grenades';
 import { smokeEnvelope, smokeRadius, smokeInterior, smokeObscures } from './grenadeSmoke';
 import type { CollisionWorld } from '../physics/CollisionWorld';
 
-/** Shared GLB plus two bounded billboard batches; effects never change damage or physics. */
+/** Shared GLB, pooled fiery burst and bounded smoke batches; presentation never changes damage/physics. */
 export class GrenadeView {
+  private readonly burst: ExplosionBurst;
   private container: AssetContainer | null = null;
   private readonly objects = new Map<string, { root: TransformNode; state: GrenadeState; smoke: number; authority: number }>();
   private readonly particles: SolidParticleSystem;
@@ -27,6 +29,7 @@ export class GrenadeView {
   private readonly cloudParticles: SolidParticleSystem;
   private readonly cloudMaterial: StandardMaterial;
   constructor(private readonly scene: Scene) {
+    this.burst = new ExplosionBurst(scene);
     this.material = new StandardMaterial('grenade-fx', scene);
     this.material.diffuseTexture = new Texture(assetUrl('assets/textures/shared/fx/glow.png'), scene);
     this.material.diffuseTexture.hasAlpha = true;
@@ -38,7 +41,7 @@ export class GrenadeView {
     this.particles.addShape(plane, this.lives.length); plane.dispose();
     this.particles.billboard = true;
     const mesh = this.particles.buildMesh(); mesh.material = this.material;
-    mesh.hasVertexAlpha = true; mesh.isPickable = false; mesh.alwaysSelectAsActiveMesh = true;
+    mesh.alphaIndex = 19; mesh.hasVertexAlpha = true; mesh.isPickable = false; mesh.alwaysSelectAsActiveMesh = true;
     for (const p of this.particles.particles) { p.scaling.setAll(0); p.color = new Color4(1, 1, 1, 0); }
     this.particles.setParticles();
     this.cloudMaterial = this.material.clone('grenade-smoke');
@@ -48,7 +51,7 @@ export class GrenadeView {
     this.cloudParticles.addShape(source, 12 * 32); source.dispose();
     this.cloudParticles.billboard = true;
     const clouds = this.cloudParticles.buildMesh(); clouds.material = this.cloudMaterial;
-    clouds.hasVertexAlpha = true; clouds.isPickable = false; clouds.alwaysSelectAsActiveMesh = true;
+    clouds.alphaIndex = 20; clouds.hasVertexAlpha = true; clouds.isPickable = false; clouds.alwaysSelectAsActiveMesh = true;
     for (const p of this.cloudParticles.particles) { p.scaling.setAll(0); p.color = new Color4(.43, .45, .47, 0); }
     this.cloudParticles.setParticles();
     // Depth-dependent fog only while physically inside a cloud, blended at its
@@ -70,6 +73,7 @@ export class GrenadeView {
   }
   setReduced(value: boolean): void { this.reduced = value; }
   async load(materials: MaterialLibrary, signal?: AbortSignal): Promise<void> {
+    await this.burst.ready(signal);
     this.container = await loadContainer(assetUrl('assets/models/shared/weapons/grenade.glb'), this.scene, signal);
     for (const mesh of this.container.meshes) if (mesh.material) mesh.material = materials.get(mesh.material.name);
   }
@@ -98,12 +102,13 @@ export class GrenadeView {
     object?.root.dispose(); this.objects.delete(event.grenadeId);
     // Expand the brief flash/burst separately from the seven-second smoke;
     // presentation sizes never change the authoritative blast radius.
+    this.burst.explode(event, serverTime);
     if (serverTime - event.at > 300) return; // Do not replay expired flash/debris on resume.
     const scale = 4;
     for (let i = 0; i < 5; i++) this.emit(event.position, .35, .035 * scale, false,
       new Vector3((Math.random() - .5) * 5, 2 + Math.random() * 2, (Math.random() - .5) * 5).scaleInPlace(scale), true);
     for (let i = 0; i < 18; i++) {
-      const flash = i < 2;
+      const flash = false; // The dedicated additive burst owns the flash.
       this.emit(event.position, flash ? .19 : .55 + Math.random() * .25, (flash ? .75 : .16) * scale,
         flash, new Vector3((Math.random() - .5) * 3, Math.random() * 2, (Math.random() - .5) * 3).scaleInPlace(scale));
     }
@@ -141,6 +146,7 @@ export class GrenadeView {
       p.color!.a = (data.flash ? .8 : .24) * (1 - t) ** 2;
     }
     this.particles.setParticles();
+    this.burst.update(serverTime, this.reduced);
     this.serverTime = serverTime;
     this.inside = 0;
     const eye = this.scene.activeCamera?.globalPosition;
@@ -172,7 +178,7 @@ export class GrenadeView {
   }
   inspect() {
     const mesh=this.particles.mesh;
-    return { clouds: [...this.clouds.values()].map(c => ({ id:c.id, age:this.serverTime-c.at, opacity:smokeEnvelope(this.serverTime-c.at), position:c.position })), inside:this.inside, reduced:this.reduced, cloudBudget:this.cloudParticles.nbParticles, projectiles: this.objects.size, particles: this.lives.filter((p) => p.life > 0).length,
+    return { burst: this.burst.inspect(this.serverTime), clouds: [...this.clouds.values()].map(c => ({ id:c.id, age:this.serverTime-c.at, opacity:smokeEnvelope(this.serverTime-c.at), position:c.position })), inside:this.inside, reduced:this.reduced, cloudBudget:this.cloudParticles.nbParticles, projectiles: this.objects.size, particles: this.lives.filter((p) => p.life > 0).length,
       rendering: { active:this.scene.getActiveMeshes().data.includes(mesh),enabled:mesh.isEnabled(),visible:mesh.isVisible,
         ready:mesh.isReady(),alpha:mesh.hasVertexAlpha,texture:this.material.diffuseTexture?.isReady(),disposed:mesh.isDisposed(),
         blending:this.material.needAlphaBlendingForMesh(mesh),vertices:mesh.getTotalVertices() },
@@ -180,6 +186,7 @@ export class GrenadeView {
         color:this.particles.particles[i].color?.asArray(),size:this.particles.particles[i].scaling.x}]:[]).slice(-24) };
   }
   clear(): void {
+    this.burst.clear();
     this.clouds.clear(); this.seen.clear(); this.inside = 0; this.restoreFog();
     for (const p of this.cloudParticles.particles) { p.scaling.setAll(0); p.color!.a = 0; }
     this.cloudParticles.setParticles();
@@ -189,5 +196,5 @@ export class GrenadeView {
     this.particles.setParticles();
   }
   dispose(): void { this.clear(); this.scene.onBeforeRenderObservable.remove(this.before); this.scene.onAfterRenderObservable.remove(this.after);
-    this.container?.dispose(); this.cloudParticles.dispose(); this.cloudMaterial.dispose(); this.particles.dispose(); this.material.dispose(true, true); }
+    this.burst.dispose(); this.container?.dispose(); this.cloudParticles.dispose(); this.cloudMaterial.dispose(); this.particles.dispose(); this.material.dispose(true, true); }
 }
