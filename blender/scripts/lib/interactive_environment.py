@@ -4,6 +4,7 @@ import math
 from meshkit import MeshData, Transform
 import props
 import kit
+import produce
 
 
 def apple():
@@ -13,13 +14,28 @@ def apple():
     m.face([(.005,.081,0),(.032,.089,.009),(.043,.081,.006),(.018,.078,-.003)], 'steel_green')
     return m
 
+def pear():
+    m=MeshData();m.sphere((0,-.015,0),.060,'paint_yellow',rings=6,segments=10)
+    m.sphere((0,.033,0),.036,'paint_yellow',rings=5,segments=10)
+    m.tube((0,.064,0),(.008,.09,0),.004,'wood_dark',segments=5)
+    return m
+
 
 def sign_panel(index):
     m=MeshData();m.merge(kit.hanging_sign(index,mount=False),Transform(0,.06,.53));return m
 
+def hanging_light():
+    m=MeshData();m.tube((0,0,0),(0,-.28,0),.012,'iron',segments=6)
+    m.cylinder((0,-.32,0),.15,.06,'iron',segments=10,radius_top=.065)
+    m.cylinder((0,-.47,0),.10,.15,'lantern_glass',segments=10)
+    m.cylinder((0,-.49,0),.13,.025,'iron',segments=10)
+    for k in range(4):
+        a=k*math.pi/2;m.tube((math.cos(a)*.115,-.47,math.sin(a)*.115),(math.cos(a)*.115,-.32,math.sin(a)*.115),.008,'iron',segments=4)
+    return m
+
 
 def assets():
-    result = {'apple': apple, 'loose_crate': lambda: props.crate(.32,7),
+    result = {'apple': apple,'pear':pear,'hanging_light':hanging_light,'loose_crate': lambda: props.crate(.32,7),
               'loose_barrel': lambda: props.barrel(.40,.19,8)}
     for i in range(8):
         result[f'sign_{i}'] = lambda i=i: sign_panel(i)
@@ -35,17 +51,19 @@ def stall_boxes():
     for z in [-.7,-.2,.3,.7]: box([0,2.35+(z+.8)/1.6*.25,z],[1.4,.035,.26])
     for i in range(3):
         x=-.8+i*.8
-        box([x,.95,-.4],[.36,.02,.30])
+        # Conservative player/bullet shell; decorative spheres use the exact
+        # tapered interior planes authored below instead of these broad slabs.
+        boxes.append({'c':[x,.865,-.4],'h':[.325,.015,.265],'yaw':0,'tag':'interactive-bin'})
         for side in [-1,1]:
-            box([x+side*.3475,.935,-.4],[.0125,.085,.3])
-            box([x,.935,-.4+side*.2875],[.36,.085,.0125])
+            boxes.append({'c':[x+side*.3425,.975,-.4],'h':[.0425,.125,.325],'yaw':0,'tag':'interactive-bin'})
+            boxes.append({'c':[x,.975,-.4+side*.2825],'h':[.385,.125,.0425],'yaw':0,'tag':'interactive-bin'})
     box([-.7,.275,.45],[.275,.275,.275])
     box([.75,.35,.45],[.24,.35,.24])
     return boxes
 
 
 def map_data(layout, collision, catalog):
-    data={'version':1,'bodies':[],'signs':[],'replaceProps':[]}
+    data={'version':1,'bodies':[],'signs':[],'lights':[],'basins':[],'replaceProps':[]}
     solids=list(collision['boxes'])
     for i,p in enumerate(layout['props']+layout['obstacles']):
         xf=Transform(*p['pos'],yaw=-math.radians(p['heading']))
@@ -54,11 +72,18 @@ def map_data(layout, collision, catalog):
             for b in stall_boxes():
                 converted.append({**b,'c':list(xf.point(b['c'])),'yaw':-math.radians(p['heading'])})
             data['replaceProps'].append({'index':i,'boxes':converted});solids+=converted
-            for bin_index in range(2):
-                for k in range(3):
-                    data['bodies'].append({'id':f'apple-{i}-{bin_index}-{k}','asset':'apple',
-                        'position':list(xf.point((-.8+bin_index*.8+(k-1)*.18,1.045,-.4))),
-                        'radius':.075,'halfHeight':.075,'mass':.16,'yaw':0})
+            for bin_index in range(3):
+                data['basins'].append({'position':list(xf.point((-.8+bin_index*.8,produce.FLOOR,-.4))),
+                    'yaw':-math.radians(p['heading']),'halfWidth':produce.HALF_X,'halfDepth':produce.HALF_Z,
+                    'height':produce.RIM-produce.FLOOR,'flare':produce.FLARE})
+                cluster=produce.pile(bin_index)
+                if bin_index:cluster=cluster[1:4 if bin_index==1 else 3]
+                asset='pear' if bin_index==1 else 'apple'
+                for k,(x,y,z) in enumerate(cluster):
+                    data['bodies'].append({'id':f'{asset}-{i}-{bin_index}-{k}','asset':asset,
+                        'position':list(xf.point((-.8+bin_index*.8+x,y,-.4+z))),
+                        'radius':.075,'halfHeight':.075,'mass':.16,'yaw':.73*k+bin_index,
+                        'tilt':[.22+k*.31,-.48+bin_index*.26+k*.17]})
             continue
         size=catalog['props'].get(p['type'],{}).get('collider')
         if size:
@@ -84,6 +109,12 @@ def map_data(layout, collision, catalog):
         data['bodies'].append({'id':f'loose-{n}','asset':asset,'position':[candidate[0],half+.001,candidate[1]],
                               'radius':radius,'halfHeight':half,'mass':mass,'yaw':.15*n})
         solids.append({'c':[candidate[0],half,candidate[1]],'h':[radius,half,radius],'yaw':0})
+    # One selected interior fixture per map; its plate remains in the static
+    # ceiling mesh, while the chain/cage rotates about this actual suspension.
+    from circulation import point,dimensions
+    b=next(b for b in layout['buildings'] if b.get('circulation'));w,d=dimensions(b)
+    data['lights'].append({'id':'light-'+b['id'],'asset':'hanging_light',
+        'position':point(b,w-.95,3.,d-2),'yaw':0})
     return data
 
 

@@ -1,7 +1,7 @@
 {
  "generator": "blender/scripts/generate_all.py",
  "blender": "5.2.3 LTS",
- "generated": "2026-11-01 15:28:17",
+ "generated": "2026-11-02 23:09:40",
  "assets": [
   {
    "path": "assets/characters/player-albedo.png",
@@ -83,10 +83,10 @@
   {
    "path": "assets/models/european-town/buildings/block_06.glb",
    "kind": "map-buildings",
-   "bytes": 425048,
+   "bytes": 397156,
    "description": "3 buildings: B21 (narrow_passage), B25 (room), B30 (shop)",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 8249
+   "triangles": 7319
   },
   {
    "path": "assets/models/european-town/buildings/block_07.glb",
@@ -99,7 +99,7 @@
   {
    "path": "assets/models/european-town/buildings/block_08.glb",
    "kind": "map-buildings",
-   "bytes": 206372,
+   "bytes": 206348,
    "description": "1 buildings: B27 (plaster3)",
    "script": "blender/scripts/generate_all.py",
    "triangles": 3532
@@ -131,22 +131,22 @@
   {
    "path": "assets/models/european-town/collision.json",
    "kind": "collision",
-   "bytes": 65819,
-   "description": "796 oriented collision boxes (runtime physics)",
+   "bytes": 75536,
+   "description": "903 oriented collision boxes (runtime physics)",
    "script": "blender/scripts/lib/collision_gen.py"
   },
   {
    "path": "assets/models/european-town/collision_debug.glb",
    "kind": "collision-debug",
-   "bytes": 927332,
+   "bytes": 1058256,
    "description": "Collision boxes as meshes for in-game debug view (F2)",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 9552
+   "triangles": 10836
   },
   {
    "path": "assets/models/european-town/environment.json",
    "kind": "interactive-definitions",
-   "bytes": 7726,
+   "bytes": 9757,
    "description": "Shared authored prop bodies, sign hinges and precise stall collision",
    "script": "blender/scripts/lib/interactive_environment.py"
   },
@@ -160,10 +160,10 @@
   {
    "path": "assets/models/european-town/terrain.glb",
    "kind": "map-terrain",
-   "bytes": 263796,
+   "bytes": 263848,
    "description": "Streets, plaza, courts, terraces, stairs, garden walls, gates and flying arches",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 5188
+   "triangles": 5190
   },
   {
    "path": "assets/models/industrial-complex/buildings/block_01.glb",
@@ -208,10 +208,10 @@
   {
    "path": "assets/models/industrial-complex/buildings/block_06.glb",
    "kind": "map-buildings",
-   "bytes": 428548,
+   "bytes": 404372,
    "description": "7 buildings: I29 (workshop), I30 (shed), I31 (shed), I32 (shed), I34 (shed), I36 (workshop), I37 (warehouse)",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 6252
+   "triangles": 5579
   },
   {
    "path": "assets/models/industrial-complex/buildings/block_07.glb",
@@ -240,22 +240,22 @@
   {
    "path": "assets/models/industrial-complex/collision.json",
    "kind": "collision",
-   "bytes": 15557,
-   "description": "195 oriented collision boxes (runtime physics)",
+   "bytes": 25654,
+   "description": "306 oriented collision boxes (runtime physics)",
    "script": "blender/scripts/lib/collision_gen.py"
   },
   {
    "path": "assets/models/industrial-complex/collision_debug.glb",
    "kind": "collision-debug",
-   "bytes": 222116,
+   "bytes": 357224,
    "description": "Collision boxes as meshes for in-game debug view (F2)",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 2340
+   "triangles": 3672
   },
   {
    "path": "assets/models/industrial-complex/environment.json",
    "kind": "interactive-definitions",
-   "bytes": 464,
+   "bytes": 642,
    "description": "Shared authored prop bodies, sign hinges and precise stall collision",
    "script": "blender/scripts/lib/interactive_environment.py"
   },
@@ -269,7 +269,7 @@
   {
    "path": "assets/models/industrial-complex/terrain.glb",
    "kind": "map-terrain",
-   "bytes": 502476,
+   "bytes": 502472,
    "description": "Asphalt and concrete yards, loading docks, stairs, railings, fences, canopies, pipe bridges, road paint",
    "script": "blender/scripts/generate_all.py",
    "triangles": 8348
@@ -309,10 +309,10 @@
   {
    "path": "assets/models/modern-city/buildings/block_05.glb",
    "kind": "map-buildings",
-   "bytes": 801088,
+   "bytes": 815284,
    "description": "8 buildings: C06 (backdrop), C07 (backdrop), C09 (apartment), C15 (apartment), C20 (storefront), C21 (apartment), C26 (commercial), C24 (apartment)",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 18348
+   "triangles": 19250
   },
   {
    "path": "assets/models/modern-city/buildings/block_06.glb",
@@ -333,30 +333,30 @@
   {
    "path": "assets/models/modern-city/buildings/block_08.glb",
    "kind": "map-buildings",
-   "bytes": 865356,
+   "bytes": 905084,
    "description": "8 buildings: C29 (commercial), C38 (apartment), C28 (storefront), C37 (apartment), C36 (apartment), C27 (apartment), C31 (apartment), C35 (apartment)",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 19314
+   "triangles": 18814
   },
   {
    "path": "assets/models/modern-city/collision.json",
    "kind": "collision",
-   "bytes": 13533,
-   "description": "169 oriented collision boxes (runtime physics)",
+   "bytes": 23993,
+   "description": "284 oriented collision boxes (runtime physics)",
    "script": "blender/scripts/lib/collision_gen.py"
   },
   {
    "path": "assets/models/modern-city/collision_debug.glb",
    "kind": "collision-debug",
-   "bytes": 193260,
+   "bytes": 333440,
    "description": "Collision boxes as meshes for in-game debug view (F2)",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 2028
+   "triangles": 3408
   },
   {
    "path": "assets/models/modern-city/environment.json",
    "kind": "interactive-definitions",
-   "bytes": 458,
+   "bytes": 624,
    "description": "Shared authored prop bodies, sign hinges and precise stall collision",
    "script": "blender/scripts/lib/interactive_environment.py"
   },
@@ -370,10 +370,10 @@
   {
    "path": "assets/models/modern-city/terrain.glb",
    "kind": "map-terrain",
-   "bytes": 608480,
+   "bytes": 625452,
    "description": "Roads, sidewalks and curbs, crossings, alleys, plazas, garden walls, railings, overhead wires",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 10178
+   "triangles": 10394
   },
   {
    "path": "assets/models/shared/buildings/archway_v1.glb",
@@ -512,6 +512,14 @@
    "triangles": 118
   },
   {
+   "path": "assets/models/shared/environment/hanging_light.glb",
+   "kind": "interactive-prop",
+   "bytes": 15456,
+   "description": "Original low-poly interactive hanging_light",
+   "script": "blender/scripts/lib/interactive_environment.py",
+   "triangles": 176
+  },
+  {
    "path": "assets/models/shared/environment/loose_barrel.glb",
    "kind": "interactive-prop",
    "bytes": 19536,
@@ -526,6 +534,14 @@
    "description": "Original low-poly interactive loose_crate",
    "script": "blender/scripts/lib/interactive_environment.py",
    "triangles": 180
+  },
+  {
+   "path": "assets/models/shared/environment/pear.glb",
+   "kind": "interactive-prop",
+   "bytes": 19332,
+   "description": "Original low-poly interactive pear",
+   "script": "blender/scripts/lib/interactive_environment.py",
+   "triangles": 196
   },
   {
    "path": "assets/models/shared/environment/sign_0.glb",
@@ -1090,10 +1106,10 @@
   {
    "path": "assets/models/shared/props/market_stall.glb",
    "kind": "prop",
-   "bytes": 71500,
+   "bytes": 53904,
    "description": "market_stall (2.6 x 2.6 x 1.6 m)",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 1053
+   "triangles": 861
   },
   {
    "path": "assets/models/shared/props/market_table.glb",
@@ -1503,14 +1519,14 @@
   {
    "path": "blender/source/environment.blend",
    "kind": "blend",
-   "bytes": 130951,
+   "bytes": 140441,
    "description": "Editable apples, loose props and hinged shop panels",
    "script": "blender/scripts/generate_all.py"
   },
   {
    "path": "blender/source/european-town.blend",
    "kind": "blend",
-   "bytes": 1667263,
+   "bytes": 1671983,
    "description": "Editable source: buildings, terrain, collision, markers, prop preview",
    "script": "blender/scripts/generate_all.py"
   },
@@ -1524,14 +1540,14 @@
   {
    "path": "blender/source/industrial-complex.blend",
    "kind": "blend",
-   "bytes": 1237904,
+   "bytes": 1262327,
    "description": "Editable source: buildings, terrain, collision, markers, prop preview",
    "script": "blender/scripts/generate_all.py"
   },
   {
    "path": "blender/source/modern-city.blend",
    "kind": "blend",
-   "bytes": 1362304,
+   "bytes": 1400538,
    "description": "Editable source: buildings, terrain, collision, markers, prop preview",
    "script": "blender/scripts/generate_all.py"
   },
@@ -1545,7 +1561,7 @@
   {
    "path": "blender/source/props.blend",
    "kind": "blend",
-   "bytes": 712474,
+   "bytes": 705854,
    "description": "Editable source: all street props",
    "script": "blender/scripts/generate_all.py"
   },

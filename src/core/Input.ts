@@ -89,7 +89,7 @@ export class Input {
       canvas,
       'wheel',
       (e) => {
-        if (!this.enabled || e.deltaY === 0) return;
+        if (!this.enabled || e.defaultPrevented || e.deltaY === 0) return;
         e.preventDefault();
         this.pressedEdges.add(e.deltaY > 0 ? 'nextWeapon' : 'prevWeapon');
       },

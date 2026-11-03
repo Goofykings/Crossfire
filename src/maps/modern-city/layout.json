@@ -1,7 +1,7 @@
 {
  "id": "modern-city",
  "name": "Modern City",
- "version": 2,
+ "version": 3,
  "style": "modern",
  "units": "metres; +x east, +z south, +y up (glTF / Babylon right-handed). Rects are [x0, z0, x1, z1].",
  "playArea": [
@@ -260,7 +260,7 @@
     "rect": [
      8,
      6,
-     12,
+     13.9,
      9
     ],
     "height": 0.0,
@@ -502,50 +502,10 @@
     "id": "south_shop",
     "kind": "interior",
     "rect": [
-     6.3,
-     9.3,
-     13.7,
-     17.7
-    ]
-   },
-   {
-    "id": "south_shop_door0",
-    "kind": "doorway",
-    "rect": [
-     9.1,
-     9,
-     10.9,
-     9.3
-    ]
-   },
-   {
-    "id": "south_shop_door1",
-    "kind": "doorway",
-    "rect": [
-     13.7,
-     13.1,
-     14,
-     14.9
-    ]
-   },
-   {
-    "id": "south_shop_door2",
-    "kind": "doorway",
-    "rect": [
-     9.1,
-     17.7,
-     10.9,
-     18
-    ]
-   },
-   {
-    "id": "south_shop_door3",
-    "kind": "doorway",
-    "rect": [
      6,
-     11.6,
-     6.3,
-     13.4
+     13.8,
+     14,
+     15.8
     ]
    },
    {
@@ -563,9 +523,9 @@
     "kind": "passage",
     "rect": [
      1,
-     11,
+     13.3,
      6,
-     14
+     16.3
     ]
    },
    {
@@ -596,6 +556,66 @@
      18,
      6,
      25
+    ]
+   },
+   {
+    "id": "south_shop_door0",
+    "kind": "doorway",
+    "rect": [
+     6,
+     13.75,
+     6.3,
+     15.85
+    ]
+   },
+   {
+    "id": "south_shop_door1",
+    "kind": "doorway",
+    "rect": [
+     13.7,
+     13.75,
+     14.0,
+     15.85
+    ]
+   },
+   {
+    "id": "south_shop_door2",
+    "kind": "doorway",
+    "rect": [
+     11.65,
+     9,
+     13.75,
+     9.3
+    ]
+   },
+   {
+    "id": "south_shop_door3",
+    "kind": "doorway",
+    "rect": [
+     8.95,
+     17.7,
+     11.05,
+     18.0
+    ]
+   },
+   {
+    "id": "C28_circulation_0",
+    "kind": "interior",
+    "rect": [
+     11.65,
+     9,
+     13.75,
+     14.8
+    ]
+   },
+   {
+    "id": "C28_circulation_1",
+    "kind": "interior",
+    "rect": [
+     8.95,
+     14.8,
+     11.05,
+     18
     ]
    }
   ]
@@ -1538,9 +1558,9 @@
     {
      "rect": [
       1,
-      11,
+      13.3,
       6,
-      14
+      16.3
      ],
      "style": "portal",
      "clear": 3.4
@@ -1574,55 +1594,73 @@
       13.7,
       17.7
      ],
-     "clear": 3.3,
+     "clear": 5.82,
      "doors": [
       {
-       "side": "n",
+       "side": "w",
        "rect": [
-        9.1,
-        9,
-        10.9,
-        9.3
+        6,
+        13.75,
+        6.3,
+        15.85
        ],
-       "height": 2.6,
+       "height": 2.5,
        "kind": "doorway"
       },
       {
        "side": "e",
        "rect": [
         13.7,
-        13.1,
-        14,
-        14.9
+        13.75,
+        14.0,
+        15.85
        ],
-       "height": 2.6,
+       "height": 2.5,
+       "kind": "doorway"
+      },
+      {
+       "side": "n",
+       "rect": [
+        11.65,
+        9,
+        13.75,
+        9.3
+       ],
+       "height": 2.5,
        "kind": "doorway"
       },
       {
        "side": "s",
        "rect": [
-        9.1,
+        8.95,
         17.7,
-        10.9,
-        18
+        11.05,
+        18.0
        ],
-       "height": 2.6,
-       "kind": "doorway"
-      },
-      {
-       "side": "w",
-       "rect": [
-        6,
-        11.6,
-        6.3,
-        13.4
-       ],
-       "height": 2.6,
+       "height": 2.5,
        "kind": "doorway"
       }
      ]
     }
-   ]
+   ],
+   "circulation": {
+    "style": "city",
+    "flipZ": false,
+    "exit": "e",
+    "doorV": 5.8,
+    "stairWidth": 5.7,
+    "extraDoors": [
+     [
+      "n",
+      6.7
+     ],
+     [
+      "s",
+      4.0
+     ]
+    ]
+   },
+   "purpose": "Commercial service building and upper office"
   },
   {
    "id": "C29",
@@ -2042,7 +2080,7 @@
   },
   {
    "rect": [
-    12,
+    13.9,
     6,
     14,
     9
@@ -2135,6 +2173,32 @@
    "style": "brick",
    "gates": [],
    "id": "W22"
+  },
+  {
+   "id": "north_service_kiosk",
+   "rect": [
+    -4,
+    -25,
+    -2,
+    -20
+   ],
+   "height": 2.7,
+   "style": "brick",
+   "gates": [],
+   "purpose": "Attached service enclosure / street sightline offset"
+  },
+  {
+   "id": "north_corner_store",
+   "rect": [
+    2,
+    -20.5,
+    4,
+    -17
+   ],
+   "height": 2.7,
+   "style": "brick",
+   "gates": [],
+   "purpose": "Attached service enclosure / street sightline offset"
   }
  ],
  "props": [
@@ -2222,17 +2286,17 @@
   {
    "type": "utility_box",
    "pos": [
-    17.4,
-    0.0,
-    13.5
+    19.5,
+    0,
+    10.7
    ],
    "heading": 90
   },
   {
    "type": "bench_modern",
    "pos": [
-    7.4,
-    0.0,
+    6.85,
+    0.02,
     16.4
    ],
    "heading": 90
@@ -2573,7 +2637,40 @@
    "heading": 0
   }
  ],
- "lights": [],
+ "lights": [
+  {
+   "type": "point",
+   "pos": [
+    10.0,
+    2.2,
+    17.1
+   ],
+   "color": [
+    0.85,
+    0.93,
+    1
+   ],
+   "intensity": 0.65,
+   "range": 4.5,
+   "circulation": "C28"
+  },
+  {
+   "type": "point",
+   "pos": [
+    10.0,
+    5.3,
+    17.1
+   ],
+   "color": [
+    0.85,
+    0.93,
+    1
+   ],
+   "intensity": 0.65,
+   "range": 4.5,
+   "circulation": "C28"
+  }
+ ],
  "arches": [
   {
    "id": "court_canopy",
@@ -2895,7 +2992,7 @@
     "rect": [
      8,
      6,
-     12,
+     13.9,
      9
     ]
    },
@@ -3025,50 +3122,10 @@
     "id": "south_shop",
     "kind": "interior",
     "rect": [
-     6.3,
-     9.3,
-     13.7,
-     17.7
-    ]
-   },
-   {
-    "id": "south_shop_door0",
-    "kind": "doorway",
-    "rect": [
-     9.1,
-     9,
-     10.9,
-     9.3
-    ]
-   },
-   {
-    "id": "south_shop_door1",
-    "kind": "doorway",
-    "rect": [
-     13.7,
-     13.1,
-     14,
-     14.9
-    ]
-   },
-   {
-    "id": "south_shop_door2",
-    "kind": "doorway",
-    "rect": [
-     9.1,
-     17.7,
-     10.9,
-     18
-    ]
-   },
-   {
-    "id": "south_shop_door3",
-    "kind": "doorway",
-    "rect": [
      6,
-     11.6,
-     6.3,
-     13.4
+     13.8,
+     14,
+     15.8
     ]
    },
    {
@@ -3086,9 +3143,9 @@
     "kind": "passage",
     "rect": [
      1,
-     11,
+     13.3,
      6,
-     14
+     16.3
     ]
    },
    {
@@ -3119,6 +3176,66 @@
      18,
      6,
      25
+    ]
+   },
+   {
+    "id": "south_shop_door0",
+    "kind": "doorway",
+    "rect": [
+     6,
+     13.75,
+     6.3,
+     15.85
+    ]
+   },
+   {
+    "id": "south_shop_door1",
+    "kind": "doorway",
+    "rect": [
+     13.7,
+     13.75,
+     14.0,
+     15.85
+    ]
+   },
+   {
+    "id": "south_shop_door2",
+    "kind": "doorway",
+    "rect": [
+     11.65,
+     9,
+     13.75,
+     9.3
+    ]
+   },
+   {
+    "id": "south_shop_door3",
+    "kind": "doorway",
+    "rect": [
+     8.95,
+     17.7,
+     11.05,
+     18.0
+    ]
+   },
+   {
+    "id": "C28_circulation_0",
+    "kind": "interior",
+    "rect": [
+     11.65,
+     9,
+     13.75,
+     14.8
+    ]
+   },
+   {
+    "id": "C28_circulation_1",
+    "kind": "interior",
+    "rect": [
+     8.95,
+     14.8,
+     11.05,
+     18
     ]
    }
   ],
@@ -3473,9 +3590,561 @@
      -10.995,
      16.865
     ]
+   },
+   {
+    "id": "circulation:C28:wall",
+    "rect": [
+     6,
+     9,
+     9.0,
+     9.3
+    ]
+   },
+   {
+    "id": "circulation:C28:wall",
+    "rect": [
+     11.0,
+     9,
+     11.65,
+     9.3
+    ]
+   },
+   {
+    "id": "circulation:C28:wall",
+    "rect": [
+     9.0,
+     9,
+     11.0,
+     9.3
+    ]
+   },
+   {
+    "id": "circulation:C28:wall",
+    "rect": [
+     13.75,
+     9,
+     14,
+     9.3
+    ]
+   },
+   {
+    "id": "circulation:C28:wall",
+    "rect": [
+     6,
+     17.7,
+     8.95,
+     18
+    ]
+   },
+   {
+    "id": "circulation:C28:wall",
+    "rect": [
+     11.05,
+     17.7,
+     14,
+     18
+    ]
+   },
+   {
+    "id": "circulation:C28:wall",
+    "rect": [
+     6,
+     9.3,
+     6.3,
+     13.75
+    ]
+   },
+   {
+    "id": "circulation:C28:wall",
+    "rect": [
+     6,
+     15.85,
+     6.3,
+     17.7
+    ]
+   },
+   {
+    "id": "circulation:C28:wall",
+    "rect": [
+     13.75,
+     9.3,
+     14,
+     13.75
+    ]
+   },
+   {
+    "id": "circulation:C28:wall",
+    "rect": [
+     13.7,
+     9.4,
+     13.75,
+     13.75
+    ]
+   },
+   {
+    "id": "circulation:C28:wall",
+    "rect": [
+     13.7,
+     15.85,
+     14,
+     17.7
+    ]
+   },
+   {
+    "id": "circulation:C28:turn-landing",
+    "rect": [
+     6.3,
+     9.3,
+     11.4,
+     12.0
+    ]
+   },
+   {
+    "id": "circulation:C28:stair-b",
+    "rect": [
+     6.3,
+     12.0,
+     8.6,
+     12.3
+    ]
+   },
+   {
+    "id": "circulation:C28:stair-b",
+    "rect": [
+     6.3,
+     12.3,
+     8.6,
+     12.6
+    ]
+   },
+   {
+    "id": "circulation:C28:stair-a",
+    "rect": [
+     9.1,
+     13.5,
+     11.4,
+     13.8
+    ]
+   },
+   {
+    "id": "circulation:C28:stair-b",
+    "rect": [
+     6.3,
+     12.6,
+     8.6,
+     12.9
+    ]
+   },
+   {
+    "id": "circulation:C28:stair-a",
+    "rect": [
+     9.1,
+     13.2,
+     11.4,
+     13.5
+    ]
+   },
+   {
+    "id": "circulation:C28:stair-b",
+    "rect": [
+     6.3,
+     12.9,
+     8.6,
+     13.2
+    ]
+   },
+   {
+    "id": "circulation:C28:stair-a",
+    "rect": [
+     9.1,
+     12.9,
+     11.4,
+     13.2
+    ]
+   },
+   {
+    "id": "circulation:C28:stair-b",
+    "rect": [
+     6.3,
+     13.2,
+     8.6,
+     13.5
+    ]
+   },
+   {
+    "id": "circulation:C28:stair-a",
+    "rect": [
+     9.1,
+     12.600000000000001,
+     11.4,
+     12.9
+    ]
+   },
+   {
+    "id": "circulation:C28:stair-b",
+    "rect": [
+     6.3,
+     13.5,
+     8.6,
+     13.8
+    ]
+   },
+   {
+    "id": "circulation:C28:stair-a",
+    "rect": [
+     9.1,
+     12.3,
+     11.4,
+     12.6
+    ]
+   },
+   {
+    "id": "circulation:C28:stair-b",
+    "rect": [
+     6.3,
+     13.8,
+     8.6,
+     14.1
+    ]
+   },
+   {
+    "id": "circulation:C28:stair-a",
+    "rect": [
+     9.1,
+     12.0,
+     11.4,
+     12.3
+    ]
+   },
+   {
+    "id": "circulation:C28:stair-b",
+    "rect": [
+     6.3,
+     14.1,
+     8.6,
+     14.399999999999999
+    ]
+   },
+   {
+    "id": "circulation:C28:cabinet",
+    "rect": [
+     11.1,
+     17.22,
+     12.3,
+     17.7
+    ]
+   },
+   {
+    "id": "circulation:C28:counter",
+    "rect": [
+     11.06,
+     17.2,
+     12.34,
+     17.72
+    ]
+   },
+   {
+    "id": "circulation:C28:exit-stair",
+    "rect": [
+     15.6,
+     13.7,
+     15.88,
+     15.9
+    ]
+   },
+   {
+    "id": "circulation:C28:exit-stair",
+    "rect": [
+     15.88,
+     13.7,
+     16.16,
+     15.9
+    ]
+   },
+   {
+    "id": "circulation:C28:exit-stair",
+    "rect": [
+     16.16,
+     13.7,
+     16.44,
+     15.9
+    ]
+   },
+   {
+    "id": "circulation:C28:exit-stair",
+    "rect": [
+     16.44,
+     13.7,
+     16.72,
+     15.9
+    ]
+   },
+   {
+    "id": "circulation:C28:exit-stair",
+    "rect": [
+     16.72,
+     13.7,
+     17.0,
+     15.9
+    ]
+   },
+   {
+    "id": "circulation:C28:exit-stair",
+    "rect": [
+     17.0,
+     13.7,
+     17.28,
+     15.9
+    ]
+   },
+   {
+    "id": "circulation:C28:exit-stair",
+    "rect": [
+     17.28,
+     13.7,
+     17.560000000000002,
+     15.9
+    ]
+   },
+   {
+    "id": "circulation:C28:exit-stair",
+    "rect": [
+     17.560000000000002,
+     13.7,
+     17.84,
+     15.9
+    ]
+   },
+   {
+    "id": "circulation:C28:exit-stair",
+    "rect": [
+     17.84,
+     13.7,
+     18.12,
+     15.9
+    ]
+   },
+   {
+    "id": "circulation:C28:exit-post",
+    "rect": [
+     17.84,
+     13.7,
+     17.9,
+     13.759999999999998
+    ]
+   },
+   {
+    "id": "circulation:C28:exit-post",
+    "rect": [
+     17.84,
+     15.84,
+     17.9,
+     15.899999999999999
+    ]
+   },
+   {
+    "id": "circulation:C28:exit-stair",
+    "rect": [
+     18.12,
+     13.7,
+     18.4,
+     15.9
+    ]
+   },
+   {
+    "id": "circulation:C28:exit-stair",
+    "rect": [
+     18.4,
+     13.7,
+     18.68,
+     15.9
+    ]
+   },
+   {
+    "id": "circulation:C28:exit-stair",
+    "rect": [
+     18.68,
+     13.7,
+     18.96,
+     15.9
+    ]
+   },
+   {
+    "id": "circulation:C28:exit-stair",
+    "rect": [
+     18.96,
+     13.7,
+     19.240000000000002,
+     15.9
+    ]
+   },
+   {
+    "id": "circulation:C28:exit-rail",
+    "rect": [
+     18.96,
+     13.7,
+     19.240000000000002,
+     13.759999999999998
+    ]
+   },
+   {
+    "id": "circulation:C28:exit-post",
+    "rect": [
+     18.96,
+     13.7,
+     19.020000000000003,
+     13.759999999999998
+    ]
+   },
+   {
+    "id": "circulation:C28:exit-rail",
+    "rect": [
+     18.96,
+     15.84,
+     19.240000000000002,
+     15.899999999999999
+    ]
+   },
+   {
+    "id": "circulation:C28:exit-post",
+    "rect": [
+     18.96,
+     15.84,
+     19.020000000000003,
+     15.899999999999999
+    ]
+   },
+   {
+    "id": "circulation:C28:exit-stair",
+    "rect": [
+     19.240000000000002,
+     13.7,
+     19.52,
+     15.9
+    ]
+   },
+   {
+    "id": "circulation:C28:exit-rail",
+    "rect": [
+     19.240000000000002,
+     13.7,
+     19.52,
+     13.759999999999998
+    ]
+   },
+   {
+    "id": "circulation:C28:exit-rail",
+    "rect": [
+     19.240000000000002,
+     15.84,
+     19.52,
+     15.899999999999999
+    ]
+   },
+   {
+    "id": "circulation:C28:exit-rail",
+    "rect": [
+     19.52,
+     13.7,
+     19.8,
+     13.759999999999998
+    ]
+   },
+   {
+    "id": "circulation:C28:exit-rail",
+    "rect": [
+     19.52,
+     15.84,
+     19.8,
+     15.899999999999999
+    ]
+   },
+   {
+    "id": "circulation:C28:exit-rail",
+    "rect": [
+     19.8,
+     13.7,
+     20.08,
+     13.759999999999998
+    ]
+   },
+   {
+    "id": "circulation:C28:exit-rail",
+    "rect": [
+     19.8,
+     15.84,
+     20.08,
+     15.899999999999999
+    ]
+   },
+   {
+    "id": "circulation:C28:exit-support",
+    "rect": [
+     15.389999999999999,
+     13.7,
+     15.51,
+     13.82
+    ]
+   },
+   {
+    "id": "circulation:C28:exit-support",
+    "rect": [
+     15.389999999999999,
+     15.78,
+     15.51,
+     15.899999999999999
+    ]
    }
   ]
  },
+ "circulationRoutes": [
+  {
+   "id": "C28",
+   "height": 3.22,
+   "waypoints": [
+    [
+     12.7,
+     0,
+     7.5
+    ],
+    [
+     12.7,
+     0.02,
+     14.8
+    ],
+    [
+     10.05,
+     0.02,
+     14.8
+    ],
+    [
+     10.05,
+     1.62,
+     11.5
+    ],
+    [
+     8.1,
+     1.62,
+     11.5
+    ],
+    [
+     8.1,
+     3.22,
+     14.8
+    ],
+    [
+     14.9,
+     3.22,
+     14.8
+    ],
+    [
+     20.65,
+     0,
+     14.8
+    ]
+   ]
+  }
+ ],
  "spawns": [
   {
    "id": "S01",
@@ -3563,7 +4232,7 @@
    "pos": [
     9.0,
     0.0,
-    19.0
+    19.5
    ],
    "heading": 270
   },
@@ -3606,20 +4275,20 @@
   {
    "id": "S15",
    "pos": [
+    11.5,
+    0.0,
+    8.0
+   ],
+   "heading": 45
+  },
+  {
+   "id": "S16",
+   "pos": [
     -20.0,
     0.0,
     -11.0
    ],
    "heading": 195
-  },
-  {
-   "id": "S16",
-   "pos": [
-    11.0,
-    0.0,
-    8.0
-   ],
-   "heading": 315
   }
  ]
 }

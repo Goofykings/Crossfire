@@ -38,6 +38,7 @@ export class MaterialLibrary {
   private readonly materials = new Map<string, PBRMaterial>();
   private readonly textures = new Map<string, Texture>();
   private anisotropy = 4;
+  private ultra = false;
   private fallback: PBRMaterial | null = null;
   readonly missing = new Set<string>();
 
@@ -60,6 +61,37 @@ export class MaterialLibrary {
   setAnisotropy(level: number): void {
     this.anisotropy = level;
     for (const t of this.textures.values()) t.anisotropicFilteringLevel = level;
+  }
+
+  /** Update shared instances in place, including weapon/remote materials, without rebatching. */
+  setUltra(enabled: boolean): void {
+    if (this.ultra === enabled) return;
+    this.ultra = enabled;
+    for (const [name, material] of this.materials) this.applyQuality(name, this.defs[name], material);
+  }
+
+  private applyQuality(name: string, def: MaterialDef, m: PBRMaterial): void {
+    m.enableSpecularAntiAliasing = this.ultra;
+    // Alpha defaults to true in Babylon and takes precedence over green. Our
+    // authored ORM images store roughness in green, with an opaque alpha channel.
+    m.useRoughnessFromMetallicTextureAlpha = !this.ultra;
+    if (def.orm) {
+      // This borrowed dielectric texture has almost zero metal in blue. The
+      // existing corrected variant preserves its identical AO/roughness channels
+      // and supplies white metal so the authored scalar metallic factor applies.
+      const path = this.ultra && def.orm === 'assets/textures/shared/metal_orm.jpg' && (def.metallic ?? 0) > 0
+        ? 'assets/textures/weapons/gun_metal_orm.png' : def.orm;
+      m.metallicTexture = this.texture(path, def.tile || 1, true);
+    }
+    m.metallic = def.metallic ?? (def.orm ? 1 : 0);
+    // Remove JPEG metal-channel noise from dielectric masonry/wood/fabric.
+    if (this.ultra && /^(stone|slabs|plaster|brick|concrete|cobble|pavers|curb|stucco|facade_tiles|wood|canvas|cardboard|soil|terracotta|interior_)/.test(name)) m.metallic = 0;
+    if (this.ultra && /^(glass|gun_glass|weapon_lens)/.test(name)) m.metallic = 0;
+    // A thin finish belongs on painted bodywork, not stone, cloth or rubber.
+    const coat = this.ultra ? (/^carpaint_/.test(name) ? .45 : /^(steel_|container_|paint_)/.test(name) ? .14 : 0) : 0;
+    m.clearCoat.isEnabled = coat > 0;
+    m.clearCoat.intensity = coat;
+    m.clearCoat.roughness = /^carpaint_/.test(name) ? .22 : .45;
   }
 
   private texture(path: string, tile: number, linear: boolean, invertY = true): Texture {
@@ -184,6 +216,7 @@ export class MaterialLibrary {
       m.zOffsetUnits = -2;
     }
     m.environmentIntensity = 1;
+    this.applyQuality(name, def, m);
     this.materials.set(name, m);
     return m;
   }

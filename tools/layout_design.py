@@ -669,6 +669,8 @@ def emit_layout(areas, rects):
     from compact_dressing import finish_layout
     layout['upperRoutes'] = [make_route('market_gallery', [-17,-21,-14,-3], 'gallery')]
     finish_layout(layout, PROPS)
+    from realism_layout import author
+    author(layout)
     layout["spawns"] = ffa_spawns(layout, PROPS)
     return layout
 

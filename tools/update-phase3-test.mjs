@@ -47,8 +47,8 @@ try {
     },backend,process.argv.includes('--capture-fx'));
     await page.goto(`${base}?multiplayer&autoplay&quality=low&shadows=off&scale=.6`,{waitUntil:'domcontentloaded',timeout:240000});
     await completeGuestProfile(page,name);
-    await page.waitForFunction(()=>window.__crossfire.ready()||document.querySelector('#start.visible .btn.primary:not(:disabled)'),{timeout:240000});
-    if(!await page.evaluate(()=>window.__crossfire.ready()))await page.click('#start .btn.primary');
+    await page.waitForFunction(()=>window.__crossfire.ready()||document.querySelector('#weapons.visible .weapon-card:not(:disabled)'),{timeout:240000});
+    if(!await page.evaluate(()=>window.__crossfire.ready()))await page.click('#weapons .weapon-card[data-weapon="rifle"]');
     await page.waitForFunction(()=>window.__crossfire.ready(),{timeout:60000});
     page.id=await page.evaluate(()=>window.__crossfire.network().selfId);return page;
   }
@@ -64,15 +64,14 @@ try {
   await b.screenshot({path:`${out}/remote-crouch.png`});
   await a.keyboard.up('Control');await until(async()=>(await me(a)).motion.crouch===0,'authoritative crouch release');check((await me(a)).motion.crouch===0,'release stands up');
   // Actual key binding persists across settings updates, with mouse throw also exposed in the HUD.
-  check((await a.evaluate(()=>window.__crossfire.settings())).keyBindings.grenade[0]==='KeyR','R grenade default');
-  check((await a.evaluate(()=>window.__crossfire.settings())).keyBindings.reload[0]==='KeyF','F reload default');
+  check((await a.evaluate(()=>window.__crossfire.settings())).keyBindings.grenade[0]==='KeyG','G grenade default');
+  check((await a.evaluate(()=>window.__crossfire.settings())).keyBindings.reload[0]==='KeyR','R reload default');
   await a.evaluate(()=>window.__grenadeCapture.arm());
   await a.evaluate(()=>window.__crossfire.look(0,-80));await delay(150);
-  await a.keyboard.down('r');await until(async()=>(await a.evaluate(()=>window.__crossfire.grenades())).count===0,'authoritative inventory consumption');
+  await a.keyboard.press('g');await until(async()=>(await a.evaluate(()=>window.__crossfire.grenades())).count===0,'authoritative inventory consumption');
   const throwing=await a.evaluate(()=>window.__crossfire.grenades());
   check(throwing.count===0&&throwing.projectiles===1,'real key consumes inventory and renders projectile');
   check(throwing.lower>.02,'short throw lowers and returns the existing weapon');
-  await a.keyboard.up('r');
   let g;await until(async()=>{g=(await room.snapshotForTest()).grenades[0];return g&&Date.now()-g.at>1300;},'projectile settles');
   await room.placeForCombatTest(b.id,[g.position.x,arena.center[1],g.position.z]);
   await room.placeForCombatTest(a.id,arena.sources.right);
@@ -82,6 +81,8 @@ try {
   await until(async()=>!(await me(b)).alive,'actual radial elimination');
   await until(async()=>(await a.evaluate(()=>window.__crossfire.grenades())).particles>0,'brief explosion particles',2000);
   const blastVisual=await a.evaluate(()=>window.__crossfire.grenades());
+  check(blastVisual.particles<=128&&(!process.argv.includes('--capture-fx')||blastVisual.samples.some(p=>p.flash&&p.size>=.75*Math.sqrt(10))),
+    'tenfold flash area uses the existing bounded particle batch');
   if(process.argv.includes('--capture-fx'))check(blastVisual.samples.some(p=>p.flash&&p.color[3]>.5),'new flash survives a slow preceding frame');
   await a.screenshot({path:`${out}/explosion.png`});
   await a.evaluate(()=>window.__grenadeCapture.resume());

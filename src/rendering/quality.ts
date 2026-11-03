@@ -10,12 +10,20 @@ export interface GraphicsPreset {
   fog: boolean;
   /** Static geometry batching cell size (m); larger = fewer draw calls, coarser culling. */
   batchCell: number;
+  /** Opt-in material refinements; other presets retain their original appearance. */
+  ultraMaterials?: boolean;
+  reflectionSize?: 256 | 512;
+  bloomWeight?: number;
+  aoSamples?: number;
+  aoStrength?: number;
 }
 
 export const GRAPHICS_PRESETS: Record<GraphicsQuality, GraphicsPreset> = {
   low: { msaa: 1, fxaa: true, bloom: false, sharpen: false, ssao: false, anisotropy: 2, fog: true, batchCell: 40 },
   medium: { msaa: 2, fxaa: true, bloom: true, sharpen: false, ssao: false, anisotropy: 4, fog: true, batchCell: 40 },
   high: { msaa: 4, fxaa: false, bloom: true, sharpen: true, ssao: true, anisotropy: 8, fog: true, batchCell: 40 },
+  ultra: { msaa: 4, fxaa: false, bloom: true, sharpen: true, ssao: true, anisotropy: 16, fog: true, batchCell: 40,
+    ultraMaterials: true, reflectionSize: 512, bloomWeight: .12, aoSamples: 20, aoStrength: .7 },
 };
 
 export interface ShadowPreset {

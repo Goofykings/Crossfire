@@ -21,7 +21,7 @@ export class PostFX {
     pl.bloomEnabled = p.bloom;
     if (p.bloom) {
       pl.bloomThreshold = 0.92;
-      pl.bloomWeight = 0.22;
+      pl.bloomWeight = p.bloomWeight ?? 0.22;
       pl.bloomKernel = 48;
       pl.bloomScale = 0.5;
     }
@@ -35,9 +35,9 @@ export class PostFX {
       try {
         const ssao = new SSAO2RenderingPipeline('ssao', this.scene, { ssaoRatio: 0.5, blurRatio: 0.5 }, [this.camera]);
         ssao.radius = 0.9;
-        ssao.totalStrength = 0.85;
+        ssao.totalStrength = p.aoStrength ?? 0.85;
         ssao.base = 0.12;
-        ssao.samples = 12;
+        ssao.samples = p.aoSamples ?? 12;
         ssao.maxZ = 60;
         ssao.expensiveBlur = false;
         this.ssao = ssao;

@@ -19,7 +19,7 @@ import {
 } from '@babylonjs/core';
 import { assetUrl } from '../core/assets';
 import type { EnvironmentConfig } from '../maps/types';
-import type { ShadowPreset } from './quality';
+import type { GraphicsPreset, ShadowPreset } from './quality';
 
 const DEG = Math.PI / 180;
 
@@ -46,6 +46,10 @@ export class Environment {
   private receivers: AbstractMesh[] = [];
   private hdrSettled = false;
   private disposed = false;
+  private ultraHdr: HDRCubeTexture | null = null;
+  private ultraSettled = false;
+  private ultraReady = false;
+  private wantsUltra = false;
 
   constructor(
     private readonly scene: Scene,
@@ -114,6 +118,30 @@ export class Environment {
 
   setFog(enabled: boolean): void {
     this.scene.fogMode = enabled ? Scene.FOGMODE_EXP2 : Scene.FOGMODE_NONE;
+  }
+
+  /** One optional cached prefilter per map, never a per-frame reflection pass.
+   * Keep the original environment until the new cube has finished prefiltering. */
+  applyGraphicsPreset(p: GraphicsPreset): void {
+    this.setFog(p.fog);
+    this.wantsUltra = p.reflectionSize === 512;
+    if (!this.wantsUltra) { this.scene.environmentTexture = this.hdr; return; }
+    if (this.ultraReady) { this.scene.environmentTexture = this.ultraHdr; return; }
+    if (this.ultraHdr) return;
+    const settled = (ready: boolean) => {
+      // A cached Babylon texture may complete its callback inside construction.
+      queueMicrotask(() => {
+        this.ultraSettled = true;
+        this.ultraReady = ready;
+        if (this.disposed) this.ultraHdr?.dispose();
+        else if (ready && this.wantsUltra) this.scene.environmentTexture = this.ultraHdr;
+      });
+    };
+    // Babylon's HDR cache is keyed by URL, not requested cube dimensions.
+    // Distinguish the 512 cube while still serving the same static HDR asset.
+    this.ultraHdr = new HDRCubeTexture(`${assetUrl(this.cfg.hdr)}?ibl=512`, this.scene, 512, false, true, false, true,
+      () => settled(true), () => settled(false));
+    this.ultraHdr.rotationY = this.hdr.rotationY;
   }
 
   /**
@@ -201,6 +229,7 @@ export class Environment {
     // Babylon's native async prefilter cannot be interrupted safely. Detach now,
     // then release its texture after the prefilter settles instead of invalidating it mid-pass.
     if (this.hdrSettled) this.hdr.dispose();
-    if (this.scene.environmentTexture === this.hdr) this.scene.environmentTexture = null;
+    if (this.ultraSettled) this.ultraHdr?.dispose();
+    if (this.scene.environmentTexture === this.hdr || this.scene.environmentTexture === this.ultraHdr) this.scene.environmentTexture = null;
   }
 }

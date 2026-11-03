@@ -288,8 +288,10 @@ def hanging_sign(index: int, board=True, mount=True) -> MeshData:
     m = MeshData()
     if mount:
         m.box(-0.02, -0.02, -0.95, 0.02, 0.02, 0.0, "iron")
-        m.tube((0.0, -0.55, 0.0), (0.0, 0.0, -0.62), 0.012, "iron", segments=5)
-        m.box(-0.06, -0.12, -0.02, 0.06, 0.12, 0.0, "iron", skip=("pz",))
+        # Brace above the projecting arm: the old lower diagonal occupied the
+        # sign board's plane and visibly passed through its lettering at rest.
+        m.tube((0.0, 0.22, 0.0), (0.0, 0.0, -0.62), 0.012, "iron", segments=5)
+        m.box(-0.06, -0.12, -0.02, 0.06, 0.26, 0.0, "iron", skip=("pz",))
     if board:
         cu, cv = (index % 2) * 0.5, 1.0 - (index // 2 + 1) * 0.25
         # board hangs perpendicular to the wall (visible from along the street)

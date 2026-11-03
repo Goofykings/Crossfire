@@ -232,7 +232,11 @@ def stage_map(key: str, previews: bool):
         col = exporter.collection(name, bcol)
         objs = []
         for b in group:
-            md, placements = gen.generate(b)
+            if b.get('circulation'):
+                from circulation import generate
+                md, placements = generate(b)
+            else:
+                md, placements = gen.generate(b)
             interactive.separate_signs(placements,environment,b['id'])
             x0, z0, x1, z1 = b["rect"]
             objs += realize(md, placements, b["id"], col, ((x0 + x1) / 2, 0.0, (z0 + z1) / 2))

@@ -5,6 +5,19 @@ import { SettingsDraft } from '../src/config/settingsDraft';
 import { parseClientMessage, parseServerMessage } from '../shared/protocol';
 
 describe('custom controls', () => {
+  it('uses R reload and G grenade, with keyboard alternatives to mouse fire and aim', () => {
+    const b=defaultBindings();
+    expect(b.reload).toEqual(['KeyR']);expect(b.grenade).toEqual(['KeyG']);
+    expect(b.fire).toEqual(['Mouse0','KeyJ']);expect(b.aim).toEqual(['Mouse2','KeyK']);
+    expect(sanitizeBindings(b)).toEqual(b);
+  });
+  it('migrates the former factory R grenade / F reload without resetting customized controls', () => {
+    const old={...defaultBindings(),grenade:['KeyR'],reload:['KeyF'],aim:['Mouse2'],fire:['Mouse0']};
+    expect(sanitizeBindings(old)).toEqual(defaultBindings());
+    const custom={...old,forward:['KeyI'],chat:['KeyG']};
+    expect(sanitizeBindings(custom)).toEqual(custom);
+    expect(sanitizeBindings(sanitizeBindings(custom))).toEqual(custom);
+  });
   it('defaults chat to Enter while retaining saved custom chat bindings', () => {
     expect(defaultBindings().chat).toEqual(['Enter']);
     expect(sanitizeBindings({ ...defaultBindings(), chat: ['KeyT'] }).chat).toEqual(['KeyT']);
@@ -14,8 +27,8 @@ describe('custom controls', () => {
     const changed = { ...draft.value.keyBindings, aim: ['KeyL'], fire: ['Mouse0'] };
     draft.set('keyBindings', changed);
     expect(draft.dirtyKeys).toEqual(['keyBindings']);
-    expect(store.value.keyBindings.aim).toEqual(['Mouse2']);
-    draft.discard(); expect(draft.value.keyBindings.aim).toEqual(['Mouse2']);
+    expect(store.value.keyBindings.aim).toEqual(defaultBindings().aim);
+    draft.discard(); expect(draft.value.keyBindings.aim).toEqual(defaultBindings().aim);
     draft.set('keyBindings', changed); draft.apply();
     expect(store.value.keyBindings.aim).toEqual(['KeyL']);
     expect(store.value.keyBindings.fire).toEqual(['Mouse0']);

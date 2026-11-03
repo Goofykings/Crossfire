@@ -36,12 +36,24 @@ describe('settings', () => {
   });
 
   it('clamps and rejects invalid values', () => {
-    const s = sanitizeSettings({ fov: 300, masterVolume: -1, graphicsQuality: 'ultra', resolutionScale: 'x', invertY: 1 });
+    const s = sanitizeSettings({ fov: 300, masterVolume: -1, graphicsQuality: 'invalid-quality', resolutionScale: 'x', invertY: 1 });
     expect(s.fov).toBe(110);
     expect(s.masterVolume).toBe(0);
     expect(s.graphicsQuality).toBe(DEFAULT_SETTINGS.graphicsQuality);
     expect(s.resolutionScale).toBe(DEFAULT_SETTINGS.resolutionScale);
     expect(s.invertY).toBe(false);
+  });
+
+  it('persists an explicitly chosen Ultra without changing defaults or other settings', () => {
+    const storage = new MemoryStorage(), store = new SettingsStore(storage);
+    expect(store.value.graphicsQuality).toBe('medium');
+    store.update({ graphicsQuality: 'ultra', shadowQuality: 'low', masterVolume: .3 });
+    const restored = new SettingsStore(storage);
+    expect(restored.value.graphicsQuality).toBe('ultra');
+    expect(restored.value.shadowQuality).toBe('low');
+    expect(restored.value.masterVolume).toBe(.3);
+    restored.update({ graphicsQuality: 'low' });
+    expect(new SettingsStore(storage).value.graphicsQuality).toBe('low');
   });
 
   it('survives corrupted storage and missing storage', () => {

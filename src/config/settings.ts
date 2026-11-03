@@ -1,7 +1,7 @@
 /** Player settings persisted in localStorage. */
 import { defaultBindings, sanitizeBindings, type KeyBindings } from './keybindings';
 
-export type GraphicsQuality = 'low' | 'medium' | 'high';
+export type GraphicsQuality = 'low' | 'medium' | 'high' | 'ultra';
 export type ShadowQuality = 'off' | 'low' | 'medium' | 'high';
 
 export interface Settings {
@@ -69,7 +69,7 @@ export function sanitizeSettings(raw: unknown): Settings {
   if (typeof r.invertY === 'boolean') s.invertY = r.invertY;
   if (typeof r.showFps === 'boolean') s.showFps = r.showFps;
   s.keyBindings = sanitizeBindings(r.keyBindings);
-  if (r.graphicsQuality === 'low' || r.graphicsQuality === 'medium' || r.graphicsQuality === 'high') {
+  if (r.graphicsQuality === 'low' || r.graphicsQuality === 'medium' || r.graphicsQuality === 'high' || r.graphicsQuality === 'ultra') {
     s.graphicsQuality = r.graphicsQuality;
   }
   if (r.shadowQuality === 'off' || r.shadowQuality === 'low' || r.shadowQuality === 'medium' || r.shadowQuality === 'high') {

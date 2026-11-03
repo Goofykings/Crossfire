@@ -1,9 +1,9 @@
 import { MOVEMENT } from '../src/config/constants';
-import type { CollisionWorld } from '../src/physics/CollisionWorld';
+import type { Collider, CollisionWorld } from '../src/physics/CollisionWorld';
 import type { ControllerState, Vec3 } from '../src/player/PlayerController';
 
 /** Metres, seconds and HP. One shared balance definition for server and HUD. */
-export const GRENADE = Object.freeze({ perLife: 1, radius: .065, fuseMs: 2000, speed: 7.8,
+export const GRENADE = Object.freeze({ perLife: 1, radius: .065, fuseMs: 2000, speed: 15.6,
   lift: 1.5, gravity: MOVEMENT.gravity, restitution: .42, friction: .68, damage: 100, damageRadius: 1.8 });
 export interface GrenadeState {
   id: string; ownerId: string; ownerLife: number; roundId: number;
@@ -18,12 +18,12 @@ export type GrenadeEvent = { kind: 'throw'; id: string; projectile: GrenadeState
 
 /** Swept sphere against the existing OBB grid. Expanded slabs conservatively
  * round box corners; continuous sweeps cannot tunnel through thin walls. */
-export function sweepSphere(world: CollisionWorld, start: Vec3, delta: Vec3, radius: number, halfHeight = radius) {
+export function sweepSphere(world: CollisionWorld, start: Vec3, delta: Vec3, radius: number, halfHeight = radius, accept?: (c:Collider)=>boolean) {
   let best: { fraction: number; normal: Vec3 } | null = null;
   for (const c of world.query(Math.min(start.x,start.x+delta.x)-radius,Math.min(start.y,start.y+delta.y)-halfHeight,
     Math.min(start.z,start.z+delta.z)-radius,Math.max(start.x,start.x+delta.x)+radius,
     Math.max(start.y,start.y+delta.y)+halfHeight,Math.max(start.z,start.z+delta.z)+radius)) {
-    if (!c.solid) continue;
+    if (!c.solid || (accept&&!accept(c))) continue;
     const x=start.x-c.cx,z=start.z-c.cz;
     const o=[x*c.cos-z*c.sin,start.y-c.cy,x*c.sin+z*c.cos];
     const d=[delta.x*c.cos-delta.z*c.sin,delta.y,delta.x*c.sin+delta.z*c.cos];

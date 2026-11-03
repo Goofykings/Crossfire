@@ -39,6 +39,16 @@ describe('continuous shared grenade physics', () => {
     const g=throwGrenade(w,eye,eye,d,zero,data);expect(g === null || g.position.z>-.12).toBe(true);
     expect(throwGrenade(w,{...eye,z:-.4},eye,d,zero,data)).toBeNull();
   });
+  it.each([0, -.2, -.45])('roughly doubles practical throw range at pitch %s without changing blast balance', pitch => {
+    const eye={x:0,y:1.64,z:0},direction={x:0,y:-Math.sin(pitch),z:-Math.cos(pitch)};
+    const g=throwGrenade(floor(),eye,eye,direction,{x:0,y:0,z:0},{id:'g',ownerId:'a',ownerLife:1,roundId:0,at:1000})!;
+    const old=structuredClone(g);
+    old.velocity={x:direction.x*7.8,y:direction.y*7.8+GRENADE.lift,z:direction.z*7.8};
+    advanceGrenade(g,g.explodeAt,floor());advanceGrenade(old,old.explodeAt,floor());
+    const ratio=(Math.abs(g.position.z)-.38)/(Math.abs(old.position.z)-.38);
+    expect(ratio).toBeGreaterThan(1.8);expect(ratio).toBeLessThan(2.8);
+    expect(GRENADE.damage).toBe(100);expect(GRENADE.damageRadius).toBe(1.8);expect(GRENADE.fuseMs).toBe(2000);
+  });
 });
 describe('authoritative radial damage', () => {
   it('caps at 100, falls linearly and reaches zero at 1.8m', () => {
@@ -77,7 +87,7 @@ describe('held crouch and existing controls', () => {
   });
   it('migrates the old factory R reload, preserving a customized R binding', () => {
     const old=defaultBindings() as Record<string,string[]>;delete old.grenade;delete old.crouch;old.reload=['KeyR'];
-    expect(sanitizeBindings(old).grenade).toEqual(['KeyR']);expect(sanitizeBindings(old).reload).toEqual(['KeyF']);
+    expect(sanitizeBindings(old).grenade).toEqual(['KeyG']);expect(sanitizeBindings(old).reload).toEqual(['KeyR']);
     old.forward=['KeyI'];const custom=sanitizeBindings(old);
     expect(custom.reload).toEqual(['KeyR']);expect(custom.forward).toEqual(['KeyI']);expect(custom.grenade).toEqual(['KeyG']);
     expect(bindingConflict(custom,'grenade',['KeyR'])).toBe('reload');expect(sanitizeBindings(custom)).toEqual(custom);

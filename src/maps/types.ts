@@ -55,6 +55,7 @@ export interface Building {
   doors: BuildingDoor[];
   passages?: { rect: Rect; style: 'arch' | 'lintel'; clear: number }[];
   rooms?: { rect: Rect; clear: number; doorSides?: ('n' | 's' | 'w' | 'e')[] }[];
+  circulation?: { style: 'town' | 'industrial' | 'city'; flipZ: boolean; exit: 'w' | 'e'; doorV: number; stairWidth: number; extraDoors: [string,number][] };
   chamfer?: { corner: 'nw' | 'ne' | 'se' | 'sw'; size: number };
   balcony?: { side: string; floor: number };
   shopfront?: { side: string };
@@ -97,6 +98,7 @@ export interface MapLayout {
   terraces: Terrace[];
   upperRoutes?: (Terrace & { style: 'gallery' | 'catwalk' | 'sky_passage' })[];
   ladders?: LadderRegion[];
+  circulationRoutes?: { id: string; height: number; waypoints: Vec3Tuple[] }[];
   navigation?: {
     version: number;
     groundRoutes: { id: string; kind: string; rect: Rect }[];

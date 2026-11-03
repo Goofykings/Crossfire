@@ -5,18 +5,24 @@ import { PublicRoom as ProductionRoom } from '../dist/index.js';
 export { default } from '../dist/index.js';
 export class PublicRoom extends ProductionRoom {
   async environmentForTest(){return {definition:this.activeMap.environment,states:this.environment.capture(),active:this.environment.active};}
-  async environmentTargetForTest(id){
-    const def=this.activeMap.environment,b=def.bodies.find(b=>b.id===id),sign=def.signs.find(b=>b.id===id);
+  async saveEnvironmentForTest(stale=false){
+    await this.persist();
+    if(stale){const saved=await this.ctx.storage.get('environment');saved.mapVersion='pre-polish';await this.ctx.storage.put('environment',saved);}
+  }
+  async environmentTargetForTest(id,oblique=false){
+    const def=this.activeMap.environment,b=def.bodies.find(b=>b.id===id),light=def.lights?.find(b=>b.id===id),sign=def.signs.find(b=>b.id===id)??light;
     if(!b&&!sign)throw new Error('Unknown authored prop');
     const s=this.environment.capture().find(s=>s.id===id),p=s.position;
-    const target=[p.x,p.y-(sign?.29:0),p.z],w=this.activeMap.world;
-    for(let i=0;i<16;i++){
-      const angle=i*Math.PI/8,x=p.x+Math.sin(angle)*2.2,z=p.z+Math.cos(angle)*2.2,y=w.groundHeight(x,z,.34,3);
+    const offset=sign?(light?.36:.29):0;
+    const target=[p.x+Math.sin(s.angle)*offset*Math.cos(s.yaw),p.y-Math.cos(s.angle)*offset,p.z-Math.sin(s.angle)*offset*Math.sin(s.yaw)],w=this.activeMap.world;
+    for(const approachRadius of [2.2,1.15])for(let i=0;i<16;i++){
+      const angle=i*Math.PI/8,x=p.x+Math.sin(angle)*approachRadius,z=p.z+Math.cos(angle)*approachRadius,y=w.groundHeight(x,z,.34,3);
       if(!Number.isFinite(y)||w.overlapsCylinder(x,z,.34,y+.42,y+1.8))continue;
       const delta=[target[0]-x,target[1]-y-1.64,target[2]-z],distance=Math.hypot(...delta),d=delta.map(v=>v/distance);
       if(w.raycast(x,y+1.64,z,...d,distance-.05))continue;
       // Shoot signs across their actual board normal, not a thin edge.
-      if(sign&&Math.abs(d[0]*Math.cos(sign.yaw)-d[2]*Math.sin(sign.yaw))<.5)continue;
+      if(sign&&!light&&Math.abs(d[0]*Math.cos(sign.yaw)-d[2]*Math.sin(sign.yaw))<.5)continue;
+      if(oblique&&sign&&!light&&Math.abs(d[0]*Math.cos(sign.yaw)-d[2]*Math.sin(sign.yaw))>.85)continue;
       return {position:[x,y,z],target,yaw:Math.atan2(-d[0],-d[2]),pitch:Math.asin(d[1])};
     }
     throw new Error('No clear real-player firing position for '+id);

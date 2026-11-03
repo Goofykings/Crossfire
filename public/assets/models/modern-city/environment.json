@@ -29,5 +29,18 @@
   }
  ],
  "signs": [],
+ "lights": [
+  {
+   "id": "light-C28",
+   "asset": "hanging_light",
+   "position": [
+    13.05,
+    3.0,
+    16
+   ],
+   "yaw": 0
+  }
+ ],
+ "basins": [],
  "replaceProps": []
 }

@@ -1,4 +1,4 @@
-import { Quaternion, TransformNode, Vector3, type AssetContainer, type Scene } from '@babylonjs/core';
+import { Color3, PointLight, Quaternion, TransformNode, Vector3, type AssetContainer, type Scene } from '@babylonjs/core';
 import { loadContainer } from '../core/loadContainer';
 import { assetUrl } from '../core/assets';
 import type { MaterialLibrary } from '../rendering/MaterialLibrary';
@@ -8,6 +8,8 @@ import { EnvironmentSimulation, type EnvironmentDefinition, type EnvironmentFram
 /** Shared meshes/materials with independent small poses; no client-generated multiplayer forces. */
 export class EnvironmentProps {
   private readonly containers:AssetContainer[]=[];
+  private readonly lights:PointLight[]=[];
+  private readonly tilts=new Map<string,Quaternion>();
   private readonly objects=new Map<string,{root:TransformNode;previous:PropState;next:PropState;from:number;to:number;progress:number}>();
   readonly practice:EnvironmentSimulation;
   private seq=-1;
@@ -17,17 +19,24 @@ export class EnvironmentProps {
   async load(materials:MaterialLibrary,signal?:AbortSignal):Promise<void> {
     const assets=new Map<string,AssetContainer>();
     try {
-      for(const name of new Set([...this.definition.bodies,...this.definition.signs].map(d=>d.asset))) {
+      for(const name of new Set([...this.definition.bodies,...this.definition.signs,...(this.definition.lights??[])].map(d=>d.asset))) {
         const container=await loadContainer(assetUrl(`assets/models/shared/environment/${name}.glb`),this.scene,signal);
         this.containers.push(container);for(const mesh of container.meshes)if(mesh.material)mesh.material=materials.get(mesh.material.name);
         assets.set(name,container);
       }
       const states=this.practice.capture();
-      for(const d of [...this.definition.bodies,...this.definition.signs]) {
+      for(const d of [...this.definition.bodies,...this.definition.signs,...(this.definition.lights??[])]) {
         const entries=assets.get(d.asset)!.instantiateModelsToScene(name=>`environment:${d.id}:${name}`,false);
         const root=new TransformNode(`environment:${d.id}`,this.scene);
-        for(const node of entries.rootNodes){node.parent=root;const body=this.definition.bodies.find(b=>b.id===d.id);if(body&&d.asset!=='apple'&&node instanceof TransformNode)node.position.y-=body.halfHeight;}
+        for(const node of entries.rootNodes){node.parent=root;const body=this.definition.bodies.find(b=>b.id===d.id);if(body&&!body.tilt&&d.asset!=='apple'&&node instanceof TransformNode)node.position.y-=body.halfHeight;}
         for(const mesh of root.getChildMeshes()){mesh.isPickable=false;mesh.receiveShadows=true;}
+        const body=this.definition.bodies.find(b=>b.id===d.id);
+        if(body?.tilt)this.tilts.set(d.id,Quaternion.RotationAxis(Vector3.Forward(),body.tilt[1]).multiply(Quaternion.RotationAxis(Vector3.Right(),body.tilt[0])));
+        if(this.definition.lights?.some(l=>l.id===d.id)){
+          const light=new PointLight(`environment-light:${d.id}`,new Vector3(0,-.40,0),this.scene);
+          light.parent=root;light.diffuse=new Color3(1,.88,.67);light.specular=Color3.Black();light.intensity=.35;light.range=3;
+          this.lights.push(light); // No dynamic shadow generator or reflection probe.
+        }
         const state=states.find(s=>s.id===d.id)!;
         this.objects.set(d.id,{root,previous:state,next:state,from:0,to:0,progress:1});this.pose(root,state);
       }
@@ -44,6 +53,7 @@ export class EnvironmentProps {
   private pose(root:TransformNode,state:PropState):void {
     root.position.set(state.position.x,state.position.y,state.position.z);
     root.rotationQuaternion=Quaternion.RotationAxis(Vector3.Up(),state.yaw).multiply(Quaternion.RotationAxis(Vector3.Forward(),state.angle));
+    const tilt=this.tilts.get(state.id);if(tilt)root.rotationQuaternion=root.rotationQuaternion.multiply(tilt);
   }
   update(dt:number,serverTime:number,practice:boolean):void {
     if(practice){this.practice.advance(dt);for(const state of this.practice.takeChanges()){
@@ -57,6 +67,6 @@ export class EnvironmentProps {
     }
   }
   inspect(){return {count:this.objects.size,seq:this.seq,states:[...this.objects].map(([id,o])=>({id,position:o.root.position.asArray(),angle:o.next.angle,asleep:o.next.asleep,
-    meshes:o.root.getChildMeshes().length})),active:[...this.objects.values()].filter(o=>!o.next.asleep).length};}
-  dispose():void{for(const o of this.objects.values())o.root.dispose();this.objects.clear();for(const c of this.containers)c.dispose();this.containers.length=0;}
+    rotation:o.root.rotationQuaternion?.asArray(),meshes:o.root.getChildMeshes().length})),lights:this.lights.map(l=>({id:l.name,position:l.getAbsolutePosition().asArray(),shadow:!!l.getShadowGenerator()})),active:[...this.objects.values()].filter(o=>!o.next.asleep).length};}
+  dispose():void{for(const l of this.lights)l.dispose();this.lights.length=0;this.tilts.clear();for(const o of this.objects.values())o.root.dispose();this.objects.clear();for(const c of this.containers)c.dispose();this.containers.length=0;}
 }

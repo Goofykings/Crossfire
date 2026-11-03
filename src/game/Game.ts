@@ -175,6 +175,7 @@ export class Game {
     this.audio.setSfxVolume(s.sfxVolume);
     this.postfx.apply(GRAPHICS_PRESETS[s.graphicsQuality]);
     this.materials.setAnisotropy(GRAPHICS_PRESETS[s.graphicsQuality].anisotropy);
+    this.materials.setUltra(!!GRAPHICS_PRESETS[s.graphicsQuality].ultraMaterials);
     this.settings.onChange((v, changed) => this.applySettings(v, changed));
 
     // Public Play has no silent practice fallback.
@@ -350,7 +351,7 @@ export class Game {
     const s = this.settings.value;
     map.environment.applyShadowPreset(SHADOW_PRESETS[s.shadowQuality], this.ctx.camera);
     this.excludeViewFromSun(map);
-    map.environment.setFog(GRAPHICS_PRESETS[s.graphicsQuality].fog);
+    map.environment.applyGraphicsPreset(GRAPHICS_PRESETS[s.graphicsQuality]);
     for (const t of map.targets.targets) {
       t.onStateChange = (_t, state) => {
         if (state === 'falling') {
@@ -480,7 +481,13 @@ export class Game {
       this.weaponView?.setVisible(false);
       this.ui.setScope(0);
       this.remotePlayers.clear();
-      this.ui.show('loading');
+      const joining = network.latest?.players.find((p) => p.id === network.selfId);
+      if (joining && !joining.alive && !joining.death) {
+        // Offer the loadout as soon as the connection is established. Assets
+        // continue loading in parallel; choosing early waits for this same load.
+        this.ui.setSpawnState(joining.life > 0);
+        this.ui.openWeaponSelection();
+      } else this.ui.show('loading');
       await this.prepareGameAssets(signal);
       signal.throwIfAborted();
       while (network.state === 'connected' && network.latest && this.network === network) {
@@ -610,12 +617,21 @@ export class Game {
     this.weaponView?.setVisible(false);
     this.ui.setScope(0);
     this.ui.setSpawnState((this.network?.latest?.players.find((p) => p.id === this.network?.selfId)?.life ?? 0) > 0);
-    this.ui.show('start');
+    this.ui.openWeaponSelection();
   }
 
   private async spawnSelected(): Promise<void> {
+    if (this.state === 'loading' && this.ui.currentScreen === 'weapons' && !this.ui.spawnPending) {
+      const network = this.network, signal = this.joinAbort?.signal;
+      this.ui.setSpawnState(false, true);
+      try { await this.prepareNetworkMap(); }
+      catch { return; } // The existing join/map owner presents load failures.
+      if (signal?.aborted || this.network !== network || !this.networkReady) return;
+      return this.spawnSelected();
+    }
     const spectating = this.state === 'spectating';
-    if (spectating ? this.ui.currentScreen !== 'spectate' : this.state !== 'start' || this.ui.currentScreen !== 'start') return;
+    if (spectating ? this.ui.currentScreen !== 'spectate' : this.state !== 'start'
+      || (this.ui.currentScreen !== 'start' && this.ui.currentScreen !== 'weapons') || this.ui.spawnPending) return;
     if (spectating && (!this.spectatingDeath || this.network?.state !== 'connected'
       || Date.now() + this.network.clockOffset < this.spectatingDeath.respawnAt)) return;
     const respawn = (this.network?.latest?.players.find((p) => p.id === this.network?.selfId)?.life ?? 0) > 0;
@@ -638,6 +654,7 @@ export class Game {
         this.ui.setWeaponName(this.weapon.stats.name);
       }
       this.spectatingDeath = null; this.remotePlayers.setSpectated(null); this.ui.setRespawnBusy(false);
+      this.ui.setSpawnState(respawn);
       // enterPlay's pointer-lock callback transitions from the pre-spawn state.
       if (spectating) this.state = 'start';
       if (this.options.autoplay) this.activateWithoutLock();
@@ -787,7 +804,8 @@ export class Game {
       this.postfx.apply(p);
       this.remotePlayers.refreshEffects();
       this.materials.setAnisotropy(p.anisotropy);
-      this.map?.environment.setFog(p.fog);
+      this.materials.setUltra(!!p.ultraMaterials);
+      this.map?.environment.applyGraphicsPreset(p);
     }
     if (changed.includes('shadowQuality') && this.map) {
       this.map.environment.applyShadowPreset(SHADOW_PRESETS[v.shadowQuality], this.ctx.camera);
@@ -936,6 +954,7 @@ export class Game {
     let jumpEdge = input.wasPressed('jump');
     let fireEdge = input.wasPressed('fire');
     let reloadEdge = input.wasPressed('reload');
+    let grenadeEdge = input.wasPressed('grenade');
 
     for (const e of events) this.onWeaponEvent(e);
     this.acc += dt;
@@ -946,8 +965,10 @@ export class Game {
       const wasGrounded = player.grounded;
       player.weaponClearance = this.weapon.stats.id;
       player.fixedUpdate(FIXED_DT, it);
-      this.network?.fixedInput(player, it, { trigger: input.isDown('fire'), reload: input.isDown('reload'), grenade: input.isDown('grenade') || this.grenadeClick, ...rig.aimAngles(this.scope) });
-      const throwing = input.isDown('grenade') || this.grenadeClick;
+      const throwing = input.isDown('grenade') || grenadeEdge || this.grenadeClick;
+      // A quick key tap can be released between render frames. Forward its
+      // press edge as one authoritative input tick instead of losing the action.
+      this.network?.fixedInput(player, it, { trigger: input.isDown('fire'), reload: input.isDown('reload') || reloadEdge, grenade: throwing, ...rig.aimAngles(this.scope) });
       if (!this.options.multiplayer && throwing && !this.grenadeHeld && this.grenadeCount > 0 && this.weapon.action === 'idle' && !player.sliding) {
         const projectile = throwGrenade(map.world, player.leanEye(), { x: player.position.x, y: player.position.y + player.eyeHeight, z: player.position.z },
           player.lookDirection(), player.velocity, { id: crypto.randomUUID(), ownerId: 'player', ownerLife: 1, roundId: 0, at: Date.now() });
@@ -977,7 +998,7 @@ export class Game {
       map.targets.update(FIXED_DT);
       this.footsteps(FIXED_DT);
       if (!this.options.multiplayer && player.position.y < map.def.collision.killY) this.spawn();
-      jumpEdge = fireEdge = reloadEdge = false;
+      jumpEdge = fireEdge = reloadEdge = grenadeEdge = false;
       this.acc -= FIXED_DT;
     }
     const alpha = this.acc / FIXED_DT;
@@ -997,7 +1018,7 @@ export class Game {
     const px = (Math.tan((spreadDeg * Math.PI) / 180) / Math.tan(this.ctx.camera.fov / 2)) * (this.ctx.engine.getRenderWidth() / 2);
     // render pixels -> CSS pixels; hidden while aimed (the sight has its own reticle) or switching
     const crosshair = w.ads < 0.6 && (w.action === 'idle' || w.action === 'cycle' || w.reloading);
-    this.ui.setCrosshairSpread(px * this.ctx.engine.getHardwareScalingLevel(), crosshair);
+    this.ui.setCrosshairSpread(px * this.ctx.engine.getHardwareScalingLevel(), crosshair, dt);
     this.ui.setAmmo(w.ammo, w.reserve, w.stats.magazine, w.reloading, w.reloadProgress);
     this.ui.setWeaponSlots(this.options.multiplayer ? [w.stats.name] : this.loadout.weapons.map((x) => x.stats.name), this.options.multiplayer ? 0 : this.loadout.switchingTo ?? this.loadout.currentIndex);
     this.ui.setGrenades(this.grenadeCount);
@@ -1260,6 +1281,19 @@ export class Game {
       silhouetteInterior: () => this.remotePlayers.silhouetteInterior(),
       damageFeedback: () => this.ui.damage.inspect(),
       sceneTextureIds: () => this.ctx.scene.textures.map((t) => t.uniqueId),
+      graphics: () => ({
+        quality: this.settings.value.graphicsQuality,
+        reflectionSize: this.ctx.scene.environmentTexture?.getSize().width ?? 0,
+        reflectionId: this.ctx.scene.environmentTexture?.uniqueId ?? null,
+        reflectionReady: this.ctx.scene.environmentTexture?.isReady() ?? false,
+        exposure: this.ctx.scene.imageProcessingConfiguration.exposure,
+        environmentIntensity: this.ctx.scene.environmentIntensity,
+        materials: this.materials.all().map(m => ({ name: m.name, metallic: m.metallic, roughness: m.roughness,
+          albedo: m.albedoTexture?.uniqueId ?? null, color: m.albedoColor.asArray(),
+          normal: m.bumpTexture?.uniqueId ?? null, orm: m.metallicTexture?.name ?? null,
+          roughnessFromAlpha: m.useRoughnessFromMetallicTextureAlpha, specularAA: m.enableSpecularAntiAliasing,
+          coat: m.clearCoat.isEnabled, alpha: m.alpha })),
+      }),
       visibilityStats: () => this.remotePlayers.visibilityStats(),
       remoteOutlines: (enabled: boolean) => this.remotePlayers.setOutlinesEnabled(enabled),
       stats: () => ({

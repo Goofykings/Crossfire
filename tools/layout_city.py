@@ -508,6 +508,8 @@ def build():
     from compact_dressing import finish_layout
     layout['upperRoutes'] = [make_route('second_floor_passage', [-14,5,-11,22], 'sky_passage')]
     finish_layout(layout, PROPS)
+    from realism_layout import author
+    author(layout)
     layout["spawns"] = ffa_spawns(layout, PROPS)
     return kit, layout
 

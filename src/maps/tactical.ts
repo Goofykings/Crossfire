@@ -197,6 +197,8 @@ export function deriveTacticalMap(layout: MapLayout, props: PropCatalog | null, 
   const buildings = layout.buildings.map((b) => ({ id: b.id, poly: footprint(b), backdrop: b.type === 'backdrop' || !inPlay(b.rect) }));
 
   const covered: TacticalMapData['covered'] = [];
+  for(const b of layout.buildings)if(b.circulation)
+    covered.push({id:b.id,kind:'interior',poly:rectPoly(b.rect)});
   for (const c of layout.ground.covered) {
     const owner = layout.buildings.find((b) => b.rooms?.some((r) => sameRect(r.rect, c.rect)));
     if (c.kind === 'room' && owner) {

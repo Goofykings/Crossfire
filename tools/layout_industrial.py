@@ -452,6 +452,8 @@ def build():
     from industrial_roofs import author
     author(layout)
     finish_layout(layout, PROPS)
+    from realism_layout import author as finish_realism
+    finish_realism(layout)
     layout["spawns"] = ffa_spawns(layout, PROPS)
     return kit, layout
 

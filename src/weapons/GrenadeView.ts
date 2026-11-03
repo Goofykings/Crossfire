@@ -52,12 +52,15 @@ export class GrenadeView {
   explode(event: GrenadeExplosion): void {
     const object = this.objects.get(event.grenadeId);
     object?.root.dispose(); this.objects.delete(event.grenadeId);
-    for (let i = 0; i < 5; i++) this.emit(event.position, .35, .035, false,
-      new Vector3((Math.random() - .5) * 5, 2 + Math.random() * 2, (Math.random() - .5) * 5), true);
+    // sqrt(10) linear growth gives ten times the apparent area without more
+    // particles, a longer lifetime, or any change to authoritative blast damage.
+    const scale = Math.sqrt(10);
+    for (let i = 0; i < 5; i++) this.emit(event.position, .35, .035 * scale, false,
+      new Vector3((Math.random() - .5) * 5, 2 + Math.random() * 2, (Math.random() - .5) * 5).scaleInPlace(scale), true);
     for (let i = 0; i < 18; i++) {
       const flash = i < 2;
-      this.emit(event.position, flash ? .19 : .55 + Math.random() * .25, flash ? .75 : .16,
-        flash, new Vector3((Math.random() - .5) * 3, Math.random() * 2, (Math.random() - .5) * 3));
+      this.emit(event.position, flash ? .19 : .55 + Math.random() * .25, (flash ? .75 : .16) * scale,
+        flash, new Vector3((Math.random() - .5) * 3, Math.random() * 2, (Math.random() - .5) * 3).scaleInPlace(scale));
     }
   }
   private emit(at: { x: number; y: number; z: number }, life: number, size: number, flash: boolean, velocity: Vector3, debris = false): void {

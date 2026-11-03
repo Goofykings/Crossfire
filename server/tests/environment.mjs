@@ -9,16 +9,17 @@ import WebSocket from 'ws';
 
 test('authoritative environmental hits, bounded deltas, sleep, resume and round cleanup',{timeout:45000},async()=>{
   const origin='http://localhost:5173',clients=[];
-  const mf=new Miniflare(convertV4MiniflareOptions({name:'environment',
+  const options=convertV4MiniflareOptions({name:'environment',
     modules:[{type:'ESModule',path:fileURLToPath(new URL('runtime-fixture.mjs',import.meta.url))},
       {type:'ESModule',path:fileURLToPath(new URL('../dist/index.js',import.meta.url))}],
     compatibilityDate:'2026-10-25',host:'127.0.0.1',port:0,
     resourcePersistencePath:fs.mkdtempSync(fileURLToPath(new URL('../.wrangler/environment-',import.meta.url))),
-    durableObjects:{ROOM:{className:'PublicRoom',useSQLite:true}},bindings:{ALLOWED_ORIGINS:origin,MATCH_MODE:'ffa'},log:new Log(LogLevel.ERROR)}));
+    durableObjects:{ROOM:{className:'PublicRoom',useSQLite:true}},bindings:{ALLOWED_ORIGINS:origin,MATCH_MODE:'ffa'},log:new Log(LogLevel.ERROR)});
+  let mf=new Miniflare(options);
   const until=async(fn,label,ms=9000)=>{const end=Date.now()+ms;while(Date.now()<end){const v=await fn();if(v)return v;await delay(15);}throw new Error(label);};
   try{
-    const base=(await mf.ready).href,ns=await mf.getDurableObjectNamespace('ROOM'),room=ns.get(ns.idFromName('public-main'));
-    let round=await room.advanceMapForTest();while(round.mapId!=='european-town')round=await room.advanceMapForTest();
+    let base=(await mf.ready).href,ns=await mf.getDurableObjectNamespace('ROOM'),room=ns.get(ns.idFromName('public-main'));
+    let round=JSON.parse(JSON.stringify(await room.advanceMapForTest()));while(round.mapId!=='european-town')round=JSON.parse(JSON.stringify(await room.advanceMapForTest()));
     const self=c=>c.snapshot.players.find(p=>p.id===c.id);
     async function open(token){
       const c={ws:new WebSocket(new URL('/ws',base).href.replace('http:','ws:'),{origin}),messages:[],snapshot:null,seq:0,states:new Map()};clients.push(c);
@@ -30,15 +31,15 @@ test('authoritative environmental hits, bounded deltas, sleep, resume and round 
       c.timer=setInterval(()=>{if(c.ws.readyState===WebSocket.OPEN)c.send({type:'ping',at:Date.now()});},500);
       c.ws.once('close',()=>clearInterval(c.timer));return c;
     }
-    async function input(c,aim,trigger){const seq=++c.seq;c.send({type:'input',roundId:c.snapshot.roundId,mapVersion:c.snapshot.mapVersion,
-      frames:[{seq,yaw:aim.yaw,pitch:aim.pitch,intent:{x:0,z:0,slide:false,aim:true,jumpPressed:false},combat:{trigger,reload:false}}]});
+    async function input(c,aim,trigger,aimHeld=true){const seq=++c.seq;c.send({type:'input',roundId:c.snapshot.roundId,mapVersion:c.snapshot.mapVersion,
+      frames:[{seq,yaw:aim.yaw,pitch:aim.pitch,intent:{x:0,z:0,slide:false,aim:aimHeld,jumpPressed:false},combat:{trigger,reload:false}}]});
       await until(()=>self(c).ack>=seq,'input acknowledgement');}
-    let a=await open();const b=await open();assert.equal(a.states.size,10);assert.deepEqual([...a.states.values()],[...b.states.values()]);
+    let a=await open();const b=await open();assert.equal(a.states.size,14);assert.deepEqual([...a.states.values()],[...b.states.values()]);
     assert.ok([...a.states.values()].every(s=>s.asleep));await delay(450);
     assert.equal(b.messages.filter(m=>m.type==='environment').length,0,'no decorative traffic while asleep');
     a.send({type:'spawn',roundId:a.snapshot.roundId,mapVersion:a.snapshot.mapVersion,weapon:'rifle',requestId:crypto.randomUUID()});
     await until(()=>self(a).alive,'spawn');await delay(350);
-    const def=(await room.environmentForTest()).definition,apple=def.bodies[0],before=structuredClone(b.states.get(apple.id));
+    const def=JSON.parse(JSON.stringify((await room.environmentForTest()).definition)),apple=def.bodies[0],before=structuredClone(b.states.get(apple.id));
     const aim=await room.environmentTargetForTest(apple.id);await room.placeForCombatTest(a.id,aim.position);
     const mark=b.messages.length;await input(a,aim,true);await input(a,aim,false);
     await until(()=>b.messages.slice(mark).some(m=>m.type==='environment'&&m.frame.states.some(s=>s.id===apple.id&&!s.asleep)),'shot moves apple');
@@ -46,16 +47,44 @@ test('authoritative environmental hits, bounded deltas, sleep, resume and round 
     assert.notDeepEqual(b.states.get(apple.id).position,before.position);
     await delay(120);assert.deepEqual(a.states.get(apple.id),b.states.get(apple.id),'same authoritative final pose on both sockets');
     const frames=b.messages.slice(mark).filter(m=>m.type==='environment');assert.ok(frames.length<100);
-    for(const m of frames){assert.equal(m.frame.full,false);assert.ok(m.frame.states.length<=8);
-      for(const s of m.frame.states)assert.ok(Math.hypot(s.velocity.x,s.velocity.y,s.velocity.z)<=3.20001);}
+    for(const m of frames){assert.equal(m.frame.full,false);assert.ok(m.frame.states.length<=14);
+      for(const s of m.frame.states)assert.ok(Math.hypot(s.velocity.x,s.velocity.y,s.velocity.z)<=8.00001);}
     const quiet=b.messages.length;await delay(400);assert.equal(b.messages.slice(quiet).filter(m=>m.type==='environment').length,0);
     const saved=[...a.states.values()],id=a.id,life=self(a).life;a.ws.close();await until(()=>a.ws.readyState===WebSocket.CLOSED,'close');
     a=await open(a.token);assert.ok(a.resumed);assert.equal(a.id,id);assert.equal(self(a).life,life);
     assert.deepEqual([...a.states.values()].sort((a,b)=>a.id.localeCompare(b.id)),saved.sort((a,b)=>a.id.localeCompare(b.id)),'resume restores props, not spawn defaults');
+    const pear=def.bodies.find(b=>b.asset==='pear'),pearAim=await room.environmentTargetForTest(pear.id);
+    await room.placeForCombatTest(a.id,pearAim.position);await input(a,pearAim,true);await input(a,pearAim,false);
+    await until(()=>!b.states.get(pear.id).asleep,'confirmed hit moves an individual pear');
+    await until(()=>b.states.get(pear.id).asleep,'pear settles');
     const sign=def.signs[0],signAim=await room.environmentTargetForTest(sign.id);await room.placeForCombatTest(a.id,signAim.position);
     await input(a,signAim,true);await input(a,signAim,false);
     await until(()=>Math.abs(b.states.get(sign.id).angle)>.01,'real sign board swings');
     await until(()=>b.states.get(sign.id).asleep,'sign rests');assert.equal(b.states.get(sign.id).angle,0);
+    const light=def.lights[0],lightAim=await room.environmentTargetForTest(light.id);await room.placeForCombatTest(a.id,lightAim.position);
+    const hingeBefore=b.states.get(light.id).position;
+    await input(a,lightAim,true);await input(a,lightAim,false);
+    await until(()=>Math.abs(b.states.get(light.id).angle)>.08,'real hanging light visibly swings');
+    assert.deepEqual(b.states.get(light.id).position,hingeBefore,'suspension stays attached');
+    await until(()=>b.states.get(light.id).asleep,'light rests');
+    await until(()=>a.states.get(light.id).angle===0,'both clients converge to light rest');
+    await input(a,lightAim,false,false);await until(()=>self(a).combat.gun.ads===0,'release ADS before hibernation');await delay(200);
+    const savedEnvironment=JSON.parse(JSON.stringify((await room.environmentForTest()).states)),playerBefore=self(a);
+    const resumeToken=a.token;a.ws.close();b.ws.close();await until(()=>a.ws.readyState===WebSocket.CLOSED&&b.ws.readyState===WebSocket.CLOSED,'close before runtime reconstruction');
+    await room.saveEnvironmentForTest();
+    room[Symbol.dispose]?.();
+    await mf.dispose();mf=new Miniflare(options);base=(await mf.ready).href;ns=await mf.getDurableObjectNamespace('ROOM');
+    room=ns.get(ns.idFromName('public-main'));
+    assert.deepEqual((await room.environmentForTest()).states,savedEnvironment,'matching map revision restores moved props after reconstruction');
+    await room.saveEnvironmentForTest(true);
+    room[Symbol.dispose]?.();
+    await mf.dispose();mf=new Miniflare(options);base=(await mf.ready).href;ns=await mf.getDurableObjectNamespace('ROOM');
+    room=ns.get(ns.idFromName('public-main'));
+    const revised=await room.environmentForTest();
+    for(const state of revised.states){const d=[...revised.definition.bodies,...revised.definition.signs,...revised.definition.lights].find(d=>d.id===state.id);
+      assert.deepEqual(state.position,{x:d.position[0],y:d.position[1],z:d.position[2]},'obsolete map poses cannot float in revised baskets');}
+    a=await open(resumeToken);assert.ok(a.resumed);const playerAfter=self(a);
+    for(const field of ['health','life','weapon','kills','score'])assert.equal(playerAfter[field],playerBefore[field],'prop migration preserves '+field);
     const forged=await open();forged.send({type:'environment',frame:{states:[{id:apple.id,position:{x:500,y:500,z:500}}]}});
     await until(()=>forged.messages.some(m=>m.type==='error'),'forged prop claim rejected');
     assert.ok((await room.environmentForTest()).states.every(s=>Math.abs(s.position.x)<30));

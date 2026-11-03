@@ -1,7 +1,7 @@
 {
  "id": "industrial-complex",
  "name": "Industrial Complex",
- "version": 2,
+ "version": 3,
  "style": "industrial",
  "units": "metres; +x east, +z south, +y up (glTF / Babylon right-handed). Rects are [x0, z0, x1, z1].",
  "playArea": [
@@ -474,50 +474,10 @@
     "id": "warehouse_s",
     "kind": "interior",
     "rect": [
-     -5.7,
-     11.3,
-     5.7,
-     20.7
-    ]
-   },
-   {
-    "id": "warehouse_s_door0",
-    "kind": "doorway",
-    "rect": [
-     -0.8,
-     11,
-     0.8,
-     11.3
-    ]
-   },
-   {
-    "id": "warehouse_s_door1",
-    "kind": "doorway",
-    "rect": [
-     5.7,
-     15.2,
-     6,
-     16.8
-    ]
-   },
-   {
-    "id": "warehouse_s_door2",
-    "kind": "doorway",
-    "rect": [
-     -1.8,
-     20.7,
-     1.8,
-     21
-    ]
-   },
-   {
-    "id": "warehouse_s_door3",
-    "kind": "doorway",
-    "rect": [
      -6,
-     14.2,
-     -5.7,
-     15.8
+     14.0,
+     6,
+     16.0
     ]
    },
    {
@@ -548,6 +508,66 @@
      21,
      11,
      25
+    ]
+   },
+   {
+    "id": "warehouse_s_door0",
+    "kind": "doorway",
+    "rect": [
+     -6,
+     13.95,
+     -5.7,
+     16.05
+    ]
+   },
+   {
+    "id": "warehouse_s_door1",
+    "kind": "doorway",
+    "rect": [
+     5.699999999999999,
+     13.95,
+     6.0,
+     16.05
+    ]
+   },
+   {
+    "id": "warehouse_s_door2",
+    "kind": "doorway",
+    "rect": [
+     -1.0499999999999998,
+     11.0,
+     1.0499999999999998,
+     11.3
+    ]
+   },
+   {
+    "id": "warehouse_s_door3",
+    "kind": "doorway",
+    "rect": [
+     1.9500000000000002,
+     20.7,
+     4.050000000000001,
+     21
+    ]
+   },
+   {
+    "id": "I37_circulation_0",
+    "kind": "interior",
+    "rect": [
+     -1.0499999999999998,
+     11,
+     1.0499999999999998,
+     15.0
+    ]
+   },
+   {
+    "id": "I37_circulation_1",
+    "kind": "interior",
+    "rect": [
+     1.9500000000000002,
+     15.0,
+     4.050000000000001,
+     21
     ]
    }
   ]
@@ -1848,55 +1868,73 @@
       5.7,
       20.7
      ],
-     "clear": 5.6,
+     "clear": 5.82,
      "doors": [
       {
-       "side": "n",
+       "side": "w",
        "rect": [
-        -0.8,
-        11,
-        0.8,
-        11.3
+        -6,
+        13.95,
+        -5.7,
+        16.05
        ],
-       "height": 2.4,
+       "height": 2.5,
        "kind": "doorway"
       },
       {
        "side": "e",
        "rect": [
-        5.7,
-        15.2,
-        6,
-        16.8
+        5.699999999999999,
+        13.95,
+        6.0,
+        16.05
        ],
-       "height": 2.4,
+       "height": 2.5,
+       "kind": "doorway"
+      },
+      {
+       "side": "n",
+       "rect": [
+        -1.0499999999999998,
+        11.0,
+        1.0499999999999998,
+        11.3
+       ],
+       "height": 2.5,
        "kind": "doorway"
       },
       {
        "side": "s",
        "rect": [
-        -1.8,
+        1.9500000000000002,
         20.7,
-        1.8,
+        4.050000000000001,
         21
        ],
-       "height": 3.8,
-       "kind": "roller_open"
-      },
-      {
-       "side": "w",
-       "rect": [
-        -6,
-        14.2,
-        -5.7,
-        15.8
-       ],
-       "height": 2.4,
+       "height": 2.5,
        "kind": "doorway"
       }
      ]
     }
-   ]
+   ],
+   "circulation": {
+    "style": "industrial",
+    "flipZ": true,
+    "exit": "w",
+    "doorV": 6.0,
+    "stairWidth": 7,
+    "extraDoors": [
+     [
+      "s",
+      6.0
+     ],
+     [
+      "n",
+      9.0
+     ]
+    ]
+   },
+   "purpose": "Warehouse dispatch and elevated office"
   },
   {
    "id": "I38",
@@ -2467,8 +2505,8 @@
    "type": "pallet_goods",
    "pos": [
     -4.6,
-    0.0,
-    19
+    0.02,
+    12.1
    ],
    "heading": 0
   },
@@ -2476,8 +2514,8 @@
    "type": "crate_large",
    "pos": [
     4.5,
-    0.0,
-    19.2
+    0.02,
+    12.2
    ],
    "heading": 0
   },
@@ -2502,9 +2540,9 @@
   {
    "type": "pallet_goods",
    "pos": [
-    1.5,
-    0.0,
-    16.0
+    4.4,
+    0.02,
+    19.0
    ],
    "heading": 0
   },
@@ -2682,7 +2720,40 @@
    "heading": 90
   }
  ],
- "lights": [],
+ "lights": [
+  {
+   "type": "point",
+   "pos": [
+    0.0,
+    2.2,
+    11.9
+   ],
+   "color": [
+    0.85,
+    0.93,
+    1
+   ],
+   "intensity": 0.65,
+   "range": 4.5,
+   "circulation": "I37"
+  },
+  {
+   "type": "point",
+   "pos": [
+    0.0,
+    5.3,
+    11.9
+   ],
+   "color": [
+    0.85,
+    0.93,
+    1
+   ],
+   "intensity": 0.65,
+   "range": 4.5,
+   "circulation": "I37"
+  }
+ ],
  "arches": [
   {
    "id": "hall_canopy",
@@ -2704,7 +2775,7 @@
     -5,
     15
    ],
-   "spring": 3.6,
+   "spring": 5.4,
    "style": "canopy",
    "axis": "x"
   },
@@ -3269,50 +3340,10 @@
     "id": "warehouse_s",
     "kind": "interior",
     "rect": [
-     -5.7,
-     11.3,
-     5.7,
-     20.7
-    ]
-   },
-   {
-    "id": "warehouse_s_door0",
-    "kind": "doorway",
-    "rect": [
-     -0.8,
-     11,
-     0.8,
-     11.3
-    ]
-   },
-   {
-    "id": "warehouse_s_door1",
-    "kind": "doorway",
-    "rect": [
-     5.7,
-     15.2,
-     6,
-     16.8
-    ]
-   },
-   {
-    "id": "warehouse_s_door2",
-    "kind": "doorway",
-    "rect": [
-     -1.8,
-     20.7,
-     1.8,
-     21
-    ]
-   },
-   {
-    "id": "warehouse_s_door3",
-    "kind": "doorway",
-    "rect": [
      -6,
-     14.2,
-     -5.7,
-     15.8
+     14.0,
+     6,
+     16.0
     ]
    },
    {
@@ -3343,6 +3374,66 @@
      21,
      11,
      25
+    ]
+   },
+   {
+    "id": "warehouse_s_door0",
+    "kind": "doorway",
+    "rect": [
+     -6,
+     13.95,
+     -5.7,
+     16.05
+    ]
+   },
+   {
+    "id": "warehouse_s_door1",
+    "kind": "doorway",
+    "rect": [
+     5.699999999999999,
+     13.95,
+     6.0,
+     16.05
+    ]
+   },
+   {
+    "id": "warehouse_s_door2",
+    "kind": "doorway",
+    "rect": [
+     -1.0499999999999998,
+     11.0,
+     1.0499999999999998,
+     11.3
+    ]
+   },
+   {
+    "id": "warehouse_s_door3",
+    "kind": "doorway",
+    "rect": [
+     1.9500000000000002,
+     20.7,
+     4.050000000000001,
+     21
+    ]
+   },
+   {
+    "id": "I37_circulation_0",
+    "kind": "interior",
+    "rect": [
+     -1.0499999999999998,
+     11,
+     1.0499999999999998,
+     15.0
+    ]
+   },
+   {
+    "id": "I37_circulation_1",
+    "kind": "interior",
+    "rect": [
+     1.9500000000000002,
+     15.0,
+     4.050000000000001,
+     21
     ]
    }
   ],
@@ -3697,9 +3788,547 @@
      -14.995,
      8.864999999999998
     ]
+   },
+   {
+    "id": "circulation:I37:wall",
+    "rect": [
+     -6,
+     20.7,
+     -1.0,
+     21
+    ]
+   },
+   {
+    "id": "circulation:I37:wall",
+    "rect": [
+     1.0,
+     20.7,
+     1.9500000000000002,
+     21
+    ]
+   },
+   {
+    "id": "circulation:I37:wall",
+    "rect": [
+     -1.0,
+     20.7,
+     1.0,
+     21
+    ]
+   },
+   {
+    "id": "circulation:I37:wall",
+    "rect": [
+     4.050000000000001,
+     20.7,
+     6,
+     21
+    ]
+   },
+   {
+    "id": "circulation:I37:wall",
+    "rect": [
+     -6,
+     11,
+     -1.0499999999999998,
+     11.3
+    ]
+   },
+   {
+    "id": "circulation:I37:wall",
+    "rect": [
+     1.0499999999999998,
+     11,
+     6,
+     11.3
+    ]
+   },
+   {
+    "id": "circulation:I37:wall",
+    "rect": [
+     -6,
+     16.05,
+     -5.7,
+     20.7
+    ]
+   },
+   {
+    "id": "circulation:I37:wall",
+    "rect": [
+     -6,
+     11.3,
+     -5.7,
+     13.95
+    ]
+   },
+   {
+    "id": "circulation:I37:wall",
+    "rect": [
+     5.699999999999999,
+     16.05,
+     6,
+     20.7
+    ]
+   },
+   {
+    "id": "circulation:I37:wall",
+    "rect": [
+     5.699999999999999,
+     11.3,
+     6,
+     13.95
+    ]
+   },
+   {
+    "id": "circulation:I37:turn-landing",
+    "rect": [
+     -5.7,
+     18.0,
+     0.7000000000000002,
+     20.7
+    ]
+   },
+   {
+    "id": "circulation:I37:stair-b",
+    "rect": [
+     -5.7,
+     17.7,
+     -3.4,
+     18.0
+    ]
+   },
+   {
+    "id": "circulation:I37:stair-b",
+    "rect": [
+     -5.7,
+     17.4,
+     -3.4,
+     17.7
+    ]
+   },
+   {
+    "id": "circulation:I37:stair-a",
+    "rect": [
+     -1.5999999999999996,
+     16.2,
+     0.7000000000000002,
+     16.5
+    ]
+   },
+   {
+    "id": "circulation:I37:stair-b",
+    "rect": [
+     -5.7,
+     17.1,
+     -3.4,
+     17.4
+    ]
+   },
+   {
+    "id": "circulation:I37:stair-a",
+    "rect": [
+     -1.5999999999999996,
+     16.5,
+     0.7000000000000002,
+     16.8
+    ]
+   },
+   {
+    "id": "circulation:I37:stair-b",
+    "rect": [
+     -5.7,
+     16.8,
+     -3.4,
+     17.1
+    ]
+   },
+   {
+    "id": "circulation:I37:stair-a",
+    "rect": [
+     -1.5999999999999996,
+     16.8,
+     0.7000000000000002,
+     17.1
+    ]
+   },
+   {
+    "id": "circulation:I37:stair-b",
+    "rect": [
+     -5.7,
+     16.5,
+     -3.4,
+     16.8
+    ]
+   },
+   {
+    "id": "circulation:I37:stair-a",
+    "rect": [
+     -1.5999999999999996,
+     17.1,
+     0.7000000000000002,
+     17.4
+    ]
+   },
+   {
+    "id": "circulation:I37:stair-b",
+    "rect": [
+     -5.7,
+     16.2,
+     -3.4,
+     16.5
+    ]
+   },
+   {
+    "id": "circulation:I37:stair-a",
+    "rect": [
+     -1.5999999999999996,
+     17.4,
+     0.7000000000000002,
+     17.7
+    ]
+   },
+   {
+    "id": "circulation:I37:stair-b",
+    "rect": [
+     -5.7,
+     15.9,
+     -3.4,
+     16.2
+    ]
+   },
+   {
+    "id": "circulation:I37:stair-a",
+    "rect": [
+     -1.5999999999999996,
+     17.7,
+     0.7000000000000002,
+     18.0
+    ]
+   },
+   {
+    "id": "circulation:I37:stair-b",
+    "rect": [
+     -5.7,
+     15.600000000000001,
+     -3.4,
+     15.9
+    ]
+   },
+   {
+    "id": "circulation:I37:cabinet",
+    "rect": [
+     1.0999999999999996,
+     11.3,
+     2.3000000000000007,
+     11.78
+    ]
+   },
+   {
+    "id": "circulation:I37:counter",
+    "rect": [
+     1.0600000000000005,
+     11.28,
+     2.34,
+     11.8
+    ]
+   },
+   {
+    "id": "circulation:I37:exit-stair",
+    "rect": [
+     -7.88,
+     13.9,
+     -7.6,
+     16.1
+    ]
+   },
+   {
+    "id": "circulation:I37:exit-stair",
+    "rect": [
+     -8.16,
+     13.9,
+     -7.88,
+     16.1
+    ]
+   },
+   {
+    "id": "circulation:I37:exit-stair",
+    "rect": [
+     -8.440000000000001,
+     13.9,
+     -8.16,
+     16.1
+    ]
+   },
+   {
+    "id": "circulation:I37:exit-stair",
+    "rect": [
+     -8.72,
+     13.9,
+     -8.440000000000001,
+     16.1
+    ]
+   },
+   {
+    "id": "circulation:I37:exit-stair",
+    "rect": [
+     -9.0,
+     13.9,
+     -8.72,
+     16.1
+    ]
+   },
+   {
+    "id": "circulation:I37:exit-stair",
+    "rect": [
+     -9.280000000000001,
+     13.9,
+     -9.0,
+     16.1
+    ]
+   },
+   {
+    "id": "circulation:I37:exit-stair",
+    "rect": [
+     -9.56,
+     13.9,
+     -9.280000000000001,
+     16.1
+    ]
+   },
+   {
+    "id": "circulation:I37:exit-stair",
+    "rect": [
+     -9.84,
+     13.9,
+     -9.56,
+     16.1
+    ]
+   },
+   {
+    "id": "circulation:I37:exit-stair",
+    "rect": [
+     -10.120000000000001,
+     13.9,
+     -9.84,
+     16.1
+    ]
+   },
+   {
+    "id": "circulation:I37:exit-post",
+    "rect": [
+     -10.120000000000001,
+     16.04,
+     -10.060000000000002,
+     16.1
+    ]
+   },
+   {
+    "id": "circulation:I37:exit-post",
+    "rect": [
+     -10.120000000000001,
+     13.9,
+     -10.060000000000002,
+     13.96
+    ]
+   },
+   {
+    "id": "circulation:I37:exit-stair",
+    "rect": [
+     -10.4,
+     13.9,
+     -10.120000000000001,
+     16.1
+    ]
+   },
+   {
+    "id": "circulation:I37:exit-stair",
+    "rect": [
+     -10.68,
+     13.9,
+     -10.4,
+     16.1
+    ]
+   },
+   {
+    "id": "circulation:I37:exit-stair",
+    "rect": [
+     -10.96,
+     13.9,
+     -10.68,
+     16.1
+    ]
+   },
+   {
+    "id": "circulation:I37:exit-stair",
+    "rect": [
+     -11.24,
+     13.9,
+     -10.96,
+     16.1
+    ]
+   },
+   {
+    "id": "circulation:I37:exit-rail",
+    "rect": [
+     -11.24,
+     16.04,
+     -10.96,
+     16.1
+    ]
+   },
+   {
+    "id": "circulation:I37:exit-post",
+    "rect": [
+     -11.24,
+     16.04,
+     -11.18,
+     16.1
+    ]
+   },
+   {
+    "id": "circulation:I37:exit-rail",
+    "rect": [
+     -11.24,
+     13.9,
+     -10.96,
+     13.96
+    ]
+   },
+   {
+    "id": "circulation:I37:exit-post",
+    "rect": [
+     -11.24,
+     13.9,
+     -11.18,
+     13.96
+    ]
+   },
+   {
+    "id": "circulation:I37:exit-stair",
+    "rect": [
+     -11.52,
+     13.9,
+     -11.24,
+     16.1
+    ]
+   },
+   {
+    "id": "circulation:I37:exit-rail",
+    "rect": [
+     -11.52,
+     16.04,
+     -11.24,
+     16.1
+    ]
+   },
+   {
+    "id": "circulation:I37:exit-rail",
+    "rect": [
+     -11.52,
+     13.9,
+     -11.24,
+     13.96
+    ]
+   },
+   {
+    "id": "circulation:I37:exit-rail",
+    "rect": [
+     -11.8,
+     16.04,
+     -11.52,
+     16.1
+    ]
+   },
+   {
+    "id": "circulation:I37:exit-rail",
+    "rect": [
+     -11.8,
+     13.9,
+     -11.52,
+     13.96
+    ]
+   },
+   {
+    "id": "circulation:I37:exit-rail",
+    "rect": [
+     -12.08,
+     16.04,
+     -11.8,
+     16.1
+    ]
+   },
+   {
+    "id": "circulation:I37:exit-rail",
+    "rect": [
+     -12.08,
+     13.9,
+     -11.8,
+     13.96
+    ]
+   },
+   {
+    "id": "circulation:I37:exit-support",
+    "rect": [
+     -7.51,
+     15.98,
+     -7.39,
+     16.1
+    ]
+   },
+   {
+    "id": "circulation:I37:exit-support",
+    "rect": [
+     -7.51,
+     13.899999999999999,
+     -7.39,
+     14.02
+    ]
    }
   ]
  },
+ "circulationRoutes": [
+  {
+   "id": "I37",
+   "height": 3.22,
+   "waypoints": [
+    [
+     7,
+     0.02,
+     15.0
+    ],
+    [
+     -0.6500000000000004,
+     0.02,
+     15.0
+    ],
+    [
+     -0.6500000000000004,
+     1.62,
+     18.5
+    ],
+    [
+     -3.9,
+     1.62,
+     18.5
+    ],
+    [
+     -3.9,
+     3.22,
+     15.0
+    ],
+    [
+     -6.9,
+     3.22,
+     15.0
+    ],
+    [
+     -12.65,
+     0,
+     15.0
+    ]
+   ]
+  }
+ ],
  "spawns": [
   {
    "id": "S01",

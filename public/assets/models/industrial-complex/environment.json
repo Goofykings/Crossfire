@@ -29,5 +29,18 @@
   }
  ],
  "signs": [],
+ "lights": [
+  {
+   "id": "light-I37",
+   "asset": "hanging_light",
+   "position": [
+    5.050000000000001,
+    3.0,
+    13
+   ],
+   "yaw": 0
+  }
+ ],
+ "basins": [],
  "replaceProps": []
 }

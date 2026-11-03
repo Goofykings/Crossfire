@@ -58,7 +58,7 @@ describe('authored map and strict environment protocol',()=>{
     const s=new EnvironmentSimulation(def,m.world);expect(s.active).toBe(0);
   });
   it('uses exposed 3D apples and refined bin collision instead of an invisible solid stall',()=>{
-    const m=WORLDS['european-town'];expect(m.environment.bodies.filter(b=>b.asset==='apple')).toHaveLength(6);
+    const m=WORLDS['european-town'];expect(m.environment.bodies.filter(b=>b.asset==='apple'||b.asset==='pear')).toHaveLength(9);
     const b=m.environment.bodies[0],o={x:b.position[0],y:1.64,z:b.position[2]+2},delta={x:0,y:b.position[1]-o.y,z:-2};
     const length=Math.hypot(...Object.values(delta)),d={x:0,y:delta.y/length,z:delta.z/length};
     const wall=m.world.raycast(o.x,o.y,o.z,d.x,d.y,d.z,length);

@@ -1,5 +1,24 @@
 # CLAUDE.md: notes for future sessions
 
+## Gameplay Phase 4 physics polish (2026-11-02)
+
+See docs/PHYSICS_POLISH_PHASE4.md and newest PROGRESS.md entry. This supersedes
+the older environmental budgets below: Town now has nine interactive apples/
+pears, two loose bodies, two signs and one selected interior lamp (14 states).
+Other maps have two loose bodies and one lamp. Keep the v12 wire fields and
+14-state global cap; trusted definitions have optional basins/tilt/lights.
+produce.py shares tapered bin/fruit authorship; static collision stays conservative
+for players and bullets, while environment sphere sweeps use finite tapered
+contacts. sweepSphere's optional filter does not change grenade defaults.
+Fivefold impulses are capped at 8 m/s; 120 Hz substeps, pair support, damping and
+sleep remain bounded. Keep sign brackets/light plates static and real hinges at
+their upper pivots. Lamp point lights follow the cage without dynamic shadows.
+Use the dominant horizontal hit projection for lamps: a truthy tiny spread
+component must not swallow their front-facing impulse. Matching frontend/assets
+and Worker publication is needed later. Persist decorative poses with mapVersion;
+restore matching revisions only, retaining the sequence and player state when
+legacy poses reset. No deployment or public validation here.
+
 ## Coordinated deployment (2026-11-02)
 
 See docs/DEPLOYMENT.md. Main releases now check both packages, run the real

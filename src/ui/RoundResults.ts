@@ -52,7 +52,7 @@ export function createRoundResults(result: RoundResult, selfId: string, team: Pl
   mvp.append(node('small', '', 'MVP'), node('strong', '', result.mvp?.name ?? 'No participants'), node('span', '', result.mvp ? `${result.mvp.score} points` : ''));
   panel.append(mvp);
   const actions = node('div', 'result-actions');
-  const play = node('button', 'btn primary', 'PLAY AGAIN'), lobby = node('button', 'btn', 'RETURN TO LOBBY');
+  const play = node('button', 'btn primary', 'PLAY AGAIN'), lobby = node('button', 'btn leave-match', 'RETURN TO LOBBY');
   let activated = false;
   const once = (action: () => void) => () => { if (activated) return; activated = true; play.disabled = lobby.disabled = true; action(); };
   play.onclick = once(next); lobby.onclick = once(home); actions.append(play, lobby); panel.append(actions);

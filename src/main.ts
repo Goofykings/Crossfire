@@ -14,7 +14,7 @@ function parseOptions(): GameOptions {
     map: q.get('map') ?? undefined,
     cam: cam ? cam.split(',').map(Number) : null,
     hideHud: q.has('nohud'),
-    quality: quality === 'low' || quality === 'medium' || quality === 'high' ? quality : undefined,
+    quality: quality === 'low' || quality === 'medium' || quality === 'high' || quality === 'ultra' ? quality : undefined,
     shadows: shadows === 'off' || shadows === 'low' || shadows === 'medium' || shadows === 'high' ? shadows : undefined,
     scale: scale ? Number(scale) : undefined,
   };

@@ -66,6 +66,9 @@ def to_obb(b, tag, yaw=0.0):
 
 
 def building_boxes(b):
+    if b.get('circulation'):
+        from circulation import parts
+        return [to_obb(r,f"circulation:{b['id']}:{kind}") for r,_,kind in parts(b)]
     x0, z0, x1, z1 = b["rect"]
     top = bs.eave_height(b)
     tag = f"building:{b['id']}"

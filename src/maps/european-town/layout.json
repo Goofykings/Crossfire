@@ -1,7 +1,7 @@
 {
  "id": "european-town",
  "name": "European Town",
- "version": 2,
+ "version": 3,
  "units": "metres; +x east, +z south, +y up (glTF / Babylon right-handed). Rects are [x0, z0, x1, z1].",
  "playArea": [
   -26,
@@ -494,9 +494,9 @@
     "kind": "room",
     "rect": [
      -11,
-     11,
+     11.5,
      -4,
-     14
+     13.5
     ]
    },
    {
@@ -1237,7 +1237,16 @@
       "e"
      ]
     }
-   ]
+   ],
+   "circulation": {
+    "style": "town",
+    "flipZ": false,
+    "exit": "w",
+    "doorV": 6.5,
+    "stairWidth": 7,
+    "extraDoors": []
+   },
+   "purpose": "Garden provisions shop and apartment"
   },
   {
    "id": "B26",
@@ -1930,7 +1939,7 @@
    "rect": [
     -20,
     11,
-    -17,
+    -17.5,
     12
    ],
    "height": 3.6,
@@ -2126,9 +2135,9 @@
   {
    "type": "flower_pot_large",
    "pos": [
-    -13,
-    0.0,
-    11.2
+    -12,
+    0,
+    15.2
    ],
    "heading": 0
   },
@@ -2484,7 +2493,40 @@
    "heading": 0
   }
  ],
- "lights": [],
+ "lights": [
+  {
+   "type": "point",
+   "pos": [
+    -7.5,
+    2.2,
+    13.1
+   ],
+   "color": [
+    1,
+    0.9,
+    0.76
+   ],
+   "intensity": 0.65,
+   "range": 4.5,
+   "circulation": "B25"
+  },
+  {
+   "type": "point",
+   "pos": [
+    -7.5,
+    5.3,
+    13.1
+   ],
+   "color": [
+    1,
+    0.9,
+    0.76
+   ],
+   "intensity": 0.65,
+   "range": 4.5,
+   "circulation": "B25"
+  }
+ ],
  "targets": [
   {
    "id": "T01",
@@ -3083,9 +3125,9 @@
     "kind": "room",
     "rect": [
      -11,
-     11,
+     11.5,
      -4,
-     14
+     13.5
     ]
    },
    {
@@ -3480,9 +3522,529 @@
      -13.995,
      -8.135000000000003
     ]
+   },
+   {
+    "id": "circulation:B25:wall",
+    "rect": [
+     -11,
+     6,
+     -8.5,
+     6.3
+    ]
+   },
+   {
+    "id": "circulation:B25:wall",
+    "rect": [
+     -6.5,
+     6,
+     -4,
+     6.3
+    ]
+   },
+   {
+    "id": "circulation:B25:wall",
+    "rect": [
+     -8.5,
+     6,
+     -6.5,
+     6.3
+    ]
+   },
+   {
+    "id": "circulation:B25:wall",
+    "rect": [
+     -11,
+     13.7,
+     -4,
+     14
+    ]
+   },
+   {
+    "id": "circulation:B25:wall",
+    "rect": [
+     -11,
+     6.3,
+     -10.7,
+     11.45
+    ]
+   },
+   {
+    "id": "circulation:B25:wall",
+    "rect": [
+     -11,
+     13.55,
+     -10.7,
+     13.7
+    ]
+   },
+   {
+    "id": "circulation:B25:wall",
+    "rect": [
+     -4.3,
+     6.3,
+     -4,
+     11.45
+    ]
+   },
+   {
+    "id": "circulation:B25:wall",
+    "rect": [
+     -4.3,
+     13.55,
+     -4,
+     13.7
+    ]
+   },
+   {
+    "id": "circulation:B25:turn-landing",
+    "rect": [
+     -10.7,
+     6.3,
+     -4.3,
+     9.0
+    ]
+   },
+   {
+    "id": "circulation:B25:stair-b",
+    "rect": [
+     -10.7,
+     9.0,
+     -8.4,
+     9.3
+    ]
+   },
+   {
+    "id": "circulation:B25:stair-b",
+    "rect": [
+     -10.7,
+     9.3,
+     -8.4,
+     9.6
+    ]
+   },
+   {
+    "id": "circulation:B25:stair-a",
+    "rect": [
+     -6.6,
+     10.5,
+     -4.3,
+     10.8
+    ]
+   },
+   {
+    "id": "circulation:B25:stair-b",
+    "rect": [
+     -10.7,
+     9.6,
+     -8.4,
+     9.9
+    ]
+   },
+   {
+    "id": "circulation:B25:stair-a",
+    "rect": [
+     -6.6,
+     10.2,
+     -4.3,
+     10.5
+    ]
+   },
+   {
+    "id": "circulation:B25:stair-b",
+    "rect": [
+     -10.7,
+     9.9,
+     -8.4,
+     10.2
+    ]
+   },
+   {
+    "id": "circulation:B25:stair-a",
+    "rect": [
+     -6.6,
+     9.9,
+     -4.3,
+     10.2
+    ]
+   },
+   {
+    "id": "circulation:B25:stair-b",
+    "rect": [
+     -10.7,
+     10.2,
+     -8.4,
+     10.5
+    ]
+   },
+   {
+    "id": "circulation:B25:stair-a",
+    "rect": [
+     -6.6,
+     9.600000000000001,
+     -4.3,
+     9.9
+    ]
+   },
+   {
+    "id": "circulation:B25:stair-b",
+    "rect": [
+     -10.7,
+     10.5,
+     -8.4,
+     10.8
+    ]
+   },
+   {
+    "id": "circulation:B25:stair-a",
+    "rect": [
+     -6.6,
+     9.3,
+     -4.3,
+     9.6
+    ]
+   },
+   {
+    "id": "circulation:B25:stair-b",
+    "rect": [
+     -10.7,
+     10.8,
+     -8.4,
+     11.1
+    ]
+   },
+   {
+    "id": "circulation:B25:stair-a",
+    "rect": [
+     -6.6,
+     9.0,
+     -4.3,
+     9.3
+    ]
+   },
+   {
+    "id": "circulation:B25:stair-b",
+    "rect": [
+     -10.7,
+     11.1,
+     -8.4,
+     11.399999999999999
+    ]
+   },
+   {
+    "id": "circulation:B25:cabinet",
+    "rect": [
+     -6.4,
+     13.219999999999999,
+     -5.2,
+     13.7
+    ]
+   },
+   {
+    "id": "circulation:B25:counter",
+    "rect": [
+     -6.4399999999999995,
+     13.2,
+     -5.16,
+     13.719999999999999
+    ]
+   },
+   {
+    "id": "circulation:B25:exit-stair",
+    "rect": [
+     -12.88,
+     11.4,
+     -12.6,
+     13.6
+    ]
+   },
+   {
+    "id": "circulation:B25:exit-stair",
+    "rect": [
+     -13.16,
+     11.4,
+     -12.88,
+     13.6
+    ]
+   },
+   {
+    "id": "circulation:B25:exit-stair",
+    "rect": [
+     -13.440000000000001,
+     11.4,
+     -13.16,
+     13.6
+    ]
+   },
+   {
+    "id": "circulation:B25:exit-stair",
+    "rect": [
+     -13.72,
+     11.4,
+     -13.440000000000001,
+     13.6
+    ]
+   },
+   {
+    "id": "circulation:B25:exit-stair",
+    "rect": [
+     -14.0,
+     11.4,
+     -13.72,
+     13.6
+    ]
+   },
+   {
+    "id": "circulation:B25:exit-stair",
+    "rect": [
+     -14.280000000000001,
+     11.4,
+     -14.0,
+     13.6
+    ]
+   },
+   {
+    "id": "circulation:B25:exit-stair",
+    "rect": [
+     -14.56,
+     11.4,
+     -14.280000000000001,
+     13.6
+    ]
+   },
+   {
+    "id": "circulation:B25:exit-stair",
+    "rect": [
+     -14.84,
+     11.4,
+     -14.56,
+     13.6
+    ]
+   },
+   {
+    "id": "circulation:B25:exit-stair",
+    "rect": [
+     -15.120000000000001,
+     11.4,
+     -14.84,
+     13.6
+    ]
+   },
+   {
+    "id": "circulation:B25:exit-post",
+    "rect": [
+     -15.120000000000001,
+     11.4,
+     -15.060000000000002,
+     11.46
+    ]
+   },
+   {
+    "id": "circulation:B25:exit-post",
+    "rect": [
+     -15.120000000000001,
+     13.54,
+     -15.060000000000002,
+     13.6
+    ]
+   },
+   {
+    "id": "circulation:B25:exit-stair",
+    "rect": [
+     -15.4,
+     11.4,
+     -15.120000000000001,
+     13.6
+    ]
+   },
+   {
+    "id": "circulation:B25:exit-stair",
+    "rect": [
+     -15.68,
+     11.4,
+     -15.4,
+     13.6
+    ]
+   },
+   {
+    "id": "circulation:B25:exit-stair",
+    "rect": [
+     -15.96,
+     11.4,
+     -15.68,
+     13.6
+    ]
+   },
+   {
+    "id": "circulation:B25:exit-stair",
+    "rect": [
+     -16.240000000000002,
+     11.4,
+     -15.96,
+     13.6
+    ]
+   },
+   {
+    "id": "circulation:B25:exit-rail",
+    "rect": [
+     -16.240000000000002,
+     11.4,
+     -15.96,
+     11.46
+    ]
+   },
+   {
+    "id": "circulation:B25:exit-post",
+    "rect": [
+     -16.240000000000002,
+     11.4,
+     -16.18,
+     11.46
+    ]
+   },
+   {
+    "id": "circulation:B25:exit-rail",
+    "rect": [
+     -16.240000000000002,
+     13.54,
+     -15.96,
+     13.6
+    ]
+   },
+   {
+    "id": "circulation:B25:exit-post",
+    "rect": [
+     -16.240000000000002,
+     13.54,
+     -16.18,
+     13.6
+    ]
+   },
+   {
+    "id": "circulation:B25:exit-stair",
+    "rect": [
+     -16.52,
+     11.4,
+     -16.240000000000002,
+     13.6
+    ]
+   },
+   {
+    "id": "circulation:B25:exit-rail",
+    "rect": [
+     -16.52,
+     11.4,
+     -16.240000000000002,
+     11.46
+    ]
+   },
+   {
+    "id": "circulation:B25:exit-rail",
+    "rect": [
+     -16.52,
+     13.54,
+     -16.240000000000002,
+     13.6
+    ]
+   },
+   {
+    "id": "circulation:B25:exit-rail",
+    "rect": [
+     -16.8,
+     11.4,
+     -16.52,
+     11.46
+    ]
+   },
+   {
+    "id": "circulation:B25:exit-rail",
+    "rect": [
+     -16.8,
+     13.54,
+     -16.52,
+     13.6
+    ]
+   },
+   {
+    "id": "circulation:B25:exit-rail",
+    "rect": [
+     -17.08,
+     11.4,
+     -16.8,
+     11.46
+    ]
+   },
+   {
+    "id": "circulation:B25:exit-rail",
+    "rect": [
+     -17.08,
+     13.54,
+     -16.8,
+     13.6
+    ]
+   },
+   {
+    "id": "circulation:B25:exit-support",
+    "rect": [
+     -12.51,
+     11.4,
+     -12.39,
+     11.52
+    ]
+   },
+   {
+    "id": "circulation:B25:exit-support",
+    "rect": [
+     -12.51,
+     13.48,
+     -12.39,
+     13.600000000000001
+    ]
    }
   ]
  },
+ "circulationRoutes": [
+  {
+   "id": "B25",
+   "height": 3.22,
+   "waypoints": [
+    [
+     -3,
+     0.02,
+     12.5
+    ],
+    [
+     -5.65,
+     0.02,
+     12.5
+    ],
+    [
+     -5.65,
+     1.62,
+     8.5
+    ],
+    [
+     -8.9,
+     1.62,
+     8.5
+    ],
+    [
+     -8.9,
+     3.22,
+     12.5
+    ],
+    [
+     -11.9,
+     3.22,
+     12.5
+    ],
+    [
+     -17.65,
+     0,
+     12.5
+    ]
+   ]
+  }
+ ],
  "spawns": [
   {
    "id": "S01",
@@ -3626,7 +4188,7 @@
     0.0,
     -16.0
    ],
-   "heading": 195
+   "heading": 180
   }
  ]
 }

@@ -1,7 +1,7 @@
 /** Physical keyboard codes and mouse buttons; multiple defaults preserve existing controls. */
 export const DEFAULT_BINDINGS = {
   forward: ['KeyW', 'ArrowUp'], back: ['KeyS', 'ArrowDown'], left: ['KeyA', 'ArrowLeft'], right: ['KeyD', 'ArrowRight'],
-  jump: ['Space'], slide: ['ShiftLeft', 'ShiftRight'], crouch: ['ControlLeft'], grenade: ['KeyR'], aim: ['Mouse2'], fire: ['Mouse0'], reload: ['KeyF'],
+  jump: ['Space'], slide: ['ShiftLeft', 'ShiftRight'], crouch: ['ControlLeft'], grenade: ['KeyG'], aim: ['Mouse2', 'KeyK'], fire: ['Mouse0', 'KeyJ'], reload: ['KeyR'],
   leanLeft: ['KeyQ'], leanRight: ['KeyE'], leaderboard: ['Tab'], chat: ['Enter'], pause: ['Escape'],
   weapon1: ['Digit1', 'Numpad1'], weapon2: ['Digit2', 'Numpad2'], weapon3: ['Digit3', 'Numpad3'], weapon4: ['Digit4', 'Numpad4'],
 } as const;
@@ -20,10 +20,12 @@ export function sanitizeBindings(value: unknown): KeyBindings {
   const fallback = defaultBindings();
   if (!value || typeof value !== 'object') return fallback;
   const data = { ...value as Record<string, unknown> }, result = {} as KeyBindings, seen = new Set<string>();
-  const legacy = data.grenade === undefined && data.crouch === undefined;
   const oldActions = BINDABLE_ACTIONS.filter(a => a !== 'grenade' && a !== 'crouch');
-  const oldDefault = legacy && oldActions.every(a => JSON.stringify(data[a]) === JSON.stringify(a === 'reload' ? ['KeyR'] : DEFAULT_BINDINGS[a]));
-  if (oldDefault) data.reload = ['KeyF'];
+  // Migrate only the complete former factory layout. A saved custom R grenade
+  // (or any other customization) remains intentional; never steal its key.
+  const formerDefault = BINDABLE_ACTIONS.every(a => JSON.stringify(data[a]) === JSON.stringify(
+    a === 'grenade' ? ['KeyR'] : a === 'reload' ? ['KeyF'] : a === 'aim' ? ['Mouse2'] : a === 'fire' ? ['Mouse0'] : DEFAULT_BINDINGS[a]));
+  if (formerDefault) return fallback;
   // Validate saved controls first. New actions must never steal a custom key.
   for (const action of oldActions) {
     const candidate = data[action];
@@ -35,7 +37,7 @@ export function sanitizeBindings(value: unknown): KeyBindings {
   for (const action of ['grenade', 'crouch'] as const) {
     const candidate = data[action];
     if (candidate === undefined) {
-      const choices = [...(action === 'grenade' ? ['KeyR','KeyG','KeyH','KeyN','KeyB'] : ['ControlLeft','ControlRight','KeyC','KeyV','KeyZ']),
+      const choices = [...(action === 'grenade' ? ['KeyG','KeyH','KeyN','KeyB'] : ['ControlLeft','ControlRight','KeyC','KeyV','KeyZ']),
         ...Array.from({ length: 26 }, (_, n) => `Key${String.fromCharCode(65 + n)}`), 'Mouse3', 'Mouse4'];
       const code = choices.find(c => !seen.has(c));
       if (!code) return fallback;

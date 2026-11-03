@@ -131,8 +131,13 @@ export class PublicRoom extends DurableObject<Bindings> {
       if (scores?.roundId === this.round.id) this.scores = scores;
       else this.scores.roundId = this.round.id;
       this.environment=new EnvironmentSimulation(this.activeMap.environment,this.activeMap.world);
-      const props=await ctx.storage.get<{roundId:number;seq:number;states:PropState[]}>('environment');
-      if(props?.roundId===this.round.id&&props.states.every(validPropState)){this.environment.restore(props.states);this.environmentSeq=props.seq;}
+      const props=await ctx.storage.get<{roundId:number;mapVersion?:string;seq:number;states:PropState[]}>('environment');
+      if(props?.roundId===this.round.id){
+        if(Number.isSafeInteger(props.seq)&&props.seq>=0)this.environmentSeq=props.seq;
+        // Old basket geometry used a higher floor. Restoring its sleeping poses
+        // into a revised map would leave fruit floating above the new container.
+        if(props.mapVersion===this.activeMap.revision&&props.states.every(validPropState))this.environment.restore(props.states);
+      }
       const stored = await ctx.storage.get<Session[]>('sessions') ?? [];
       this.grenades = ((await ctx.storage.get<unknown[]>('grenades')) ?? []).filter(validGrenade).filter(g=>g.roundId===this.round.id);
       this.explosions = ((await ctx.storage.get<unknown[]>('explosions')) ?? []).filter(validExplosion).filter(e=>e.roundId===this.round.id&&Date.now()-e.at<2000);
@@ -732,7 +737,7 @@ export class PublicRoom extends DurableObject<Bindings> {
       e.session.motion = e.controller.capture();
       e.session.combat.gun = e.gun?.capture() ?? null;
     }
-    return this.ctx.storage.put({ environment:{roundId:this.round.id,seq:this.environmentSeq,states:this.environment.capture()},grenades:this.grenades,explosions:this.explosions,'team-scores': this.scores, 'round-ledger': this.ledger, 'round-result': this.lastResult,
+    return this.ctx.storage.put({ environment:{roundId:this.round.id,mapVersion:this.activeMap.revision,seq:this.environmentSeq,states:this.environment.capture()},grenades:this.grenades,explosions:this.explosions,'team-scores': this.scores, 'round-ledger': this.ledger, 'round-result': this.lastResult,
       sessions: [...this.players.values()].map((e) => e.session) });
   }
   private async scheduleCleanup(): Promise<void> {

@@ -1,4 +1,5 @@
 import { assetUrl } from '../core/assets';
+import { CrosshairMotion } from './CrosshairMotion';
 import type { AudioManager } from '../audio/AudioManager';
 import { SETTING_LIMITS, type Settings, type SettingsStore } from '../config/settings';
 import { SettingsDraft } from '../config/settingsDraft';
@@ -59,6 +60,7 @@ const SCOPE_SVG = `<svg viewBox="-100 -100 200 200" preserveAspectRatio="xMidYMi
 </svg>`;
 
 export class UI {
+  private readonly crosshairMotion = new CrosshairMotion();
   private readonly screens = new Map<Screen, HTMLElement>();
   private settingsReturn: Screen = 'menu';
   private settingsFocus: HTMLElement | null = null;
@@ -338,24 +340,32 @@ export class UI {
     const s = this.screen('weapons');
     s.setAttribute('aria-label', 'Select weapon');
     const head = el('div', 'weapon-select-head');
-    head.append(el('h2', '', 'Loadout'), this.button('Back', '', 'weapon-back', () => this.show(this.weaponSelectionReturn)));
+    head.append(el('h2', '', 'Loadout'), this.button('Back', '', 'weapon-back', () => {
+      if (this.weaponSelectionReturn === 'spectate') this.show('spectate');
+      else this.onQuit();
+    }));
     const grid = el('div', 'weapon-grid');
     for (const id of ['smg', 'rifle', 'sniper', 'shotgun'] as const) {
       const card = this.button(this.labels[id], '', 'weapon-card', () => {
         this.pendingWeapon = id;
         try { localStorage.setItem('crossfire.pending-weapon', id); } catch { /* Optional preference. */ }
         this.refreshSelection();
-        this.show(this.weaponSelectionReturn);
+        if (this.weaponSelectionReturn === 'spectate') this.show('spectate');
+        else this.onStart();
       });
       card.dataset.weapon = id;
+      card.prepend(el('div', 'weapon-art'));
       this.weaponCards.set(id, card);
       grid.appendChild(card);
     }
-    s.append(head, grid);
+    const status = el('div', 'spawn-error weapon-spawn-error');
+    status.setAttribute('role', 'status');
+    s.append(head, grid, status);
     this.refreshSelection();
   }
 
   get selectedWeapon(): WeaponId { return this.pendingWeapon; }
+  openWeaponSelection(): void { this.weaponSelectionReturn = 'start'; this.show('weapons'); }
   get spawnPending(): boolean { return this.spawnButton.disabled; }
 
   private refreshSelection(): void {
@@ -386,7 +396,7 @@ export class UI {
     controls.append(this.spectateWeapon,
       this.button('SWITCH WEAPON', '', '', () => { this.weaponSelectionReturn = 'spectate'; this.show('weapons'); }),
       this.button('SETTINGS', '', '', () => this.openSettings('spectate')),
-      this.button('LEAVE MATCH', '', '', () => this.onQuit()));
+      this.button('LEAVE MATCH', '', 'leave-match', () => this.onQuit()));
     s.append(this.spectateBy, bottom, controls);
     this.refreshSelection();
   }
@@ -415,8 +425,7 @@ export class UI {
     const img = el('img');
     img.src = url;
     img.alt = this.labels[id];
-    this.weaponCards.get(id)?.querySelector('img')?.remove();
-    this.weaponCards.get(id)?.prepend(img);
+    this.weaponCards.get(id)?.querySelector('.weapon-art')?.replaceChildren(img);
     this.refreshSelection();
   }
 
@@ -424,6 +433,10 @@ export class UI {
     this.spawnButton.firstElementChild!.textContent = respawn ? 'Respawn' : 'Spawn';
     for (const button of this.screens.get('start')!.querySelectorAll('button')) button.disabled = busy;
     this.spawnError.textContent = error;
+    if (this.weaponSelectionReturn === 'start') {
+      for (const button of this.weaponCards.values()) button.disabled = busy;
+      this.screens.get('weapons')!.querySelector('.weapon-spawn-error')!.textContent = busy ? 'Spawning…' : error;
+    }
   }
 
   setOnline(count: number | null): void {
@@ -650,6 +663,7 @@ export class UI {
           ['fov', this.rangeRow('fov', 'Field of view', 1, (x) => `${Math.round(x)}°`)],
         ],
       },
+      { key: 'controls', title: 'Controls', rows: [] },
       {
         key: 'sound',
         title: 'Sound',
@@ -666,6 +680,7 @@ export class UI {
               ['low', 'Low'],
               ['medium', 'Medium'],
               ['high', 'High'],
+              ['ultra', 'Ultra'],
             ]),
           ],
           [
@@ -697,7 +712,8 @@ export class UI {
         panel.appendChild(row);
         this.settingRows.set(key, row);
       }
-      if (c.key === 'gameplay') panel.appendChild(this.buildControls());
+      if (c.key === 'controls') panel.appendChild(this.buildControls());
+      panel.tabIndex = 0;
       const index = this.settingTabs.length;
       tab.addEventListener('click', () => this.selectSettingsTab(index, false));
       tab.addEventListener('keydown', (e) => {
@@ -711,7 +727,7 @@ export class UI {
       });
       tabs.appendChild(tab);
       panels.appendChild(panel);
-      this.settingTabs.push({ key: c.key, tab, panel, keys: [...c.rows.map(([k]) => k), ...(c.key === 'gameplay' ? ['keyBindings' as const] : [])] });
+      this.settingTabs.push({ key: c.key, tab, panel, keys: [...c.rows.map(([k]) => k), ...(c.key === 'controls' ? ['keyBindings' as const] : [])] });
     }
 
     const foot = el('div', 'settings-foot');
@@ -1029,8 +1045,8 @@ export class UI {
     (this.reloadBar.firstElementChild as HTMLElement).style.width = `${Math.round(progress * 100)}%`;
   }
 
-  setCrosshairSpread(px: number, visible: boolean): void {
-    this.crosshair.style.setProperty('--gap', `${Math.round(4 + px)}px`);
+  setCrosshairSpread(px: number, visible: boolean, dt: number): void {
+    this.crosshair.style.setProperty('--gap', `${this.crosshairMotion.update(px, dt)}px`);
     this.crosshair.style.opacity = visible ? '1' : '0';
   }
 

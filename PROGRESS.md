@@ -1,3 +1,303 @@
+# Gameplay Phase 4: interactive props and physics polish
+
+Completed locally 2026-11-02, preserving all uncommitted Phases 1–3 below.
+No later phase started. No commit, push or deployment performed.
+Details and deployment steps: [docs/PHYSICS_POLISH_PHASE4.md](docs/PHYSICS_POLISH_PHASE4.md).
+
+Inspection found an existing room-owned decorative simulation, server ray-based
+impulses, shared swept collision, instanced Blender props and sleeping 10 Hz
+changed-pose synchronization. Extended these systems without adding a physics
+engine or changing competitive gameplay.
+
+Implemented:
+
+- Nine individually interactive fruits (six apples/three pears), with varied
+  orientations and cluster densities. A four-apple pile rests on three separated
+  bottom fruits; other fruit sits on the floors. Removed the static third-bin
+  fruit. Analytic support and non-overlap checks prevent floating starting poses.
+- Closed tapered wooden bins sit on the counter. Meshes/definitions share the
+  produce author. Decorative sphere collision uses finite sloped inside/outside
+  contacts, floor/rim support and upward rebounds. Players/bullets keep a shared
+  conservative shell; grenade collision retains its original defaults.
+- Fivefold firearm impulses before an 8 m/s cap, 120 Hz bounded substeps,
+  continuous world sweeps, mass-weighted neighbour transfers, spin, damping and
+  supported-body sleeping. Static walls block high-speed props; contact position
+  corrections respect world geometry. Small crates/barrels react more visibly.
+- Existing sign top-edge hinges now have stronger impulses and less damping,
+  returning to rest within the unchanged 0.30 radian limit. Fixed a diagonal
+  bracket passing through the sign board by moving it above the projecting arm.
+- One hanging lamp per enclosed map interior, with fixed ceiling plate and a
+  moving chain/cage. Its short-range point light follows the actual pose without
+  dynamic shadows. Corrected near-axial hits so tiny weapon spread cannot swallow
+  the stronger front-facing impulse. Other fixtures remain static.
+- Town uses 11 bodies/two signs/one lamp (14 states); other maps two bodies/one
+  lamp. Retained the original 14-state wire budget, strict v12 fields, validated
+  server-only impulses, 10 Hz changed poses and no continuing asleep traffic.
+- Durable decorative poses now include the map revision. Matching revisions
+  restore moved objects; legacy/revised geometry resets only decorations to
+  supported starts, preserving environment sequence and all player/combat state.
+  This prevents the old higher bin-floor positions floating after publication.
+- Regenerated prop/map GLBs, environment definitions, editable Blender sources
+  and manifests. Preserved existing material textures, graphics and multiplayer
+  hosting configuration, including .env.local and the GitHub Pages base path.
+
+Verification:
+
+- Final frontend suite: **407 tests / 42 files passed**, including 12 physics
+  polish cases. Covered force/displacement, bounded wall and tapered-bin contact,
+  upward rebounds, supported fruit, neighbour transfer/sleep, hinge/light motion,
+  near-axial hits, bracket clearance and unchanged wire budget. Existing crosshair,
+  weapon, graphics/material, map/stair/door/thickness and combat checks passed.
+- Full backend suite: **55 checks passed**. After final tuning/persistence work,
+  reran the **22 public-room integration checks** and expanded environmental test
+  successfully. Two real WebSocket peers verified apples/pears, signs/lamps,
+  matching poses, quiet traffic, reconnect, rejection of forged forces, round
+  cleanup and two complete persisted runtime reconstructions. Matching revision
+  preserved moved props; stale revision reset decorations without player resets.
+- Frontend typecheck/production build, backend typecheck/dry-run build, real
+  frontend/Worker protocol compatibility and all generated-asset checks passed.
+  Existing Vite bundle-size advisory remains. Miniflare emits non-fatal RPC stub
+  disposal notices in local runtime tests; no test failures remain.
+- Real production-base-path Chrome checks passed: **28 controls/weapon-joining
+  checks**, **31 High/Ultra checks**, grenade/crouch/G/R/explosion/scoring/respawn
+  checks, and the two-browser environmental harness across all maps plus practice.
+  Inspected close fruit, rest/swing sign and light views, and the final corrected
+  bracket render. Verified rendered/server pose convergence, preserved moved fruit
+  on reconnect and actual light-source following without dynamic shadows. No
+  browser/shader/asset errors. Captures/logs remain in ignored test-results/.
+
+Limitations: simple decorative sphere/ellipsoid proxies and bounded hinges, not
+general rigid-body physics. Local validation is not public Cloudflare validation
+or a low-end-device/six-human benchmark. Both frontend/assets and Worker require
+matching publication using the existing coordinated workflow when authorized;
+see the linked deployment notes. Protocol remains v12. Stopped after Phase 4.
+
+# Gameplay Phase 3: map realism, enclosed interiors and connected circulation
+
+Completed locally 2026-11-02, preserving the uncommitted Phase 1 and Phase 2
+changes below. No later phase started. No commit, push or deployment performed.
+Implementation/reproduction notes: [docs/MAP_REALISM_PHASE3.md](docs/MAP_REALISM_PHASE3.md).
+
+Inspected all three layouts, Blender authors, exported GLBs, generated collision,
+tactical/navigation data and Worker world definitions. Existing compact maps
+already had ground loops and external two-ended galleries, but lacked enclosed
+two-storey buildings with internal turning stairs. Existing solid facade skins,
+arches, pipe normals, Industrial roof ladders, landmarks and textures were retained.
+
+Implemented:
+
+- Town B25: enclosed provisions shop/apartment, through ground aisle, internal
+  return stairs, upstairs work/storage area and independent west garden exit.
+- Industrial I37: enclosed dispatch warehouse/office, four ground connections,
+  internal return stairs, upstairs storage and west loading-lane egress. Raised
+  the existing canopy above the upper doorway and cleared storage from stairs.
+- City C28: enclosed commercial interior with north/south/arcade connections,
+  internal return stairs and east upper exit. Aligned the arcade with the aisle,
+  widened its approach, and offset the long north street with attached service
+  enclosures that preserve alternate paths and medium/long views.
+- Each building uses 30 cm walls, a floor, 22 cm upper slab, ceiling, glazing,
+  2.1 m ground doors, turning landing and supported external egress stairs.
+  Upper floors are 3.22 m high, preserving standing/long-weapon stair clearance.
+  Added wall-mounted shelves, storage, counters and short-range practical lights.
+- Moved affected benches, pallets, a planter and utility cabinet away from routes
+  and onto their actual supporting floors. Shortened the Town garden wall at the
+  external stair foot. Retained existing cover and the remaining route network.
+- One Blender solid-parts author drives GLBs and server collision. Updated
+  tactical blockers, clear route annotations and spawn placement from the new
+  geometry. Regenerated map GLBs, collision/debug assets, editable .blend sources
+  and manifests. Shared protocol stays v12; existing map hashes update naturally.
+
+Verification:
+
+- Frontend: **395 tests / 41 files passed**, including 15 new checks for both-way
+  interior traversal with no weapon/rifle/sniper, wall depth, supported props,
+  fixtures, longer sightlines and matching Worker revisions. Existing full-map
+  flood fill, spawn access, route loops, doorway/gallery/stair/bench clearance,
+  tactical accuracy, mesh overlap and deterministic collision checks passed.
+- Backend: **55 checks passed** in real local workerd. Added two real WebSocket
+  peers traversing every new interior with a sniper, synchronizing movement and
+  resuming upstairs without duplicate players or resetting health/life/weapon/
+  kills. Reran that check successfully after the final shelf placement change.
+- Frontend typecheck/production build, backend typecheck/dry-run build, real
+  frontend/Worker protocol compatibility and all generated-asset checks passed.
+  The existing Vite bundle-size advisory remains.
+- Visually inspected collision-derived top-down plans for all maps and **18 local
+  Chrome views** of entrances, stairs, turns, upper exits, streets and work areas
+  under Ultra. Fixed shelves initially crossing a window, then inspected the
+  final wall-mounted arrangements. No missing materials/assets or browser/shader
+  errors. Plans are in docs/map-realism/; captures/logs in ignored test-results/.
+
+Limitations: these are local checks, not public Cloudflare validation or a
+six-human competitive balance/performance benchmark. Publishing requires
+matching frontend/assets and Worker map revisions; hosting settings are unchanged.
+Stopped after Phase 3.
+
+# Gameplay Phase 2: optional Ultra graphics and realistic materials
+
+Completed locally 2026-11-02, continuing the uncommitted Phase 1 work below.
+No subsequent phase started; no commit, push or deployment performed.
+
+Inspection found Low / Medium / High presets (no Extreme in this checkout),
+shared PBR materials, ACES tone mapping, per-map HDR image-based lighting,
+packed ORM and normal maps, batching, optional SSAO and independent shadows.
+Audited all 173 GLBs: map/weapon material names resolve through the authored
+registry; the three character materials intentionally retain embedded skins.
+Existing GLBs, base textures, normal-map orientation, skins, lighting exposure,
+sun settings, shadow choices and all lower preset definitions were preserved.
+
+Implemented:
+
+- Ultra is an explicit highest graphics option, including Settings and the
+  developer `quality=ultra` query. It persists through the existing settings
+  store. Medium remains the default; no hardware detection enables Ultra.
+- Ultra corrects ORM roughness: Babylon's default alpha flag was overriding
+  the intended green channel. It also corrects metal props that borrowed a
+  nearly dielectric blue channel: the existing `gun_metal_orm.png` contains the
+  same AO/roughness data with white metallic, allowing authored metal factors
+  to apply. No texture or GLB replacement needed. Low/Medium/High retain their
+  previous material appearance when switching back.
+- Material refinements are selective: preserve dielectric masonry, wood and
+  fabric; dielectric glass with original transparency; modest clear coat on
+  painted steel/containers and a stronger finish on car paint. Metal and gun
+  roughness now uses the authored variation. Specular anti-aliasing reduces
+  shimmering while moving. Stone, cloth, wood and rubber get no clear coat.
+- Ultra lazily prefilters one cached 512px HDR cube per map, replacing the
+  original 256px cube only after readiness. The URL includes `?ibl=512` because
+  Babylon's HDR cache otherwise ignores requested dimensions. Sky/sun rotation
+  stays aligned. Rapid preset changes cannot install a late Ultra cube after
+  returning to Low; map disposal releases pending work after it settles.
+  The ordinary environment remains available if the optional upgrade fails.
+- Ultra uses 16x requested anisotropy, 20-sample half-resolution SSAO with
+  reduced strength and lower bloom weight. Geometry batching, shadow settings,
+  resolution scale and exposure are unchanged. No reflection probes, SSR,
+  real-time GI or per-frame cube rendering added. Materials update in place,
+  including first-person and remote weapon meshes using the shared library.
+
+Verification:
+
+- `npm.cmd test`: **380 tests passed / 40 files**. New tests cover settings
+  persistence, default opt-in behavior, actual PBR channel flags, selective
+  finishes, corrected metal maps, reversible settings, tint sharing and
+  preservation of base/normal textures, weapon colors and glass alpha.
+- Frontend typecheck and production build passed. The existing large-bundle
+  advisory remains; no new dependency or generated asset was introduced.
+- `tools/ultra-graphics-test.mjs` passed **31 checks** in real local Chrome
+  against the production build served under `/crossfire/`. High/Ultra screenshots
+  of all three maps, stone/wood, glass, industrial props, a town interior and all
+  four weapons were visually inspected. Checks cover 256/512 actual dimensions,
+  identical texture/color/alpha assignments, exposure, live switching, cached
+  resources, sliding/ADS/firing, real Settings selection, refresh persistence
+  and map replacement during pending prefilter work. No shader, asset-loading
+  or browser exceptions. The harness accepts the existing leave-match dialog
+  during its refresh test; the game's confirmation behavior was not changed.
+- After warm-up, six preset changes left identical resource counts (273 meshes,
+  107 materials, 124 textures in the sampled City scene). High/Ultra had the same
+  geometry draw calls: Town 92, Industrial 68, City 112. Both stayed about 60 FPS
+  in the sampled stationary views at 1280x720, resolution scale .8 and Medium
+  shadows on this machine. Scene-processing medians were High/Ultra respectively:
+  Town 3.45/3.61ms, Industrial 2.58/2.65ms, City 3.37/3.15ms. These are local,
+  vsync-limited CPU/frame observations, not a GPU benchmark or low-end guarantee.
+
+Limitations: reflection content is the static HDR environment, so nearby walls
+and players are not dynamically mirrored. Authored opaque facade glazing stays
+opaque; existing transparent lenses keep their alpha. The original stylized
+geometry remains. First use can briefly hitch while shaders/cube filtering warm
+up; cached switching adds no repeating reflection workload. Ultra's extra cube
+is retained until map disposal, and is never allocated unless Ultra is chosen.
+No public-hosted or Chromebook performance validation was performed.
+
+Phase 2 files: `src/config/settings.ts`, `src/main.ts`, `src/ui/UI.ts`,
+`src/rendering/quality.ts`, `src/rendering/MaterialLibrary.ts`,
+`src/rendering/Environment.ts`, `src/rendering/PostFX.ts`, `src/game/Game.ts`
+(preset application and read-only graphics diagnostics), `tests/settings.test.ts`,
+`tests/materialQuality.test.ts`, `tools/ultra-graphics-test.mjs`, and this log.
+Evidence: `test-results/ultra-graphics/results.json` and comparison screenshots.
+Reproduce after `npm.cmd run build` with
+`node tools/serve-dist.mjs --port 4200 --base /crossfire/`, then
+`node tools/ultra-graphics-test.mjs http://127.0.0.1:4200/crossfire/`.
+
+Phase 2 is frontend-only: no Cloudflare, shared protocol, multiplayer or gameplay
+changes. Protocol remains v12. Earlier Phase 1 changes remain intact and still
+require a coordinated frontend/Worker release when authorized. Stopped after
+Phase 2.
+
+---
+
+# Gameplay Phase 1: controls, UI and weapon selection
+
+Completed locally 2026-11-02. This is the new gameplay-controls phase, separate
+from the historical numbered updates below. No later phase was started.
+
+- Controls is a separate Settings tab using the existing draft, category
+  navigation, persistence, per-action reset and Reset controls. Panels scroll
+  independently; Settings heading, tabs and Apply/Back stay outside the scroll
+  region. Small-screen pause and home settings keep every binding accessible.
+  Gameplay input remains disabled in settings, and the canvas wheel handler
+  also respects already-handled events.
+- Factory defaults are R reload / G grenade, with J fire / K aim as keyboard
+  alternatives to mouse buttons. Only the complete former factory binding map
+  migrates automatically; customized layouts, including custom R grenade, stay
+  intact. Older layouts missing grenade choose an unused key starting with G.
+  Existing partial-magazine reload rules, durations and authoritative ammunition
+  remain. Browser testing found quick taps could be lost because the server
+  received only held keys; reload/grenade press edges now reach one input tick.
+- Shared authoritative grenade launch speed increased 7.8 -> 15.6 m/s. Fuse,
+  gravity, continuous swept collisions, inventory, damage (100) and radius
+  (1.8 m) are unchanged. Range comparisons cover three common throw angles and
+  thin-wall tests retain speeds above the new launch speed. Flash, smoke and
+  debris scale by sqrt(10) for approximately tenfold apparent area; the existing
+  128-particle batch, short lifetimes and smooth fade stay bounded.
+- Crosshair expansion and recovery use frame-rate-independent exponential
+  damping and fractional pixel gaps. This is cosmetic: accuracy, weapon spread
+  and shot direction are unchanged.
+- A connected, unspawned session immediately opens the four loadout cards while
+  assets load in parallel. Selecting a card waits for that same map load if
+  necessary, then requests the existing server-approved spawn directly. There
+  is no extra Spawn confirmation. Busy cards prevent duplicate requests; Back
+  can cancel joining/loading. Server round/spawn restrictions, locked loadouts,
+  reconnect and spectating/respawn weapon selection remain in place.
+- Weapon cards are borderless translucent gray with eased hover scaling and a
+  distinct blue selection. Reserved image space prevents label jumps as previews
+  arrive. Shared buttons use consistent typography, 6px radii, translucency,
+  easing, keyboard focus and disabled states; primary actions are blue, leave
+  actions red and secondary actions neutral. The existing home navigation bars,
+  background and character preview are preserved.
+
+Verification:
+
+- Frontend/shared: **374 tests passed** across 39 files; frontend typecheck and
+  production build passed (the existing large-bundle warning remains).
+- Cloudflare backend: typecheck, dry-run build and **54 checks passed**, including
+  combat/reload, grenades/score, crouch, health, reconnect, respawn, environmental
+  props, movement and traversal. Real frontend/Worker protocol compatibility
+  passed; all **7 deployment tests passed**. Protocol stays **v12**; no schemas,
+  Cloudflare configuration, deployment workflow or credentials changed.
+- Production build served at `/crossfire/`: **28 real Chrome UI checks passed**,
+  covering 1280x720 / 640x480 / 390x640 home settings, small-screen pause settings,
+  independent scrolling, reset/rebind, cancellation during loading, quick-tap R
+  partial reload, and all four one-request/one-connection weapon selections.
+  Screenshots were visually inspected under `test-results/gameplay-phase1/`.
+- Two simultaneous Chrome clients against the local Worker passed crouch,
+  quick-tap G throw, enlarged flash/bounded effects, actual damage and scoring,
+  kill feed/leaderboard, reconnect without restocking or duplicate players,
+  respawn and cleanup. No browser exceptions or asset failures. Evidence:
+  `test-results/update-phase3/results.json` and screenshots. These are local
+  results, not public Cloudflare/GitHub Pages validation.
+
+Relevant files: `src/config/keybindings.ts`, `src/core/Input.ts`,
+`src/game/Game.ts`, `src/ui/UI.ts`, `src/ui/CrosshairMotion.ts`,
+`src/ui/RoundResults.ts`, `src/styles.css`, `src/weapons/GrenadeView.ts`,
+`shared/grenades.ts`, keybinding/grenade/crosshair tests, and the two browser tools.
+Reproduce browser checks after frontend/server builds with
+`node tools/serve-dist.mjs --port 4200 --base /crossfire/`, then
+`node tools/gameplay-phase1-test.mjs http://127.0.0.1:4200/crossfire/` and
+`node tools/update-phase3-test.mjs http://127.0.0.1:4200/crossfire/ --capture-fx`.
+
+Both frontend and Worker need a future coordinated release for the new shared
+grenade tuning. No commit, push or deployment performed. Stopped after Phase 1.
+
+---
+
 # Grenade scoring test: delayed peer snapshot
 
 Updated 2026-11-02. The backend integration step failed in
