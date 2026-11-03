@@ -1,11 +1,11 @@
 import type { Elimination, Snapshot } from '../../shared/protocol';
-import { teammates } from '../../shared/combat';
+import { playerColor } from './teamColors';
 import { weaponIcon } from './WeaponIcons';
 import { comboLabel } from './matchFormatting';
 
 export function combatRelationship(mode: Snapshot['match']['mode'], selfId: string, selfTeam: Elimination['victimTeam'],
   id: string | null, targetTeam: Elimination['victimTeam']): 'friendly' | 'opponent' {
-  return id === selfId || teammates(mode, selfTeam, targetTeam) ? 'friendly' : 'opponent';
+  return playerColor(mode, selfId, selfTeam, id, targetTeam);
 }
 
 /** Ephemeral, server-confirmed events. Player names are always rendered as text. */
@@ -29,9 +29,11 @@ export class CombatFeed {
     const relation = (id: string | null, playerTeam: Elimination['victimTeam']) => combatRelationship(snapshot.match.mode, selfId, selfTeam, id, playerTeam);
     const row = document.createElement('div'); row.className = 'kill-feed-entry';
     const killer = document.createElement('span'); killer.className = `combat-name-${relation(event.killerId, event.killerTeam)}`;
+    killer.dataset.id = event.killerId ?? ''; killer.dataset.team = event.killerTeam ?? '';
     killer.textContent = event.killerName ?? 'Environment';
     const icon = document.createElement('span'); icon.className = 'kill-feed-weapon'; icon.innerHTML = weaponIcon(event.weapon);
     const victim = document.createElement('span'); victim.className = `combat-name-${relation(event.victimId, event.victimTeam)}`; victim.textContent = event.victimName;
+    victim.dataset.id = event.victimId; victim.dataset.team = event.victimTeam ?? '';
     row.append(killer, icon, victim); this.feed.appendChild(row);
     while (this.feed.childElementCount > 5) this.feed.firstElementChild?.remove();
     window.setTimeout(() => row.remove(), 5500);
@@ -51,6 +53,14 @@ export class CombatFeed {
       this.confirmation.hidden = false;
       // Replacing the node restarts the animation even for rapid confirmed kills.
       this.confirmation.classList.remove('active'); void this.confirmation.offsetWidth; this.confirmation.classList.add('active');
+    }
+  }
+  updatePerspective(snapshot: Snapshot, selfId: string): void {
+    const team = snapshot.players.find(p => p.id === selfId)?.team ?? null;
+    for (const node of this.feed.querySelectorAll<HTMLElement>('[data-id]')) {
+      const target = snapshot.players.find(p => p.id === node.dataset.id);
+      const targetTeam = target ? target.team : (node.dataset.team === 'blue' || node.dataset.team === 'red' ? node.dataset.team : null);
+      node.className = `combat-name-${playerColor(snapshot.match.mode, selfId, team, node.dataset.id || null, targetTeam)}`;
     }
   }
   clear(): void { this.feed.replaceChildren(); this.confirmation.hidden = true; this.confirmation.classList.remove('active'); }

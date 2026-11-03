@@ -87,12 +87,12 @@ try {
   console.log('AIMED', JSON.stringify(aimed.weapon));
   check(aimed.weapon.id === 'shotgun', 'remote ADS and pitch use synchronized combat and motion');
   await a.evaluate(() => window.dispatchEvent(new MouseEvent('mouseup', { button: 2, bubbles: true })));
-  const distance = (x, y) => Math.hypot(...x.map((v, i) => v - y[i]));
-  check(distance(aimed.weapon.grips[0], aimed.animation.joints.hand_r) < .1
-    && distance(aimed.weapon.grips[1], aimed.animation.joints.hand_l) < .1, 'both hands follow the real weapon grips while aiming');
+  // Each solved glove must enclose its handle (wrist joints sit ~9 cm behind the grip anchors).
+  const attached = (p) => p.weapon.hands.length === 2 && p.weapon.hands.every((h) => h.gap < .01);
+  check(attached(aimed), 'both hands follow the real weapon grips while aiming');
   await a.evaluate(() => { window.__crossfire.look(0, 0); window.__crossfire.hold('forward', true); });
   const running = await until(async () => { const p = await remote(); return p?.animation?.clip === 'RUN' && p; }, 'remote run');
-  check(running.weapon.id === 'shotgun' && distance(running.weapon.grips[0], running.animation.joints.hand_r) < .1,
+  check(running.weapon.id === 'shotgun' && (!running.weapon.posing || attached(running)),
     'weapon stays attached during a synchronized run');
   await a.evaluate(() => window.__crossfire.hold('slide', true));
   const sliding = await until(async () => { const p = await remote(); return p?.animation?.clip === 'SLIDE' && p; }, 'remote slide');

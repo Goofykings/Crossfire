@@ -118,6 +118,16 @@ export class PublicRoom extends ProductionRoom {
     this.broadcast();
     return this.snapshot();
   }
+  async smokeObservationForTest(position) {
+    const w=this.activeMap.world;
+    for(let distance=6;distance<=10;distance+=2)for(let i=0;i<16;i++){
+      const x=position.x+Math.cos(i*Math.PI/8)*distance,z=position.z+Math.sin(i*Math.PI/8)*distance,y=w.groundHeight(x,z,.34,3);
+      if(!Number.isFinite(y)||w.overlapsCylinder(x,z,.34,y+.42,y+1.8))continue;
+      const delta=[position.x-x,position.y+1-y-1.64,position.z-z],length=Math.hypot(...delta);
+      if(!w.raycast(x,y+1.64,z,...delta.map(v=>v/length),length-.2))return [x,y,z];
+    }
+    throw new Error('No clear external smoke observation point');
+  }
   async wallArenaForTest() {
     const world = this.activeMap.world;
     let fallback = null;

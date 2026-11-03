@@ -1,3 +1,4 @@
+import { PROTOCOL_VERSION } from '../../tools/protocol-version.mjs';
 /** Real workerd and TCP clients; test RPC places players only, never prop impulses. */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -26,7 +27,7 @@ test('authoritative environmental hits, bounded deltas, sleep, resume and round 
       c.ws.on('message',raw=>{const m=JSON.parse(String(raw));c.messages.push(m);if(m.snapshot)c.snapshot=m.snapshot;
         const frame=m.frame??m.snapshot?.environment;if(frame){if(frame.full)c.states.clear();for(const s of frame.states)c.states.set(s.id,s);}});
       c.ws.on('error',()=>{});await new Promise((resolve,reject)=>{c.ws.once('open',resolve);c.ws.once('error',reject);});
-      c.send=m=>c.ws.send(JSON.stringify({v:12,...m}));c.send({type:'join',name:'Environment peer',...(token?{resumeToken:token}:{})});
+      c.send=m=>c.ws.send(JSON.stringify({v: PROTOCOL_VERSION,...m}));c.send({type:'join',name:'Environment peer',...(token?{resumeToken:token}:{})});
       const w=await until(()=>c.messages.find(m=>m.type==='welcome'),'welcome');c.id=w.selfId;c.token=w.resumeToken;c.resumed=w.resumed;c.seq=self(c).ack;
       c.timer=setInterval(()=>{if(c.ws.readyState===WebSocket.OPEN)c.send({type:'ping',at:Date.now()});},500);
       c.ws.once('close',()=>clearInterval(c.timer));return c;

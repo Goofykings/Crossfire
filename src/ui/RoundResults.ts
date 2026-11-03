@@ -1,11 +1,12 @@
-import { teammates, type PlayerTeam } from '../../shared/combat';
+import { playerColor, displayTeam, teamOrder } from './teamColors';
+import { type PlayerTeam } from '../../shared/combat';
 import { pointsOrder, resultOutcome, type RoundResult, type RoundStanding } from '../../shared/scoring';
 import { formatScore } from './matchFormatting';
 import { weaponIcon } from './WeaponIcons';
 
-export function resultGroups(result: RoundResult): { team: PlayerTeam; players: RoundStanding[] }[] {
+export function resultGroups(result: RoundResult, selfTeam: PlayerTeam = null): { team: PlayerTeam; players: RoundStanding[] }[] {
   const players = [...(result.players ?? [])].sort(pointsOrder);
-  return result.mode === 'teams' ? (['blue', 'red'] as const).map((team) => ({ team, players: players.filter((p) => p.team === team) }))
+  return result.mode === 'teams' ? teamOrder(selfTeam).map((team) => ({ team, players: players.filter((p) => p.team === team) }))
     : [{ team: null, players }];
 }
 
@@ -20,13 +21,13 @@ export function createRoundResults(result: RoundResult, selfId: string, team: Pl
   const banner = node('header', 'result-banner');
   banner.append(node('small', 'result-mode', result.mode === 'teams' ? 'TEAMS · MATCH COMPLETE' : 'FREE FOR ALL · MATCH COMPLETE'), node('h1', 'result-title', outcome));
   const winner = node('p', 'result-winner', result.draw ? 'Match drawn' : result.mode === 'teams'
-    ? `${result.winningTeam?.toUpperCase()} TEAM WINS` : `${result.winner?.name} wins`);
+    ? `${displayTeam(result.winningTeam, team)?.toUpperCase()} TEAM WINS` : `${result.winner?.name} wins`);
   banner.append(winner); panel.append(banner);
   const boards = node('div', 'result-boards'); boards.dataset.mode = result.mode;
   if (!result.players) boards.append(node('p', 'result-unavailable', 'Detailed results unavailable for this earlier round.'));
-  else for (const group of resultGroups(result)) {
-    const section = node('section', 'result-board'); section.dataset.team = group.team ?? 'ffa';
-    const heading = node('h2', 'result-board-heading', group.team ? `${group.team.toUpperCase()} TEAM` : 'FINAL RANKING');
+  else for (const group of resultGroups(result, team)) {
+    const section = node('section', 'result-board'); section.dataset.team = displayTeam(group.team, team) ?? 'ffa';
+    const heading = node('h2', 'result-board-heading', group.team ? `${displayTeam(group.team, team)!.toUpperCase()} TEAM` : 'FINAL RANKING');
     if (group.team && result.teamScores) heading.append(node('strong', 'result-team-score', String(result.teamScores[group.team])));
     section.append(heading);
     const scroll = node('div', 'result-table-scroll'); scroll.tabIndex = 0; scroll.setAttribute('aria-label', `${group.team ?? 'FFA'} match results`);
@@ -35,7 +36,7 @@ export function createRoundResults(result: RoundResult, selfId: string, team: Pl
     const body = table.createTBody();
     for (const [i, p] of group.players.entries()) {
       const row = body.insertRow(); row.dataset.playerId = p.id; row.classList.toggle('local', p.id === selfId);
-      const friendly = p.id === selfId || teammates(result.mode, team, p.team);
+      const friendly = playerColor(result.mode, selfId, team, p.id, p.team) === 'friendly';
       const name = row.insertCell(); name.className = `score-name-${friendly ? 'friendly' : 'opponent'}`;
       name.append(node('span', 'result-rank', String(i + 1)), node('span', 'result-player-name', p.name)); name.title = p.name;
       if (p.id === result.winner?.id) name.append(node('small', 'result-player-winner', 'WINNER'));
@@ -49,6 +50,8 @@ export function createRoundResults(result: RoundResult, selfId: string, team: Pl
   }
   panel.append(boards);
   const mvp = node('div', 'result-mvp');
+  if (result.mvp) mvp.classList.add(`score-name-${playerColor(result.mode, selfId, team, result.mvp.id, result.players?.find(p => p.id === result.mvp?.id)?.team ?? null)}`);
+  if (!result.draw) winner.classList.add(`score-name-${result.mode === 'teams' ? (result.winningTeam === team ? 'friendly' : 'opponent') : playerColor(result.mode, selfId, team, result.winner?.id ?? null, null)}`);
   mvp.append(node('small', '', 'MVP'), node('strong', '', result.mvp?.name ?? 'No participants'), node('span', '', result.mvp ? `${result.mvp.score} points` : ''));
   panel.append(mvp);
   const actions = node('div', 'result-actions');

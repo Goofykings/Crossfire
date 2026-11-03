@@ -42,7 +42,7 @@ const clips = gltf.animations.map((a) => {
   assert.ok(changing >= 2, `${a.name} must contain actual animated transforms`);
   return { name: a.name, duration, tracks: a.channels.length, changing };
 });
-assert.deepEqual(clips.map((c) => c.name).sort(), ['IDLE', 'JUMP_LAND', 'JUMP_LOOP', 'JUMP_START', 'RUN', 'SLIDE']);
+assert.deepEqual(clips.map((c) => c.name).sort(), ['CROUCH', 'IDLE', 'JUMP_LAND', 'JUMP_LOOP', 'JUMP_START', 'RUN', 'SLIDE']);
 assert.ok(gltf.images.every((image) => image.bufferView !== undefined && !image.uri), 'Self-contained embedded textures');
 console.log(JSON.stringify({ file, bytes: bytes.length, vertices, triangles,
   joints: gltf.skins[0].joints.map((i) => gltf.nodes[i].name), materials: gltf.materials.map((m) => m.name),

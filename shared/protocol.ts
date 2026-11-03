@@ -6,7 +6,7 @@ import type { CombatIntent } from './combat';
 import { pointsOrder, type ScoreAward, type RoundResult, type RoundStanding } from './scoring';
 import { GRENADE, type GrenadeState, type GrenadeEvent, type GrenadeExplosion } from './grenades';
 
-export const PROTOCOL_VERSION = 12;
+export const PROTOCOL_VERSION = 13;
 export const validWeapon = (x: unknown): x is WeaponId => x === 'rifle' || x === 'shotgun' || x === 'sniper' || x === 'smg';
 export const PUBLIC_ROOM = 'public-main';
 export const INPUT_BATCH_LIMIT = 12;
@@ -242,7 +242,7 @@ export function parseServerMessage(text: string): ServerMessage | null {
     || new Set(s.grenades.map(g=>(g as GrenadeState).id)).size!==s.grenades.length
     || !Array.isArray(s.explosions) || s.explosions.length>64 || !s.explosions.every(e=>validExplosion(e)&&e.roundId===s.roundId)
     || !Array.isArray(s.players) || s.players.length > 16 || !s.players.every((p) => record(p) && typeof p.id === 'string'
-      && natural(p.grenades) && p.grenades<=GRENADE.perLife
+      && natural(p.grenades)
       && natural(p.score) && natural(p.comboCount) && (p.comboUntil === null || natural(p.comboUntil))
       && (p.comboCount === 0 ? p.comboUntil === null : p.alive === true && p.comboUntil !== null)
       && (p.lastPlayedRound === null || natural(p.lastPlayedRound)) && team(p.lastPlayedTeam)

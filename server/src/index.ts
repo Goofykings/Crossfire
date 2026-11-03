@@ -1,3 +1,4 @@
+import { GRENADE_SMOKE_MS } from '../../shared/grenades';
 import { EnvironmentSimulation, ENVIRONMENT, validPropState, type PropState, type EnvironmentFrame } from '../../shared/environment';
 import { DurableObject } from 'cloudflare:workers';
 import { FIXED_DT, PLAYER_MAX_HEALTH } from '../../src/config/constants';
@@ -140,7 +141,7 @@ export class PublicRoom extends DurableObject<Bindings> {
       }
       const stored = await ctx.storage.get<Session[]>('sessions') ?? [];
       this.grenades = ((await ctx.storage.get<unknown[]>('grenades')) ?? []).filter(validGrenade).filter(g=>g.roundId===this.round.id);
-      this.explosions = ((await ctx.storage.get<unknown[]>('explosions')) ?? []).filter(validExplosion).filter(e=>e.roundId===this.round.id&&Date.now()-e.at<2000);
+      this.explosions = ((await ctx.storage.get<unknown[]>('explosions')) ?? []).filter(validExplosion).filter(e=>e.roundId===this.round.id&&Date.now()-e.at<GRENADE_SMOKE_MS);
       for (const s of stored) {
         // An unclean restart is still resumable only for the bounded grace window.
         if (!s.expiresAt) s.expiresAt = (s.lastSeen ?? Date.now()) + this.grace;
@@ -509,6 +510,7 @@ export class PublicRoom extends DurableObject<Bindings> {
     const award = credited ? awardElimination(credited.session, at, head, Math.max(1, Math.trunc(positive(this.env.COMBO_WINDOW_MS ?? '', COMBO_WINDOW_MS)))) : null;
     if (credited) {
       credited.session.kills++;
+      credited.session.grenades++; // Same exactly-once transaction as the authoritative kill award.
       if (this.mode === 'teams' && credited.session.team) this.scores[credited.session.team]++;
       this.recordStanding(credited);
     }
@@ -596,7 +598,7 @@ export class PublicRoom extends DurableObject<Bindings> {
   }
 
   private updateGrenades(now: number): void {
-    this.explosions=this.explosions.filter(e=>now-e.at<2000);
+    this.explosions=this.explosions.filter(e=>now-e.at<GRENADE_SMOKE_MS);
     for(const g of [...this.grenades]) {
       advanceGrenade(g,now,this.activeMap.world);
       if(now<g.explodeAt)continue;
@@ -617,7 +619,7 @@ export class PublicRoom extends DurableObject<Bindings> {
       }
       // Posthumous kills still score, but dead sessions must never retain a live combo timer.
       if(owner&&!owner.session.alive)resetCombo(owner.session);
-      this.explosions.push(event);this.publish({v:PROTOCOL_VERSION,type:'grenade',event:{kind:'explode',...event}});
+      this.explosions.push(event); if(this.explosions.length>64)this.explosions.shift();this.publish({v:PROTOCOL_VERSION,type:'grenade',event:{kind:'explode',...event}});
     }
   }
 

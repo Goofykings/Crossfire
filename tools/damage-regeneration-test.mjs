@@ -1,3 +1,4 @@
+import { PROTOCOL_VERSION } from './protocol-version.mjs';
 /** Real Worker, real shooter socket and production-browser victim/HUD.
  * Fixture RPC only places server-approved players; hits and health are real.
  */
@@ -83,7 +84,7 @@ try {
   const messages = []; let snapshot, id, seq = 0;
   ws.on('message', (raw) => { const m = JSON.parse(String(raw)); messages.push(m); if (m.snapshot) snapshot = m.snapshot; }); ws.on('error', () => {});
   await new Promise((resolve, reject) => { ws.once('open', resolve); ws.once('error', reject); });
-  const send = (m) => ws.send(JSON.stringify({ v: 12, ...m }));
+  const send = (m) => ws.send(JSON.stringify({ v: PROTOCOL_VERSION, ...m }));
   send({ type: 'join', name: 'Actual health shooter' });
   const welcome = await until(() => messages.find((m) => m.type === 'welcome'), 'actual shooter join'); id = welcome.selfId;
   heartbeat = setInterval(() => { if (ws.readyState === WebSocket.OPEN) send({ type: 'ping', at: Date.now() }); }, 500);

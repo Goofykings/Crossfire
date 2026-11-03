@@ -1,20 +1,19 @@
 import type { PlayerState, Snapshot } from '../../shared/protocol';
 import { weaponIcon } from './WeaponIcons';
-import { teammates } from '../../shared/combat';
+import { playerColor, displayTeam, teamOrder } from './teamColors';
 import { pointsOrder } from '../../shared/scoring';
 import { formatScore, matchCountdown } from './matchFormatting';
 
 export function scoreboardRelationship(snapshot: Snapshot, selfId: string, player: PlayerState): 'friendly' | 'opponent' {
-  if (player.id === selfId) return 'friendly';
   const self = snapshot.players.find((p) => p.id === selfId);
-  return teammates(snapshot.match.mode, self?.team ?? null, player.team) ? 'friendly' : 'opponent';
+  return playerColor(snapshot.match.mode, selfId, self?.team ?? null, player.id, player.team);
 }
 
 export const scoreOrder = pointsOrder;
 
-export function scoreboardGroups(snapshot: Snapshot): { label: string; players: PlayerState[] }[] {
-  if (snapshot.match.mode === 'teams') return (['blue', 'red'] as const).map((team) => ({
-    label: `${team.toUpperCase()} · ${snapshot.match.teamScores?.[team] ?? '—'}`,
+export function scoreboardGroups(snapshot: Snapshot, selfTeam: PlayerState['team'] = null): { label: string; players: PlayerState[] }[] {
+  if (snapshot.match.mode === 'teams') return teamOrder(selfTeam).map((team) => ({
+    label: `${displayTeam(team, selfTeam)!.toUpperCase()} · ${snapshot.match.teamScores?.[team] ?? '—'}`,
     players: snapshot.players.filter((p) => p.team === team).sort(scoreOrder),
   })).concat(snapshot.players.some((p) => p.team === null) ? [{ label: 'UNASSIGNED', players: snapshot.players.filter((p) => p.team === null).sort(scoreOrder) }] : []);
   return [{ label: '', players: [...snapshot.players].sort(scoreOrder) }];
@@ -48,9 +47,9 @@ export class Scoreboard {
     if (signature === this.signature) return;
     this.signature = signature;
     this.body.replaceChildren();
-    const groups = snapshot ? scoreboardGroups(snapshot) : [{ label: '', players: [] }];
+    const groups = snapshot ? scoreboardGroups(snapshot, snapshot.players.find(p => p.id === selfId)?.team ?? null) : [{ label: '', players: [] }];
     for (const group of groups) {
-      if (group.label) { const heading = document.createElement('h3'); heading.textContent = group.label; this.body.appendChild(heading); }
+      if (group.label) { const heading = document.createElement('h3'); heading.textContent = group.label; heading.dataset.team = group.label.startsWith('BLUE') ? 'blue' : group.label.startsWith('RED') ? 'red' : ''; this.body.appendChild(heading); }
       const table = document.createElement('table');
       const head = table.createTHead().insertRow();
       for (const label of ['PLAYER', 'WEAPON', 'SCORE', 'KILLS', 'DEATHS']) { const th = document.createElement('th'); th.textContent = label; th.scope = 'col'; head.appendChild(th); }

@@ -5,6 +5,9 @@ import type { ControllerState, Vec3 } from '../src/player/PlayerController';
 /** Metres, seconds and HP. One shared balance definition for server and HUD. */
 export const GRENADE = Object.freeze({ perLife: 1, radius: .065, fuseMs: 2000, speed: 15.6,
   lift: 1.5, gravity: MOVEMENT.gravity, restitution: .42, friction: .68, damage: 100, damageRadius: 1.8 });
+/** Presentation/history only; independent of blast damage and physics. */
+export const GRENADE_SMOKE_MS = 7000;
+export const GRENADE_SMOKE_DENSE_MS = 5000;
 export interface GrenadeState {
   id: string; ownerId: string; ownerLife: number; roundId: number;
   at: number; explodeAt: number; updatedAt: number; position: Vec3; velocity: Vec3;

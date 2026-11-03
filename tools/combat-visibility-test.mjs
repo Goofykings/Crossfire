@@ -1,3 +1,4 @@
+import { PROTOCOL_VERSION } from './protocol-version.mjs';
 /** Production browser + real Worker/TCP WebSocket tests. No mocked roster, hits or teams.
  * Test-only RPC places already-spawned actual sessions in real map sightlines.
  */
@@ -66,7 +67,7 @@ try {
       const c = { ws, messages: [], snapshot: null, id: '', seq: 0, position: null }; sockets.push(c);
       ws.on('message', (raw) => { const m = JSON.parse(String(raw)); c.messages.push(m); if (m.snapshot) c.snapshot = m.snapshot; }); ws.on('error', () => {});
       await new Promise((resolve, reject) => { ws.once('open', resolve); ws.once('error', reject); });
-      c.send = (m) => ws.send(JSON.stringify({ v: 12, ...m }));
+      c.send = (m) => ws.send(JSON.stringify({ v: PROTOCOL_VERSION, ...m }));
       c.send({ type: 'join', name });
       const welcome = await until(() => c.messages.find((m) => m.type === 'welcome'), 'Node join');
       c.id = welcome.selfId;

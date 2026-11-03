@@ -105,11 +105,11 @@ try {
     const audio=await p.evaluate(()=>window.__crossfire.spatialAudio());
     check(audio.recent.filter(s=>s.name==='grenade_explosion').length===1,'one positional explosion for player or spectator');
   }
-  await delay(1200);const clean=await a.evaluate(()=>window.__crossfire.grenades());
-  check(clean.projectiles===0&&clean.particles===0,'projectile, flash and smoke fully clean up');
+  await delay(7200);const clean=await a.evaluate(()=>window.__crossfire.grenades());
+  check(clean.projectiles===0&&clean.particles===0&&clean.clouds.length===0,'projectile, flash and seven-second smoke fully clean up');
   const before=await net(a);await a.evaluate(()=>window.__crossfire.networkReconnect());
   await until(async()=>{const n=await net(a);return n.state==='connected'&&n.diagnostics.opens>before.diagnostics.opens;},'actual reconnect after throw');
-  check((await me(a)).grenades===0,'reconnect cannot restock grenade');
+  check((await me(a)).grenades===1,'reconnect preserves exactly one earned grenade');
   check((await net(a)).rendered.filter(p=>p.id===b.id).length<=1,'no duplicate remote avatar');
   await until(async()=>await b.$eval('.respawn-button',e=>!e.disabled),'respawn becomes available');
   await b.click('.respawn-button');await until(async()=>(await b.evaluate(()=>window.__crossfire.state()))==='playing','mouse respawn');

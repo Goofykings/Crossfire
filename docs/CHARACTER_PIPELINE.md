@@ -41,7 +41,7 @@ Every action uses the same mesh/rig and remains in place. The root bone never tr
 
 `CharacterAssetLibrary` loads once through the existing cancellable GLB loader and Pages asset paths. Geometry, materials and textures are shared; each remote gets cloned bone transforms and animation groups for independent poses. No local first-person humanoid is instantiated. Normal operation uses the GLB; a corrupt/missing download retains the existing fallback and exposes an error in `characterAsset()` diagnostics.
 
-`PlayerAnimationState` consumes server grounded, slide and crouch state, with horizontal speed derived from the same authoritative position interpolation used to render the actor. This also handles sparse batches that move during a snapshot interval but end with zero instantaneous velocity. It selects all six clips, handles joining midair without inventing a launch, uses run-speed hysteresis, and retains a low pose if standing clearance is blocked. `PlayerAnimator` crossfades groups over about 100 ms, varies running playback with speed, holds completed short poses as needed, and does not restart an unchanged clip every frame. It never edits controller state, server positions, collider sizes or weapon state. Animated characters are not vertically squashed during a slide.
+`PlayerAnimationState` consumes server grounded, slide and crouch state, with horizontal speed derived from the same authoritative position interpolation used to render the actor. This also handles sparse batches that move during a snapshot interval but end with zero instantaneous velocity. It selects all six clips, handles joining midair without inventing a launch, uses run-speed hysteresis, and retains a low pose if standing clearance is blocked. `PlayerAnimator` crossfades groups over per-clip eased durations (`CLIP_FADE`, 0.08-0.19 s; see docs/CHARACTER_ANIMATION.md), varies running playback with speed, holds completed short poses as needed, and does not restart an unchanged clip every frame. It never edits controller state, server positions, collider sizes or weapon state. Animated characters are not vertically squashed during a slide.
 
 Slow startup exposed an existing UI recovery edge: a spawn acknowledgement can arrive after the request times out. Retry now enters an already-approved live server session with its existing locked weapon, rather than asking the server to spawn again. The browser regression deliberately drops one actual acknowledgement and verifies recovery using the real authoritative snapshots and Spawn button.
 
@@ -73,3 +73,10 @@ node tools/combat-visibility-test.mjs --out test-results/character --url http://
 The browser tool uses independent actual browsers and actual Worker WebSocket clients, not fabricated remote players. Bounded input frames from a real WebSocket client drive the authoritative controller while browsers observe real animation groups and bone positions. It also preserves the existing FFA/Teams combat, wall visibility, health, elimination, respawn and disconnect checks. Fixture RPC only positions already spawned sessions on clear map sightlines. Final results and remaining limits are recorded at the top of PROGRESS.md.
 
 The original character export added no Worker/protocol change. The subsequent directional combat-visual update requires protocol v6 and matching frontend/Worker builds; see [deployment boundary](COMBAT_VISUALS.md). No commit, push or deployment is automatic. Local GPU measurements do not establish performance on every Chromebook or public-server load capacity.
+
+## Weapon hold rig (2026-11-03)
+
+The gloves now carry a gripping finger curl and opposed thumb. Remote players and the home
+preview share one weapon rig (`CharacterWeapon`): bind-pose-derived hinged arm IK, per-weapon
+holds, head-anchored ADS and time-based ADS/recoil/landing layers. See
+[CHARACTER_ANIMATION.md](CHARACTER_ANIMATION.md).

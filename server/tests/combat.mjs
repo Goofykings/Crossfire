@@ -1,3 +1,4 @@
+import { PROTOCOL_VERSION } from '../../tools/protocol-version.mjs';
 /** Real player-to-player combat through TCP WebSockets and the actual Worker.
  * The test-only RPC positions real spawned sessions; it never applies damage or assigns scores.
  */
@@ -46,7 +47,7 @@ for (const mode of (process.env.CROSSFIRE_SCORING_ONLY ? ['ffa'] : ['ffa', 'team
     ws.on('message', (raw) => { const m = JSON.parse(String(raw)); c.messages.push(m); if (m.snapshot) c.snapshot = m.snapshot; });
     ws.on('error', () => {});
     await new Promise((resolve, reject) => { ws.once('open', resolve); ws.once('error', reject); });
-    c.send = (m) => ws.send(JSON.stringify({ v: 12, ...m }));
+    c.send = (m) => ws.send(JSON.stringify({ v: PROTOCOL_VERSION, ...m }));
     c.send({ type: 'join', name: `Combat ${clients.length}`, ...(resumeToken ? { resumeToken } : {}) });
     const welcome = await wait(c, (m) => m.type === 'welcome');
     c.id = welcome.selfId; c.token = welcome.resumeToken;
@@ -105,6 +106,8 @@ for (const mode of (process.env.CROSSFIRE_SCORING_ONLY ? ['ffa'] : ['ffa', 'team
         const state = await stub.snapshotForTest();
         const saved = state.players.find((p) => p.id === a.id);
         const replay = await stub.replayDeadTransitionForTest(b.id, a.id);
+        assert.equal(saved.grenades, 2 + i, 'each firearm kill awards one grenade above the initial inventory');
+        assert.equal(replay.players.find((p) => p.id === a.id).grenades, saved.grenades, 'replayed death cannot award again');
         assert.equal(replay.players.find((p) => p.id === a.id).score, saved.score);
         assert.equal(replay.players.find((p) => p.id === a.id).comboUntil, saved.comboUntil);
         if (i < 2) await delay(1100);
@@ -112,6 +115,7 @@ for (const mode of (process.env.CROSSFIRE_SCORING_ONLY ? ['ffa'] : ['ffa', 'team
       assert.equal(me(a).score, 510);
       const comboUntil = me(a).comboUntil;
       const original = a; original.ws.close(); await delay(80); a = await open('sniper', original.token);
+      assert.equal(me(a).grenades, 4, 'resume retains all three earned grenades');
       assert.equal(me(a).score, 510); assert.equal(me(a).comboCount, 3); assert.equal(me(a).comboUntil, comboUntil);
       const enemy = await open('sniper'); await place(enemy, a); await aim(enemy, a, 1.6); await shot(enemy, a, 1.6);
       await wait(a, (m) => m.type === 'snapshot' && m.snapshot.players.some((p) => p.id === a.id && !p.alive));
@@ -155,6 +159,7 @@ for (const mode of (process.env.CROSSFIRE_SCORING_ONLY ? ['ffa'] : ['ffa', 'team
           'incoming direction follows the actual aimed shot, including pellet spread');
         assert.equal(result.hits[0].life, me(b).life);
         for (const c of [a, b]) await wait(c, (m) => m.type === 'snapshot' && m.snapshot.players.some((p) => p.id === b.id && p.life === 1 && p.health === 100 - expected));
+        assert.equal(me(a).grenades, expected === 100 ? 2 : 1, 'nonlethal damage grants no grenade; lethal damage grants exactly one');
         if (weapon === 'shotgun') { assert.equal(result.hits[0].killed, true); assert.equal(me(a).kills, 1); assert.equal(me(b).deaths, 1); }
         await leave(a); await leave(b);
       });

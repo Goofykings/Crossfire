@@ -1,3 +1,4 @@
+import { texturesReady } from '../core/assetReadiness';
 import { Color3, Material, PBRMaterial, Texture, type Scene } from '@babylonjs/core';
 import { assetUrl, fetchJson } from '../core/assets';
 
@@ -49,6 +50,8 @@ export class MaterialLibrary {
     signal?.throwIfAborted();
     this.defs = file.materials;
   }
+
+  ready(signal?: AbortSignal): Promise<void> { return texturesReady([...this.textures.values()], signal); }
 
   has(name: string): boolean {
     return name in this.defs;

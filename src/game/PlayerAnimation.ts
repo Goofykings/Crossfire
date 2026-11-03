@@ -40,11 +40,16 @@ export class PlayerAnimationState {
   }
 }
 
+/** Crossfade durations by elapsed time; entering or leaving a low stance is slower. */
+export const CLIP_FADE: Record<CharacterClip, number> = { IDLE: .14, RUN: .14, JUMP_START: .08, JUMP_LOOP: .12,
+  JUMP_LAND: .1, SLIDE: .16, CROUCH: .19 };
+
 /** Crossfade actual exported groups, retaining independent state for each real player. */
 export class PlayerAnimator {
   readonly state: PlayerAnimationState;
   private active = new Map<CharacterClip, number>();
   private held = false;
+  private fade = CLIP_FADE.IDLE;
   private starts = 0;
   private readonly history: CharacterClip[] = [];
   constructor(private readonly groups: Record<CharacterClip, AnimationGroup>,
@@ -63,6 +68,7 @@ export class PlayerAnimator {
         this.starts++;
       }
       this.held = false;
+      this.fade = Math.max(CLIP_FADE[clip], CLIP_FADE[previous]);
       this.history.push(clip); if (this.history.length > 16) this.history.shift();
     }
     const current = this.groups[clip];
@@ -72,13 +78,16 @@ export class PlayerAnimator {
       current.speedRatio = 0;
       if (!this.held) { current.goToFrame(current.to - .001, true); this.held = true; }
     } else current.speedRatio = clip === 'RUN' ? Math.max(.45, Math.min(1.6, Math.hypot(m.velocity.x, m.velocity.z) / 4.7)) : 1;
-    const blend = Math.min(1, dt / .10);
+    // Progress is linear in elapsed time; applied weights are eased so a stance change starts
+    // and ends without a velocity jump, then normalised (partial totals blend toward rest).
+    const step = dt / this.fade;
+    let total = 0;
     for (const [name, weight] of this.active) {
-      const w = weight + ((name === clip ? 1 : 0) - weight) * blend;
-      this.groups[name].weight = w;
-      if (name !== clip && w < .005) { this.groups[name].stop(true); this.active.delete(name); }
-      else this.active.set(name, w);
+      const w = name === clip ? Math.min(1, weight + step) : Math.max(0, weight - step);
+      if (name !== clip && w < .005) { this.groups[name].stop(true); this.active.delete(name); continue; }
+      this.active.set(name, w); total += w * w * (3 - 2 * w);
     }
+    for (const [name, weight] of this.active) this.groups[name].weight = total > 0 ? weight * weight * (3 - 2 * weight) / total : 1;
   }
   inspect() {
     return { clip: this.state.clip, elapsed: this.state.elapsed, starts: this.starts, history: [...this.history],

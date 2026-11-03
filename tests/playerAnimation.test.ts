@@ -49,3 +49,24 @@ it('does not restart current clips, blends changes and isolates per-player anima
   expect(a.inspect().weights.IDLE).toBeUndefined();
   a.dispose(); b.dispose();
 });
+it('crossfades stance changes over their own elapsed-time duration with eased, normalised weights', () => {
+  const groups = Object.fromEntries(Object.keys(durations).map((name) => [name,
+    { weight: 0, speedRatio: 1, to: durations[name as CharacterClip] * 60, start() {}, stop() {}, goToFrame() {}, getCurrentFrame: () => 0 }])) as unknown as Record<CharacterClip, AnimationGroup>;
+  const a = new PlayerAnimator(groups, durations);
+  for (let i = 0; i < 30; i++) a.update(pose(), 1 / 60);
+  const weights: number[] = [];
+  let frames = 0;
+  while (frames < 60) {
+    a.update(pose({ crouch: 1 }), 1 / 60); frames++;
+    weights.push(groups.CROUCH.weight);
+    expect(groups.CROUCH.weight + (a.inspect().weights.IDLE !== undefined ? groups.IDLE.weight : 0)).toBeCloseTo(1, 6);
+    if (a.inspect().weights.IDLE === undefined) break;
+  }
+  // CLIP_FADE.CROUCH = 0.19 s, independent of frame count.
+  expect(frames / 60).toBeGreaterThan(.17);
+  expect(frames / 60).toBeLessThan(.22);
+  // Eased: the first and last steps are much smaller than the middle ones.
+  const steps = weights.map((w, i) => w - (weights[i - 1] ?? 0));
+  expect(steps[0]).toBeLessThan(steps[Math.floor(steps.length / 2)] / 2);
+  a.dispose();
+});

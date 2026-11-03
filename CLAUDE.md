@@ -1,5 +1,15 @@
 # CLAUDE.md: notes for future sessions
 
+## Character weapon rig (2026-11-03)
+
+See docs/CHARACTER_ANIMATION.md. src/game/CharacterWeapon.ts is the ONLY arm/weapon pose
+system, shared by RemotePlayers and HomeCharacter; never add a second pose table or
+BoneIKController. Arm rest axes derive from bone rest matrices plus the char_geometry
+A-pose; weapon grip_r/grip_l are surface contact points, so WEAPON_HOLDS offsets move to
+handle centres. Gloves carry a baked grip curl (char_geometry.py). ADS anchors to the head
+joint; ADS intent comes from synchronized aimHeld + action, recoil from ShotResult. No
+protocol change. Inspect with __crossfire.characterLab / tools/character-pose-lab.mjs.
+
 ## Gameplay Phase 4 physics polish (2026-11-02)
 
 See docs/PHYSICS_POLISH_PHASE4.md and newest PROGRESS.md entry. This supersedes

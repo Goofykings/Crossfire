@@ -1,3 +1,4 @@
+import { PROTOCOL_VERSION } from '../shared/protocol';
 import { describe, expect, it } from 'vitest';
 import { FIXED_DT } from '../src/config/constants';
 import { CollisionWorld } from '../src/physics/CollisionWorld';
@@ -80,7 +81,7 @@ describe('held, authoritative lean', () => {
   it('rejects forged offsets, invalid lean and aim angles, and old protocol versions', () => {
     const frame = { seq: 1, yaw: 0, pitch: 0, intent: { ...NO_INTENT, lean: 1 },
       combat: { trigger: true, reload: false, aimYaw: .1, aimPitch: .05 } };
-    const message = { v: 12, type: 'input', roundId: 0, mapVersion: 'test', frames: [frame] };
+    const message = { v: PROTOCOL_VERSION, type: 'input', roundId: 0, mapVersion: 'test', frames: [frame] };
     expect(parseClientMessage(JSON.stringify(message))).toEqual(message);
     expect(parseClientMessage(JSON.stringify({ ...message, v: 7 }))).toBeNull();
     for (const lean of [-2, .5, 2, 'right', null]) {

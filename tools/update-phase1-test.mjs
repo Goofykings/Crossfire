@@ -1,3 +1,4 @@
+import { PROTOCOL_VERSION } from './protocol-version.mjs';
 /** Local Worker with real browser viewers and real WebSocket shooters. */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -93,7 +94,7 @@ try {
     const c = { ws, messages: [], snapshot: null, seq: 0 };
     ws.on('message', (raw) => { const m = JSON.parse(String(raw)); c.messages.push(m); if (m.snapshot) c.snapshot = m.snapshot; }); ws.on('error', () => {});
     await new Promise((resolve, reject) => { ws.once('open', resolve); ws.once('error', reject); });
-    c.send = (m) => ws.send(JSON.stringify({ v: 12, ...m })); c.send({ type: 'join', name: `Actual ${weapon}` });
+    c.send = (m) => ws.send(JSON.stringify({ v: PROTOCOL_VERSION, ...m })); c.send({ type: 'join', name: `Actual ${weapon}` });
     const welcome = await until(() => c.messages.find((m) => m.type === 'welcome'), 'shooter joins'); c.id = welcome.selfId;
     const timer = setInterval(() => { if (ws.readyState === WebSocket.OPEN) c.send({ type: 'ping', at: Date.now() }); }, 500); timers.push(timer);
     c.send({ type: 'spawn', roundId: c.snapshot.roundId, mapVersion: c.snapshot.mapVersion, weapon, requestId: `phase1-${weapon}` });

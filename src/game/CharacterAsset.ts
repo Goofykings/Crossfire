@@ -1,3 +1,4 @@
+import { meshesReady } from '../core/assetReadiness';
 import { BoundingInfo, Mesh, Quaternion, Space, TransformNode, Vector3, type AssetContainer, type Scene, type InstantiatedEntries, type AnimationGroup } from '@babylonjs/core';
 import { assetUrl, fetchJson } from '../core/assets';
 import { loadContainer } from '../core/loadContainer';
@@ -82,6 +83,12 @@ export class CharacterAssetLibrary {
       // Character failure cannot break a working multiplayer connection.
       console.warn('[crossfire] Character export unavailable:', this.reason);
     }
+  }
+
+  async ready(signal?: AbortSignal): Promise<void> {
+    await this.load(signal);
+    if (!this.container) throw new Error(`Required character asset unavailable: ${this.reason}`);
+    await meshesReady(this.container.meshes, signal);
   }
 
   instantiate(parent: TransformNode, id: string): CharacterInstance | null {

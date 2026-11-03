@@ -1,21 +1,22 @@
 import { Color3, Color4, DirectionalLight, Engine, FreeCamera, HemisphericLight, MeshBuilder,
   PBRMaterial, Quaternion, Scene, Space, TransformNode, Vector3 } from '@babylonjs/core';
 import { CharacterAssetLibrary, type CharacterInstance } from '../game/CharacterAsset';
-import { CharacterWeaponLibrary, type CharacterWeapon, type CharacterHoldPose } from '../game/CharacterWeapon';
+import { CharacterWeaponLibrary, type CharacterWeapon } from '../game/CharacterWeapon';
+import type { CharacterMotion } from '../game/PlayerAnimation';
 import { MaterialLibrary } from '../rendering/MaterialLibrary';
 import type { WeaponId } from '../weapons/Weapon';
 
-/** Each existing model has different grip spacing, stock and fore-end geometry. */
-const HOME_HOLDS: Record<WeaponId, CharacterHoldPose> = {
-  rifle: { offset: [.08, .01, -.20], yaw: .72, pitch: .18, elbows: [[.40, 1.10, -.14], [-.37, 1.09, -.28]], hands: [
-    { fingers: [-.65, -.65, -.25], back: [.70, -.70, 0] }, { fingers: [0, .45, -.89], back: [0, -.89, -.45] }] },
-  shotgun: { offset: [.09, -.02, -.19], yaw: .82, pitch: .22, elbows: [[.40, 1.08, -.14], [-.38, 1.08, -.30]], hands: [
-    { fingers: [-.65, -.68, -.25], back: [.72, -.69, 0] }, { fingers: [0, .35, -.94], back: [0, -.94, -.35] }] },
-  sniper: { offset: [.09, -.07, -.19], yaw: .68, pitch: -.08, elbows: [[.41, 1.06, -.14], [-.38, 1.06, -.30]], hands: [
-    { fingers: [-.65, -.65, -.25], back: [.70, -.70, 0] }, { fingers: [0, .5, -.87], back: [0, -.87, -.5] }] },
-  smg: { offset: [.10, .05, -.17], yaw: .88, pitch: .46, elbows: [[.38, 1.12, -.12], [-.34, 1.13, -.23]], hands: [
-    { fingers: [-.63, -.70, -.25], back: [.74, -.67, 0] }, { fingers: [0, .3, -.95], back: [0, -.95, -.3] }] },
-};
+/** Test-only pose lab: the same rig and weapon holds under explicit, repeatable inputs. */
+export interface CharacterLabOptions {
+  weapon?: WeaponId; ads?: number; pitch?: number; fire?: number;
+  motion?: Partial<CharacterMotion>;
+  /** Orbit camera: heading in degrees (0 = facing the character), pitch in degrees, metres. */
+  camera?: { heading: number; pitch: number; distance: number; height: number; target?: [number, number, number];
+    /** Aim at a weapon anchor after posing instead of a fixed point. */
+    focus?: 'grip_r' | 'grip_l' };
+  /** Seconds of animation and blending to advance before capturing. */
+  advance?: number;
+}
 
 /** Isolated preview of the same selected/default skin; never creates a map,
  * gameplay controller, map, environment or multiplayer connection. */
@@ -30,6 +31,7 @@ export class HomeCharacter {
   private weapons: CharacterWeaponLibrary | null = null;
   private weapon: CharacterWeapon | null = null;
   private selectedWeapon: WeaponId = 'rifle';
+  private preferredWeapon: WeaponId = 'rifle';
   private loadingWeapon: WeaponId | null = null;
   private abort: AbortController | null = null;
   private target = 0;
@@ -41,6 +43,7 @@ export class HomeCharacter {
   private headNode: TransformNode | null = null;
   private readonly animatedHead = Quaternion.Identity();
   private hasHeadPose = false;
+  private lab: CharacterLabOptions | null = null;
   private readonly reduced = matchMedia('(prefers-reduced-motion: reduce)');
   private readonly move = (e: MouseEvent) => {
     this.target = Math.max(-1, Math.min(1, (e.clientX / innerWidth - .5) * 2)) * Math.PI / 12;
@@ -71,7 +74,9 @@ export class HomeCharacter {
     if (this.nameLabel) { this.nameLabel.textContent = name; this.nameLabel.hidden = !name; }
   }
   setWeapon(id: WeaponId): void {
-    if (this.selectedWeapon === id) return;
+    this.preferredWeapon = id;
+    // The pose lab chooses its own weapon until it is released.
+    if (this.lab || this.selectedWeapon === id) return;
     this.selectedWeapon = id;
     this.syncWeapon();
   }
@@ -81,7 +86,7 @@ export class HomeCharacter {
     this.loadingWeapon = id;
     void library.load(id, controller.signal).then(() => {
       if (controller.signal.aborted || library !== this.weapons || !this.character) return;
-      if (id === this.selectedWeapon) { this.weapon?.dispose(); this.weapon = library.create(this.character, id); this.weapon?.setHomePose(HOME_HOLDS[id]); }
+      if (id === this.selectedWeapon) { this.weapon?.dispose(); this.weapon = library.create(this.character, id); }
     }).catch((error) => { if (!controller.signal.aborted) console.warn('[crossfire] Home weapon:', error); })
       .finally(() => { if (library === this.weapons) { this.loadingWeapon = null; if (id !== this.selectedWeapon) this.syncWeapon(); } });
   }
@@ -161,10 +166,65 @@ export class HomeCharacter {
       // The head adds a little more turn than the body, including up/down look.
       pivot.rotation.y = -.12 + this.yaw;
       pivot.rotation.x = this.pitch;
-      if (this.character) this.character.update({ velocity: { x: 0, y: 0, z: 0 }, grounded: true, crouch: 0, slideRemaining: 0 }, this.reduced.matches ? 0 : dt);
+      this.step(this.reduced.matches ? 0 : dt);
       scene.animationsEnabled = !this.reduced.matches;
       scene.render();
     });
+  }
+  /** Advance the shared animation and weapon-hold layers by elapsed seconds. */
+  private step(dt: number): void {
+    const motion: CharacterMotion = { velocity: { x: 0, y: 0, z: 0 }, grounded: true, crouch: 0, slideRemaining: 0, ...this.lab?.motion };
+    this.character?.update(motion, dt);
+    this.weapon?.setState({ pitch: this.lab?.pitch ?? 0, ads: this.lab?.ads ?? 0, airborne: !motion.grounded });
+    this.weapon?.advance(dt);
+  }
+  /** Test hook: pose the preview with explicit inputs and return a rendered frame. The
+   * render loop pauses and animation advances in fixed 1/60 s steps for repeatable shots. */
+  async characterLab(options: CharacterLabOptions | null): Promise<{ image: string; state: ReturnType<HomeCharacter['inspect']> } | null> {
+    const engine = this.engine, scene = this.scene, canvas = this.canvas;
+    if (!engine || !scene || !canvas) return null;
+    if (!options) {
+      this.lab = null; scene.useConstantAnimationDeltaTime = false;
+      if (this.selectedWeapon !== this.preferredWeapon) { this.selectedWeapon = this.preferredWeapon; this.syncWeapon(); }
+      canvas.style.removeProperty('width'); canvas.style.removeProperty('height'); canvas.style.removeProperty('mask-image');
+      this.resize(); return null;
+    }
+    this.lab = options;
+    if (options.weapon && options.weapon !== this.selectedWeapon) { this.selectedWeapon = options.weapon; this.syncWeapon(); }
+    const start = performance.now();
+    while ((!this.character || this.weapon?.id !== this.selectedWeapon) && performance.now() - start < 30000) await new Promise((r) => setTimeout(r, 50));
+    if (!this.character || !this.weapon) return null;
+    // Parallel shader compilation needs event-loop turns; synchronous renders skip unready meshes.
+    await scene.whenReadyAsync();
+    engine.stopRenderLoop();
+    canvas.style.width = '480px'; canvas.style.height = '640px'; canvas.style.maskImage = 'none';
+    engine.resize();
+    scene.useConstantAnimationDeltaTime = true; scene.animationsEnabled = true;
+    const pivot = this.character.root.parent as TransformNode;
+    pivot.rotation.set(0, 0, 0);
+    this.yaw = this.pitch = this.headYaw = this.headPitch = 0;
+    const camera = scene.activeCamera as FreeCamera, view = options.camera ?? { heading: 0, pitch: 0, distance: 3.2, height: 1.05 };
+    const h = view.heading * Math.PI / 180, p = view.pitch * Math.PI / 180;
+    const aimAt = (focus: Vector3) => {
+      camera.position.set(focus.x + Math.sin(h) * Math.cos(p) * view.distance, focus.y + Math.sin(p) * view.distance,
+        focus.z - Math.cos(h) * Math.cos(p) * view.distance);
+      camera.setTarget(focus); camera.fov = .62;
+    };
+    aimAt(view.target ? new Vector3(...view.target) : new Vector3(0, view.height, 0));
+    const steps = Math.max(1, Math.round((options.advance ?? .6) * 60));
+    const shots = options.fire ?? 0, interval = Math.max(1, Math.round(steps / Math.max(1, shots)));
+    for (let i = 0; i < steps; i++) {
+      if (shots && i % interval === 0 && i / interval < shots) this.weapon.fire();
+      this.step(1 / 60);
+      scene.render();
+    }
+    if (view.focus) {
+      const grip = this.weapon.inspect().grips[view.focus === 'grip_r' ? 0 : 1];
+      if (grip) { aimAt(Vector3.FromArray(grip)); scene.render(); }
+    }
+    // Same task as the last render: the drawing buffer is still intact.
+    const image = canvas.toDataURL('image/png');
+    return { image, state: this.inspect() };
   }
   inspect() { return { active: !!this.engine, ready: !!this.character, skin: this.library?.inspect().file ?? null,
     engines: Engine.Instances.length,

@@ -1,3 +1,4 @@
+import { PROTOCOL_VERSION } from '../shared/protocol';
 import { describe, expect, it } from 'vitest';
 import { parseClientMessage, parseServerMessage, type PlayerState, type Snapshot } from '../shared/protocol';
 import { PlayerController } from '../src/player/PlayerController';
@@ -17,7 +18,7 @@ const snapshot = (players: PlayerState[]): Snapshot => ({ result: null, grenades
 
 describe('pre-spawn protocol and loadout', () => {
   it('accepts only implemented loadouts and never client scores, positions or live state', () => {
-    const request = { v: 12, type: 'spawn', roundId: 0, mapVersion: 'test', requestId: 'life-1', weapon: 'shotgun' };
+    const request = { v: PROTOCOL_VERSION, type: 'spawn', roundId: 0, mapVersion: 'test', requestId: 'life-1', weapon: 'shotgun' };
     expect(parseClientMessage(JSON.stringify(request))).toEqual(request);
     for (const fields of [{ weapon: 'invalid' }, { alive: true }, { kills: 8 }, { position: { x: 100, y: 0, z: 0 } }, { requestId: '' }]) {
       expect(parseClientMessage(JSON.stringify({ ...request, ...fields }))).toBeNull();
@@ -25,11 +26,16 @@ describe('pre-spawn protocol and loadout', () => {
   });
   it('validates authoritative life and score fields instead of accepting malformed snapshots', () => {
     const s = snapshot([player('Connected menu player', 0, 0)]);
-    const message = { v: 12, type: 'snapshot', snapshot: s };
+    const message = { v: PROTOCOL_VERSION, type: 'snapshot', snapshot: s };
     expect(parseServerMessage(JSON.stringify(message))).toEqual(message);
     for (const fields of [{ kills: -1 }, { deaths: 1.5 }, { alive: true, weapon: null }, { life: -1 }, { team: 'fake' }]) {
       expect(parseServerMessage(JSON.stringify({ ...message, snapshot: { ...s, players: [{ ...s.players[0], ...fields }] } }))).toBeNull();
     }
+  });
+  it('accepts earned inventory above one while rejecting malformed counts', () => {
+    const s = snapshot([player('rewarded', 0, 0)]);
+    for (const grenades of [0, 1, 2, 100]) { s.players[0].grenades = grenades; expect(parseServerMessage(JSON.stringify({v:PROTOCOL_VERSION,type:'snapshot',snapshot:s}))).not.toBeNull(); }
+    for (const grenades of [-1, .5, Number.MAX_SAFE_INTEGER + 1]) { s.players[0].grenades = grenades; expect(parseServerMessage(JSON.stringify({v:PROTOCOL_VERSION,type:'snapshot',snapshot:s}))).toBeNull(); }
   });
   it('locks every switching path during a life and accepts a different loadout on the next spawn', () => {
     const loadout = new Loadout();
@@ -70,6 +76,9 @@ describe('server scoreboard presentation (fixtures, not multiplayer players)', (
   it('preserves Teams assignments and authoritative team scores, keeping unassigned clients visible', () => {
     const s = snapshot([player('Red', 5, 1, 'red'), player('Menu', 0, 0), player('Blue', 2, 4, 'blue')]);
     s.match = { mode: 'teams', endsAt: 601000, teamScores: { blue: 12, red: 8 } };
+    const relative = scoreboardGroups(s, 'red');
+    expect(relative.map(g => g.label)).toEqual(['BLUE \u00b7 8', 'RED \u00b7 12', 'UNASSIGNED']);
+    expect(relative[0].players[0].team).toBe('red');
     const groups = scoreboardGroups(s);
     expect(groups.map((g) => g.label)).toEqual(['BLUE · 12', 'RED · 8', 'UNASSIGNED']);
     expect(groups.map((g) => g.players.map((p) => p.id))).toEqual([['Blue'], ['Red'], ['Menu']]);

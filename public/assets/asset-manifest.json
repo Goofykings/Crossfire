@@ -29,7 +29,7 @@
   {
    "path": "assets/characters/player.json",
    "kind": "character-metadata",
-   "bytes": 1608,
+   "bytes": 1609,
    "description": "Measured export scale, pose bounds, clip names/durations and rig",
    "script": "blender/characters/generate_player.py"
   },
@@ -1505,7 +1505,7 @@
   {
    "path": "blender/characters/player.blend",
    "kind": "character-source",
-   "bytes": 433218,
+   "bytes": 433383,
    "description": "Editable humanoid mesh, 18-joint rig and seven in-place actions",
    "script": "blender/characters/generate_player.py"
   },

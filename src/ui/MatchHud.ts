@@ -1,3 +1,4 @@
+import { teamOrder } from './teamColors';
 import type { Snapshot } from '../../shared/protocol';
 import { matchCountdown } from './matchFormatting';
 
@@ -26,7 +27,7 @@ export class MatchHud {
     this.blue.className = 'match-team blue'; this.red.className = 'match-team red';
     this.root.append(this.blue, clock, this.red); parent.appendChild(this.root);
   }
-  update(snapshot: Snapshot | null, serverNow: number, visible: boolean): void {
+  update(snapshot: Snapshot | null, serverNow: number, visible: boolean, selfId = ''): void {
     this.root.hidden = !visible || !snapshot;
     if (!snapshot) return;
     const mode = snapshot.match.mode === 'teams' ? 'TEAMS' : snapshot.match.mode === 'ffa' ? 'FFA' : '';
@@ -42,7 +43,8 @@ export class MatchHud {
     }
     const scores = snapshot.match.teamScores;
     this.blue.hidden = this.red.hidden = snapshot.match.mode !== 'teams' || !scores;
-    for (const [node, score] of [[this.blue, scores?.blue], [this.red, scores?.red]] as const) {
+    const [friendly, enemy] = teamOrder(snapshot.players.find(p => p.id === selfId)?.team ?? null);
+    for (const [node, score] of [[this.blue, scores?.[friendly]], [this.red, scores?.[enemy]]] as const) {
       const text = String(score ?? ''); if (node.textContent !== text) node.textContent = text;
     }
   }

@@ -1,7 +1,7 @@
+import { readinessDeadline } from '../core/assetReadiness';
 import { EnvironmentProps } from '../game/EnvironmentProps';
 import { EMPTY_ENVIRONMENT, type EnvironmentDefinition } from '../../shared/environment';
 import { loadContainer } from '../core/loadContainer';
-import { abortable } from '../core/cancellation';
 import {
   Color3,
   InstancedMesh,
@@ -210,8 +210,10 @@ export class MapManager {
       const pruned = this.materials.prune(inUse);
       if (pruned.materials) console.info('[crossfire] released', pruned.materials, 'materials and', pruned.textures, 'textures');
 
+      onProgress(0.92, 'Loading map textures');
+      await this.materials.ready(active);
       onProgress(0.94, 'Compiling shaders');
-      await abortable(scene.whenReadyAsync(), active);
+      await readinessDeadline(scene.whenReadyAsync(), active, 'Map shaders failed to become ready');
       active.throwIfAborted();
 
       let debugMeshes: AbstractMesh[] | null = null;

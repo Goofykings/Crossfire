@@ -1,3 +1,4 @@
+import { PROTOCOL_VERSION } from '../shared/protocol';
 import { describe, expect, it } from 'vitest';
 import { GuestProfileStore, GUEST_PROFILE_KEY } from '../src/config/guestProfile';
 import { normalizeUsername } from '../shared/username';
@@ -53,7 +54,7 @@ describe('local guest profile', () => {
     expect(Array.from(normalizeUsername('😀'.repeat(30))!)).toHaveLength(24);
   });
   it('never accepts local guest IDs or client-selected session IDs in the join protocol', () => {
-    const join = { v: 12, type: 'join', name: 'Alice' };
+    const join = { v: PROTOCOL_VERSION, type: 'join', name: 'Alice' };
     expect(parseClientMessage(JSON.stringify(join))).toEqual(join);
     for (const fields of [{ guestId: crypto.randomUUID() }, { id: crypto.randomUUID() }, { sessionId: crypto.randomUUID() }]) {
       expect(parseClientMessage(JSON.stringify({ ...join, ...fields }))).toBeNull();

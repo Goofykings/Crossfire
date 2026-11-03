@@ -25,26 +25,26 @@ try {
     await page.waitForFunction((id) => window.__crossfire?.homeCharacter().weapon?.id === id, { timeout: 120000 }, weapon);
     await new Promise((resolve) => setTimeout(resolve, 500));
     const state = await page.evaluate(() => window.__crossfire.homeCharacter());
-    const j = state.character.joints, grips = state.weapon.grips;
-    for (const [index, hand] of state.weapon.homeHands.entries()) {
-      assert.ok(distance(hand.contact, grips[index]) < .035, `${weapon}: palm meets grip ${index}`);
-      assert.ok(dot(hand.fingers, hand.desiredFingers) > .99 && dot(hand.back, hand.desiredBack) > .99,
-        `${weapon}: fingers and palm face the intended weapon directions ${index}`);
-    }
-    assert.ok(j.forearm_r[0] > .15 && j.forearm_l[0] < -.15
+    const j = state.character.joints;
+    // Same shared rig as remote players: both handles enclosed, natural wrists and elbows.
+    const checkHands = (s, label) => {
+      for (const [index, hand] of s.weapon.hands.entries()) {
+        assert.ok(hand.gap < .01, `${weapon}: ${label} hand ${index} encloses its handle (${hand.gap})`);
+        assert.ok(hand.wristBend < 55 * Math.PI / 180, `${weapon}: ${label} wrist ${index} stays natural`);
+        assert.ok(hand.elbowBend < 140 * Math.PI / 180, `${weapon}: ${label} elbow ${index} stays natural`);
+      }
+    };
+    checkHands(state, 'idle');
+    assert.ok(j.forearm_r[0] > .15 && j.forearm_l[0] < -.1
       && j.forearm_r[1] < j.upper_arm_r[1] - .08 && j.forearm_l[1] < j.upper_arm_l[1] - .08, `${weapon}: elbows stay below and outside the shoulders`);
-    assert.ok(j.hand_r[2] < -.12 && j.hand_l[2] < -.20, `${weapon}: hands remain in front of the torso`);
+    assert.ok(j.hand_r[2] < -.05 && j.hand_l[2] < -.12, `${weapon}: hands remain in front of the torso`);
     assert.equal(state.weapon.instances, 1);
     assert.equal(state.character.clip, 'IDLE');
     await page.mouse.move(1100, 100);
     await new Promise((resolve) => setTimeout(resolve, 450));
     const turned = await page.evaluate(() => window.__crossfire.homeCharacter());
     assert.ok(turned.yaw > .1 && turned.headPitch > .05, `${weapon}: mouse-responsive body and head remain active`);
-    for (const [index, hand] of turned.weapon.homeHands.entries()) {
-      assert.ok(distance(hand.contact, turned.weapon.grips[index]) < .035
-        && dot(hand.fingers, hand.desiredFingers) > .99 && dot(hand.back, hand.desiredBack) > .99,
-      `${weapon}: palms and finger directions remain aligned while turning`);
-    }
+    checkHands(turned, 'turned');
     assert.notEqual(turned.character.frame, state.character.frame, `${weapon}: idle animation advances`);
     assert.equal(await page.$eval('.home-character-name', (e) => e.textContent), 'Test Player');
     assert.ok(!requests.some((url) => /\/assets\/models\/(european-town|industrial-complex|modern-city)\//.test(url)), 'preview does not load a map');

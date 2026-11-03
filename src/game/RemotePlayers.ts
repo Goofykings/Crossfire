@@ -1,6 +1,6 @@
 import { Color3, Frustum, Material, Matrix, MeshBuilder, Quaternion, StandardMaterial, TransformNode, Vector3, type Scene, type Mesh, type BaseTexture } from '@babylonjs/core';
 import type { Elimination, PlayerState, Snapshot } from '../../shared/protocol';
-import { teammates } from '../../shared/combat';
+import { playerColor } from '../ui/teamColors';
 import { CharacterAssetLibrary, type CharacterInstance } from './CharacterAsset';
 import { VisibilityWorld } from '../rendering/VisibilityWorld';
 import { animationVelocity } from './PlayerAnimation';
@@ -23,12 +23,23 @@ interface Avatar {
   life: number; death?: { elapsed: number; started: number; direction: Elimination['direction']; rotation: Quaternion; baseY: number; materials: Material[]; textures: Set<BaseTexture> };
 }
 
+/** Mirrors Weapon.update's ADS gate from synchronized intent and action, so the
+ * third-person pose can blend on its own 150 ms curve instead of the slower gun ramp. */
+export function aimIntent(player: Pick<PlayerState, 'weapon' | 'combat'>): number {
+  const gun = player.combat.gun;
+  if (!gun) return 0;
+  const canAim = gun.action === 'idle' || (gun.action === 'cycle' && player.weapon !== 'sniper');
+  return player.combat.aimHeld && canAim ? 1 : 0;
+}
+
 /** Real connected avatars with interpolated poses and relationship-based visibility. */
 export class RemotePlayers {
   private readonly avatars = new Map<string, Avatar>();
   private readonly material: StandardMaterial;
   private readonly labels = document.createElement('div');
   private presenting = true;
+  private smokeObscures: (from: Vector3, to: Vector3) => boolean = () => false;
+  setSmokeVisibility(test: (from: Vector3, to: Vector3) => boolean): void { this.smokeObscures = test; }
   private spectatedId: string | null = null;
   private outlinesEnabled = true;
   private visibilityWorld: VisibilityWorld | null = null;
@@ -48,14 +59,25 @@ export class RemotePlayers {
     // Read actual animated bone positions after the engine evaluates this frame.
     scene.onBeforeAnimationsObservable.add(() => { for (const a of this.avatars.values()) { a.weapon?.restore(); a.character?.restoreLean(); } });
     scene.onAfterAnimationsObservable.add(() => {
-      for (const a of this.avatars.values()) { a.character?.applyLean(); if (!a.death) a.weapon?.update(); this.presentation(a, this.dt); }
+      const camera = scene.activeCamera;
+      const planes = camera ? Frustum.GetPlanes(camera.getTransformationMatrix()) : null;
+      for (const a of this.avatars.values()) {
+        a.character?.applyLean();
+        if (a.weapon && !a.death) {
+          // Arm IK only for avatars that can be seen; their blend states still advance.
+          a.weapon.posing = a.root.isEnabled() && (!planes || a.meshes.some((mesh) => { mesh.computeWorldMatrix(); return mesh.isInFrustum(planes); }));
+          a.weapon.update();
+        }
+        this.presentation(a, this.dt);
+      }
       this.silhouettes?.update(this.outlinesEnabled && this.presenting);
     });
   }
   async prepare(signal?: AbortSignal): Promise<void> {
     await Promise.all([this.characters.load(signal), ...(['rifle', 'smg', 'shotgun', 'sniper'] as WeaponId[])
-      .map((id) => this.weapons.load(id, signal).catch((error) => { if (signal?.aborted) throw error; console.warn('[crossfire] Remote weapon:', error); }))]);
+      .map((id) => this.weapons.load(id, signal))]);
   }
+  async ready(signal?: AbortSignal): Promise<void> { await Promise.all([this.characters.ready(signal), this.weapons.ready(signal)]); }
   prepareVisibility(): void {
     this.visibilityWorld = VisibilityWorld.fromMeshes(this.scene.meshes);
     this.silhouettes ??= new PlayerSilhouettes(this.scene, this.scene.activeCamera!);
@@ -94,6 +116,8 @@ export class RemotePlayers {
       grounded: player.motion.grounded, sliding: player.motion.slideRemaining > 0, crouch };
   }
   setOutlinesEnabled(enabled: boolean): void { this.outlinesEnabled = enabled; }
+  /** Cosmetic third-person recoil for a server-confirmed shot by this player. */
+  fire(id: string): void { this.avatars.get(id)?.weapon?.fire(); }
   private remove(a: Avatar): void {
     this.silhouettes?.remove(a.meshes); a.weapon?.dispose(); a.character?.dispose(); a.root.dispose(); a.label.remove();
     for (const material of a.death?.materials ?? []) material.dispose(false, false);
@@ -159,7 +183,7 @@ export class RemotePlayers {
         a.weapon?.dispose();
         a.weapon = player.weapon && a.character ? this.weapons.create(a.character, player.weapon) : null;
       }
-      a.friendly = teammates(s.match.mode, self?.team ?? null, player.team);
+      a.friendly = playerColor(s.match.mode, selfId, self?.team ?? null, player.id, player.team) === 'friendly';
       if (a.label.textContent !== player.name) a.label.textContent = player.name;
       a.label.dataset.relationship = a.friendly ? 'teammate' : 'opponent';
       a.seen = performance.now();
@@ -193,7 +217,8 @@ export class RemotePlayers {
       a.look.rotation.x = m.pitch + (n.pitch - m.pitch) * k;
       const ads = (older.player.combat.gun?.ads ?? 0) + ((newer.player.combat.gun?.ads ?? 0) - (older.player.combat.gun?.ads ?? 0)) * k;
       a.weaponAds = ads;
-      a.weapon?.setPose(a.look.rotation.x, ads);
+      a.weapon?.setState({ pitch: a.look.rotation.x, ads: aimIntent(newer.player), airborne: !(k < .5 ? m.grounded : n.grounded) });
+      a.weapon?.advance(dt);
       const crouch = m.crouch + (n.crouch - m.crouch) * k;
       a.lean = m.lean + (n.lean - m.lean) * k;
       a.character?.setLean(a.lean);
@@ -229,12 +254,13 @@ export class RemotePlayers {
     const bodyInView = a.meshes.some((mesh) => { mesh.computeWorldMatrix(); return mesh.isInFrustum(planes); });
     // A scoped torso can be visible while its head marker is above the viewport.
     // Do not use the name anchor to decide whether the body outline can render.
-    a.visible = this.presenting && bodyInView && this.visibleBody(a, eye);
+    const smoked = this.smokeObscures(eye, head);
+    a.visible = !smoked && this.presenting && bodyInView && this.visibleBody(a, eye);
     // Reveal after stable visibility; hide immediately when all interior probes are
     // occluded. Never retain an enemy marker behind a newly occluding wall.
     a.clearFor = a.visible ? Math.min(.1, a.clearFor + dt) : 0;
-    this.silhouettes?.set(a.meshes, a.friendly, this.presenting && bodyInView);
-    a.label.hidden = !this.presenting || !inView || (!a.friendly && a.clearFor < .04);
+    this.silhouettes?.set(a.meshes, a.friendly, this.presenting && bodyInView && !smoked);
+    a.label.hidden = smoked || !this.presenting || !inView || (!a.friendly && a.clearFor < .04);
     if (!a.label.hidden) {
       a.label.style.left = `${screen.x}px`; a.label.style.top = `${screen.y}px`;
       a.label.style.fontSize = `${Math.max(11, Math.min(14, 15 - distance * .07))}px`;

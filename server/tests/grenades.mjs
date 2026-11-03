@@ -1,3 +1,4 @@
+import { PROTOCOL_VERSION } from '../../tools/protocol-version.mjs';
 /** Actual workerd, sockets, inventory, trajectories and damage; RPC only places real players. */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -29,7 +30,7 @@ for (const mode of ['ffa','teams']) test(`grenades and held crouch: inventory, r
         else c.snapshot=m.snapshot;
       }});c.ws.on('error',()=>{});
       await new Promise((resolve,reject)=>{c.ws.once('open',resolve);c.ws.once('error',reject);});
-      c.send=m=>c.ws.send(JSON.stringify({v: 12,...m}));c.send({type:'join',name:'Grenade peer',...(token?{resumeToken:token}:{})});
+      c.send=m=>c.ws.send(JSON.stringify({v: PROTOCOL_VERSION,...m}));c.send({type:'join',name:'Grenade peer',...(token?{resumeToken:token}:{})});
       const w=await until(()=>c.messages.find(m=>m.type==='welcome'));c.id=w.selfId;c.token=w.resumeToken;c.resumed=w.resumed;c.seq=self(c).ack;
       c.timer=setInterval(()=>{if(c.ws.readyState===WebSocket.OPEN)c.send({type:'ping',at:Date.now()});},500);
       c.ws.once('close',()=>clearInterval(c.timer));return c;
@@ -83,6 +84,7 @@ for (const mode of ['ffa','teams']) test(`grenades and held crouch: inventory, r
       assert.equal(death.award.base,100);assert.equal(death.award.headshot,0);
       assert.equal(death.award.combo,death.award.total-100);
     }
+    assert.equal(confirmed.shooter.grenades,kills,'each confirmed elimination replenishes once, including multi-kills');
     assert.equal(confirmed.shooter.score,mode==='ffa'?220:100);assert.equal(confirmed.victim.deaths,1);
     const killFeed=()=>b.messages.slice(mark).filter(m=>m.type==='elimination'&&m.elimination.weapon==='grenade'
       &&deaths.some(d=>d.victimId===m.elimination.victimId&&d.victimLife===m.elimination.victimLife));
@@ -98,6 +100,7 @@ for (const mode of ['ffa','teams']) test(`grenades and held crouch: inventory, r
     } else {assert.equal(confirmed.other.health,100);assert.equal(confirmed.other.alive,true);assert.equal(blast.event.hits.some(h=>h.id===c.id),false);}
     await until(()=>self(a).kills===kills&&self(a).score===confirmed.shooter.score);
     await delay(500);assert.equal(b.messages.slice(mark).filter(m=>m.type==='grenade'&&m.event.kind==='explode').length,1);
+    assert.equal(self(a).grenades,kills,'later ticks cannot duplicate grenade rewards');
     assert.equal(self(a).kills,kills,'no repeated damage or scoring on later ticks');
     assert.equal(self(a).score,mode==='ffa'?220:100,'no duplicate awards on later ticks');
     assert.equal(killFeed().length,kills,'no duplicate kill-feed events, even with a new event ID');
@@ -118,6 +121,7 @@ for (const mode of ['ffa','teams']) test(`grenades and held crouch: inventory, r
     const settled=(await room.snapshotForTest()).grenades[0];
     await room.placeForCombatTest(a.id,[settled.position.x,arena.center[1],settled.position.z]);
     await until(()=>!self(a).alive&&self(b).kills===1);
+    assert.equal(self(b).grenades,1,'posthumous kill rewards exactly once');
     assert.equal(self(b).score,100,'posthumous elimination retains credit');assert.equal(self(b).comboCount,0,'dead owner retains no live combo');
     assert.equal(self(a).death.weapon,'grenade');
     await spawn(b);await room.placeForCombatTest(b.id,arena.center);await input(b,{grenade:true});

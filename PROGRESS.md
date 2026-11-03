@@ -1,3 +1,101 @@
+# Character rigging, weapon holds and smooth multiplayer animation
+
+Completed locally 2026-11-03, preserving the uncommitted grenade/loading work below.
+Stopped at this request. No commit, push or deployment. Details, root cause and
+limitations: [docs/CHARACTER_ANIMATION.md](docs/CHARACTER_ANIMATION.md).
+
+- Root cause: no sphere hands existed. Remote players used `BoneIKController` (wrist planted
+  in the grip, A-pose hand roll, fixed poles); the home preview had a separate solver with
+  an assumed hand-back constant; gloves had a relaxed curl; grip anchors are surface
+  contact points, not handle centres.
+- Regenerated the character with gripping fingers/opposed thumb (same counts).
+- One shared rig for remote players and home: bind-pose-derived hinged two-bone IK, hands
+  turning about the handle axis, per-weapon ready/ADS holds with measured handle offsets,
+  bladed torso, head-anchored ADS cheek weld, look-pitch distribution, overreach safety.
+- Time-based layers: eased per-clip crossfades (crouch 0.19 s), third-order ADS (~150 ms),
+  per-weapon recoil from each server `ShotResult`, landing dip, breathing sway. ADS intent
+  from synchronized `aimHeld` + action. No protocol, server or gameplay changes.
+- Off-screen avatars skip IK. Lab hook `__crossfire.characterLab` and tools
+  `character-pose-lab.mjs` / `character-animation-mp-test.mjs`. Fixed the stale six-clip
+  list in `inspect-character.mjs`.
+
+Verified: typecheck; 421 tests / 43 files; production build; `assets:verify`;
+`inspect-character.mjs`; home preview test (4 weapons, 60 fps); real two-client
+Chrome/local Durable Object animation test (all checks, 10 shots = 10 recoil impulses);
+server suite 55/55 (server/shared untouched; one run under Vite+Chrome load timed out in
+the existing "shot moves apple" prop test, which passed alone and in a clean full rerun). Visual passes: three lab refinement passes (full body, grip
+close-ups, motion/look states) for all four weapons, plus in-map observer screenshots.
+
+Limits: baked fingers (no finger bones/trigger motion), no clavicle, short third-person
+stocks leave ~45 deg trigger-wrist deviation and a jaw-level cheek weld, no third-person
+reload/pump hand motion. Frontend release needed after an authorized commit; Worker
+unchanged.
+
+---
+
+# Grenade rewards, persistent smoke, readiness and relative team colors
+
+Completed locally 2026-11-03. Stopped at this request. No commit, push or deployment.
+Implementation, complete changed-file list, QA commands and limitations:
+[docs/GRENADE_LOADING_TEAM_COLORS.md](docs/GRENADE_LOADING_TEAM_COLORS.md).
+
+- Server-confirmed credited eliminations now award exactly one grenade in the
+  existing guarded kill/score transaction. Includes firearm, multi-kill and
+  posthumous grenade kills. Nonlethal hits and duplicate deaths cannot reward.
+  Earned inventory can exceed one; respawn/round resets remain unchanged.
+- Live local elimination events show a +1 above the grenade HUD, rising 26 px
+  and fading over 800 ms. Four separated lanes handle rapid awards. Ordinary
+  inventory snapshots and reconnects do not replay the animation.
+- Larger flash, burst/debris and trailing smoke, plus an expanding cloud dense
+  for five seconds with a two-second fade. Server timestamps/history restore
+  current smoke age after loading/reconnect. Spatial billboards and blended
+  depth fog limit inside visibility; smoke also obscures tags/outlines.
+  Fixed pools cap effects at 128 transient particles and 12 x 32 cloud particles.
+  A persisted reduced-effects setting and automatic Low reduction preserve
+  smoke duration/concealment while reducing particles.
+- Critical loading explicitly waits for map/weapon textures, GLB-contained
+  textures, collision, immediate character assets and practical hidden-mesh
+  shader variants, in addition to the existing connection/snapshot/revision
+  checks. Early gun selection remains available, then waits behind loading
+  until spawn is safe. Real stage labels, cancellation, asset-specific errors,
+  Retry/Back and cached-asset reuse are preserved. Incomplete worlds are covered.
+- One client-side perspective mapper drives HUD scores, leaderboard, results,
+  winner/MVP, feed, tags and outlines. Local team appears blue regardless of its
+  server ID; opponents are red. FFA colors only self blue. No membership,
+  scoring, spawn or map revision changes.
+- Protocol v13 expands the actual grenade-count schema from 0..1 to a
+  nonnegative safe integer. No additional message fields. Updated QA clients
+  read the shared version instead of copying literals. Existing coordinated
+  Cloudflare/Pages deployment, credentials, origins and dedicated scaffold stay.
+
+Verified:
+
+- Frontend: 416 tests / 43 files; TypeScript and production build passed.
+- Cloudflare: generated types/TypeScript, dry-run build and all 55 checks passed.
+- Actual frontend/Worker protocol integration, all 7 release gate tests, and
+  dedicated scaffold typecheck/build/all 7 checks passed.
+- Real Chrome/local workerd FFA and Teams sessions: delayed gun GLB, texture
+  and map geometry block spawning; HTTP 503 texture failure identifies the
+  asset, covers the world and successfully retries; smoke synchronizes, stays
+  dense/fades/expires, restores on resume, and does not replay reward/sound.
+- Three-client FFA explosion: two actual kills, two separated +1 animations,
+  accepted inventory two, correct 220-point combo and no duplicate rewards.
+- Actual red-team client: own blue score, opponent red feed, correct defeat,
+  relative results groups and opponent MVP. Inspected loading/error, smoke
+  inside/outside, multi-kill HUD and completed results screenshots locally.
+- Corrected an existing traversal-test race: normal neutral input now settles
+  held movement before exact reconnect-position comparison. Server movement
+  rules and the exact comparison were preserved. Full backend rerun passed.
+
+Limits/deployment: local Chrome/workerd validation only; no public Cloudflare
+or low-end device testing. Smoke is bounded billboards/local depth fog, not a
+fluid simulation, and oldest clouds are culled beyond 12. Existing bundle-size
+warning remains. Both frontend and Worker require the matching v13 release via
+existing CI after an authorized commit/push; existing tabs must refresh. No new
+secrets or configuration are needed. Nothing was deployed.
+
+---
+
 # Gameplay Phase 4: interactive props and physics polish
 
 Completed locally 2026-11-02, preserving all uncommitted Phases 1–3 below.

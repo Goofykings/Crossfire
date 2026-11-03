@@ -1,3 +1,4 @@
+import { meshesReady } from '../core/assetReadiness';
 import { abortable } from '../core/cancellation';
 import { ArcRotateCamera, Color3, Mesh, MeshBuilder, PBRMaterial, Quaternion, SceneInstrumentation, StandardMaterial, Vector3 } from '@babylonjs/core';
 import { AudioManager, type SoundName } from '../audio/AudioManager';
@@ -28,7 +29,7 @@ import { RemotePlayers } from './RemotePlayers';
 import { Presence } from '../network/Presence';
 import { resolveMultiplayerBackend } from '../network/backendConfig';
 import { weaponPreviews } from '../ui/WeaponPreviews';
-import { HomeCharacter } from '../ui/HomeCharacter';
+import { HomeCharacter, type CharacterLabOptions } from '../ui/HomeCharacter';
 import type { Elimination, Snapshot } from '../../shared/protocol';
 
 type State = 'menu' | 'loading' | 'start' | 'playing' | 'paused' | 'spectating' | 'results';
@@ -281,8 +282,12 @@ export class Game {
       this.weaponView = view;
       view.setVisible(false);
       grenades = new GrenadeView(this.ctx.scene); this.grenadeView = grenades;
+      this.remotePlayers.setSmokeVisibility((from, to) => this.grenadeView?.obscures(from, to) ?? false);
+      this.ui.setLoading(0, 'Loading weapons and character');
       await Promise.all([grenades.load(this.materials, signal), view.load(signal), effects.loadCasings(this.materials, signal), this.remotePlayers.prepare(signal)]);
       signal?.throwIfAborted();
+      this.ui.setLoading(0, 'Loading weapon materials');
+      await this.materials.ready(signal);
       await weaponPreviews((id, url) => this.ui.setWeaponPreview(id, url), signal);
       signal?.throwIfAborted();
       this.ui.setWeaponName(this.weapon.stats.name);
@@ -402,6 +407,7 @@ export class Game {
           if (shot.shooterId !== network.selfId && (this.state === 'playing' || this.state === 'spectating' || this.state === 'paused')) {
             const shooter = network.latest?.players.find((p) => p.id === shot.shooterId && p.alive);
             if (shooter) {
+              this.remotePlayers.fire(shot.shooterId);
               const camera = this.ctx.camera;
               const delta = new Vector3(shooter.motion.position.x, shooter.motion.position.y + MOVEMENT.standEye, shooter.motion.position.z).subtract(camera.globalPosition);
               const right = camera.getDirection(Vector3.Right()), up = camera.getDirection(Vector3.Up()), forward = camera.getDirection(Vector3.Forward(true));
@@ -430,6 +436,7 @@ export class Game {
         network.onElimination = (event) => {
           if (signal.aborted || this.network !== network) return;
           this.remotePlayers.eliminate(event);
+          if (event.killerId === network.selfId && event.victimId !== network.selfId && event.award) this.ui.grenadeReward();
           if (network.latest) this.ui.combatFeed.add(event, network.latest, network.selfId);
         };
         network.onSnapshot = (snapshot) => { if (!signal.aborted && this.network === network) this.acceptSnapshot(snapshot); };
@@ -454,6 +461,9 @@ export class Game {
       await this.requestMap(id, signal);
       signal.throwIfAborted();
       if (this.map?.def.id !== id) return;
+      this.ui.setLoading(0, 'Preparing weapons and character shaders');
+      await Promise.all([meshesReady(this.weaponView?.meshes ?? [], signal), this.remotePlayers.ready(signal)]);
+      signal.throwIfAborted();
       this.showPreSpawn();
       if (this.options.autoplay) await this.spawnSelected();
     } catch (error) {
@@ -497,6 +507,12 @@ export class Game {
         if (!network.latest || network.state !== 'connected') return;
         if (target.roundId !== network.latest.roundId || target.mapId !== network.latest.mapId) continue;
         if (this.map!.revision !== target.mapVersion) throw new Error('Map assets differ from the server. Rebuild matching client/server assets.');
+        this.ui.setLoading(0, 'Preparing weapons and character shaders');
+        await this.materials.ready(signal);
+        await Promise.all([meshesReady(this.weaponView?.meshes ?? [], signal), this.remotePlayers.ready(signal)]);
+        signal.throwIfAborted();
+        if (!network.latest || network.state !== 'connected') return;
+        if (target.roundId !== network.latest.roundId || target.mapId !== network.latest.mapId) continue;
         this.loadedRound = target.roundId;
         this.networkReady = true;
         this.acceptSnapshot(network.latest);
@@ -539,6 +555,8 @@ export class Game {
     const self = snapshot.players.find((p) => p.id === this.network!.selfId);
     if(this.network.environment)this.map.props.sync(this.network.environment);
     this.grenadeView?.sync(snapshot.grenades);
+    for (const explosion of snapshot.explosions) this.grenadeView?.explode(explosion, snapshot.serverTime);
+    this.ui.combatFeed.updatePerspective(snapshot, this.network.selfId);
     this.remotePlayers.snapshot(snapshot, this.network.selfId);
     if (!self) return;
     this.grenadeCount = self.grenades; this.ui.setGrenades(self.grenades);
@@ -622,6 +640,7 @@ export class Game {
 
   private async spawnSelected(): Promise<void> {
     if (this.state === 'loading' && this.ui.currentScreen === 'weapons' && !this.ui.spawnPending) {
+      this.ui.show('loading');
       const network = this.network, signal = this.joinAbort?.signal;
       this.ui.setSpawnState(false, true);
       try { await this.prepareNetworkMap(); }
@@ -880,6 +899,7 @@ export class Game {
     if(this.map&&this.state!=='loading')this.map.props.update(dt,Date.now()+(this.network?.clockOffset??0),!this.options.multiplayer);
     if (this.map && this.state !== 'loading' && this.state !== 'results') {
       if (!this.options.multiplayer) this.updatePracticeGrenades();
+      this.grenadeView?.setReduced(this.settings.value.reducedEffects || this.settings.value.graphicsQuality === 'low');
       this.grenadeView?.update(dt, Date.now() + (this.network?.clockOffset ?? 0), this.map.world);
     }
     this.ui.update(dt);
@@ -887,7 +907,7 @@ export class Game {
     this.ui.damage.update(cameraAngles?.y ?? this.player?.yaw ?? 0, cameraAngles?.x ?? this.player?.pitch ?? 0);
     this.updateHudMeta();
     this.ui.matchHud.update(this.network?.latest ?? null, Date.now() + (this.network?.clockOffset ?? 0),
-      this.ui.currentScreen === 'hud' || this.ui.currentScreen === 'spectate');
+      this.ui.currentScreen === 'hud' || this.ui.currentScreen === 'spectate', this.network?.selfId);
     this.ctx.scene.render();
     this.input.endFrame();
   }
@@ -1027,12 +1047,14 @@ export class Game {
   }
 
   private presentGrenade(event: GrenadeEvent): void {
-    if (!this.map || (event.kind === 'explode' && Date.now() + (this.network?.clockOffset ?? 0) - event.at > 1000)) return;
+    if (!this.map) return;
     if (event.kind === 'throw') {
       if (event.projectile.ownerId === (this.network?.selfId ?? 'player')) { this.stats.grenadesThrown++; this.weaponView?.throwGrenade(); }
       return;
     }
-    this.grenadeView?.explode(event);
+    const now = Date.now() + (this.network?.clockOffset ?? 0);
+    this.grenadeView?.explode(event, now);
+    if (now - event.at > 600) return; // History restores smoke, never old sound or hit feedback.
     const camera = this.ctx.camera, delta = new Vector3(event.position.x, event.position.y, event.position.z).subtract(camera.globalPosition);
     this.audio.playSpatial('grenade_explosion', { x: Vector3.Dot(delta, camera.getDirection(Vector3.Right())),
       y: Vector3.Dot(delta, camera.getDirection(Vector3.Up())), z: -Vector3.Dot(delta, camera.getDirection(Vector3.Forward(true))) }, .2);
@@ -1277,6 +1299,8 @@ export class Game {
       },
       characterAsset: () => this.remotePlayers.characters.inspect(),
       homeCharacter: () => this.homeCharacter.inspect(),
+      /** Pose lab on the isolated home preview (same rig as remote players); null restores it. */
+      characterLab: (options: CharacterLabOptions | null) => this.homeCharacter.characterLab(options),
       silhouetteStats: () => this.remotePlayers.silhouetteStats(),
       silhouetteInterior: () => this.remotePlayers.silhouetteInterior(),
       damageFeedback: () => this.ui.damage.inspect(),

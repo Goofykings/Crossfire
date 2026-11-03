@@ -120,11 +120,11 @@ describe('display-only formatting and compatibility', () => {
     expect(matchCountdown(600000, 600001 - 5000 + 5000)).toBe('0:00'); expect(matchCountdown(null, 0)).toBe('--:--');
   });
   it('rejects old wire versions and forged score/award messages', () => {
-    expect(PROTOCOL_VERSION).toBe(12);
-    expect(parseClientMessage(JSON.stringify({ v: 9, type: 'join', name: 'Old' }))).toBeNull();
-    expect(parseServerMessage(JSON.stringify({ v: 9, type: 'pong', at: 0, serverTime: 0 }))).toBeNull();
+    expect(PROTOCOL_VERSION).toBeGreaterThan(12);
+    expect(parseClientMessage(JSON.stringify({ v: PROTOCOL_VERSION - 1, type: 'join', name: 'Old' }))).toBeNull();
+    expect(parseServerMessage(JSON.stringify({ v: PROTOCOL_VERSION - 1, type: 'pong', at: 0, serverTime: 0 }))).toBeNull();
     for (const extra of [{ score: 999 }, { comboCount: 10 }, { comboUntil: 123 }, { result: ledger() }]) {
-      expect(parseClientMessage(JSON.stringify({ v: 12, type: 'join', name: 'Unit', ...extra }))).toBeNull();
+      expect(parseClientMessage(JSON.stringify({ v: PROTOCOL_VERSION, type: 'join', name: 'Unit', ...extra }))).toBeNull();
     }
   });
   it('validates point breakdown arithmetic against the eliminating hit', () => {
@@ -132,7 +132,7 @@ describe('display-only formatting and compatibility', () => {
       victimId: 'b', victimName: 'B', killerId: 'a', killerName: 'A', weapon: 'rifle', head: true,
       at: 1000, respawnAt: 4000, killerTeam: null, victimTeam: null,
       award: { base: 100, headshot: 50, combo: 20, comboCount: 2, total: 170 } };
-    const message = { v: 12, type: 'elimination', elimination };
+    const message = { v: PROTOCOL_VERSION, type: 'elimination', elimination };
     expect(parseServerMessage(JSON.stringify(message))).toEqual(message);
     for (const invalid of [{ total: 171 }, { headshot: 0 }, { combo: 40 }, { comboCount: 0 }, { total: 170.5 }]) {
       expect(parseServerMessage(JSON.stringify({ ...message, elimination: { ...elimination, award: { ...elimination.award, ...invalid } } }))).toBeNull();

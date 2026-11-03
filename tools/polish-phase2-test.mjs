@@ -1,3 +1,4 @@
+import { PROTOCOL_VERSION } from './protocol-version.mjs';
 /** Real browser HUD/results plus real WebSocket opponents. No fabricated score events. */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -78,7 +79,7 @@ try {
     const ws = new WebSocket(new URL('/ws', backend).href.replace('http:', 'ws:'), { origin: new URL(base).origin }); sockets.push(ws);
     const messages = []; ws.on('message', (raw) => messages.push(JSON.parse(String(raw)))); ws.on('error', () => {});
     await new Promise((resolve, reject) => { ws.once('open', resolve); ws.once('error', reject); });
-    const send = (m) => ws.send(JSON.stringify({ v: 12, ...m }));
+    const send = (m) => ws.send(JSON.stringify({ v: PROTOCOL_VERSION, ...m }));
     send({ type: 'join', name: `Opponent ${sockets.length}` });
     const welcome = await until(() => messages.find((m) => m.type === 'welcome'), 'opponent joins');
     timers.push(setInterval(() => { if (ws.readyState === WebSocket.OPEN) send({ type: 'ping', at: Date.now() }); }, 500));

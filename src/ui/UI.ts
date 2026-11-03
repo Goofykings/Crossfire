@@ -311,12 +311,13 @@ export class UI {
     const progress = el('div', 'loading-progress');
     const spinner = el('span', 'loading-spinner');
     spinner.setAttribute('aria-hidden', 'true');
-    progress.append(spinner, el('div', 'loading-word', 'LOADING'));
+    progress.append(spinner, el('div', 'loading-word', 'LOADING'), el('div', 'loading-status', 'Opening match'));
     s.append(back, progress);
   }
 
-  setLoading(fraction: number, _label: string): void {
+  setLoading(fraction: number, label: string): void {
     this.screens.get('loading')!.setAttribute('aria-busy', String(fraction < 1));
+    this.screens.get('loading')!.querySelector('.loading-status')!.textContent = label;
   }
 
   private buildStart(): void {
@@ -694,6 +695,7 @@ export class UI {
           ],
           ['resolutionScale', this.rangeRow('resolutionScale', 'Resolution scale', 0.05, pct)],
           ['showFps', this.toggleRow('showFps', 'Show FPS counter')],
+          ['reducedEffects', this.toggleRow('reducedEffects', 'Reduced smoke particles')],
         ],
       },
     ];
@@ -894,7 +896,7 @@ export class UI {
     return row;
   }
 
-  private toggleRow(key: 'invertY' | 'showFps', label: string): HTMLElement {
+  private toggleRow(key: 'invertY' | 'showFps' | 'reducedEffects', label: string): HTMLElement {
     const id = `set-${key}`;
     const { row, lab } = this.settingRow(label, id);
     const input = el('input', 'switch');
@@ -1028,6 +1030,18 @@ export class UI {
       scope.style.opacity = String(amount);
       scope.classList.toggle('visible', amount > 0.001);
     }
+  }
+
+  grenadeReward(): void {
+    // Only live, deduplicated server elimination events call this; snapshots never do.
+    const awards = this.grenadeButton.querySelectorAll('.grenade-reward');
+    if (awards.length >= 4) awards[0].remove();
+    const popup = document.createElement('i'); popup.className = 'grenade-reward'; popup.textContent = '+1';
+    const occupied = new Set([...this.grenadeButton.querySelectorAll<HTMLElement>('.grenade-reward')].map(node => Number(node.dataset.lane)));
+    const lane = [0, 1, 2, 3].find(value => !occupied.has(value)) ?? 0;
+    popup.dataset.lane = String(lane); popup.style.left = `${-16 + lane * 26}px`;
+    this.grenadeButton.append(popup);
+    window.setTimeout(() => popup.remove(), 800);
   }
 
   setGrenades(count: number): void {

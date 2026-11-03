@@ -18,6 +18,7 @@ export interface Settings {
   /** Render resolution relative to the display's device pixels (0.5..1). */
   resolutionScale: number;
   showFps: boolean;
+  reducedEffects: boolean;
   keyBindings: KeyBindings;
 }
 
@@ -31,6 +32,7 @@ export const DEFAULT_SETTINGS: Settings = {
   shadowQuality: 'medium',
   resolutionScale: 1,
   showFps: true,
+  reducedEffects: false,
   keyBindings: defaultBindings(),
 };
 
@@ -67,6 +69,7 @@ export function sanitizeSettings(raw: unknown): Settings {
   num('sfxVolume');
   num('resolutionScale');
   if (typeof r.invertY === 'boolean') s.invertY = r.invertY;
+  if (typeof r.reducedEffects === 'boolean') s.reducedEffects = r.reducedEffects;
   if (typeof r.showFps === 'boolean') s.showFps = r.showFps;
   s.keyBindings = sanitizeBindings(r.keyBindings);
   if (r.graphicsQuality === 'low' || r.graphicsQuality === 'medium' || r.graphicsQuality === 'high' || r.graphicsQuality === 'ultra') {

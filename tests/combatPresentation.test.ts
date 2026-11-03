@@ -1,3 +1,4 @@
+import { PROTOCOL_VERSION } from '../shared/protocol';
 import { expect, it } from 'vitest';
 import { damageHaze, damageTurn, deathPose } from '../src/game/CombatPresentation';
 import { parseClientMessage, parseServerMessage } from '../shared/protocol';
@@ -54,7 +55,7 @@ const elimination = { award: { base: 100, headshot: 0, combo: 0, comboCount: 1, 
   victimId: 'victim', victimName: 'Victim', killerId: 'killer', killerName: 'Killer', weapon: 'rifle', head: false,
   at: 1000, respawnAt: 4000, killerTeam: null, victimTeam: null };
 it('validates actual server direction vectors and rejects old or client-invented combat events', () => {
-  const message = { v: 12, type: 'elimination', elimination };
+  const message = { v: PROTOCOL_VERSION, type: 'elimination', elimination };
   expect(parseServerMessage(JSON.stringify(message))).toEqual(message);
   expect(parseServerMessage(JSON.stringify({ ...message, v: 5 }))).toBeNull();
   expect(parseServerMessage(JSON.stringify({ ...message, elimination: { ...elimination, respawnAt: 3999 } }))).toBeNull();
@@ -62,5 +63,5 @@ it('validates actual server direction vectors and rejects old or client-invented
     expect(parseServerMessage(JSON.stringify({ ...message, elimination: { ...elimination, direction } }))).toBeNull();
   }
   expect(parseClientMessage(JSON.stringify(message))).toBeNull();
-  expect(parseClientMessage(JSON.stringify({ v: 12, type: 'damage', direction: { x: 0, y: 0, z: 1 }, amount: 100 }))).toBeNull();
+  expect(parseClientMessage(JSON.stringify({ v: PROTOCOL_VERSION, type: 'damage', direction: { x: 0, y: 0, z: 1 }, amount: 100 }))).toBeNull();
 });

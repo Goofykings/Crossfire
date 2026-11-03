@@ -1,3 +1,4 @@
+import { PROTOCOL_VERSION } from '../../tools/protocol-version.mjs';
 /** Real workerd/TCP peers: only the initial arena position uses the test fixture. */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -57,6 +58,11 @@ test('enclosed interiors: authoritative stair loops synchronize across two real 
         }
         const p=me(a).motion.position;assert.ok(Math.hypot(p.x-to[0],p.z-to[2])<.18,`${id} segment ${i}: ${JSON.stringify(p)}`);
         if(i===route.waypoints.length-2){
+          // Stop held movement and let real server friction settle before comparing
+          // exact positions: a reconnect must not equal an earlier moving snapshot.
+          a.send({type:'input',roundId:a.snapshot.roundId,mapVersion:a.snapshot.mapVersion,frames:[{seq:++a.seq,yaw:me(a).motion.yaw,pitch:0,
+            intent:{x:0,z:0,slide:false,aim:false,jumpPressed:false},combat:{trigger:false,reload:false}}]});
+          await until(()=>me(a).ack>=a.seq&&Math.hypot(me(a).motion.velocity.x,me(a).motion.velocity.z)===0);
           const saved=me(a),token=a.token,session=a.id;a.ws.close();await until(()=>a.ws.readyState===WebSocket.CLOSED);a=await open(token);
           assert.ok(a.resumed);assert.equal(a.id,session);assert.equal(me(a).life,saved.life);assert.equal(me(a).health,saved.health);
           assert.deepEqual(me(a).motion.position,saved.motion.position);
@@ -88,7 +94,7 @@ test('authoritative ladders: real movement, peer synchronization, release and re
       const c={ws:new WebSocket(new URL('/ws',base).href.replace('http:','ws:'),{origin}),messages:[],snapshot:null,seq:0,id:''};clients.push(c);
       c.ws.on('message',raw=>{const m=JSON.parse(String(raw));c.messages.push(m);if(m.snapshot)c.snapshot=m.snapshot;});c.ws.on('error',()=>{});
       await new Promise((resolve,reject)=>{c.ws.once('open',resolve);c.ws.once('error',reject);});
-      c.send=m=>c.ws.send(JSON.stringify({v: 12,...m}));c.send({type:'join',name:'Traversal peer',...(token?{resumeToken:token}:{})});
+      c.send=m=>c.ws.send(JSON.stringify({v: PROTOCOL_VERSION,...m}));c.send({type:'join',name:'Traversal peer',...(token?{resumeToken:token}:{})});
       const welcome=await until(()=>c.messages.find(m=>m.type==='welcome'));c.id=welcome.selfId;c.token=welcome.resumeToken;
       c.seq=me(c).ack;c.resumed=welcome.resumed;
       c.timer=setInterval(()=>{if(c.ws.readyState===WebSocket.OPEN)c.send({type:'ping',at:Date.now()});},500);

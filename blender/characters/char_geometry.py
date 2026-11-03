@@ -668,14 +668,16 @@ def _arm(b: Builder, side: int) -> None:
     b.loft(rings, start="fan", end="fan")
     b.end()
 
-    # relaxed fingers: three phalanges curling toward the palm
+    # Gripping fingers: the character always carries a weapon, so the phalanges wrap a ~4 cm
+    # handle lying across the distal palm (its axis along the knuckle line), leaving the hole
+    # for the grip. The curl is per joint so the closing arc follows a circle, not a hook.
     palm_dir = mul(bk, -1.0)
     for k, (of, length, rad) in enumerate(((0.029, 0.072, 0.0098), (0.0095, 0.08, 0.0102),
                                             (-0.0095, 0.074, 0.0098), (-0.028, 0.06, 0.0088))):
         p = arm_point(side, 0.628, -0.004, of)
         path = [p]
         direction = d
-        for seg, curl in zip((0.42, 0.33, 0.25), (0.22, 0.42, 0.5)):
+        for seg, curl in zip((0.42, 0.33, 0.25), (0.86, 0.98, 0.72)):
             direction = norm(rotate(direction, cross(d, palm_dir), curl))
             p = add(p, mul(direction, length * seg))
             path.append(p)
@@ -684,10 +686,11 @@ def _arm(b: Builder, side: int) -> None:
         b.tube(path, radii, 6, fw)
         b.end()
 
+    # Opposed thumb: crosses in front of the palm and closes over the far side of the handle.
     base = arm_point(side, 0.56, -0.008, 0.032)
-    direction = norm(add(add(d, mul(fw, 0.8)), mul(palm_dir, 0.35)))
+    direction = norm(add(add(d, mul(fw, 0.75)), mul(palm_dir, 0.75)))
     path = [base]
-    for seg, curl in ((0.038, 0.15), (0.03, 0.35)):
+    for seg, curl in ((0.038, 0.32), (0.03, 0.45)):
         direction = norm(rotate(direction, cross(direction, palm_dir), curl))
         path.append(add(path[-1], mul(direction, seg)))
     b.begin(f"thumb_{side}", "glove", bone(f"hand_{'r' if side > 0 else 'l'}"))
