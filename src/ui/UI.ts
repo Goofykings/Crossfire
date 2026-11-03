@@ -1,3 +1,4 @@
+import { ChallengesPanel } from './ChallengesPanel';
 import { assetUrl } from '../core/assets';
 import { CrosshairMotion } from './CrosshairMotion';
 import type { AudioManager } from '../audio/AudioManager';
@@ -144,6 +145,7 @@ export class UI {
   readonly damage: DamageFeedback;
   readonly combatFeed: CombatFeed;
   readonly matchHud: MatchHud;
+  readonly challenges: ChallengesPanel;
   private resultBody!: HTMLElement;
 
   constructor(
@@ -155,6 +157,8 @@ export class UI {
     this.draft = new SettingsDraft(settings);
     this.usernameDraft = profile.value.username;
     this.buildMenu();
+    this.challenges = new ChallengesPanel(this.screens.get('menu')!);
+    this.root.appendChild(this.challenges.account);
     this.buildLoading();
     try { const saved = localStorage.getItem('crossfire.pending-weapon'); if (validWeapon(saved)) this.pendingWeapon = saved; } catch { /* Optional preference. */ }
     this.buildStart();
@@ -953,6 +957,7 @@ export class UI {
     const home = screen === 'menu' || homeSettings;
     document.body.dataset.homePage = homeSettings ? 'settings' : home ? 'play' : '';
     this.homeHeader.hidden = !home;
+    this.challenges.account.hidden = screen !== 'menu';
     this.homeHeader.dataset.page = homeSettings ? 'settings' : 'play';
     this.homeTabs.forEach((tab, i) => {
       if (i === (homeSettings ? 1 : 0)) tab.setAttribute('aria-current', 'page');

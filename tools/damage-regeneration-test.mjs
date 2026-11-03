@@ -63,7 +63,7 @@ try {
       }
     };
     const actualFetch = window.fetch;
-    window.fetch = (input, init) => actualFetch(new URL(String(input), location.href).pathname === '/presence' ? new URL('/presence', backend) : input, init);
+    window.fetch = (input, init) => actualFetch(['/presence','/profile'].includes(new URL(String(input), location.href).pathname) ? new URL(new URL(String(input),location.href).pathname, backend) : input, init);
     setInterval(() => {
       const c = window.__damageCase, e = document.querySelector('.damage-edges');
       if (!c || !e || !c.shots.length || performance.now() - c.hitAt > 900) return;

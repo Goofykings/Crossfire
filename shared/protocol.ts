@@ -1,3 +1,4 @@
+import { validCareerView, type CareerView } from './challenges';
 import { validEnvironmentFrame, type EnvironmentFrame } from './environment';
 import { validMap, type MapId } from './maps';
 import type { MoveIntent, ControllerState, Vec3 } from '../src/player/PlayerController';
@@ -6,7 +7,7 @@ import type { CombatIntent } from './combat';
 import { pointsOrder, type ScoreAward, type RoundResult, type RoundStanding } from './scoring';
 import { GRENADE, type GrenadeState, type GrenadeEvent, type GrenadeExplosion } from './grenades';
 
-export const PROTOCOL_VERSION = 13;
+export const PROTOCOL_VERSION = 14;
 export const validWeapon = (x: unknown): x is WeaponId => x === 'rifle' || x === 'shotgun' || x === 'sniper' || x === 'smg';
 export const PUBLIC_ROOM = 'public-main';
 export const INPUT_BATCH_LIMIT = 12;
@@ -71,13 +72,14 @@ export interface Snapshot {
   match: { mode: 'ffa' | 'teams' | null; endsAt: number | null; teamScores: { blue: number; red: number } | null };
 }
 export type ClientMessage =
-  | { v: typeof PROTOCOL_VERSION; type: 'join'; name: string; resumeToken?: string }
+  | { v: typeof PROTOCOL_VERSION; type: 'join'; name: string; resumeToken?: string; profileToken?: string }
   | { v: typeof PROTOCOL_VERSION; type: 'spawn'; roundId: number; mapVersion: string; weapon: WeaponId; requestId: string }
   | { v: typeof PROTOCOL_VERSION; type: 'input'; roundId: number; mapVersion: string; frames: InputFrame[] }
   | { v: typeof PROTOCOL_VERSION; type: 'ping'; at: number }
   | { v: typeof PROTOCOL_VERSION; type: 'chat'; text: string }
   | { v: typeof PROTOCOL_VERSION; type: 'leave' };
 export type ServerMessage =
+  | { v: typeof PROTOCOL_VERSION; type: 'career'; profile: CareerView }
   | { v:typeof PROTOCOL_VERSION;type:'environment';frame:EnvironmentFrame }
   | { v: typeof PROTOCOL_VERSION; type: 'grenade'; event: GrenadeEvent }
   | { v: typeof PROTOCOL_VERSION; type: 'chat'; id: string; name: string; text: string }
@@ -168,7 +170,8 @@ export function parseClientMessage(text: string): ClientMessage | null {
     case 'spawn': return keys(x, ['v', 'type', 'roundId', 'mapVersion', 'weapon', 'requestId']) && validWeapon(x.weapon)
       && Number.isSafeInteger(x.roundId) && (x.roundId as number) >= 0 && typeof x.mapVersion === 'string' && x.mapVersion.length <= 64 && typeof x.requestId === 'string'
       && /^[a-zA-Z0-9-]{1,48}$/.test(x.requestId) ? x as unknown as ClientMessage : null;
-    case 'join': return keys(x, ['v', 'type', 'name', 'resumeToken']) && typeof x.name === 'string' && x.name.length <= 64
+    case 'join': return keys(x, ['v', 'type', 'name', 'resumeToken', 'profileToken']) && typeof x.name === 'string' && x.name.length <= 64
+      && (x.profileToken === undefined || (typeof x.profileToken === 'string' && /^[a-f0-9]{64}$/.test(x.profileToken)))
       && (x.resumeToken === undefined || (typeof x.resumeToken === 'string' && /^[a-f0-9]{64}$/.test(x.resumeToken))) ? x as unknown as ClientMessage : null;
     case 'input': return keys(x, ['v', 'type', 'roundId', 'mapVersion', 'frames']) && Number.isSafeInteger(x.roundId) && (x.roundId as number) >= 0 && typeof x.mapVersion === 'string'
       && x.mapVersion.length <= 64 && Array.isArray(x.frames) && x.frames.length > 0 && x.frames.length <= INPUT_BATCH_LIMIT
@@ -209,6 +212,7 @@ export function parseServerMessage(text: string): ServerMessage | null {
   let x: unknown;
   try { x = JSON.parse(text); } catch { return null; }
   if (!record(x) || x.v !== PROTOCOL_VERSION) return null;
+  if (x.type === 'career') return keys(x, ['v', 'type', 'profile']) && validCareerView(x.profile) ? x as unknown as ServerMessage : null;
   if(x.type==='environment')return keys(x,['v','type','frame'])&&validEnvironmentFrame(x.frame)?x as unknown as ServerMessage:null;
   if (x.type === 'grenade') {
     const e=x.event;

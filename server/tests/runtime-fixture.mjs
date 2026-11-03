@@ -4,6 +4,21 @@
 import { PublicRoom as ProductionRoom } from '../dist/index.js';
 export { default } from '../dist/index.js';
 export class PublicRoom extends ProductionRoom {
+  async seedCareerForTest(id, mode='kills', eligibility='eligible') {
+    const e=this.players.get(id),p=e?.session.profileId?this.careers.profiles.get(e.session.profileId):null;
+    if(!e||!p)throw new Error('Requires a real credential-authorized joined session');
+    const ids=mode==='kills'?[['daily:sniper:5','daily:headshots:3','daily:points:1000'],['weekly:sniper:40','weekly:headshots:20','weekly:points:10000']]
+      :[['daily:wins:1','daily:mvp:1','daily:matches:2'],['weekly:wins:5','weekly:mvp:3','weekly:matches:15']];
+    for(const [index,category] of ['daily','weekly'].entries())p[category].challenges=ids[index].map(id=>({id,progress:Number(id.split(':')[2])-(id.includes(':points:')?50:1),completedAt:null}));
+    if(mode==='round')e.session.participation.firstSpawn=eligibility==='late'?Date.now():Date.now()-600000+1000;
+    p.revision++;this.careers.mark(e.session.profileId);await this.persist();return JSON.parse(JSON.stringify(p));
+  }
+  async ageCareerForTest(id) {
+    const e=this.players.get(id),p=this.careers.profiles.get(e.session.profileId);
+    for(const [category,days] of [['daily',1],['weekly',7]]){const offset=days*86400000;p[category].start-=offset;p[category].endsAt-=offset;
+      for(const card of p[category].challenges)if(card.completedAt!==null)card.completedAt-=offset;}
+    await this.ctx.storage.put('career:'+e.session.profileId,p);
+  }
   async environmentForTest(){return {definition:this.activeMap.environment,states:this.environment.capture(),active:this.environment.active};}
   async saveEnvironmentForTest(stale=false){
     await this.persist();

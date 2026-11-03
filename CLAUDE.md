@@ -1,3 +1,19 @@
+## Daily/weekly challenges and guest wallets (2026-11-03)
+
+Current protocol is v14; see docs/CHALLENGES.md and newest PROGRESS.md. Shared
+challenges.ts owns stable UTC daily/Monday periods, definitions and reward rules.
+The local guest UUID/name remain preferences. Only the server-issued bearer
+credential authorizes a persistent guest wallet; hash it for server storage and
+never log/expose it in URLs/diagnostics. /profile bootstrap/read does not create a
+match player. Keep profile progress/reward markers and gameplay in the same atomic
+room batch put; send owner-only career views after persistence. Dirty write
+acknowledgments use monotonic generations. Never add client claims or local-only
+gem balances. Result eligibility is conservative and documented; abandoned round
+markers must survive session replacement. Keep frontend countdowns on the monotonic
+server clock, and keep the account overlay above the home-header shade. Both
+frontend and Worker require matching releases through existing coordinated CI.
+No deployment or recoverable/cross-device account system was implemented.
+
 # CLAUDE.md: notes for future sessions
 
 ## Character weapon rig (2026-11-03)

@@ -1,3 +1,4 @@
+import type { CareerView } from '../../shared/challenges';
 import type { EnvironmentFrame } from '../../shared/environment';
 import { FIXED_DT } from '../config/constants';
 import type { MoveIntent, PlayerController } from '../player/PlayerController';
@@ -27,6 +28,7 @@ export class MultiplayerClient {
     this.environment={...f,full:true,states};this.onEnvironment(f);
   }
   clockOffset = 0;
+  onCareer: (profile: CareerView) => void = () => {};
   onSnapshot: (snapshot: Snapshot) => void = () => {};
   onShot: (shot: ShotResult) => void = () => {};
   onElimination: (event: Elimination) => void = () => {};
@@ -91,7 +93,7 @@ export class MultiplayerClient {
   private readonly url: string;
   private spawning: { id: string; resolve: (s: Snapshot) => void; reject: (e: Error) => void; timeout: number } | null = null;
 
-  constructor(url: string, private readonly name: string | (() => string) = 'Player', private readonly options: { debug?: boolean } = {}) {
+  constructor(url: string, private readonly name: string | (() => string) = 'Player', private readonly options: { debug?: boolean; profileToken?: () => string | undefined; profileScope?: () => string | undefined } = {}) {
     const parsed = multiplayerEndpoint(url);
     this.url = parsed.href;
     try {
@@ -100,7 +102,7 @@ export class MultiplayerClient {
     } catch { /* Storage may be disabled. */ }
   }
 
-  private get storageKey(): string { return `crossfire.session.v1:${this.url}`; }
+  private get storageKey(): string { const scope=this.options.profileScope?.();return `crossfire.session.v1:${this.url}${scope ? `:${scope}` : ''}`; }
   private saveToken(): void {
     try { if (this.token) sessionStorage.setItem(this.storageKey, this.token); else sessionStorage.removeItem(this.storageKey); } catch { /* Optional persistence. */ }
   }
@@ -166,7 +168,7 @@ export class MultiplayerClient {
     socket.onopen = () => {
       if (this.socket !== socket) return;
       this.opens++; this.trace('open');
-      this.send({ v: PROTOCOL_VERSION, type: 'join', name: typeof this.name === 'function' ? this.name() : this.name, ...(this.token ? { resumeToken: this.token } : {}) });
+      this.send({ v: PROTOCOL_VERSION, type: 'join', ...(this.options.profileToken?.() ? { profileToken: this.options.profileToken() } : {}), name: typeof this.name === 'function' ? this.name() : this.name, ...(this.token ? { resumeToken: this.token } : {}) });
     };
     socket.onmessage = (event) => {
       if (this.socket !== socket || typeof event.data !== 'string') return;
@@ -248,6 +250,7 @@ export class MultiplayerClient {
           window.clearTimeout(pending.timeout);
           pending.resolve(m.snapshot);
         }
+      } else if(m.type==='career'){ this.onCareer(m.profile);
       } else if(m.type==='environment'){this.acceptEnvironment(m.frame);
       } else if (m.type === 'grenade') {
         const round = m.event.kind === 'throw' ? m.event.projectile.roundId : m.event.roundId;

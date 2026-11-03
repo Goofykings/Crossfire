@@ -44,7 +44,7 @@ try {
         constructor(url, protocols) { super(new URL(String(url)).pathname === '/ws' ? new URL('/ws', server).href.replace('http:', 'ws:') : url, protocols); }
       };
       const original = window.fetch;
-      window.fetch = (input, init) => original(new URL(String(input), location.href).pathname === '/presence' ? new URL('/presence', server) : input, init);
+      window.fetch = (input, init) => original(['/presence','/profile'].includes(new URL(String(input), location.href).pathname) ? new URL(new URL(String(input),location.href).pathname, server) : input, init);
     }, backend, index ? 'shotgun' : 'rifle');
     await page.goto(`${base}?multiplayer&autoplay&nohud&quality=low&shadows=off`, { waitUntil: 'domcontentloaded', timeout: 240000 });
     await completeGuestProfile(page, name);

@@ -82,15 +82,15 @@ body[data-home-page='play'] #game, body[data-home-page='settings'] #game { visib
 .home-backdrop-frame { position: absolute; inset: 0; overflow: hidden; z-index: -2; }
 .home-backdrop {
   position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
-  filter: blur(7px) saturate(0.75) brightness(0.65);
+  filter: blur(7px) saturate(0.8) brightness(0.83);
   animation: home-breathe 22s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 /* Transform only: no map, layout work or panning on home. Extra scale covers blurred edges. */
 @keyframes home-breathe { 0%, 100% { transform: scale(1.04); } 50% { transform: scale(1.01); } }
-#menu::after { content: ''; position: absolute; inset: 0; background: linear-gradient(#10151bd9 0%, #11182033 45%, #0d131ae8 100%); z-index: -1; }
+#menu::after { content: ''; position: absolute; inset: 0; background: linear-gradient(#10151b9e 0%, #10151b80 20%, #11182019 43%, #0d131a50 100%); z-index: -1; }
 .home-header { position: absolute; z-index: 40; top: var(--home-top); left: 24px; right: 24px; display: flex; align-items: center; flex-direction: column; gap: var(--nav-gap); pointer-events: none; }
 .home-header[hidden] { display: none; }
-body[data-home-page='play'] .home-header::before { content: ''; position: absolute; z-index: -1; top: calc(-1 * var(--home-top)); left: -24px; right: -24px; bottom: -120px; background: linear-gradient(to bottom, #050a12e0 0%, #050a12d9 48%, #050a1280 72%, #050a1200 100%); pointer-events: none; }
+body[data-home-page='play'] .home-header::before { content: ''; position: absolute; z-index: -1; top: calc(-1 * var(--home-top)); left: -24px; right: -24px; bottom: -70px; background: linear-gradient(to bottom, #050a12a8 0%, #050a1294 52%, #050a1240 76%, #050a1200 100%); pointer-events: none; }
 .home-nav { position: relative; display: flex; width: min(360px, 100%); height: 50px; background: transparent; pointer-events: auto; }
 .home-nav .btn.nav-button { width: 50%; justify-content: center; border: 0; background: transparent; border-radius: 0; padding: 14px 16px; color: #bcc5d0; font-size: clamp(12px, 1.4vw, 15px); letter-spacing: 0.14em; }
 .home-nav .btn[aria-current='page'], .home-nav .btn:hover, .home-nav .btn:focus-visible { background: transparent; color: #fff; box-shadow: none; }
@@ -1490,3 +1490,63 @@ button:disabled { cursor: default; opacity: 0.45; }
 .result-winner.score-name-opponent, .result-mvp.score-name-opponent { color:#ff8c8c; }
 .scoreboard h3[data-team="blue"] { color:#82b9ff; }
 .scoreboard h3[data-team="red"] { color:#ff8c8c; }
+
+/* Challenges stay beside the isolated character, never over the main Play action. */
+.challenges-panel { position:absolute; z-index:2; left:clamp(18px,3vw,48px); top:var(--home-content-top); width:clamp(225px,25vw,310px); max-height:calc(100% - var(--home-content-top) - 150px); display:flex; flex-direction:column; gap:12px; padding:18px; min-height:0; color:#f3f3f5; background:#24262bd6; border-radius:8px; backdrop-filter:blur(8px); text-align:left; }
+.challenge-tabs { display:flex; flex-shrink:0; gap:24px; }
+.challenge-tabs button { position:relative; padding:0 0 9px; background:none; border:0; font:700 13px var(--font); letter-spacing:.12em; color:#a4a6ad; transition:color 140ms,transform 140ms; }
+.challenge-tabs button[aria-selected="true"] { color:#fff; }
+.challenge-tabs button[aria-selected="true"]::after { content:''; position:absolute; bottom:0; left:-2px; right:-2px; height:2px; border-radius:2px; background:#eee; }
+.challenge-tabs button:hover { color:#fff; transform:scale(1.035); }
+.challenge-tabs button:focus-visible,.challenge-retry:focus-visible { outline:2px solid #bed9fa; outline-offset:4px; }
+.challenge-list { display:flex; flex-direction:column; gap:18px; min-height:0; overflow-y:auto; scrollbar-width:thin; scrollbar-color:#ffffff30 transparent; padding:2px; }
+.challenge-card { flex-shrink:0; min-width:0; }
+.challenge-description { font-weight:650; font-size:12px; line-height:1.4; text-transform:uppercase; letter-spacing:.035em; }
+.challenge-progress { display:flex; gap:10px; align-items:center; margin:8px 0; }
+.challenge-track { height:5px; flex:1; min-width:20px; border-radius:3px; overflow:hidden; background:#1011148c; }
+.challenge-track i { display:block; height:100%; width:0; border-radius:inherit; background:#f0f1f3; transition:width 260ms ease-out; }
+.challenge-fraction { flex-shrink:0; font:500 10px var(--mono); color:#d3d4da; font-variant-numeric:tabular-nums; }
+.challenge-card-foot { display:flex; justify-content:space-between; gap:6px; align-items:center; }
+.challenge-reward { display:flex; gap:5px; align-items:center; font-size:12px; }
+.gem-icon { width:17px; height:19px; flex-shrink:0; color:#c7cbd3; vertical-align:middle; }
+.challenge-completed { font-size:8px; letter-spacing:.025em; color:#d1e3d4; }
+.challenge-card.completed { animation:challenge-complete 450ms ease-out; }
+.challenge-reset,.challenge-status { flex-shrink:0; color:#aeb0b8; font-size:10px; line-height:1.4; }
+.challenge-status:empty { display:none; }
+.challenge-retry { align-self:flex-start; padding:3px 0; border:0; background:none; color:#d9e9ff; font-size:12px; }
+.challenge-switch { animation:challenge-switch 170ms ease-out; }
+.home-account { position:absolute; z-index:45; top:24px; right:clamp(18px,3vw,48px); max-width:22vw; text-align:right; color:#f4f4f7; }
+.home-account-name { font-weight:650; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-shadow:0 1px 6px #000; }
+.home-gems { display:flex; gap:7px; justify-content:flex-end; align-items:center; margin-top:6px; font:600 19px var(--font); font-variant-numeric:tabular-nums; }
+.gem-earned .home-gems { animation:gem-earned 450ms ease-out; }
+@keyframes challenge-switch { from { opacity:.35; transform:translateY(3px); } to { opacity:1; transform:none; } }
+@keyframes challenge-complete { from { filter:brightness(1.35); } to { filter:brightness(1); } }
+@keyframes gem-earned { 40% { transform:scale(1.06); } }
+@media(max-width:900px) {
+  :root { --home-top:64px; --nav-gap:18px; }
+  .home-account { top:12px; max-width:45vw; }
+  .home-account-name { font-size:12px; }.home-gems { margin-top:3px; font-size:16px; }
+  .challenges-panel { left:14px; width:clamp(160px,32vw,250px); padding:12px; gap:10px; top:var(--challenge-top,var(--home-content-top)); max-height:calc(100% - var(--challenge-top,var(--home-content-top)) - clamp(28px,7vh,80px) - 140px); }
+  .challenge-list { gap:13px; }
+  .challenge-description { font-size:11px; }
+  .challenge-tabs { gap:18px; }.challenge-tabs button { font-size:11px; }
+  .challenge-card-foot { flex-wrap:wrap; }
+  .home-character { left:68%; width:62vw; }
+  .home-character-name { left:68%; max-width:48vw; }
+}
+@media(max-width:540px) {
+  .challenges-panel { width:43vw; left:10px; padding:10px; gap:8px; }
+  .challenge-list { gap:12px; }.challenge-tabs { gap:14px; }
+  .challenge-description { font-size:10px; }.challenge-progress { gap:6px; margin:6px 0; }
+  .challenge-fraction { font-size:9px; }.challenge-completed { font-size:7px; }.challenge-reset { font-size:9px; }
+  .home-character { left:73%; width:54vw; }.home-character-name { left:73%; max-width:46vw; }
+}
+@media(min-width:541px) and (max-width:900px) and (max-height:560px) {
+  .challenges-panel { --challenge-top:130px; width:clamp(140px,24vw,170px); }
+}
+@media(prefers-reduced-motion:reduce) {
+  .challenge-switch,.challenge-card.completed,.gem-earned .home-gems { animation:none; }
+  .challenge-track i,.challenge-tabs button { transition:none; }
+}
+
+body[data-home-page='settings'] .challenges-panel, body[data-home-page='settings'] .home-account { visibility:hidden; pointer-events:none; }

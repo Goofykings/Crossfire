@@ -88,8 +88,7 @@ try {
         }
       };
       const actualFetch = window.fetch;
-      window.fetch = (input, init) => actualFetch(new URL(String(input), location.href).pathname === '/presence'
-        ? new URL('/presence', backend) : input, init);
+      window.fetch = (input, init) => actualFetch(['/presence','/profile'].includes(new URL(String(input), location.href).pathname) ? new URL(new URL(String(input),location.href).pathname, backend) : input, init);
     }, backend);
     page.on('pageerror', (e) => errors.push(String(e)));
     page.on('response', (r) => { if (r.status() >= 400 && r.url().includes('/assets/')) errors.push(`${r.status()} ${r.url()}`); });

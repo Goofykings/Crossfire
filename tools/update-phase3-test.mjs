@@ -43,7 +43,7 @@ try {
       const Socket=window.WebSocket;
       window.WebSocket=class extends Socket{constructor(url,protocols){super(new URL(String(url)).pathname==='/ws'?new URL('/ws',backend).href.replace('http:','ws:'):url,protocols);this.addEventListener('message',e=>{try{const m=JSON.parse(e.data);if(armed&&m.type==='grenade'&&m.event.kind==='explode')exploded=true;}catch{}});}};
       const fetch=window.fetch;
-      window.fetch=(input,init)=>fetch(new URL(String(input),location.href).pathname==='/presence'?new URL('/presence',backend):input,init);
+      window.fetch=(input,init)=>fetch(['/presence','/profile'].includes(new URL(String(input),location.href).pathname) ? new URL(new URL(String(input),location.href).pathname, backend):input,init);
     },backend,process.argv.includes('--capture-fx'));
     await page.goto(`${base}?multiplayer&autoplay&quality=low&shadows=off&scale=.6`,{waitUntil:'domcontentloaded',timeout:240000});
     await completeGuestProfile(page,name);

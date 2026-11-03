@@ -98,8 +98,7 @@ try {
           });
         } };
         const fetchActual = window.fetch;
-        window.fetch = (input, init) => fetchActual(new URL(String(input), location.href).pathname === '/presence'
-          ? new URL('/presence', backend) : input, init);
+        window.fetch = (input, init) => fetchActual(['/presence','/profile'].includes(new URL(String(input), location.href).pathname) ? new URL(new URL(String(input),location.href).pathname, backend) : input, init);
       }, backend, name === 'Actual viewer');
       page.on('pageerror', (e) => errors.push(String(e)));
       page.on('response', (response) => {

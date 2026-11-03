@@ -41,7 +41,7 @@ try {
         send(data){const message=JSON.parse(data);if(message.type==='spawn')window.__transport.spawns.push(message);return super.send(data);}
       };
       const nativeFetch=window.fetch;
-      window.fetch=(input,init)=>nativeFetch(new URL(String(input),location.href).pathname==='/presence'?new URL('/presence',backend):input,init);
+      window.fetch=(input,init)=>nativeFetch(['/presence','/profile'].includes(new URL(String(input),location.href).pathname) ? new URL(new URL(String(input),location.href).pathname, backend):input,init);
     },backend);
     await page.goto(`${base}?multiplayer&quality=low&shadows=off&scale=.6`,{waitUntil:'domcontentloaded',timeout:240000});
     await completeGuestProfile(page,name);return page;

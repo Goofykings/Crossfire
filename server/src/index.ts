@@ -1,3 +1,5 @@
+import { Careers, careerIdentity } from './careers';
+import { advanceChallenges, type ChallengeEvent, type CareerView } from '../../shared/challenges';
 import { GRENADE_SMOKE_MS } from '../../shared/grenades';
 import { EnvironmentSimulation, ENVIRONMENT, validPropState, type PropState, type EnvironmentFrame } from '../../shared/environment';
 import { DurableObject } from 'cloudflare:workers';
@@ -28,6 +30,8 @@ interface Bindings {
   RELEASE_SHA?: string;
 }
 interface Session extends ScoreState {
+  profileId?: string;
+  participation?: { roundId: number; firstSpawn: number; abandoned: boolean };
   crouchHeld?: boolean;
   revision: number;
   grenades: number;
@@ -79,6 +83,30 @@ export default {
       return Response.json({ ok: true, service: 'crossfire-multiplayer', stage: 2, protocol: PROTOCOL_VERSION,
         room: PUBLIC_ROOM, release: env.RELEASE_SHA ?? 'local' }, { headers: { 'Cache-Control': 'no-store' } });
     }
+    if (url.pathname === '/profile') {
+      const origin = request.headers.get('Origin');
+      if (!origin || !env.ALLOWED_ORIGINS.split(',').map(s => s.trim()).includes(origin)) return new Response('Origin denied', { status:403 });
+      const headers = { 'Access-Control-Allow-Origin':origin, 'Access-Control-Allow-Methods':'GET, POST, OPTIONS', 'Access-Control-Allow-Headers':'Authorization, Content-Type', 'Cache-Control':'no-store', 'Vary':'Origin' };
+      if (url.search) return new Response('Use /profile without query parameters', { status:400, headers });
+      if (request.method === 'OPTIONS') return new Response(null, { status:204, headers });
+      // Validate before entering the shared room: a slow POST body must never
+      // hold its concurrency gate and pause everyone's simulation.
+      if (request.method === 'POST') {
+        if (request.headers.has('Authorization') || (request.headers.get('Content-Length') && request.headers.get('Content-Length') !== '0'))
+          return Response.json({error:'Profile creation accepts no player data.'},{status:400,headers});
+        if (request.body) {
+          const reader=request.body.getReader();let timeout:ReturnType<typeof setTimeout>|undefined;
+          try {
+            const first=await Promise.race([reader.read(),new Promise<never>((_,reject)=>{timeout=setTimeout(()=>reject(new Error('Body timeout')),1000);})]);
+            if(first.value?.byteLength)return Response.json({error:'Profile creation accepts no player data.'},{status:400,headers});
+          } catch { return Response.json({error:'An empty request body is required.'},{status:400,headers}); }
+          finally {if(timeout!==undefined)clearTimeout(timeout);void reader.cancel().catch(()=>{});}
+        }
+        request=new Request(request.url,{method:'POST',headers:request.headers});
+      }
+      const response = await env.ROOM.getByName(PUBLIC_ROOM).fetch(request);
+      return new Response(response.body, { status:response.status, headers:{ ...headers, 'Content-Type':'application/json' } });
+    }
     if (url.pathname !== '/ws' && url.pathname !== '/presence') return new Response('Not found', { status: 404 });
     if (request.method !== 'GET') return new Response('Method not allowed', { status: 405 });
     const origin = request.headers.get('Origin');
@@ -96,6 +124,8 @@ export default {
 
 export class PublicRoom extends DurableObject<Bindings> {
   private readonly players = new Map<string, Entry>();
+  private readonly careers = new Careers(this.ctx.storage, () => new Set([...this.players.values()].flatMap(e => e.session.profileId ? [e.session.profileId] : [])));
+  private readonly careerSent = new Map<string, number>();
   private timer: ReturnType<typeof setInterval> | null = null;
   private lastTick = Date.now();
   private accumulator = 0;
@@ -140,6 +170,8 @@ export class PublicRoom extends DurableObject<Bindings> {
         if(props.mapVersion===this.activeMap.revision&&props.states.every(validPropState))this.environment.restore(props.states);
       }
       const stored = await ctx.storage.get<Session[]>('sessions') ?? [];
+      const attachments = ctx.getWebSockets().map(s => (s.deserializeAttachment() as Attachment)?.session);
+      await Promise.all([...new Set([...stored, ...attachments].flatMap(s => s?.profileId ? [s.profileId] : []))].map(id => this.careers.load(id)));
       this.grenades = ((await ctx.storage.get<unknown[]>('grenades')) ?? []).filter(validGrenade).filter(g=>g.roundId===this.round.id);
       this.explosions = ((await ctx.storage.get<unknown[]>('explosions')) ?? []).filter(validExplosion).filter(e=>e.roundId===this.round.id&&Date.now()-e.at<GRENADE_SMOKE_MS);
       for (const s of stored) {
@@ -162,6 +194,7 @@ export class PublicRoom extends DurableObject<Bindings> {
         e.socket = socket;
         this.players.set(s.id, e);
       }
+      if (ledger && ledger.roundId < this.round.id && this.lastResult) this.finishCareerRound(this.lastResult);
       this.trace('restore', { sockets: ctx.getWebSockets().length, sessions: this.players.size });
       this.prune();
       await this.persist();
@@ -234,6 +267,7 @@ export class PublicRoom extends DurableObject<Bindings> {
 
   async fetch(request: Request): Promise<Response> {
     this.ensureRound();
+    if (new URL(request.url).pathname === '/profile') return this.ctx.blockConcurrencyWhile(() => this.careers.http(request));
     if (new URL(request.url).pathname === '/presence') {
       return Response.json({ room: PUBLIC_ROOM, online: this.connected().length });
     }
@@ -293,7 +327,7 @@ export class PublicRoom extends DurableObject<Bindings> {
     const e = this.current(socket);
     if (message.type === 'join') {
       if (e) { this.error(socket, 'already_joined', 'Already joined'); return; }
-      await this.join(socket, message.name, message.resumeToken);
+      await this.join(socket, message.name, message.resumeToken, message.profileToken);
       return;
     }
     if (!e) { this.error(socket, 'join_required', 'Join before sending input', true); return; }
@@ -337,6 +371,7 @@ export class PublicRoom extends DurableObject<Bindings> {
       e.session.death = null;
       e.session.health = PLAYER_MAX_HEALTH;
       e.session.regenAt = null;
+      if (e.session.participation?.roundId !== this.round.id) e.session.participation = { roundId:this.round.id, firstSpawn:now, abandoned:false };
       e.session.lastPlayedRound = this.round.id;
       e.session.lastPlayedTeam = e.session.team;
       e.gun = new Weapon(WEAPONS.find((w) => w.id === message.weapon)!);
@@ -365,10 +400,17 @@ export class PublicRoom extends DurableObject<Bindings> {
     }
   }
 
-  private async join(socket: WebSocket, requested: string, resume?: string): Promise<void> {
+  private async join(socket: WebSocket, requested: string, resume?: string, profileToken?: string): Promise<void> {
     this.prune();
     let e = resume ? [...this.players.values()].find((p) => p.session.token === resume) : undefined;
     if (resume && !e) { this.error(socket, 'resume_expired', 'Session expired; join again', true); return; }
+    const profileId = profileToken ? await careerIdentity(profileToken) : undefined;
+    if (profileId && !await this.careers.load(profileId)) { this.error(socket, 'profile_invalid', 'Guest challenge credential is invalid. Reload to retry.', true); return; }
+    if (e?.session.profileId && e.session.profileId !== profileId) { this.error(socket, 'profile_mismatch', 'This match session belongs to a different guest credential.', true); return; }
+    // A persistent guest cannot farm challenges through overlapping player sessions.
+    if (profileId && [...this.players.values()].some(p => p !== e && p.session.profileId === profileId && (p.socket || p.session.lastPlayedRound === this.round.id))) {
+      this.error(socket, 'profile_in_use', 'This guest is already in the public match. Resume the original tab or wait for the next round.', true); return;
+    }
     const resumed = !!e;
     const name = normalizeUsername(requested) ?? 'Player';
     if (!e) {
@@ -383,6 +425,7 @@ export class PublicRoom extends DurableObject<Bindings> {
     // A valid resume credential preserves the session, while display names remain editable.
     regenerate(e.session, Date.now());
     expireCombo(e.session, Date.now());
+    e.session.profileId = profileId;
     e.session.name = name;
     const old = e.socket;
     e.socket = socket;
@@ -444,6 +487,7 @@ export class PublicRoom extends DurableObject<Bindings> {
     if (next.id === this.round.id) return;
     for (const e of this.players.values()) this.recordStanding(e);
     this.lastResult = finalizeRound(this.ledger, this.scores);
+    this.finishCareerRound(this.lastResult);
     this.round = next;
     this.ledger = this.emptyLedger();
     this.activeMap = WORLDS[next.mapId];
@@ -512,6 +556,7 @@ export class PublicRoom extends DurableObject<Bindings> {
       credited.session.kills++;
       credited.session.grenades++; // Same exactly-once transaction as the authoritative kill award.
       if (this.mode === 'teams' && credited.session.team) this.scores[credited.session.team]++;
+      this.advanceCareer(credited, { kind:'kill', weapon:weapon ?? credited.session.weapon!, head, points:award!.total }, at);
       this.recordStanding(credited);
     }
     this.recordStanding(victim);
@@ -703,6 +748,12 @@ export class PublicRoom extends DurableObject<Bindings> {
     if (!e) return;
     this.trace('disconnect', { id: e.session.id, intentional: forget, lastSeen: e.lastSeen });
     this.attach(e);
+    if (e.session.participation?.roundId === this.round.id) {
+      e.session.participation.abandoned = true;
+      const profile=e.session.profileId?this.careers.profiles.get(e.session.profileId):null;
+      if(profile){profile.abandonedRound=this.round.id;this.careers.mark(e.session.profileId!);}
+    }
+    this.careerSent.delete(e.session.id);
     e.socket = undefined;
     e.queue.length = 0;
     e.session.expiresAt = Date.now() + this.grace;
@@ -739,8 +790,32 @@ export class PublicRoom extends DurableObject<Bindings> {
       e.session.motion = e.controller.capture();
       e.session.combat.gun = e.gun?.capture() ?? null;
     }
-    return this.ctx.storage.put({ environment:{roundId:this.round.id,mapVersion:this.activeMap.revision,seq:this.environmentSeq,states:this.environment.capture()},grenades:this.grenades,explosions:this.explosions,'team-scores': this.scores, 'round-ledger': this.ledger, 'round-result': this.lastResult,
-      sessions: [...this.players.values()].map((e) => e.session) });
+    const views = this.careers.views(Date.now()), pending = this.careers.capture();
+    return this.ctx.storage.put({ ...pending.records, environment:{roundId:this.round.id,mapVersion:this.activeMap.revision,seq:this.environmentSeq,states:this.environment.capture()},grenades:this.grenades,explosions:this.explosions,'team-scores': this.scores, 'round-ledger': this.ledger, 'round-result': this.lastResult,
+      sessions: [...this.players.values()].map((e) => e.session) }).then(() => { this.careers.committed(pending.versions); this.sendCareerViews(views); });
+  }
+  private advanceCareer(e: Entry, event: ChallengeEvent, at: number): void {
+    const id = e.session.profileId, profile = id ? this.careers.profiles.get(id) : null;
+    if (profile && id) { const revision=profile.revision;advanceChallenges(profile, id, event, at);if(profile.revision!==revision)this.careers.mark(id); }
+  }
+  private finishCareerRound(result: RoundResult): void {
+    const eligible = new Set<string>();
+    for (const e of this.connected()) {
+      const id=e.session.profileId, participation=e.session.participation, p=id?this.careers.profiles.get(id):null;
+      if(!id||!p||eligible.has(id)||!participation||participation.roundId!==result.roundId||participation.abandoned||p.abandonedRound===result.roundId||p.lastMatchRound>=result.roundId)continue;
+      const standing=result.players?.find(s=>s.id===e.session.id);
+      if(!standing)continue;
+      eligible.add(id);p.lastMatchRound=result.roundId;this.careers.mark(id);
+      advanceChallenges(p,id,{kind:'round',won:!result.draw&&(result.mode==='teams'?standing.team===result.winningTeam:result.winner?.id===standing.id),
+        mvp:result.mvp?.id===standing.id,complete:participation.firstSpawn<=result.endedAt-600000+30000},result.endedAt);
+    }
+  }
+  private sendCareerViews(views: Map<string, CareerView>): void {
+    for(const e of this.connected()) {
+      const view=e.session.profileId?views.get(e.session.profileId):null;
+      if(!view||this.careerSent.get(e.session.id)===view.revision)continue;
+      this.careerSent.set(e.session.id,view.revision);this.send(e.socket!,{v:PROTOCOL_VERSION,type:'career',profile:view});
+    }
   }
   private async scheduleCleanup(): Promise<void> {
     const deadlines = [...this.players.values()].filter((e) => !e.socket).map((e) => e.session.expiresAt);

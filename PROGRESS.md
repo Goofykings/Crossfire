@@ -1,3 +1,81 @@
+# Daily/weekly challenges, durable guest gems and home polish
+
+Completed locally 2026-11-03. Stopped at this request. No commit, push or deployment.
+Full behavior, changed-file list, QA commands, eligibility and guest limitations:
+[docs/CHALLENGES.md](docs/CHALLENGES.md).
+
+- Added exactly three stable randomized daily and weekly objectives from a
+  shared configurable library. Selections prefer different families and survive
+  refresh/reconnect. Daily reset: 00:00 UTC; weekly: Monday 00:00 UTC.
+- Server-confirmed eliminations advance appropriate weapon/headshot/total-kill
+  and actual point objectives. Frozen round results supply wins/MVP/completion.
+  No client claims, practice damage, assists or nonlethal rewards. Disconnects
+  disqualify that round's result objectives; complete-match objectives also
+  require the first spawn within 30 seconds of round start. Existing gameplay
+  scoring/results are preserved. See the documented conservative eligibility.
+- Automatic once-only 100-gem daily / 250-gem weekly rewards (300/750 maximum
+  for active periods); simultaneous completions sum correctly. Completed cards
+  remain until reset. Balance carries forward. Late previous-period events
+  cannot roll current periods backwards.
+- Added server-minted 256-bit browser-held guest credentials, hashed on the
+  server, separate from editable names/local guest UUIDs and match resume tokens.
+  Wallets and challenge records persist in the existing Durable Object independently
+  of room sessions. Atomic batch puts include gameplay and dirty career state;
+  private owner-only updates are sent after persistence. Completion markers and
+  result round IDs prevent duplicate awards after replay/restart. Bounded caches
+  and dirty write versions avoid rewriting historical wallets every tick.
+- Added allowlisted no-store /profile HTTP bootstrap/read endpoints and private
+  v14 career frames; validated optional credential on join. Profile access never
+  creates a match player. Unknown credentials/forged balances are rejected.
+  Credential-scoped match resume prevents accidental cross-profile reuse;
+  simultaneous sessions for one persistent guest are refused.
+- Home: Daily/Weekly keyboard tabs, precise animated progress, retained completed
+  and received states, UTC countdown anchored to monotonic server time, original
+  shared SVG gem icon, white top-right name/balance, compact transitions and
+  reduced-motion support. Brighter existing background and shorter upper shade.
+  Responsive panel/character placement; short screens scroll the challenge list
+  while keeping tabs/reset/Play accessible. Account display sits above the shade.
+- Preserved settings/profile rename, character rig/weapon/framing/fade, maps,
+  combat, graphics presets, existing Cloudflare binding/origins and coordinated
+  CI. Existing browser QA redirects /profile to its actual local Worker too.
+
+Verified:
+
+- 475 frontend tests / 45 files; frontend TypeScript and production build passed.
+- Server generated types/TypeScript and dry-run build passed; clean full backend
+  suite 59/59, including four new durable challenge/combat/result scenarios.
+- Real frontend/Worker protocol compatibility passed. Deployment gate tests 7/7.
+  Dedicated scaffold typecheck/build/tests 7/7; scaffold remains incomplete.
+- 37 production-build Chrome/local workerd browser checks: exact card counts,
+  tab switching and keyboard navigation, actual zero initial balance, no home
+  WebSocket, account rename, reset countdown unaffected by browser clock edits,
+  1280x720/900x600/640x480/390x640/320x568 fit/no Play/title overlap and every card
+  accessible, actual two-client elimination completing explicitly seeded nearly
+  finished objectives, owner-only 1,050 reward sync, retained completed cards,
+  weekly rewards, full refresh persistence and no credential reroll. No browser,
+  HTTP or asset failures. Inspected desktop/mobile and completed screenshots.
+- Unit coverage: every definition, UTC/Monday/year boundaries, period resets,
+  safe delayed events, caps, simultaneous/idempotent rewards, schema rejection,
+  temporary storage, request coalescing, monotonic countdown and stale responses.
+  Worker coverage: unauthorized/duplicate/wrong-profile join rejection, forged
+  currency rejection, nonlethal damage, headshot rewards, private views, restart,
+  repeated round wakeups, resets and late/abandoned eligibility.
+- One full backend run under concurrent Chrome load hit existing apple-hit and
+  slide-producer timing failures; the isolated clean full rerun passed all 59.
+  No movement or prop rules/assertions were weakened.
+
+Limits/release: browser-held guest capability, not a recoverable account. Clearing
+site data/loss of credential loses access; storage-blocked guests are temporary.
+No cross-device login/recovery/rotation, shop or spending API. Stronger accounts
+and abuse controls are needed before purchased/value-bearing currency. Legacy
+pre-v14 unscoped match resume tokens do not migrate automatically into new wallets.
+Public Cloudflare and low-end performance were not tested. Both frontend and
+Worker require matching v14 deployment through existing CI after an authorized
+commit/push; no new secrets, bindings or migrations. Existing tabs may need refresh.
+Nothing was committed, pushed or deployed.
+
+---
+
 # Character rigging, weapon holds and smooth multiplayer animation
 
 Completed locally 2026-11-03, preserving the uncommitted grenade/loading work below.

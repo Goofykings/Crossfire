@@ -1,3 +1,4 @@
+import { CareerClient } from '../network/CareerClient';
 import { meshesReady } from '../core/assetReadiness';
 import { abortable } from '../core/cancellation';
 import { ArcRotateCamera, Color3, Mesh, MeshBuilder, PBRMaterial, Quaternion, SceneInstrumentation, StandardMaterial, Vector3 } from '@babylonjs/core';
@@ -66,6 +67,7 @@ export class Game {
   readonly ctx: RenderContext;
   readonly input: Input;
   readonly settings = new SettingsStore();
+  private career: CareerClient | null = null;
   readonly guestProfile = new GuestProfileStore();
   private readonly lastUsedWeapon = new LastUsedWeapon();
   private readonly reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
@@ -207,9 +209,9 @@ export class Game {
         e.returnValue = '';
       }
     });
-    window.addEventListener('pagehide', () => { this.network?.disconnect(false); this.presence?.dispose(); });
+    window.addEventListener('pagehide', () => { this.network?.disconnect(false); this.presence?.dispose(); this.career?.dispose(); });
     window.addEventListener('pageshow', (e) => {
-      if (e.persisted) this.presence?.start();
+      if (e.persisted) { this.presence?.start(); this.career?.start(() => this.ui.currentScreen === 'menu'); }
       if (e.persisted && this.network) void this.network.connect().catch((error) => this.connectionError((error as Error).message));
     });
     window.addEventListener('keyup', (e) => { if (this.input.matches('leaderboard', e.code)) { this.tabHeld = false; this.ui.scoreboard.setVisible(false); } });
@@ -258,8 +260,15 @@ export class Game {
     this.presence = new Presence(this.multiplayerBackend.ok ? this.multiplayerBackend.url : '', (count) => this.ui.setOnline(count),
       () => this.ui.currentScreen === 'menu');
     this.presence.start();
+    if (this.multiplayerBackend.ok) {
+      this.career = new CareerClient(this.multiplayerBackend.url);
+      this.career.onChange = () => this.ui.challenges.set(this.career!.view, this.career!.error, this.career!.temporary);
+      this.ui.challenges.onRetry = this.ui.challenges.onReset = () => { void this.career?.ensure().catch(() => {}); };
+      this.career.start(() => this.ui.currentScreen === 'menu');
+    } else this.ui.challenges.set(null, 'Challenges unavailable: check multiplayer configuration.');
     this.ctx.engine.runRenderLoop(() => this.frame(this.ctx.engine.getDeltaTime() / 1000));
     await this.ui.ensureGuestProfile();
+    void this.career?.ensure().catch(() => {});
     if (this.options.autoplay) await this.play(first);
   }
 
@@ -394,9 +403,12 @@ export class Game {
     try {
       if (this.options.multiplayer) {
         if (!this.multiplayerBackend.ok) throw new Error(this.multiplayerBackend.error);
+        await this.career?.ensure().catch(() => {});
+        signal.throwIfAborted();
         const network = new MultiplayerClient(this.multiplayerBackend.url, () => this.guestProfile.value.username,
-          { debug: new URLSearchParams(location.search).has('networkDebug') });
+          { debug: new URLSearchParams(location.search).has('networkDebug'), profileToken: () => this.career?.joinCredential(), profileScope: () => this.career?.sessionScope() });
         this.network = network;
+        network.onCareer = profile => { if (!signal.aborted && this.network === network) this.career?.accept(profile); };
         network.onChat = (message) => {
           if (signal.aborted || this.network !== network) return;
           this.ui.addChat(message.name, message.text);
@@ -811,6 +823,7 @@ export class Game {
     this.effects?.clearDecals();
     this.ui.show('menu');
     void this.presence?.poll();
+    void this.career?.ensure().catch(() => {});
   }
 
   private applySettings(v: Readonly<Settings>, changed: (keyof Settings)[]): void {
@@ -838,6 +851,7 @@ export class Game {
 
   // --- main loop -------------------------------------------------------------------------------
   private frame(rawDt: number): void {
+    this.ui.challenges.update(this.guestProfile.value.username, this.career?.serverNow ?? null);
     this.homeCharacter.setWeapon(this.lastUsedWeapon.value ?? this.ui.selectedWeapon);
     this.homeCharacter.setName(this.guestProfile.value.username);
     this.homeCharacter.setVisible(this.state === 'menu' && this.ui.currentScreen === 'menu' && !this.options.autoplay);

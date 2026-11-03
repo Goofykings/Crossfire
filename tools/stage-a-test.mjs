@@ -39,8 +39,7 @@ async function open(practice, name) {
         ? new URL('/ws', backend).href.replace('http:', 'ws:') : url, protocols); }
     };
     const realFetch = window.fetch;
-    window.fetch = (input, init) => realFetch(new URL(String(input), location.href).pathname === '/presence'
-      ? new URL('/presence', backend) : input, init);
+    window.fetch = (input, init) => realFetch(['/presence','/profile'].includes(new URL(String(input), location.href).pathname) ? new URL(new URL(String(input),location.href).pathname, backend) : input, init);
   }, backend);
   page.on('pageerror', (e) => errors.push(String(e)));
   await page.goto(`${base}?${practice ? 'practice' : 'multiplayer'}&autoplay&quality=medium&shadows=low`, { waitUntil: 'domcontentloaded' });

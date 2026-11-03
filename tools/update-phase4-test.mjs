@@ -34,7 +34,7 @@ try{
       const Socket=window.WebSocket;
       window.WebSocket=class extends Socket{constructor(url,protocols){super(new URL(String(url)).pathname==='/ws'?new URL('/ws',backend).href.replace('http:','ws:'):url,protocols);}};
       const fetch=window.fetch;
-      window.fetch=(input,init)=>fetch(new URL(String(input),location.href).pathname==='/presence'?new URL('/presence',backend):input,init);
+      window.fetch=(input,init)=>fetch(['/presence','/profile'].includes(new URL(String(input),location.href).pathname) ? new URL(new URL(String(input),location.href).pathname, backend):input,init);
     },backend);
     await page.goto(`${base}?${practice?'practice':'multiplayer'}&autoplay&map=european-town&quality=low&shadows=off&scale=.6`,{waitUntil:'domcontentloaded',timeout:240000});
     await completeGuestProfile(page,name);
