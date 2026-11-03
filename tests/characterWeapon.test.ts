@@ -5,10 +5,11 @@ import '@babylonjs/loaders/glTF';
 import { CharacterAssetLibrary, type CharacterInstance } from '../src/game/CharacterAsset';
 import { assetUrl } from '../src/core/assets';
 import { CharacterWeaponLibrary, WEAPON_HOLDS, type CharacterWeapon } from '../src/game/CharacterWeapon';
-import { aimIntent } from '../src/game/RemotePlayers';
+import { aimIntent, solveInterval } from '../src/game/RemotePlayers';
 import type { CharacterMotion } from '../src/game/PlayerAnimation';
 import type { MaterialLibrary } from '../src/rendering/MaterialLibrary';
 import type { PlayerState } from '../shared/protocol';
+import type { WeaponAction } from '../src/weapons/Weapon';
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -88,24 +89,103 @@ it('keeps both hands on every weapon with natural elbows and wrists in each stan
         expect(hand.gap, `${label} encloses its handle`).toBeLessThan(.01);
         expect(hand.wristBend, `${label} wrist`).toBeLessThan(55 * Math.PI / 180);
         expect(hand.elbowBend, `${label} elbow`).toBeLessThan(140 * Math.PI / 180);
-        // Elbows stay outside and below their shoulders, never folded through the chest.
+        // Elbows stay on their own side and below their shoulders, never folded through the
+        // chest: an inward support elbow must be reaching well forward, under the fore-end.
         const side = index ? -1 : 1, elbow = hand.elbow, shoulder = hand.shoulder;
-        expect(Math.sign(elbow[0] - shoulder[0] * .3) || side, `${label} elbow side`).toBe(side);
+        expect(elbow[0] * side, `${label} elbow side`).toBeGreaterThan(-.02);
+        expect(elbow[0] * side > shoulder[0] * side * .3 || elbow[2] < shoulder[2] - .15, `${label} elbow clear of the chest`).toBe(true);
         expect(elbow[1], `${label} elbow height`).toBeLessThan(shoulder[1] + .05 + Math.max(0, pitch) * .25);
       }
       // Weapon held in front of the chest, not inside it.
       expect(Math.min(state.grips[0][2], state.grips[1][2]), `${id} ${name} in front`).toBeLessThan(j.upper_arm_r[2]);
     }
-    if (id === 'rifle') {
-      // ADS lifts the sight to the eye line: well above the ready grip.
-      weapon.setState({ ads: 0, pitch: 0 }); step(still, 45);
-      const ready = weapon.inspect().sight![1];
-      weapon.setState({ ads: 1 }); step(still, 45);
-      const aimed = weapon.inspect();
-      expect(aimed.sight![1] - ready).toBeGreaterThan(.2);
-      expect(Math.abs(aimed.sight![1] - (aimed.head![1] + .04))).toBeLessThan(.03);
-    }
+    weapon.setState({ ads: 0, pitch: 0 }); step(still, 45);
+    const ready = weapon.inspect();
+    weapon.setState({ ads: 1 }); step(still, 45);
+    const aimed = weapon.inspect();
+    // ADS raises the sight toward the eye line, well above the ready hold.
+    expect(aimed.sight![1] - ready.sight![1], `${id} ADS raise`).toBeGreaterThan(.12);
+    // The butt pad rests in the shoulder pocket (next to the lifted shoulder joint, inside
+    // it and in front of it), clearly below the jaw rather than beside it.
+    expect(Math.abs(aimed.butt[1] - aimed.shoulder![1]), `${id} butt at shoulder height`).toBeLessThan(.05);
+    expect(aimed.butt[1], `${id} butt below the jaw`).toBeLessThan(aimed.head![1] - .07);
+    expect(aimed.shoulder![0] - aimed.butt[0], `${id} butt inside the shoulder joint`).toBeGreaterThan(.02);
+    expect(aimed.shoulder![2] - aimed.butt[2], `${id} butt in front of the shoulder joint`).toBeGreaterThan(.06);
+    // Cheek weld: the head drops and tilts onto the stock, bounded, bringing the eye close
+    // to the sight line; the trigger finger rests on the blade.
+    expect(aimed.weld.angle).toBeGreaterThan(.2);
+    expect(aimed.weld.angle).toBeLessThanOrEqual(.6 + 1e-6);
+    expect(aimed.weld.residual, `${id} eye near the sight line`).toBeLessThan(.065);
+    expect(aimed.triggerGap!, `${id} trigger finger on the trigger`).toBeLessThan(.012);
+    expect(ready.triggerGap!, `${id} trigger finger off the trigger at rest`).toBeGreaterThan(.04);
+    // The firing shoulder lifts into the stock in ADS.
+    expect(aimed.clavicles![0]).toBeGreaterThan(ready.clavicles![0] + .08);
+    for (const hand of aimed.hands) expect(hand.wristBend, `${id} ADS wrist`).toBeLessThan(35 * Math.PI / 180);
   }
+  character.dispose(); scene.dispose(); engine.dispose();
+});
+
+it('works the gun with visible hand actions that rejoin the grips', async () => {
+  const { engine, scene, character, equip, step } = await rig();
+  const crouch = { ...still, crouch: 1 }, walk = { ...still, velocity: { x: 0, y: 0, z: -2.2 } };
+  // Each case plays the gameplay action sequence at its real durations (shell reloads chain).
+  const cases: [typeof WEAPONS[number], [WeaponAction, number][], CharacterMotion][] = [
+    ['rifle', [['reload', 2.1]], still], ['rifle', [['reloadEmpty', 2.6]], walk], ['smg', [['reload', 1.65]], crouch],
+    ['sniper', [['cycle', 1.05]], still], ['sniper', [['reloadEmpty', 3.6]], still], ['shotgun', [['cycle', .6]], walk],
+    ['shotgun', [['shellStart', .45], ['shell', .5], ['shell', .5], ['shellEnd', .4]], crouch],
+  ];
+  for (const [id, sequence, motion] of cases) {
+    const weapon = equip(id), action = sequence.map(([name]) => name).join('+');
+    weapon.setState({ ads: 0, action: 'idle', progress: 0 }); step(motion, 30);
+    const rest = weapon.inspect();
+    const frames = sequence.flatMap(([name, seconds]) => {
+      const count = Math.round(seconds * 60);
+      return Array.from({ length: count }, (_, f) => [name, (f + 1) / count] as const);
+    });
+    let previous = rest.hands.map((h) => Vector3.FromArray(h.contact)), velocity = previous.map(() => Vector3.Zero());
+    let away = 0, bolt = 0, pump = 0, magazine = 0, shell = false, jerk = 0, gap = 0;
+    for (const [name, progress] of frames) {
+      weapon.setState({ action: name, progress });
+      step(motion, 1);
+      const s = weapon.inspect();
+      away = Math.max(away, s.action.support); bolt = Math.max(bolt, s.action.bolt); pump = Math.max(pump, s.action.pump);
+      magazine = Math.max(magazine, s.action.mag ? Math.hypot(...s.action.mag) : 0); shell ||= s.action.shell;
+      // Hands track their (moving) targets, without teleports between frames.
+      for (const [i, hand] of s.hands.entries()) {
+        gap = Math.max(gap, hand.gap);
+        const now = Vector3.FromArray(hand.contact), moved = now.subtract(previous[i]);
+        jerk = Math.max(jerk, moved.subtract(velocity[i]).length());
+        velocity[i] = moved; previous[i] = now;
+      }
+    }
+    expect(gap, `${id} ${action} hands on their targets`).toBeLessThan(.01);
+    expect(jerk, `${id} ${action} smooth hand motion`).toBeLessThan(.03);
+    if (action.startsWith('reload')) { expect(away).toBeGreaterThan(.99); expect(magazine, `${id} magazine travels`).toBeGreaterThan(.1); }
+    if (action.includes('shell+')) { expect(away).toBeGreaterThan(.99); expect(shell).toBe(true); }
+    if (id === 'sniper') expect(bolt, 'trigger hand works the bolt').toBeGreaterThan(.99);
+    if (id === 'shotgun' && action === 'cycle') expect(pump, 'pump stroke').toBeCloseTo(.085, 3);
+    // Finished: back on both grips with the parts at rest.
+    weapon.setState({ action: 'idle', progress: 0 }); step(motion, 20);
+    const done = weapon.inspect();
+    for (const [i, hand] of done.hands.entries()) {
+      expect(Vector3.Distance(Vector3.FromArray(hand.handle), Vector3.FromArray(hand.contact)), `${id} ${action} hand ${i} back on its grip`).toBeLessThan(.01);
+      // Same handle relative to the weapon's own grip anchor as before the action (walking moves both).
+      const offset = (h: typeof hand, grip: number[]) => Vector3.Distance(Vector3.FromArray(h.handle), Vector3.FromArray(grip));
+      expect(Math.abs(offset(hand, done.grips[i]) - offset(rest.hands[i], rest.grips[i])), `${id} ${action} hand ${i} at its rest grip`).toBeLessThan(.005);
+    }
+    expect(done.action.mag?.every((v) => Math.abs(v) < 1e-6) ?? true).toBe(true);
+  }
+  character.dispose(); scene.dispose(); engine.dispose();
+});
+
+it('reuses the last solve for distant players on skipped frames', async () => {
+  const { engine, scene, character, equip, step } = await rig();
+  const weapon = equip('rifle');
+  step(still, 20);
+  weapon.solveEvery = 3;
+  const before = weapon.solves;
+  step(still, 30, () => { for (const hand of weapon.inspect().hands) expect(hand.gap).toBeLessThan(.01); });
+  expect(weapon.solves - before).toBe(10);
   character.dispose(); scene.dispose(); engine.dispose();
 });
 
@@ -185,6 +265,11 @@ it('derives remote ADS intent from synchronized aim and action like the weapon s
   expect(aimIntent(player(true, 'cycle', 'shotgun'))).toBe(1);
   expect(aimIntent(player(true, 'cycle', 'sniper'))).toBe(0);
   expect(aimIntent({ weapon: null, combat: { aimHeld: true, gun: null } } as unknown as PlayerState)).toBe(0);
+  // The presented (interpolated) action wins over the newest sample's.
+  expect(aimIntent(player(true, 'idle'), 'reload')).toBe(0);
+  expect(aimIntent(player(true, 'reload'), 'idle')).toBe(1);
+  // Distant players solve their arms less often; low graphics quality brings that closer.
+  expect([solveInterval(8), solveInterval(20), solveInterval(40), solveInterval(10, .5), solveInterval(20, .5)]).toEqual([1, 2, 3, 2, 3]);
 });
 
 it('keeps character asset failures nonfatal when the metadata is unavailable', async () => {

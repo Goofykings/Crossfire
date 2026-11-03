@@ -28,6 +28,19 @@ No deployment or recoverable/cross-device account system was implemented.
 
 # CLAUDE.md: notes for future sessions
 
+## Character animation pass 2 (2026-11-03)
+
+See docs/CHARACTER_ANIMATION.md (pass 2). The weapon GLBs were already realistically sized;
+ADS now puts the measured butt pad in a torso-frame shoulder pocket and a bounded neck/head
+cheek weld brings the eye toward the sight. The rig has 26 joints: clavicles (shoulder
+blend weights) and three index phalanges per glove; clips leave them at rest and only
+CharacterWeapon poses them. CharacterActions.ts keys reload/pump/bolt/shell hand work to
+gameplay progress (cosmetic only); RemoteTimeline.ts stamps shot events with the following
+snapshot's server time so recoil plays on the interpolated timeline; no protocol change.
+Recompute world matrices top-down after rotating joints (Babylon caches per render), keep
+hot paths allocation-light, and keep solveInterval LOD for distant players. Profile with
+tests/characterPerf.test.ts (CHARACTER_PERF=1) and tools/character-perf-test.mjs.
+
 ## Character weapon rig (2026-11-03)
 
 See docs/CHARACTER_ANIMATION.md. src/game/CharacterWeapon.ts is the ONLY arm/weapon pose
@@ -298,7 +311,7 @@ See docs/COMBAT_VISUALS.md and the newest PROGRESS.md entry. No commit, push or 
 
 The latest character brief authorizes generating and integrating the actual humanoid. The supplied
 reference is `references_images/Player.png`. Existing `blender/characters/char_geometry.py` is reused;
-`generate_player.py` builds the weighted bpy mesh, one 18-joint rig and six in-place actions. Run
+`generate_player.py` builds the weighted bpy mesh, one rig (now 26 joints) and seven in-place actions. Run
 `npm.cmd run assets:player`, `node tools/inspect-character.mjs`, and `npm.cmd run assets:verify`.
 Outputs include editable player.blend, self-contained player.glb, shared atlas pair and measured
 player.json. Maps, damage, weapons and menus remain unchanged. Character materials are intentionally

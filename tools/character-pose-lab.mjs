@@ -23,6 +23,18 @@ const POSES = {
   run: { ads: 0, motion: { ...still, velocity: { x: 0, y: 0, z: -4.7 } }, advance: .55 },
   slide: { ads: 0, motion: { ...still, velocity: { x: 0, y: 0, z: -6 }, slideRemaining: .6, crouch: .6 }, advance: .4 },
   jump: { ads: 0, motion: { ...still, grounded: false, velocity: { x: 0, y: 1, z: 0 } }, advance: .5 },
+  walk: { ads: 0, motion: { ...still, velocity: { x: 0, y: 0, z: -2.2 } }, advance: .7 },
+  walkAds: { ads: 1, motion: { ...still, velocity: { x: 0, y: 0, z: -2.2 } }, advance: .7 },
+  act1: { ads: 0, motion: still, advance: .8, act: 0 },
+  act2: { ads: 0, motion: still, advance: .8, act: 1 },
+  act3: { ads: 0, motion: still, advance: .8, act: 2 },
+  crouchAct: { ads: 0, motion: { ...still, crouch: 1 }, advance: .8, act: 1 },
+};
+// Gameplay actions held at a progress fraction: what other players see during reloads,
+// pump strokes and bolt cycles (the action keys follow the weapon's own cue timing).
+const ACTIONS = {
+  rifle: [['reload', .27], ['reload', .45], ['reload', .6]], smg: [['reload', .27], ['reload', .45], ['reload', .6]],
+  sniper: [['cycle', .28], ['cycle', .5], ['reload', .3]], shotgun: [['cycle', .4], ['shell', .3], ['shell', .7]],
 };
 const poses = flag('poses', 'ready,ads,crouch,crouchAds,fire').split(',');
 const viewNames = flag('views', 'front,side,quarter,rear').split(',');
@@ -62,17 +74,22 @@ try {
         const drop = spec.motion.crouch > .5 ? (view.distance < 2 ? .35 : .3) : 0;
         const camera = { ...view, height: view.height - drop, ...(view.target ? { target: [view.target[0], view.target[1] - drop, view.target[2]] } : {}) };
         // Settle: hold the base pose, then fire and capture shortly after the impulse.
+        const [action, progress] = spec.act === undefined ? ['idle', 0] : ACTIONS[weapon][spec.act];
         const result = await page.evaluate(async (o) => {
           const lab = window.__crossfire.characterLab;
+          o.spec = { ...o.spec, motion: o.spec.motion };
           if (o.spec.fire) {
             await lab({ weapon: o.weapon, ads: o.spec.ads, pitch: o.spec.pitch, motion: o.spec.motion, camera: o.camera, advance: o.spec.advance });
             return lab({ weapon: o.weapon, ads: o.spec.ads, pitch: o.spec.pitch, motion: o.spec.motion, camera: o.camera, advance: o.spec.settle, fire: 1 });
           }
-          return lab({ weapon: o.weapon, ads: o.spec.ads, pitch: o.spec.pitch, motion: o.spec.motion, camera: o.camera, advance: o.spec.advance });
-        }, { weapon, spec, camera });
-        tiles.push({ image: result.image, label: `${weapon} ${pose} ${viewNames[column]}` });
+          return lab({ weapon: o.weapon, ads: o.spec.ads, pitch: o.spec.pitch, motion: o.spec.motion, camera: o.camera, advance: o.spec.advance,
+            action: o.action, progress: o.progress });
+        }, { weapon, spec, camera, action, progress });
+        tiles.push({ image: result.image, label: `${weapon} ${pose}${action !== 'idle' ? ` (${action} ${progress})` : ''} ${viewNames[column]}` });
         if (column === 0 && pose === poses[0] && weapon === weapons[0]) console.log('rest axes', JSON.stringify(result.state.weapon.hands.map((h) => h.rest)));
-        if (column === 0) report[weapon][`${pose}:geometry`] = { butt: result.state.weapon.butt, head: result.state.weapon.head, sight: result.state.weapon.sight };
+        if (column === 0) report[weapon][`${pose}:geometry`] = { butt: result.state.weapon.butt, shoulder: result.state.weapon.shoulder,
+          eye: result.state.weapon.eye, sight: result.state.weapon.sight, weld: result.state.weapon.weld, triggerGap: result.state.weapon.triggerGap,
+          clavicles: result.state.weapon.clavicles, gaps: result.state.weapon.hands.map((h) => +h.gap.toFixed(4)) };
         if (column === 0) report[weapon][pose] = result.state.weapon.hands.map((h) => ({ reach: +h.reach.toFixed(3),
           wristDeg: +(h.wristBend * 57.3).toFixed(0), elbowDeg: +(h.elbowBend * 57.3).toFixed(0),
           forearm: h.forearmInWeapon.map((v) => +v.toFixed(2)) }));

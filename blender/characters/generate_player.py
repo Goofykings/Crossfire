@@ -273,7 +273,7 @@ def register_assets(data):
     manifest_file = ROOT / 'public/assets/asset-manifest.json'
     manifest = json.loads(manifest_file.read_text(encoding='utf8'))
     descriptions = {
-        'blender/characters/player.blend': ('character-source', 'Editable humanoid mesh, 18-joint rig and seven in-place actions'),
+        'blender/characters/player.blend': ('character-source', 'Editable humanoid mesh, 26-joint rig (clavicles, index phalanges) and seven in-place actions'),
         'assets/characters/player.glb': ('player-character', 'Skinned multiplayer humanoid; seven clips, embedded shared PBR atlas pair'),
         'assets/characters/player.json': ('character-metadata', 'Measured export scale, pose bounds, clip names/durations and rig'),
         'assets/characters/player-albedo.png': ('character-texture', 'Original 256px skin/fabric/gear atlas, embedded in player.glb'),

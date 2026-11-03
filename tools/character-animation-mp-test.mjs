@@ -73,12 +73,12 @@ try {
   const shot = async (name) => { await delay(250); await observer.screenshot({ path: `${out}/${name}.png` }); };
 
   const ready = await until(async () => { const p = await seen(); return p.weapon.adsBlend < .05 && p.animation.weights.IDLE > .99 && p; }, 'ready');
-  check(attached(ready), 'ready: both hands enclose the remote weapon handles');
+  check(attached(ready), `ready: both hands enclose the remote weapon handles (${ready.weapon.hands.map((h) => `gap ${h.gap.toFixed(4)} wrist ${(h.wristBend * 57.3).toFixed(0)}`).join(', ')})`);
   await shot('ready');
 
   await subject.evaluate(() => window.__crossfire.hold('aim', true));
   const aimed = await until(async () => { const p = await seen(); return p.weapon.adsBlend > .95 && p; }, 'remote ADS');
-  check(attached(aimed) && aimed.weapon.sight[1] - ready.weapon.sight[1] > .2, 'ADS: remote weapon rises to the eye line with hands attached');
+  check(attached(aimed) && aimed.weapon.sight[1] - ready.weapon.sight[1] > .12 && aimed.weapon.weld.residual < .065, 'ADS: remote weapon rises to the eye line, stock in the shoulder, hands attached');
   await shot('ads');
 
   await subject.evaluate(() => window.__crossfire.hold('crouch', true));
@@ -107,6 +107,44 @@ try {
   const sent = (await subject.evaluate(() => window.__crossfire.weapon())).ammo;
   console.log('SHOTS', fired.weapon.shots - before, 'recoil peak', recoilPeak.toFixed(3), 'subject ammo', sent);
   check(fired.weapon.shots - before >= 4 && recoilPeak > .2 && attached(fired), 'firing: each server-confirmed automatic shot drives cosmetic recoil');
+  // Recoil is on the interpolated timeline: each impulse plays once the rendered pose reaches
+  // its server tick (never before), promptly after it (no extra buffering), and roughly the
+  // interpolation delay after the shot event arrived rather than on arrival.
+  const history = fired.shots.history;
+  console.log('RECOIL TIMING', JSON.stringify(history.map((h) => ({ afterStamp: +(h.presented - h.at).toFixed(1), afterArrivalWall: +(h.presented + 100 - h.received).toFixed(1) }))));
+  check(history.length >= 4 && history.every((h) => h.presented >= h.at && h.presented - h.at < 40 && h.presented + 100 - h.received > 40),
+    'firing: recoil plays when the delayed remote pose reaches each shot, not on arrival');
+  check(fired.shots.pending.length === 0, 'firing: no recoil impulse left queued or replayed');
+
+  // Remote reload: the support hand leaves the fore-end, the magazine travels with it, and
+  // both hands are back on their grips once the gameplay reload ends.
+  await subject.evaluate(() => window.__crossfire.hold('reload', true));
+  await delay(120);
+  await subject.evaluate(() => window.__crossfire.hold('reload', false));
+  let reloadSeen = null, magTravel = 0;
+  const reloadEnd = Date.now() + 4000;
+  while (Date.now() < reloadEnd) {
+    const p = await seen();
+    if (p.weapon.action.name.startsWith('reload')) {
+      magTravel = Math.max(magTravel, p.weapon.action.mag ? Math.hypot(...p.weapon.action.mag) : 0);
+      if (!reloadSeen && p.weapon.action.support > .99 && p.weapon.action.magazine) { reloadSeen = p; await observer.screenshot({ path: `${out}/reload.png` }); }
+    } else if (reloadSeen) break;
+  }
+  check(reloadSeen && reloadSeen.weapon.hands[1].gap < .01 && magTravel > .1, 'reload: remote support hand works the magazine, which travels with it');
+  const reloaded = await until(async () => { const p = await seen(); return p.weapon.action.name === 'idle' && p.weapon.action.support < .01 && p; }, 'reload finished');
+  check(attached(reloaded), 'reload: both hands rejoin their grips afterwards');
+
+  // Remote pump: the observer's shotgun (seen by the subject) strokes its pump after a shot.
+  await observer.evaluate(() => window.__crossfire.look(315, 70));
+  await delay(300);
+  await observer.evaluate(() => window.__crossfire.hold('fire', true));
+  await delay(90);
+  await observer.evaluate(() => window.__crossfire.hold('fire', false));
+  let pumpPeak = 0;
+  const pumpEnd = Date.now() + 1500;
+  while (Date.now() < pumpEnd) { const p = await view(subject, observer.id); pumpPeak = Math.max(pumpPeak, p?.weapon?.action.pump ?? 0); }
+  check(pumpPeak > .07, `pump: the remote shotgun's pump and support hand stroke after its shot (${pumpPeak.toFixed(3)} m)`);
+  await observer.evaluate(() => window.__crossfire.look(315, -14));
 
   await subject.evaluate(() => window.__crossfire.look(90, 25));
   const pitched = await until(async () => { const p = await seen(); return p.weapon.pitch > .3 && p; }, 'remote pitch');

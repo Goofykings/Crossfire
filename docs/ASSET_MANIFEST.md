@@ -7,7 +7,7 @@ Regenerate maps/props with `npm run assets`; regenerate the independent characte
 |---|---|---:|---:|---|
 | `assets/characters/player-albedo.png` | character-texture | 57 KB |  | Original 256px skin/fabric/gear atlas, embedded in player.glb |
 | `assets/characters/player-orm.png` | character-texture | 1 KB |  | Shared 256px roughness/metallic atlas, embedded in player.glb |
-| `assets/characters/player.glb` | player-character | 457 KB | 9248 | Skinned multiplayer humanoid; seven clips, embedded shared PBR atlas pair |
+| `assets/characters/player.glb` | player-character | 493 KB | 9320 | Skinned multiplayer humanoid; seven clips, embedded shared PBR atlas pair |
 | `assets/characters/player.json` | character-metadata | 2 KB |  | Measured export scale, pose bounds, clip names/durations and rig |
 | `assets/materials.json` | materials | 53 KB |  | Material table (names, texture sets, tiling, tint, PBR factors) |
 | `assets/models/european-town/buildings/block_01.glb` | map-buildings | 670 KB | 12492 | 8 buildings: B16 (stone2), B12 (shop), B10 (stone2), B01 (backdrop), B02 (balcony), B03 (shop), B04 (plaster3), B05 (backdrop) |
@@ -194,7 +194,7 @@ Regenerate maps/props with `npm run assets`; regenerate the independent characte
 | `assets/models/shared/weapons/shotgun.glb` | weapon | 67 KB | 790 | shotgun first-person model: moving parts (pump, shell) and anchors (muzzle, sight, eject, grip_r, grip_l, port) |
 | `assets/models/shared/weapons/smg.glb` | weapon | 36 KB | 396 | Original compact SMG with detachable magazine and first-person anchors |
 | `assets/models/shared/weapons/sniper.glb` | weapon | 159 KB | 1936 | sniper first-person model: moving parts (bolt, mag) and anchors (muzzle, sight, eject, grip_r, grip_l, mag_grip, bolt_grip) |
-| `blender/characters/player.blend` | character-source | 423 KB |  | Editable humanoid mesh, 18-joint rig and seven in-place actions |
+| `blender/characters/player.blend` | character-source | 442 KB |  | Editable humanoid mesh, 26-joint rig (clavicles, index phalanges) and seven in-place actions |
 | `blender/source/building_library.blend` | blend | 1217 KB |  | Editable source: catalogue of the 8 building types x 2 variants |
 | `blender/source/environment.blend` | blend | 137 KB |  | Editable apples, loose props and hinged shop panels |
 | `blender/source/european-town.blend` | blend | 1633 KB |  | Editable source: buildings, terrain, collision, markers, prop preview |

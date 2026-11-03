@@ -4,11 +4,13 @@ import { CharacterAssetLibrary, type CharacterInstance } from '../game/Character
 import { CharacterWeaponLibrary, type CharacterWeapon } from '../game/CharacterWeapon';
 import type { CharacterMotion } from '../game/PlayerAnimation';
 import { MaterialLibrary } from '../rendering/MaterialLibrary';
-import type { WeaponId } from '../weapons/Weapon';
+import type { WeaponAction, WeaponId } from '../weapons/Weapon';
 
 /** Test-only pose lab: the same rig and weapon holds under explicit, repeatable inputs. */
 export interface CharacterLabOptions {
   weapon?: WeaponId; ads?: number; pitch?: number; fire?: number;
+  /** A gameplay action held at a progress fraction (reload, pump or bolt hand work). */
+  action?: WeaponAction; progress?: number;
   motion?: Partial<CharacterMotion>;
   /** Orbit camera: heading in degrees (0 = facing the character), pitch in degrees, metres. */
   camera?: { heading: number; pitch: number; distance: number; height: number; target?: [number, number, number];
@@ -16,6 +18,13 @@ export interface CharacterLabOptions {
     focus?: 'grip_r' | 'grip_l' };
   /** Seconds of animation and blending to advance before capturing. */
   advance?: number;
+}
+
+/** Test-only performance probe: extra armed characters in the isolated preview scene. */
+export interface CharacterPerfResult {
+  characters: number; frames: number; renderCpuMs: { median: number; p95: number }; rigMs: number;
+  frameIntervalMs: { median: number; p95: number }; drawCalls: number; activeMeshes: number; skinnedMeshes: number;
+  heapMb: number | null;
 }
 
 /** Isolated preview of the same selected/default skin; never creates a map,
@@ -175,7 +184,8 @@ export class HomeCharacter {
   private step(dt: number): void {
     const motion: CharacterMotion = { velocity: { x: 0, y: 0, z: 0 }, grounded: true, crouch: 0, slideRemaining: 0, ...this.lab?.motion };
     this.character?.update(motion, dt);
-    this.weapon?.setState({ pitch: this.lab?.pitch ?? 0, ads: this.lab?.ads ?? 0, airborne: !motion.grounded });
+    this.weapon?.setState({ pitch: this.lab?.pitch ?? 0, ads: this.lab?.ads ?? 0, airborne: !motion.grounded,
+      action: this.lab?.action ?? 'idle', progress: this.lab?.progress ?? 0 });
     this.weapon?.advance(dt);
   }
   /** Test hook: pose the preview with explicit inputs and return a rendered frame. The
@@ -225,6 +235,68 @@ export class HomeCharacter {
     // Same task as the last render: the drawing buffer is still intact.
     const image = canvas.toDataURL('image/png');
     return { image, state: this.inspect() };
+  }
+  /** Test hook: renders `count` armed characters (this one plus extras) in mixed states for
+   * `frames` frames and reports JS render/rig time, frame interval, draw calls and meshes.
+   * Extras are disposed afterwards; no map or network is involved. */
+  async characterPerf(count: number, frames = 240): Promise<CharacterPerfResult | null> {
+    const engine = this.engine, scene = this.scene, library = this.library, weapons = this.weapons;
+    if (!engine || !scene || !library || !weapons || !this.character || !this.weapon) return null;
+    const ids: WeaponId[] = ['rifle', 'smg', 'shotgun', 'sniper'];
+    await Promise.all(ids.map((id) => weapons.load(id)));
+    const extras: { character: CharacterInstance; weapon: CharacterWeapon }[] = [];
+    for (let i = 1; i < count; i++) {
+      const parent = new TransformNode(`home:perf:${i}`, scene);
+      parent.position.set((i % 3 - 1) * 1.1 + (i < 3 ? .55 : 0), 0, Math.ceil(i / 3) * 1.4);
+      const character = library.instantiate(parent, `home-perf-${i}`);
+      const weapon = character && weapons.create(character, ids[i % ids.length]);
+      if (character && weapon) extras.push({ character, weapon });
+    }
+    let rig = 0;
+    const before = scene.onBeforeAnimationsObservable.add(() => { for (const e of extras) e.weapon.restore(); });
+    const after = scene.onAfterAnimationsObservable.add(() => {
+      const start = performance.now();
+      for (const e of extras) e.weapon.update();
+      rig += performance.now() - start;
+    });
+    await scene.whenReadyAsync();
+    engine.stopRenderLoop();
+    const camera = scene.activeCamera as FreeCamera, saved = camera.position.clone(), fov = camera.fov;
+    camera.position.set(0, 1.4, -5.5); camera.setTarget(new Vector3(0, 1, 1)); camera.fov = .9;
+    const cpu: number[] = [], intervals: number[] = [];
+    let draws = 0, last = 0;
+    const all = [{ character: this.character, weapon: this.weapon }, ...extras];
+    for (let f = 0; f < frames + 30; f++) {
+      const now = await new Promise<number>((resolve) => requestAnimationFrame(resolve));
+      const start = performance.now();
+      for (const [i, e] of all.entries()) {
+        e.character.update({ velocity: { x: 0, y: 0, z: i % 2 ? -2.2 : 0 }, grounded: true, crouch: i === 2 ? 1 : 0, slideRemaining: 0 }, 1 / 60);
+        e.weapon.setState({ ads: i % 3 === 0 ? 1 : 0, pitch: Math.sin(f / 40) * .3, action: i === 4 ? 'reload' : 'idle', progress: (f % 120) / 120 });
+        if (i === 1 && f % 6 === 0) e.weapon.fire();
+        e.weapon.advance(1 / 60);
+      }
+      // The engine's draw-call counter is cumulative here: count this render's increase.
+      const counter = (engine as unknown as { _drawCalls: { current: number } })._drawCalls, drawn = counter.current;
+      scene.render();
+      const end = performance.now();
+      if (f >= 30) {
+        cpu.push(end - start); if (last) intervals.push(now - last);
+        draws += counter.current - drawn;
+      } else rig = 0;
+      last = now;
+    }
+    const stat = (v: number[]) => { const s = [...v].sort((a, b) => a - b); return { median: +s[Math.floor(s.length / 2)].toFixed(2), p95: +s[Math.floor(s.length * .95)].toFixed(2) }; };
+    const result: CharacterPerfResult = { characters: all.length, frames, renderCpuMs: stat(cpu),
+      // This preview's own weapon is updated by its observer too; extras are timed directly.
+      rigMs: +(rig / frames).toFixed(3), frameIntervalMs: stat(intervals), drawCalls: Math.round(draws / frames),
+      activeMeshes: scene.getActiveMeshes().length, skinnedMeshes: scene.meshes.filter((m) => m.skeleton && m.isEnabled()).length,
+      heapMb: (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory ? +((performance as unknown as { memory: { usedJSHeapSize: number } }).memory.usedJSHeapSize / 1048576).toFixed(1) : null };
+    scene.onBeforeAnimationsObservable.remove(before); scene.onAfterAnimationsObservable.remove(after);
+    for (const e of extras) { e.weapon.dispose(); const parent = e.character.root.parent; e.character.dispose(); parent?.dispose(); }
+    camera.position.copyFrom(saved); camera.fov = fov; this.resize();
+    // Resume the normal preview loop.
+    const live = this.engine; if (live === engine) { this.dispose(); this.create(); }
+    return result;
   }
   inspect() { return { active: !!this.engine, ready: !!this.character, skin: this.library?.inspect().file ?? null,
     engines: Engine.Instances.length,

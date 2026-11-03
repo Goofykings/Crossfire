@@ -17,12 +17,12 @@ Outputs:
 
 | File | Purpose |
 |---|---|
-| `blender/characters/player.blend` | Editable mesh, weights, 18-joint armature and all six actions |
+| `blender/characters/player.blend` | Editable mesh, weights, 26-joint armature (clavicles, index phalanges) and all seven actions |
 | `public/assets/characters/player.glb` | Actual skinned mesh, three materials, embedded atlas textures and animations |
 | `public/assets/characters/player.json` | Measured scale/ground, actual clip names/durations and union of posed bounds |
 | `public/assets/characters/player-{albedo,orm}.png` | Original shared 256 px atlas pair, also embedded in the GLB |
 
-The generator registers its outputs in the existing asset manifest without rebuilding other assets. The verifier understands explicitly self-contained materials; map GLBs still require the global material table. The GLB byte audit checks normalized vertex weights, valid joint indices, real changing animation channels, no root translation, embedded textures, all six clip names, and a budget below 12,000 triangles / 800 KB. Current export: 9,248 triangles, 4,931 exported vertices, 456,152 bytes, one 18-joint skin and three primitives/materials.
+The generator registers its outputs in the existing asset manifest without rebuilding other assets. The verifier understands explicitly self-contained materials; map GLBs still require the global material table. The GLB byte audit checks normalized vertex weights, valid joint indices, real changing animation channels, no root translation, embedded textures, all seven clip names, and a budget below 12,000 triangles / 800 KB. Current export: 9,320 triangles, 4,967 exported vertices, 504,892 bytes, one 26-joint skin (clavicles and three index phalanges per hand, posed only at runtime; see docs/CHARACTER_ANIMATION.md) and three primitives/materials.
 
 ## Coordinate and animation contract
 

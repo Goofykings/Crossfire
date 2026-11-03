@@ -31,6 +31,8 @@ CELL_PAD = 0.11  # fraction of a cell left as margin so mip levels do not bleed 
 # ----------------------------------------------------------------------------------------------- skeleton
 ARM_ANGLE = math.radians(40.0)          # rest A-pose: arms 40 deg out from vertical
 SHOULDER = (0.19, 0.0, 1.425)
+# Sternoclavicular joint: the clavicle pivots here so the whole arm can shrug and protract.
+CLAVICLE = (0.028, 0.035, 1.438)
 UPPER_ARM, FOREARM, HAND = 0.285, 0.255, 0.11
 HIP = (0.095, 0.0, 0.93)
 KNEE = (0.095, 0.012, 0.50)             # slight forward knee gives IK and engines a bend direction
@@ -65,11 +67,15 @@ def bones() -> list[tuple[str, Vec, Vec, str | None]]:
     ]
     for side, sfx in ((-1, "l"), (1, "r")):
         out += [
-            (f"upper_arm_{sfx}", arm_point(side, 0.0), arm_point(side, UPPER_ARM), "chest"),
+            (f"clavicle_{sfx}", (side * CLAVICLE[0], CLAVICLE[1], CLAVICLE[2]), arm_point(side, 0.0), "chest"),
+            (f"upper_arm_{sfx}", arm_point(side, 0.0), arm_point(side, UPPER_ARM), f"clavicle_{sfx}"),
             (f"forearm_{sfx}", arm_point(side, UPPER_ARM), arm_point(side, UPPER_ARM + FOREARM), f"upper_arm_{sfx}"),
             (f"hand_{sfx}", arm_point(side, UPPER_ARM + FOREARM), arm_point(side, UPPER_ARM + FOREARM + HAND),
              f"forearm_{sfx}"),
         ]
+        path = index_path(side)
+        out += [(f"index_{k + 1}_{sfx}", path[2 * k], path[2 * k + 2], f"hand_{sfx}" if k == 0 else f"index_{k}_{sfx}")
+                for k in range(3)]
     for side, sfx in ((-1, "l"), (1, "r")):
         m = lambda p: (side * p[0], p[1], p[2])  # noqa: E731
         out += [
@@ -140,7 +146,18 @@ def chain(x: float, names: Sequence[str], bounds: Sequence[float], halves: Seque
 
 
 def torso_weights(p: Vec) -> Weights:
-    return chain(p[2], ("pelvis", "spine", "chest", "neck", "head"), (1.05, 1.25, 1.47, 1.575), (0.05, 0.06, 0.025, 0.03))
+    w = chain(p[2], ("pelvis", "spine", "chest", "neck", "head"), (1.05, 1.25, 1.47, 1.575), (0.05, 0.06, 0.025, 0.03))
+    # The shoulder cap and trapezius follow the clavicle (shrug/protraction), fading out
+    # toward the neck, the sternum and the ribs so the torso never folds.
+    side = 1 if p[0] >= 0 else -1
+    shoulder = (side * SHOULDER[0], SHOULDER[1], SHOULDER[2])
+    s = 0.85 * smoothstep(0.15, 0.06, math.sqrt(dot(sub(p, shoulder), sub(p, shoulder))))
+    s *= smoothstep(0.045, 0.11, abs(p[0])) * smoothstep(1.3, 1.37, p[2])
+    if s < 1e-4:
+        return w
+    out = {k: v * (1 - s) for k, v in w.items()}
+    out[f"clavicle_{'r' if side > 0 else 'l'}"] = s
+    return {k: v for k, v in out.items() if v > 1e-4}
 
 
 def leg_weights(side: int) -> Callable[[Vec], Weights]:
@@ -637,6 +654,54 @@ def _neck_head(b: Builder) -> None:
     b.end()
 
 
+# (offset toward the thumb, length, radius) for index, middle, ring and little fingers.
+FINGERS = ((0.029, 0.072, 0.0098), (0.0095, 0.08, 0.0102), (-0.0095, 0.074, 0.0098), (-0.028, 0.06, 0.0088))
+FINGER_SEGMENTS, FINGER_CURL = (0.42, 0.33, 0.25), (0.86, 0.98, 0.72)
+
+
+def finger_path(side: int, of: float, length: float) -> list[Vec]:
+    """Knuckle and the three phalanx ends of a gripping finger."""
+    d, bk, _ = arm_axes(side)
+    axis = cross(d, mul(bk, -1.0))
+    p = arm_point(side, 0.628, -0.004, of)
+    path, direction = [p], d
+    for seg, curl in zip(FINGER_SEGMENTS, FINGER_CURL):
+        direction = norm(rotate(direction, axis, curl))
+        p = add(p, mul(direction, length * seg))
+        path.append(p)
+    return path
+
+
+def index_path(side: int) -> list[Vec]:
+    """Index finger joints with a midpoint per phalanx: [knuckle, mid, joint, mid, joint, mid, tip]."""
+    of, length, _ = FINGERS[0]
+    joints = finger_path(side, of, length)
+    out = [joints[0]]
+    for a, b_ in zip(joints, joints[1:]):
+        out += [mul(add(a, b_), 0.5), b_]
+    return out
+
+
+def index_weights(side: int, path: Sequence[Vec]) -> Callable[[Vec], Weights]:
+    """Phalanx weights by arc length along the finger, blended over a few millimetres per joint."""
+    sfx = "r" if side > 0 else "l"
+    names = tuple(f"index_{k}_{sfx}" for k in (1, 2, 3))
+    lengths = [math.sqrt(dot(sub(b_, a), sub(b_, a))) for a, b_ in zip(path, path[1:])]
+    starts = [sum(lengths[:i]) for i in range(len(lengths))]
+    bounds = (starts[2], starts[4])
+
+    def weights(p: Vec) -> Weights:
+        best, at = float("inf"), 0.0
+        for a, b_, s0, ln in zip(path, path[1:], starts, lengths):
+            t = min(1.0, max(0.0, dot(sub(p, a), sub(b_, a)) / (ln * ln)))
+            q = add(a, mul(sub(b_, a), t))
+            dist = dot(sub(p, q), sub(p, q))
+            if dist < best:
+                best, at = dist, s0 + t * ln
+        return chain(at, names, bounds, (0.004, 0.003))
+    return weights
+
+
 def _arm(b: Builder, side: int) -> None:
     d, bk, fw = arm_axes(side)
     sh = (side * SHOULDER[0], SHOULDER[1], SHOULDER[2])
@@ -671,18 +736,21 @@ def _arm(b: Builder, side: int) -> None:
     # Gripping fingers: the character always carries a weapon, so the phalanges wrap a ~4 cm
     # handle lying across the distal palm (its axis along the knuckle line), leaving the hole
     # for the grip. The curl is per joint so the closing arc follows a circle, not a hook.
+    # The index finger has its own three phalanx bones (trigger and support-hand poses); its
+    # tube gets mid-phalanx rings so each joint bends over a short blended band.
+    sfx = "r" if side > 0 else "l"
     palm_dir = mul(bk, -1.0)
-    for k, (of, length, rad) in enumerate(((0.029, 0.072, 0.0098), (0.0095, 0.08, 0.0102),
-                                            (-0.0095, 0.074, 0.0098), (-0.028, 0.06, 0.0088))):
-        p = arm_point(side, 0.628, -0.004, of)
-        path = [p]
-        direction = d
-        for seg, curl in zip((0.42, 0.33, 0.25), (0.86, 0.98, 0.72)):
-            direction = norm(rotate(direction, cross(d, palm_dir), curl))
-            p = add(p, mul(direction, length * seg))
-            path.append(p)
+    for k, (of, length, rad) in enumerate(FINGERS):
+        path = finger_path(side, of, length)
         radii = [(rad, rad * 0.92), (rad * 0.97, rad * 0.9), (rad * 0.92, rad * 0.85), (rad * 0.85, rad * 0.8)]
-        b.begin(f"finger_{side}_{k}", "glove", bone(f"hand_{'r' if side > 0 else 'l'}"))
+        if k == 0:
+            path = index_path(side)
+            radii = [radii[i // 2] if i % 2 == 0 else
+                     ((radii[i // 2][0] + radii[i // 2 + 1][0]) / 2, (radii[i // 2][1] + radii[i // 2 + 1][1]) / 2)
+                     for i in range(len(path))]
+            b.begin(f"finger_{side}_{k}", "glove", index_weights(side, path))
+        else:
+            b.begin(f"finger_{side}_{k}", "glove", bone(f"hand_{sfx}"))
         b.tube(path, radii, 6, fw)
         b.end()
 

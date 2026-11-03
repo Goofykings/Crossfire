@@ -7,8 +7,9 @@ import { animationVelocity } from './PlayerAnimation';
 import { deathPose } from './CombatPresentation';
 import { PlayerSilhouettes } from '../rendering/PlayerSilhouettes';
 import { CharacterWeaponLibrary, type CharacterWeapon } from './CharacterWeapon';
+import { presentedAction, ShotTimeline } from './RemoteTimeline';
 import type { MaterialLibrary } from '../rendering/MaterialLibrary';
-import type { WeaponId, WeaponState } from '../weapons/Weapon';
+import { WEAPONS, type WeaponId, type WeaponState } from '../weapons/Weapon';
 import { MOVEMENT } from '../config/constants';
 import { LEAN_ANGLE, leanOffset } from '../../shared/lean';
 
@@ -20,15 +21,25 @@ interface Avatar {
   lean: number;
   weapon: CharacterWeapon | null;
   weaponAds: number;
+  /** Server-confirmed shots waiting for the interpolated pose to reach them. */
+  shots: ShotTimeline;
   life: number; death?: { elapsed: number; started: number; direction: Elimination['direction']; rotation: Quaternion; baseY: number; materials: Material[]; textures: Set<BaseTexture> };
+}
+
+/** Interval between shots at the weapon's cadence (milliseconds). */
+const shotInterval = (id: WeaponId | null) => 60000 / (WEAPONS.find((w) => w.id === id)?.rpm ?? 600);
+/** Arm/finger solves for distant players run every Nth frame (cached in between); `detail`
+ * below 1 (low graphics quality) brings those distances closer. */
+export function solveInterval(distance: number, detail = 1): number {
+  const d = distance / Math.max(.25, detail);
+  return d > 32 ? 3 : d > 16 ? 2 : 1;
 }
 
 /** Mirrors Weapon.update's ADS gate from synchronized intent and action, so the
  * third-person pose can blend on its own 150 ms curve instead of the slower gun ramp. */
-export function aimIntent(player: Pick<PlayerState, 'weapon' | 'combat'>): number {
-  const gun = player.combat.gun;
-  if (!gun) return 0;
-  const canAim = gun.action === 'idle' || (gun.action === 'cycle' && player.weapon !== 'sniper');
+export function aimIntent(player: Pick<PlayerState, 'weapon' | 'combat'>, action = player.combat.gun?.action): number {
+  if (!player.combat.gun) return 0;
+  const canAim = action === 'idle' || (action === 'cycle' && player.weapon !== 'sniper');
   return player.combat.aimHeld && canAim ? 1 : 0;
 }
 
@@ -44,6 +55,7 @@ export class RemotePlayers {
   private outlinesEnabled = true;
   private visibilityWorld: VisibilityWorld | null = null;
   private dt = 1 / 60;
+  private animationDetail = 1;
   private silhouettes: PlayerSilhouettes | null = null;
   readonly characters: CharacterAssetLibrary;
   private readonly weapons: CharacterWeaponLibrary;
@@ -61,11 +73,13 @@ export class RemotePlayers {
     scene.onAfterAnimationsObservable.add(() => {
       const camera = scene.activeCamera;
       const planes = camera ? Frustum.GetPlanes(camera.getTransformationMatrix()) : null;
+      const eye = camera?.globalPosition;
       for (const a of this.avatars.values()) {
         a.character?.applyLean();
         if (a.weapon && !a.death) {
           // Arm IK only for avatars that can be seen; their blend states still advance.
           a.weapon.posing = a.root.isEnabled() && (!planes || a.meshes.some((mesh) => { mesh.computeWorldMatrix(); return mesh.isInFrustum(planes); }));
+          a.weapon.solveEvery = eye ? solveInterval(Vector3.Distance(eye, a.root.position), this.animationDetail) : 1;
           a.weapon.update();
         }
         this.presentation(a, this.dt);
@@ -116,8 +130,13 @@ export class RemotePlayers {
       grounded: player.motion.grounded, sliding: player.motion.slideRemaining > 0, crouch };
   }
   setOutlinesEnabled(enabled: boolean): void { this.outlinesEnabled = enabled; }
-  /** Cosmetic third-person recoil for a server-confirmed shot by this player. */
-  fire(id: string): void { this.avatars.get(id)?.weapon?.fire(); }
+  /** 1 = full third-person animation detail; lower values reduce distant arm solves. */
+  setAnimationDetail(detail: number): void { this.animationDetail = detail; }
+  /** A server-confirmed shot by this player; its cosmetic recoil plays when the delayed
+   * (interpolated) pose reaches it. `serverNow` is the estimated current server time. */
+  fire(id: string, weapon: WeaponId, serverNow: number): void {
+    this.avatars.get(id)?.shots.receive(serverNow, shotInterval(weapon));
+  }
   private remove(a: Avatar): void {
     this.silhouettes?.remove(a.meshes); a.weapon?.dispose(); a.character?.dispose(); a.root.dispose(); a.label.remove();
     for (const material of a.death?.materials ?? []) material.dispose(false, false);
@@ -175,7 +194,7 @@ export class RemotePlayers {
         label.className = 'remote-player-label'; label.dataset.playerId = player.id; label.hidden = true;
         this.labels.append(label);
         a = { root, look, samples: [], seen: performance.now(), label, character,
-          meshes, weapon: null, weaponAds: player.combat.gun?.ads ?? 0, friendly: false, visible: false, clearFor: 0, height: 1.8, lean: 0, life: player.life };
+          meshes, weapon: null, weaponAds: player.combat.gun?.ads ?? 0, shots: new ShotTimeline(), friendly: false, visible: false, clearFor: 0, height: 1.8, lean: 0, life: player.life };
         this.avatars.set(player.id, a);
         root.setEnabled(player.id !== this.spectatedId);
       }
@@ -188,6 +207,7 @@ export class RemotePlayers {
       a.label.dataset.relationship = a.friendly ? 'teammate' : 'opponent';
       a.seen = performance.now();
       a.samples.push({ at: s.serverTime, player });
+      a.shots.stamp(s.serverTime);
       if (a.samples.length > 30) a.samples.shift();
     }
   }
@@ -217,7 +237,10 @@ export class RemotePlayers {
       a.look.rotation.x = m.pitch + (n.pitch - m.pitch) * k;
       const ads = (older.player.combat.gun?.ads ?? 0) + ((newer.player.combat.gun?.ads ?? 0) - (older.player.combat.gun?.ads ?? 0)) * k;
       a.weaponAds = ads;
-      a.weapon?.setState({ pitch: a.look.rotation.x, ads: aimIntent(newer.player), airborne: !(k < .5 ? m.grounded : n.grounded) });
+      const gun = presentedAction({ at: older.at, gun: older.player.combat.gun }, { at: newer.at, gun: newer.player.combat.gun }, serverTime);
+      a.weapon?.setState({ pitch: a.look.rotation.x, ads: aimIntent(newer.player, gun?.action), airborne: !(k < .5 ? m.grounded : n.grounded),
+        action: gun?.action ?? 'idle', progress: gun?.progress ?? 0 });
+      if (a.shots.due(serverTime)) a.weapon?.fire();
       a.weapon?.advance(dt);
       const crouch = m.crouch + (n.crouch - m.crouch) * k;
       a.lean = m.lean + (n.lean - m.lean) * k;
@@ -290,6 +313,7 @@ export class RemotePlayers {
       death: a.death ? { elapsed: a.death.elapsed, ...deathPose(a.death.elapsed, a.death.direction),
         alpha: a.meshes[0].material?.alpha, rotation: a.root.rotationQuaternion?.asArray() } : null,
       source: a.character ? 'glb' : 'placeholder', animation: a.character?.inspect() ?? null, weapon: a.weapon?.inspect() ?? null,
+      shots: a.shots.inspect(),
       health: a.samples.at(-1)?.player.health ?? 0 }));
   }
   clear(): void {

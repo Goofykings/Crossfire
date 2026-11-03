@@ -179,6 +179,7 @@ export class Game {
     this.postfx.apply(GRAPHICS_PRESETS[s.graphicsQuality]);
     this.materials.setAnisotropy(GRAPHICS_PRESETS[s.graphicsQuality].anisotropy);
     this.materials.setUltra(!!GRAPHICS_PRESETS[s.graphicsQuality].ultraMaterials);
+    this.remotePlayers.setAnimationDetail(s.graphicsQuality === 'low' ? .5 : 1);
     this.settings.onChange((v, changed) => this.applySettings(v, changed));
 
     // Public Play has no silent practice fallback.
@@ -422,7 +423,7 @@ export class Game {
           if (shot.shooterId !== network.selfId && (this.state === 'playing' || this.state === 'spectating' || this.state === 'paused')) {
             const shooter = network.latest?.players.find((p) => p.id === shot.shooterId && p.alive);
             if (shooter) {
-              this.remotePlayers.fire(shot.shooterId);
+              this.remotePlayers.fire(shot.shooterId, shot.weapon, Date.now() + network.clockOffset);
               const camera = this.ctx.camera;
               const delta = new Vector3(shooter.motion.position.x, shooter.motion.position.y + MOVEMENT.standEye, shooter.motion.position.z).subtract(camera.globalPosition);
               const right = camera.getDirection(Vector3.Right()), up = camera.getDirection(Vector3.Up()), forward = camera.getDirection(Vector3.Forward(true));
@@ -825,6 +826,7 @@ export class Game {
       this.remotePlayers.refreshEffects();
       this.materials.setAnisotropy(p.anisotropy);
       this.materials.setUltra(!!p.ultraMaterials);
+      this.remotePlayers.setAnimationDetail(v.graphicsQuality === 'low' ? .5 : 1);
       this.map?.environment.applyGraphicsPreset(p);
     }
     if (changed.includes('shadowQuality') && this.map) {
@@ -1303,6 +1305,7 @@ export class Game {
       homeCharacter: () => this.homeCharacter.inspect(),
       /** Pose lab on the isolated home preview (same rig as remote players); null restores it. */
       characterLab: (options: CharacterLabOptions | null) => this.homeCharacter.characterLab(options),
+      characterPerf: (count: number, frames?: number) => this.homeCharacter.characterPerf(count, frames),
       silhouetteStats: () => this.remotePlayers.silhouetteStats(),
       silhouetteInterior: () => this.remotePlayers.silhouetteInterior(),
       damageFeedback: () => this.ui.damage.inspect(),

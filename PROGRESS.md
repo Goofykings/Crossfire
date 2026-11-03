@@ -1,3 +1,37 @@
+# Third-person character animation pass 2
+
+Completed locally 2026-11-03. Stopped at this request. No commit, push or deployment.
+Details, measurements and limitations: [docs/CHARACTER_ANIMATION.md](docs/CHARACTER_ANIMATION.md).
+
+- ADS fixed at the source: the weapon GLBs were already realistic at 0.85 scale (rifle
+  trigger-to-butt 0.32 m); the IK target pinned the sight to the head, leaving the butt at the
+  jaw. The measured butt pad now sits in a torso-frame shoulder pocket next to the lifted
+  shoulder, with a bounded neck/head cheek weld. ADS trigger wrist 41-47 -> 27-31 degrees;
+  ready 38-48 -> 18-34 degrees; butt 0.7-2.9 cm above the shoulder joint instead of 8-10 cm.
+- Character regenerated (`npm.cmd run assets:player`): clavicle bones with shoulder blend
+  weights, and three index phalanx bones per glove (+72 triangles; 9,320 total, 26 joints,
+  505 KB). Clips unchanged. Shoulders shrug/protract for ADS, reach, recoil and reloads.
+- Trigger finger off the trigger at rest, on the blade (6-8 mm) when aiming or shooting,
+  with a pull pulse per shot; per-weapon support index (along the fore-end or wrapped).
+- Third-person reloads (magazine travels to and from the vest), sniper bolt work with the
+  trigger hand on the moving knob, shotgun pump with the support hand riding it, and shell
+  loading from a belt pouch, all keyed to gameplay progress and cue fractions (no timing
+  change), on the interpolated timeline via `presentedAction`.
+- Remote recoil now plays when the delayed pose reaches each shot's server tick (3-15 ms
+  after it, ~80-107 ms after the event arrives) instead of on arrival; cadence, jitter,
+  stalls and no double triggering are tested. No protocol change; Worker untouched.
+- Performance: top-down world-matrix refresh and allocation-light hot paths (rig ~0.13-0.18
+  ms per character in Node, 29 -> 9 KB allocations per character-frame); distant players
+  reuse their solve every 2nd/3rd frame (halved distances on low quality). Chrome (Iris Xe):
+  6 characters 3.9 ms median frame interval; 4x CPU throttle 26 ms. No real low-end device.
+
+Validation: typecheck; `npm test` 493 passing (perf benchmark opt-in); production build;
+`assets:verify`; `inspect-character`; home preview test (all weapons, 60 fps); real
+two-client `character-animation-mp-test` passed twice (19 checks incl. recoil timing,
+remote reload and pump). Visual sheets: `test-results/character-poses/improved/`.
+Server/shared code untouched (server dry-run build only). Frontend needs a release after an
+authorized commit; the Worker does not.
+
 # Explosion VFX, seamless loading and trusted server join chat
 
 Completed locally 2026-11-03. Stopped at this request. No commit, push or deployment.

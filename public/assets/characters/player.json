@@ -28,12 +28,20 @@
     "chest",
     "neck",
     "head",
+    "clavicle_l",
     "upper_arm_l",
     "forearm_l",
     "hand_l",
+    "index_1_l",
+    "index_2_l",
+    "index_3_l",
+    "clavicle_r",
     "upper_arm_r",
     "forearm_r",
     "hand_r",
+    "index_1_r",
+    "index_2_r",
+    "index_3_r",
     "thigh_l",
     "shin_l",
     "foot_l",
@@ -41,7 +49,7 @@
     "shin_r",
     "foot_r"
   ],
-  "triangles": 9248,
+  "triangles": 9320,
   "materials": [
     "player_skin",
     "player_fabric",
@@ -79,7 +87,7 @@
   },
   "bounds": {
     "min": [
-      -0.47942670941352844,
+      -0.4794266200065613,
       -0.06000005403126124,
       -1.063365993499756
     ],
