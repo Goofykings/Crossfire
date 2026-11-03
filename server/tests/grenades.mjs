@@ -23,7 +23,11 @@ for (const mode of ['ffa','teams']) test(`grenades and held crouch: inventory, r
     let round=await room.advanceMapForTest();while(round.mapId!=='european-town')round=await room.advanceMapForTest();
     async function open(token) {
       const c={ws:new WebSocket(new URL('/ws',base).href.replace('http:','ws:'),{origin}),messages:[],snapshot:null,seq:0,id:''};clients.push(c);
-      c.ws.on('message',raw=>{const m=JSON.parse(String(raw));c.messages.push(m);if(m.snapshot)c.snapshot=m.snapshot;});c.ws.on('error',()=>{});
+      c.ws.on('message',raw=>{const m=JSON.parse(String(raw));c.messages.push(m);if(m.snapshot){
+        // Model a slower peer without inventing state: hold its actual death snapshots.
+        if(c.holdDeathSnapshots&&m.snapshot.players.some(p=>p.id===c.id&&p.death?.weapon==='grenade'))c.heldSnapshot=m.snapshot;
+        else c.snapshot=m.snapshot;
+      }});c.ws.on('error',()=>{});
       await new Promise((resolve,reject)=>{c.ws.once('open',resolve);c.ws.once('error',reject);});
       c.send=m=>c.ws.send(JSON.stringify({v: 12,...m}));c.send({type:'join',name:'Grenade peer',...(token?{resumeToken:token}:{})});
       const w=await until(()=>c.messages.find(m=>m.type==='welcome'));c.id=w.selfId;c.token=w.resumeToken;c.resumed=w.resumed;c.seq=self(c).ack;
@@ -47,6 +51,7 @@ for (const mode of ['ffa','teams']) test(`grenades and held crouch: inventory, r
     assert.equal(self(a).motion.crouch,1,'server retains held crouch between sparse frames');
     assert.equal(b.snapshot.players.find(p=>p.id===a.id).motion.crouch,1,'peer receives the same lowered collider');
     await input(a);await delay(250);assert.equal(self(a).motion.crouch,0);
+    c.holdDeathSnapshots=mode==='ffa';
     const mark=b.messages.length;await input(a,{grenade:true});
     const thrown=await until(()=>b.messages.slice(mark).find(m=>m.type==='grenade'&&m.event.kind==='throw'));
     assert.equal(self(a).grenades,0);assert.equal(thrown.event.projectile.explodeAt-thrown.event.projectile.at,2000);
@@ -63,13 +68,41 @@ for (const mode of ['ffa','teams']) test(`grenades and held crouch: inventory, r
     assert.ok(blast.event.at>=thrown.event.projectile.explodeAt,'never early detonation');
     assert.ok(blast.event.at-thrown.event.projectile.explodeAt<500,'detonates on the server tick');
     assert.equal(blast.event.hits.find(h=>h.id===b.id)?.health,0,'blast uses the actual explosion-time position');
-    const kills=mode==='ffa'?2:1;await until(()=>!self(b).alive&&self(a).kills===kills);
-    const death=self(b).death;assert.equal(death.weapon,'grenade');assert.equal(death.head,false);assert.equal(death.award.total,100);
-    assert.equal(self(a).score,mode==='ffa'?220:100);assert.equal(self(b).deaths,1);
-    if(mode==='ffa'){assert.equal(self(c).death.award.combo,20);assert.equal(self(a).comboCount,2);}
-    else {assert.equal(self(c).health,100);assert.equal(self(c).alive,true);assert.equal(blast.event.hits.some(h=>h.id===c.id),false);}
+    const kills=mode==='ffa'?2:1;
+    // One authoritative snapshot contains the whole transaction. Different TCP
+    // clients can receive that same snapshot at different times.
+    const confirmed=await until(()=>{
+      const players=b.snapshot.players,shooter=players.find(p=>p.id===a.id),victim=players.find(p=>p.id===b.id),other=players.find(p=>p.id===c.id);
+      return shooter?.kills===kills&&!victim?.alive&&victim?.death&&(mode!=='ffa'||(!other?.alive&&other?.death))
+        ? {shooter,victim,other} : null;
+    });
+    const deaths=mode==='ffa'?[confirmed.victim.death,confirmed.other.death]:[confirmed.victim.death];
+    assert.deepEqual(deaths.map(d=>d.award?.total).sort((x,y)=>x-y),mode==='ffa'?[100,120]:[100]);
+    for(const death of deaths){
+      assert.equal(death.weapon,'grenade');assert.equal(death.head,false);assert.equal(death.killerId,a.id);
+      assert.equal(death.award.base,100);assert.equal(death.award.headshot,0);
+      assert.equal(death.award.combo,death.award.total-100);
+    }
+    assert.equal(confirmed.shooter.score,mode==='ffa'?220:100);assert.equal(confirmed.victim.deaths,1);
+    const killFeed=()=>b.messages.slice(mark).filter(m=>m.type==='elimination'&&m.elimination.weapon==='grenade'
+      &&deaths.some(d=>d.victimId===m.elimination.victimId&&d.victimLife===m.elimination.victimLife));
+    const eliminationEvents=killFeed();
+    assert.equal(eliminationEvents.length,kills,'one kill-feed elimination per victim');
+    for(const death of deaths)assert.deepEqual(eliminationEvents.find(m=>m.elimination.id===death.id)?.elimination.award,death.award);
+    if(mode==='ffa'){
+      assert.equal(confirmed.shooter.comboCount,2);
+      assert.equal(self(c).death,null,'a peer can still have its previous snapshot');
+      c.holdDeathSnapshots=false;if(c.heldSnapshot)c.snapshot=c.heldSnapshot;
+      await until(()=>self(c).death?.id===confirmed.other.death.id);
+      assert.deepEqual(self(c).death.award,confirmed.other.death.award,'the delayed peer receives the same actual award');
+    } else {assert.equal(confirmed.other.health,100);assert.equal(confirmed.other.alive,true);assert.equal(blast.event.hits.some(h=>h.id===c.id),false);}
+    await until(()=>self(a).kills===kills&&self(a).score===confirmed.shooter.score);
     await delay(500);assert.equal(b.messages.slice(mark).filter(m=>m.type==='grenade'&&m.event.kind==='explode').length,1);
     assert.equal(self(a).kills,kills,'no repeated damage or scoring on later ticks');
+    assert.equal(self(a).score,mode==='ffa'?220:100,'no duplicate awards on later ticks');
+    assert.equal(killFeed().length,kills,'no duplicate kill-feed events, even with a new event ID');
+    assert.equal(self(b).health,0);assert.equal(self(b).deaths,1);
+    if(mode==='ffa'){assert.equal(self(c).health,0);assert.equal(self(c).deaths,1);}
     if(self(c).alive)await room.placeForCombatTest(c.id,arena.sources.behind);
     await spawn(b);assert.equal(self(b).grenades,1,'respawn resets inventory');
     assert.ok(!a.messages.some(m=>m.type==='error'),JSON.stringify(a.messages.filter(m=>m.type==='error')));

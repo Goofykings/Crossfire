@@ -1,3 +1,38 @@
+# Grenade scoring test: delayed peer snapshot
+
+Updated 2026-11-02. The backend integration step failed in
+[GitHub run 41494601814](https://github.com/Goofykings/Crossfire/actions/runs/41494601814).
+The reported `Cannot read properties of null (reading 'award')` is a test race:
+the old FFA test waited for shooter A's kill count and victim B's death, then
+immediately read `self(c).death.award`. Client C's independent WebSocket could
+still hold its prior snapshot, where `death` was null. The exception reads
+`award` from a null **death**, not `total` from a null award.
+
+Reproduced the same exception deterministically by holding client C's actual
+death snapshots in the test fixture. The server's real elimination transaction
+already calculates, persists and publishes the awards. The fixed test checks
+both victims and the shooter in one authoritative snapshot, verifies C can
+still be stale, releases the captured real snapshot, and waits for C to receive
+the same death and award. It asserts the two FFA awards are 100 and 120 points,
+both have 100 base / zero headshot points, one has the 20-point combo, and
+there are no duplicate explosion, damage, death, score or kill-feed events.
+Teams, posthumous scoring, crouch, inventory, reconnect and respawn checks remain.
+
+Verification: both grenade/crouch tests passed; the complete backend suite
+passed **54 checks**. Five relevant frontend/shared suites passed **64 tests**;
+production build/typecheck passed. Two local Chrome clients against the local
+Worker and production build at `/crossfire/` verified the actual grenade kill
+feed, leaderboard score/kills, match stats, effects, resume and respawn. These
+are local results; the remote GitHub workflow was not rerun.
+
+Changed `server/tests/grenades.mjs`, `tools/update-phase3-test.mjs` and this log.
+No gameplay/server implementation, protocol, deployment workflow, credentials
+or physics changed. This test-only fix needs no gameplay redeployment; a later
+push to main will trigger the existing coordinated deployment normally. No
+commit, push or deployment was performed.
+
+---
+
 # CI follow-up - distinguish tests from missing deployment credentials
 
 Updated 2026-11-02. Inspected

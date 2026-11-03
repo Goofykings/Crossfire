@@ -86,9 +86,20 @@ try {
   await a.screenshot({path:`${out}/explosion.png`});
   await a.evaluate(()=>window.__grenadeCapture.resume());
   await until(async()=>(await b.evaluate(()=>window.__crossfire.state()))==='spectating','grenade enters spectating');
-  const attackStats=await a.evaluate(()=>window.__crossfire.stats());
+  const attackStats=await until(async()=>{const stats=await a.evaluate(()=>window.__crossfire.stats());
+    return stats.grenadesThrown===1&&stats.grenadeHits===1?stats:null;},'attacker receives the grenade statistics');
   check(attackStats.grenadesThrown===1&&attackStats.grenadeHits===1&&attackStats.hits===0,'grenade stats preserve firearm accuracy');
   const dead=await me(b);check(dead.death.weapon==='grenade'&&dead.death.award.total===100&&!dead.death.head,'grenade death, feed and normal score');
+  const feed=await until(async()=>{const rows=await a.$$eval('.kill-feed-entry',rows=>rows.map(row=>({text:row.textContent,weapon:row.querySelector('[data-weapon]')?.getAttribute('data-weapon')})));
+    return rows.some(row=>row.weapon==='grenade'&&row.text.includes('Crouch Observer'))?rows:null;},'attacker receives the grenade kill feed');
+  check(feed.filter(row=>row.weapon==='grenade'&&row.text.includes('Grenadier')&&row.text.includes('Crouch Observer')).length===1,
+    'the actual grenade elimination appears once in the kill feed');
+  await a.bringToFront();await a.keyboard.down('Tab');
+  await until(()=>a.$eval('.scoreboard',e=>!e.hidden).catch(()=>false),'leaderboard is visible');
+  const standing=await until(async()=>{const row=await a.$eval(`.scoreboard tr[data-player-id="${a.id}"]`,row=>({score:row.cells[2].dataset.score,kills:row.cells[3].textContent,deaths:row.cells[4].textContent})).catch(()=>null);
+    return row?.score==='100'&&row.kills==='1'?row:null;},'leaderboard receives the authoritative score');
+  check(standing.score==='100'&&standing.kills==='1'&&standing.deaths==='0','leaderboard shows the actual grenade score and elimination');
+  await a.keyboard.up('Tab');
   for(const p of [a,b]) {
     const audio=await p.evaluate(()=>window.__crossfire.spatialAudio());
     check(audio.recent.filter(s=>s.name==='grenade_explosion').length===1,'one positional explosion for player or spectator');
