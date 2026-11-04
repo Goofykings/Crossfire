@@ -44,7 +44,15 @@ for (const mode of (process.env.CROSSFIRE_SCORING_ONLY ? ['ffa'] : ['ffa', 'team
     const ws = new WebSocket(new URL('/ws', base).href.replace('http:', 'ws:'), { origin });
     const c = { ws, messages: [], snapshot: null, id: '', token: '', seq: 0 };
     clients.push(c);
-    ws.on('message', (raw) => { const m = JSON.parse(String(raw)); c.messages.push(m); if (m.snapshot) c.snapshot = m.snapshot; });
+    ws.on('message', (raw) => {
+      const m = JSON.parse(String(raw)); c.messages.push(m);
+      if (m.snapshot) {
+        // Keep the real pre-shot cache for the shotgun regression while still
+        // recording every authoritative packet for the existing wait utility.
+        if (c.holdCombatSnapshots) c.heldSnapshot = m.snapshot;
+        else c.snapshot = m.snapshot;
+      }
+    });
     ws.on('error', () => {});
     await new Promise((resolve, reject) => { ws.once('open', resolve); ws.once('error', reject); });
     c.send = (m) => ws.send(JSON.stringify({ v: PROTOCOL_VERSION, ...m }));
@@ -147,20 +155,58 @@ for (const mode of (process.env.CROSSFIRE_SCORING_ONLY ? ['ffa'] : ['ffa', 'team
         const a = await open(weapon), b = await open();
         if (mode === 'teams') assert.notEqual(me(a).team, me(b).team);
         await place(a, b, weapon === 'shotgun' ? [[-3, 0, 1], [-3, 0, -1]] : undefined); await aim(a, b);
+        const victimLife = me(b).life;
+        const marks = new Map([a, b].map((c) => [c, c.messages.length]));
+        const teamBefore = mode === 'teams' ? a.snapshot.match.teamScores[me(a).team] : null;
+        if (weapon === 'shotgun') a.holdCombatSnapshots = b.holdCombatSnapshots = true;
         const result = await shot(a, b);
         assert.equal(result.hits.length, 1); assert.equal(result.hits[0].id, b.id);
         assert.equal(result.hits[0].amount, expected); assert.equal(result.hits[0].head, false);
-        assert.equal(me(a).score, expected === 100 ? 100 : 0, 'only lethal hits award points');
+        assert.equal(result.hits[0].health, 100 - expected);
+        assert.equal(result.hits[0].killed, expected === 100);
         const direction = result.hits[0].direction;
         assert.ok(Math.abs(Math.hypot(direction.x, direction.y, direction.z) - 1) < .001);
         const dx = b.position[0] - a.position[0], dy = b.position[1] + .9 - a.position[1] - 1.64, dz = b.position[2] - a.position[2];
         const aimLength = Math.hypot(dx, dy, dz);
         assert.ok((direction.x * dx + direction.y * dy + direction.z * dz) / aimLength > .96,
           'incoming direction follows the actual aimed shot, including pellet spread');
-        assert.equal(result.hits[0].life, me(b).life);
-        for (const c of [a, b]) await wait(c, (m) => m.type === 'snapshot' && m.snapshot.players.some((p) => p.id === b.id && p.life === 1 && p.health === 100 - expected));
-        assert.equal(me(a).grenades, expected === 100 ? 2 : 1, 'nonlethal damage grants no grenade; lethal damage grants exactly one');
-        if (weapon === 'shotgun') { assert.equal(result.hits[0].killed, true); assert.equal(me(a).kills, 1); assert.equal(me(b).deaths, 1); }
+        assert.equal(result.hits[0].life, victimLife);
+        // A shot event confirms the hit, not delivery of the following snapshot.
+        // Wait for damage only, then assert score in that SAME transaction. A
+        // real missing award must still fail, rather than waiting for score=100.
+        const confirmed = await Promise.all([a, b].map(async (c) => (await wait(c,
+          (m) => m.type === 'snapshot' && m.snapshot.players.some((p) => p.id === b.id
+            && p.life === victimLife && p.health === 100 - expected), marks.get(c))).snapshot));
+        for (const snapshot of confirmed) {
+          const attacker = snapshot.players.find((p) => p.id === a.id);
+          const victim = snapshot.players.find((p) => p.id === b.id);
+          assert.equal(attacker.score, expected === 100 ? 100 : 0, 'only lethal hits award points');
+          assert.equal(attacker.grenades, expected === 100 ? 2 : 1, 'nonlethal damage grants no grenade; lethal damage grants exactly one');
+          assert.equal(attacker.kills, expected === 100 ? 1 : 0);
+          assert.equal(victim.deaths, expected === 100 ? 1 : 0);
+          assert.equal(victim.alive, expected !== 100);
+          if (weapon === 'shotgun') {
+            assert.equal(victim.death.killerId, a.id); assert.equal(victim.death.weapon, 'shotgun');
+            assert.equal(victim.death.victimLife, victimLife); assert.equal(victim.death.head, false);
+            assert.deepEqual(victim.death.award, { base: 100, headshot: 0, combo: 0, comboCount: 1, total: 100 });
+            if (mode === 'teams') assert.equal(snapshot.match.teamScores[attacker.team], teamBefore + 1);
+          }
+        }
+        if (weapon === 'shotgun') {
+          assert.equal(me(a).score, 0, 'the regression retains the real pre-shot cache while confirmed packets arrive');
+          for (const c of [a, b]) {
+            const events = c.messages.slice(marks.get(c)).filter((m) => m.type === 'elimination'
+              && m.elimination.victimId === b.id && m.elimination.victimLife === victimLife);
+            assert.equal(events.length, 1, 'one shotgun blast awards one elimination, not one per pellet');
+            assert.deepEqual(events[0].elimination, confirmed[0].players.find((p) => p.id === b.id).death);
+            c.holdCombatSnapshots = false; c.snapshot = c.heldSnapshot;
+          }
+          const replay = await stub.replayDeadTransitionForTest(b.id, a.id);
+          assert.equal(replay.players.find((p) => p.id === a.id).score, 100, 'replaying a lethal shotgun transition cannot double-award');
+          assert.equal(replay.players.find((p) => p.id === a.id).grenades, 2);
+          assert.equal(replay.players.find((p) => p.id === a.id).kills, 1);
+          assert.equal(replay.players.find((p) => p.id === b.id).deaths, 1);
+        }
         await leave(a); await leave(b);
       });
     }

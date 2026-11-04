@@ -1,3 +1,46 @@
+# Shotgun combat integration scoring assertion
+
+Completed and verified locally 2026-11-03. Focused fix in
+`server/tests/combat.mjs`; no production gameplay,
+weapon values, scoring rules, protocol, hosting or deployment configuration changed.
+
+Root cause: `shot()` waits for real shot events on both peers, which precede the
+following authoritative snapshot. The test immediately read `me(a).score` from
+its cached pre-shot snapshot, before its existing damage-snapshot wait. Shotgun
+is the only lethal body hit in that four-weapon table, so only it expected 100
+instead of the same zero present before and after the nonlethal shots. The server
+had already eliminated the target and synchronously awarded the points.
+
+The fix waits with the existing utility for each peer's post-shot victim-life /
+health confirmation, then asserts scoring and inventory in that exact snapshot.
+It does not wait for an expected score to appear: a genuinely dead target with
+an absent award still fails. No new sleep or timeout was added.
+
+Regression coverage holds the actual pre-shot client cache while recording all
+real socket packets, deterministically reproducing the original stale-cache
+condition in FFA and Teams. Confirmed packets must show zero HP, dead victim,
+100 base points with no headshot/combo bonus, one kill/death, one grenade reward,
+one matching elimination event per peer and the Teams score increment. Replaying
+the already-dead transition must not duplicate points, kills, deaths or rewards.
+The original assertion fails under this regression setup; the fix passes it.
+
+Final verification, all completed:
+
+- Focused lethal shotgun cases in FFA and Teams: **4/4 passing** including their
+  parent tests. CLI filtering was used for this focused run only; the subsequent
+  full suite ran unfiltered. Log: `test-results/shotgun-scoring-focused.log`.
+- `npm test --prefix server`: **60/60 passing**, including the Worker dry-run
+  build, all combat/grenade/Powerups/scoring tests, lifecycle, reconnect, careers,
+  maps, stairs and ladders. Log: `test-results/shotgun-scoring-backend.log`.
+- `npm run test:protocol`: **1/1 passing**, with another Worker dry-run build and
+  the real frontend transport talking to local workerd.
+  Log: `test-results/shotgun-scoring-protocol.log`.
+- `node --check server/tests/combat.mjs` and `git diff --check` passed.
+
+Only `server/tests/combat.mjs` and this progress entry changed. Protocol stays
+v17. No frontend or Worker redeployment is required for this test-only fix. No
+commit, push or deployment performed; stopped after verification.
+
 # Powerups multiplayer mode
 
 Completed locally 2026-11-03, including the final verification requested in the
