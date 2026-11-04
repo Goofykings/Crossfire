@@ -37,3 +37,26 @@ it('uses a monotonic server anchor and rejects stale state, invalid schemas and 
   vi.stubGlobal('fetch',vi.fn().mockResolvedValue(new Response(JSON.stringify({v:PROTOCOL_VERSION,credential,profile:{...view,gems:-1}}))));
   await expect(client.ensure()).rejects.toThrow('Invalid challenge response');
 });
+
+it('reads versioned rankings and personal totals using the private credential header, rejects wrong selections',async()=>{
+ const view=careerView(createCareer('id',now),now),client=new CareerClient(url,disk());
+ const fetch=vi.fn().mockResolvedValue(new Response(JSON.stringify({v:PROTOCOL_VERSION,credential,profile:view})));vi.stubGlobal('fetch',fetch);await client.ensure();
+ const board={version:1,period:'all',metric:'kills',start:0,serverTime:now,rows:[],own:null};
+ const personal={version:1,serverTime:now,totals:{kills:0,deaths:0,points:0,wins:0,games:0,gems:0}};
+ fetch.mockImplementation((url:URL)=>Promise.resolve(Response.json(url.pathname==='/leaderboard'?board:personal)));
+ const controller=new AbortController();expect((await client.statistics('all','kills',controller.signal)).personal).toEqual(personal);
+ for(const [endpoint,options]of fetch.mock.calls.slice(1)){
+  expect(String(endpoint)).not.toContain(credential);expect(options.headers.Authorization).toBe(`Bearer ${credential}`);expect(options.signal).toBe(controller.signal);
+ }
+ await expect(client.statistics('daily','kills',controller.signal)).rejects.toThrow('incompatible');
+});
+
+it('keeps public rankings available when a stored profile is unavailable, without inventing personal stats',async()=>{
+ const client=new CareerClient(url,null);
+ const board={version:1,period:'all',metric:'kills',start:0,serverTime:now,rows:[],own:null};
+ const fetch=vi.fn().mockImplementation((input:URL|string)=>Promise.resolve(String(input).includes('/leaderboard')?Response.json(board):new Response('{}',{status:503})));
+ vi.stubGlobal('fetch',fetch);
+ const result=await client.statistics('all','kills',new AbortController().signal);
+ expect(result.board).toEqual(board);expect(result.personal).toBeNull();
+ expect(fetch.mock.calls.some(([u])=>String(u).includes('/stats'))).toBe(false);
+});

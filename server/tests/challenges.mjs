@@ -21,6 +21,7 @@ for(const mode of ['kills','eligible','late','abandoned'])test(`durable guest ch
   const me=c=>c.snapshot?.players.find(p=>p.id===c.id);
   const http=(method='GET',credential,body)=>fetch(new URL('/profile',base),{method,headers:{Origin:origin,...(credential?{Authorization:`Bearer ${credential}`}:{})},...(body?{body}:{} )});
   const profile=async credential=>{const r=await http('GET',credential);assert.equal(r.status,200);return (await r.json()).profile;};
+  const statistics=async credential=>{const r=await fetch(new URL('/stats',base),{headers:{Origin:origin,Authorization:`Bearer ${credential}`}});assert.equal(r.status,200);return (await r.json()).totals;};
   async function open(credential,resume){
     const c={ws:new WebSocket(new URL('/ws',base).href.replace('http:','ws:'),{origin}),messages:[],seq:0,profile:null};clients.push(c);
     c.ws.on('message',raw=>{const m=JSON.parse(String(raw));c.messages.push(m);if(m.snapshot)c.snapshot=m.snapshot;if(m.type==='career')c.profile=m.profile;});c.ws.on('error',()=>{});
@@ -77,10 +78,13 @@ for(const mode of ['kills','eligible','late','abandoned'])test(`durable guest ch
     if(mode==='kills'){
       await until(()=>a.profile?.gems===1050,'all six rewards');
       assert.equal(me(a).kills,1);assert.equal(a.profile.gems,1050);
+      assert.deepEqual(await statistics(created.credential),{kills:1,deaths:0,points:150,wins:0,games:0,gems:1050},'actual kill and rewards update lifetime statistics before round end');
+      assert.equal((await statistics(other.credential)).deaths,1,'confirmed death records on the victim');
       assert.ok(a.profile.daily.challenges.every(c=>c.completedAt!==null));
       assert.ok(a.profile.weekly.challenges.every(c=>c.completedAt!==null));
       await room.replayDeadTransitionForTest(b.id,a.id);
       assert.equal((await profile(created.credential)).gems,1050,'duplicate death cannot re-award');
+      assert.equal((await statistics(created.credential)).kills,1,'duplicate death cannot duplicate lifetime awards');
       assert.equal(b.profile.gems,0,'currency frames are private');
       await room.ageCareerForTest(a.id);
       const reset=await profile(created.credential);
@@ -98,12 +102,14 @@ for(const mode of ['kills','eligible','late','abandoned'])test(`durable guest ch
       const expected=mode==='eligible'?1050:mode==='late'?700:0;
       await until(async()=>(await profile(created.credential)).gems===expected,'round rewards');
       assert.equal((await profile(created.credential)).gems,expected);
+      const totals=await statistics(created.credential);assert.equal(totals.games,Number(mode==='eligible'));assert.equal(totals.wins,Number(mode==='eligible'));assert.equal(totals.gems,expected);
       await room.alarmForTest();assert.equal((await profile(created.credential)).gems,expected,'repeated round wakeup cannot award twice');
     }
-    const saved=await profile(created.credential);
+    const saved=await profile(created.credential),savedStats=await statistics(created.credential);
     for(const c of clients){clearInterval(c.timer);c.ws.terminate();}await delay(100);
     room[Symbol.dispose]?.();room=null;await mf.dispose();mf=new Miniflare(options);base=(await mf.ready).href;
     assert.equal((await profile(created.credential)).gems,saved.gems,'wallet survives runtime restart without a room session');
+    assert.deepEqual(await statistics(created.credential),savedStats,'all lifetime statistics survive a complete runtime restart');
     assert.deepEqual((await profile(created.credential)).daily,saved.daily);
   }finally{for(const c of clients){clearInterval(c.timer);c.ws.terminate();}room?.[Symbol.dispose]?.();await mf.dispose();}
 });

@@ -4,6 +4,30 @@
 import { PublicRoom as ProductionRoom } from '../dist/index.js';
 export { default } from '../dist/index.js';
 export class PublicRoom extends ProductionRoom {
+  async legacyWalletForStatisticsTest(credential,gems) {
+    const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(credential));
+    const id=[...new Uint8Array(digest)].map(n=>n.toString(16).padStart(2,'0')).join('');
+    const p=await this.careers.load(id);if(!p)throw new Error('Requires a real issued wallet');
+    p.gems=gems;p.revision++;this.careers.mark(id);await this.persist();
+  }
+  async statisticsFixtureForTest(credential,name,events) {
+    const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(credential));
+    const id=[...new Uint8Array(digest)].map(n=>n.toString(16).padStart(2,'0')).join('');
+    if(!await this.careers.load(id))throw new Error('Requires a real server-issued profile');
+    await this.statistics.load(id,name);
+    for(const event of events)this.statistics.event(id,event);
+    await this.persist();
+  }
+  async statisticsProjectionRecoveryForTest(credential, remove = true) {
+    const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(credential));
+    const identity=[...new Uint8Array(digest)].map(n=>n.toString(16).padStart(2,'0')).join('');
+    await this.statistics.project();
+    const record=await this.ctx.storage.get('statistics:'+identity);
+    if(!record)throw new Error('Requires persisted statistics');
+    // Emulate interruption after the authoritative KV save, before projection.
+    if(remove)this.ctx.storage.sql.exec('DELETE FROM statistics_rankings WHERE id=?',record.id);
+    await this.ctx.storage.put(`statistics-index:${identity}:${String(record.revision).padStart(16,'0')}`,record);
+  }
   async powerupArenaForTest() {
     const world=this.activeMap.world;
     for(const target of this.powerups.pool) for(const source of this.powerups.pool) {
@@ -226,6 +250,12 @@ export class PublicRoom extends ProductionRoom {
     this.ensureRound();
     await this.persist();
     return this.snapshot();
+  }
+  async outsideForTest(id, nonFinite = false) {
+    const entry = this.players.get(id);
+    if (!entry?.session.alive) throw new Error('Test requires a spawned real session');
+    entry.controller.position.x = nonFinite ? NaN : this.activeMap.layout.outerLimit + 1;
+    this.start();
   }
   async fallForTest(id) {
     const entry = this.players.get(id);

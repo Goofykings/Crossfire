@@ -137,3 +137,82 @@ test('authoritative ladders: real movement, peer synchronization, release and re
     await mf.dispose();
   }
 });
+
+
+test('swept wall movement and secondary recovery synchronize across real peers on all maps', {timeout:90000}, async()=>{
+  const origin='http://localhost:5173',clients=[];
+  const mf=new Miniflare(convertV4MiniflareOptions({name:'collision-safety',
+    modules:[{type:'ESModule',path:fileURLToPath(new URL('runtime-fixture.mjs',import.meta.url))},
+      {type:'ESModule',path:fileURLToPath(new URL('../dist/index.js',import.meta.url))}],
+    compatibilityDate:'2026-10-25',host:'127.0.0.1',port:0,durableObjects:{ROOM:{className:'PublicRoom',useSQLite:true}},
+    bindings:{ALLOWED_ORIGINS:origin,MATCH_MODE:'ffa'},log:new Log(LogLevel.ERROR)}));
+  const until=async fn=>{const end=Date.now()+6000;while(Date.now()<end){const v=fn();if(v)return v;await delay(10);}throw Error('Collision peer timeout');};
+  const me=c=>c.snapshot?.players.find(p=>p.id===c.id);
+  try{
+    const base=(await mf.ready).href,ns=await mf.getDurableObjectNamespace('ROOM'),room=ns.get(ns.idFromName('public-main'));
+    const {protocol:v}=await (await fetch(new URL('/health',base))).json();
+    async function open(token){
+      const c={ws:new WebSocket(new URL('/ws',base).href.replace('http:','ws:'),{origin}),messages:[],seq:0};clients.push(c);
+      c.ws.on('message',raw=>{const m=JSON.parse(String(raw));c.messages.push(m);if(m.snapshot)c.snapshot=m.snapshot;});c.ws.on('error',()=>{});
+      await new Promise((resolve,reject)=>{c.ws.once('open',resolve);c.ws.once('error',reject);});
+      c.send=m=>c.ws.send(JSON.stringify({v,...m}));c.send({type:'join',name:'Wall regression',...(token?{resumeToken:token}:{})});
+      const welcome=await until(()=>c.messages.find(m=>m.type==='welcome'));c.id=welcome.selfId;c.token=welcome.resumeToken;c.seq=me(c).ack;
+      c.timer=setInterval(()=>{if(c.ws.readyState===WebSocket.OPEN)c.send({type:'ping',at:Date.now()});},500);
+      c.ws.once('close',()=>clearInterval(c.timer));return c;
+    }
+    let a=await open();const b=await open();let mapIndex=0;
+    for(const id of ['european-town','industrial-complex','modern-city']){
+      let round=await room.snapshotForTest();while(round.mapId!==id)round=await room.advanceMapForTest();
+      await until(()=>a.snapshot.mapId===id&&b.snapshot.mapId===id);
+      const weapons=[['rifle','sniper'],['smg','shotgun'],['shotgun','rifle']][mapIndex++];
+      for(const [i,c]of [a,b].entries())c.send({type:'spawn',roundId:c.snapshot.roundId,mapVersion:c.snapshot.mapVersion,weapon:weapons[i],requestId:crypto.randomUUID()});
+      await until(()=>me(a).alive&&me(b).alive);
+      const arena=await room.wallArenaForTest(),[start,end]=arena.pair;
+      const dx=end[0]-start[0],dz=end[2]-start[2],distance=Math.hypot(dx,dz),nx=dx/distance,nz=dz/distance;
+      const center=[(start[0]+end[0])/2,(start[2]+end[2])/2],half=distance/2-1.2;
+      for(const [i,c]of [a,b].entries()){
+        const sign=i===0?1:-1,heading=Math.atan2(nx*sign,-nz*sign)*180/Math.PI;
+        await room.placeForCombatTest(c.id,arena.pair[i],heading);c.yaw=-heading*Math.PI/180;
+      }
+      for(let n=0;n<240;n+=6){
+        for(const c of [a,b]){
+          const frames=Array.from({length:6},(_,i)=>({seq:++c.seq,yaw:c.yaw,pitch:0,
+            intent:{...{x:0,z:1,aim:n%40<20,slide:n%160<100,jumpPressed:false}},combat:{trigger:false,reload:false}}));
+          c.send({type:'input',roundId:c.snapshot.roundId,mapVersion:c.snapshot.mapVersion,frames});
+        }
+        await until(()=>[a,b].every(c=>me(c).ack>=c.seq));
+        for(const [i,c]of [a,b].entries()){
+          const p=me(c).motion.position,signed=(p.x-center[0])*nx+(p.z-center[1])*nz;
+          assert.ok(i===0?signed<=-half-.339:signed>=half+.339,`${id} crossed ${arena.wall}: ${JSON.stringify(p)}`);
+          assert.ok(p.y>=-.001);assert.equal(me(c).health,100);assert.equal(me(c).alive,true);
+          assert.equal(c.messages.filter(m=>m.type==='error').length,0);
+        }
+      }
+      const final=me(a),other=await until(()=>b.snapshot.players.find(p=>p.id===a.id&&p.ack===final.ack));
+      assert.deepEqual(other.motion.position,final.motion.position,'both peers see identical authoritative wall stop');
+    }
+    const before=me(a),id=a.id,token=a.token;
+    a.ws.close();await until(()=>a.ws.readyState===WebSocket.CLOSED);a=await open(token);
+    assert.equal(a.id,id);assert.equal(me(a).life,before.life);assert.equal(me(a).health,before.health);
+    assert.deepEqual(me(a).motion.position,before.motion.position);assert.equal(a.snapshot.players.length,2);
+    await room.outsideForTest(a.id);await until(()=>!me(a).alive&&me(a).death);
+    const recovered=me(a);assert.equal(recovered.deaths,before.deaths+1);
+    assert.equal(recovered.score,before.score);assert.equal(recovered.death.killerId,null);
+    // Repeated real ticks cannot kill or award the already-dead session twice.
+    b.send({type:'input',roundId:b.snapshot.roundId,mapVersion:b.snapshot.mapVersion,
+      frames:Array.from({length:6},()=>({seq:++b.seq,yaw:b.yaw,pitch:0,
+        intent:{x:0,z:0,aim:false,slide:false,jumpPressed:false},combat:{trigger:false,reload:false}}))});
+    await until(()=>me(b).ack>=b.seq&&a.snapshot.serverTime>=b.snapshot.serverTime);
+    assert.equal(me(a).deaths,recovered.deaths);assert.equal(me(a).score,recovered.score);
+    await until(()=>Date.now()>=me(a).death.respawnAt);
+    a.send({type:'spawn',roundId:a.snapshot.roundId,mapVersion:a.snapshot.mapVersion,weapon:'smg',requestId:crypto.randomUUID()});
+    await until(()=>me(a).alive);assert.equal(me(a).life,before.life+1);
+    const p=me(a).motion.position;assert.ok(Math.abs(p.x)<28&&Math.abs(p.z)<28&&p.y>=0,'normal validated respawn recovers inside map');
+    await room.fallForTest(a.id);await until(()=>!me(a).alive);assert.equal(me(a).deaths,recovered.deaths+1);
+    await until(()=>Date.now()>=me(a).death.respawnAt);
+    a.send({type:'spawn',roundId:a.snapshot.roundId,mapVersion:a.snapshot.mapVersion,weapon:'rifle',requestId:crypto.randomUUID()});
+    await until(()=>me(a).alive);await room.outsideForTest(a.id,true);await until(()=>!me(a).alive);
+    assert.equal(me(a).deaths,recovered.deaths+2);
+    const clean=me(a).motion;assert.ok([clean.position.x,clean.position.y,clean.position.z,clean.velocity.x,clean.velocity.y,clean.velocity.z].every(Number.isFinite),'recovery preserves valid motion even in dead snapshots');
+  }finally{for(const c of clients){clearInterval(c.timer);c.ws.terminate();}await mf.dispose();}
+});

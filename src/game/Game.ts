@@ -1,3 +1,4 @@
+import { unsafeMovement } from '../../shared/movementSafety';
 import { PowerupView } from './PowerupView';
 import { maxHealth, POWERUP_STYLE } from '../../shared/powerups';
 import { GrenadeCharge } from '../../shared/grenadeCharge';
@@ -276,6 +277,7 @@ export class Game {
     this.presence.start();
     if (this.multiplayerBackend.ok) {
       this.career = new CareerClient(this.multiplayerBackend.url);
+      this.ui.leaderboard.request = (period,metric,signal) => this.career!.statistics(period,metric,signal);
       this.career.onChange = () => this.ui.challenges.set(this.career!.view, this.career!.error, this.career!.temporary);
       this.ui.challenges.onRetry = this.ui.challenges.onReset = () => { void this.career?.ensure().catch(() => {}); };
       this.career.start(() => this.ui.currentScreen === 'menu');
@@ -612,6 +614,8 @@ export class Game {
       if (this.state !== 'spectating' || this.spectatingDeath?.id !== self.death.id) this.beginSpectating(self.death);
       else this.spectatingDeath = self.death;
     } else if (this.state === 'playing' || this.state === 'spectating' || (this.state === 'paused' && !this.preSpawnPaused)) this.showPreSpawn();
+    this.ui.damage.observeHealth({ id: self.id, life: self.life, round: snapshot.roundId,
+      at: snapshot.serverTime, health: self.health, max: maxHealth(self), alive: self.alive });
   }
 
   private presentRoundResult(snapshot: Snapshot): boolean {
@@ -1080,7 +1084,7 @@ export class Game {
       for (const e of events) this.onWeaponEvent(e);
       map.targets.update(FIXED_DT);
       this.footsteps(FIXED_DT);
-      if (!this.options.multiplayer && player.position.y < map.def.collision.killY) this.spawn();
+      if (!this.options.multiplayer && (unsafeMovement(player.position, map.def.layout) || player.position.y < map.def.collision.killY)) this.spawn();
       jumpEdge = fireEdge = reloadEdge = grenadeEdge = false;
       this.acc -= FIXED_DT;
     }

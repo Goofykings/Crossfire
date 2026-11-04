@@ -1,3 +1,5 @@
+import { Statistics } from './statistics';
+import { unsafeMovement } from '../../shared/movementSafety';
 import { leanOffset, safeLean } from '../../shared/lean';
 import { activatePowerup, expirePowerup, absorbDamage, applyBurn, advanceBurn, maxHealth, powerupScale, canGrow, pickupLocations, PowerupField, type PowerupFieldState, type PowerupPlayer } from '../../shared/powerups';
 import { sweepSphere } from '../../shared/grenades';
@@ -91,6 +93,15 @@ export default {
       return Response.json({ ok: true, service: 'crossfire-multiplayer', stage: 2, protocol: PROTOCOL_VERSION,
         room: PUBLIC_ROOM, release: env.RELEASE_SHA ?? 'local' }, { headers: { 'Cache-Control': 'no-store' } });
     }
+    if (url.pathname === '/leaderboard' || url.pathname === '/stats') {
+      const origin=request.headers.get('Origin');
+      if(!origin||!env.ALLOWED_ORIGINS.split(',').map(s=>s.trim()).includes(origin))return new Response('Origin denied',{status:403});
+      const headers={'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Methods':'GET, OPTIONS','Access-Control-Allow-Headers':'Authorization','Cache-Control':'no-store','Vary':'Origin'};
+      if(request.method==='OPTIONS')return new Response(null,{status:204,headers});
+      if(request.method!=='GET')return new Response('Method not allowed',{status:405,headers});
+      const response=await env.ROOM.getByName(PUBLIC_ROOM).fetch(request);
+      return new Response(response.body,{status:response.status,headers:{...headers,'Content-Type':'application/json'}});
+    }
     if (url.pathname === '/profile') {
       const origin = request.headers.get('Origin');
       if (!origin || !env.ALLOWED_ORIGINS.split(',').map(s => s.trim()).includes(origin)) return new Response('Origin denied', { status:403 });
@@ -133,6 +144,7 @@ export default {
 export class PublicRoom extends DurableObject<Bindings> {
   private readonly players = new Map<string, Entry>();
   private readonly careers = new Careers(this.ctx.storage, () => new Set([...this.players.values()].flatMap(e => e.session.profileId ? [e.session.profileId] : [])));
+  private readonly statistics = new Statistics(this.ctx.storage);
   private readonly careerSent = new Map<string, number>();
   private timer: ReturnType<typeof setInterval> | null = null;
   private lastTick = Date.now();
@@ -181,7 +193,10 @@ export class PublicRoom extends DurableObject<Bindings> {
       this.powerups=new PowerupField(this.mode==='powerups'?pickupLocations(this.activeMap.layout,this.activeMap.world):[],this.round.id,Date.now(), await ctx.storage.get<PowerupFieldState>('powerups'));
       const stored = await ctx.storage.get<Session[]>('sessions') ?? [];
       const attachments = ctx.getWebSockets().map(s => (s.deserializeAttachment() as Attachment)?.session);
-      await Promise.all([...new Set([...stored, ...attachments].flatMap(s => s?.profileId ? [s.profileId] : []))].map(id => this.careers.load(id)));
+      await Promise.all([...new Set([...stored, ...attachments].flatMap(s => s?.profileId ? [s.profileId] : []))].map(async id => {
+        const p=await this.careers.load(id),session=[...attachments,...stored].find(s=>s?.profileId===id);
+        if(p&&session)await this.statistics.load(id,session.name,p.gems);
+      }));
       this.grenades = ((await ctx.storage.get<unknown[]>('grenades')) ?? []).filter(validGrenade).filter(g=>g.roundId===this.round.id);
       this.explosions = ((await ctx.storage.get<unknown[]>('explosions')) ?? []).filter(validExplosion).filter(e=>e.roundId===this.round.id&&Date.now()-e.at<GRENADE_SMOKE_MS);
       for (const s of stored) {
@@ -283,6 +298,10 @@ export class PublicRoom extends DurableObject<Bindings> {
 
   async fetch(request: Request): Promise<Response> {
     this.ensureRound();
+    if (['/leaderboard','/stats'].includes(new URL(request.url).pathname)) return this.ctx.blockConcurrencyWhile(async()=>{
+      if(this.statistics.hasPending)await this.persist(); const response=await this.statistics.http(request);
+      if(this.statistics.hasPending)await this.persist(); return response;
+    });
     if (new URL(request.url).pathname === '/profile') return this.ctx.blockConcurrencyWhile(() => this.careers.http(request));
     if (new URL(request.url).pathname === '/presence') {
       return Response.json({ room: PUBLIC_ROOM, online: this.connected().length });
@@ -308,7 +327,7 @@ export class PublicRoom extends DurableObject<Bindings> {
   }
 
   private simulationNeeded(): boolean {
-    return (this.mode==='powerups' && [...this.players.values()].some(e=>e.session.alive && (!!e.session.burn || Math.abs(e.controller.eyeScale-e.controller.scale)>1e-8))) || this.environment.active>0 || this.grenades.length>0 || [...this.players.values()].some((e) => e.socket && e.session.alive && (e.queue.length > 0 || !e.controller.grounded
+    return (this.mode==='powerups' && [...this.players.values()].some(e=>e.session.alive && (!!e.session.burn || Math.abs(e.controller.eyeScale-e.controller.scale)>1e-8))) || this.environment.active>0 || this.grenades.length>0 || [...this.players.values()].some((e) => e.socket && e.session.alive && (e.queue.length > 0 || !!unsafeMovement(e.controller.position, this.activeMap.layout) || !e.controller.grounded
       || (e.controller.crouch !== Number(e.crouchHeld) && (e.crouchHeld || this.activeMap.world.ceilingHeight(
           e.controller.position.x, e.controller.position.z, MOVEMENT.radius * .95,
           e.controller.position.y + MOVEMENT.stepHeight + .01) >= e.controller.position.y + MOVEMENT.standHeight))
@@ -443,6 +462,7 @@ export class PublicRoom extends DurableObject<Bindings> {
     this.updateAbility(e, Date.now());
     regenerate(e.session, Date.now());
     expireCombo(e.session, Date.now());
+    if(profileId)await this.statistics.load(profileId,name,this.careers.profiles.get(profileId)!.gems);
     e.session.profileId = profileId;
     e.session.name = name;
     const old = e.socket;
@@ -570,6 +590,7 @@ export class PublicRoom extends DurableObject<Bindings> {
 
   private eliminate(victim: Entry, killer: Entry | null, head = false, direction: { x: number; y: number; z: number } | null = null, weapon?: 'grenade' | 'burn'): void {
     if (!victim.session.alive) return;
+    const eliminationId=crypto.randomUUID();
     victim.session.alive = false; victim.grenadeCharge?.reset();
     victim.session.health = 0;
     victim.session.powerup=null;victim.session.burn=null;this.syncAbility(victim);
@@ -585,12 +606,14 @@ export class PublicRoom extends DurableObject<Bindings> {
       credited.session.kills++;
       credited.session.grenades++; // Same exactly-once transaction as the authoritative kill award.
       if (this.mode === 'teams' && credited.session.team) this.scores[credited.session.team]++;
-      this.advanceCareer(credited, { kind:'kill', weapon:weapon ?? credited.session.weapon!, head, points:award!.total }, at);
+      const gems=this.advanceCareer(credited, { kind:'kill', weapon:weapon ?? credited.session.weapon!, head, points:award!.total }, at);
+      this.statistics.event(credited.session.profileId,{kind:'kill',id:eliminationId,at,points:award!.total,gems});
       this.recordStanding(credited);
       if(!credited.session.alive)resetCombo(credited.session);
     }
     this.recordStanding(victim);
-    const elimination: import('../../shared/protocol').Elimination = { id: crypto.randomUUID(), victimLife: victim.session.life,
+    this.statistics.event(victim.session.profileId,{kind:'death',id:eliminationId,at});
+    const elimination: import('../../shared/protocol').Elimination = { id: eliminationId, victimLife: victim.session.life,
       award,
       direction, roundId: this.round.id, victimId: victim.session.id,
       victimName: victim.session.name, killerId: killer?.session.id ?? null, killerName: killer?.session.name ?? null,
@@ -770,8 +793,19 @@ export class PublicRoom extends DurableObject<Bindings> {
         const jumps=e.controller.extraJumpCount;
         e.controller.fixedUpdate(FIXED_DT, frame?.intent ?? { ...NO_INTENT, slide: e.controller.slideHeld, lean: e.leanHeld, crouch:e.crouchHeld });
         if(e.controller.extraJumpCount!==jumps)this.publish({v:PROTOCOL_VERSION,type:'powerup',event:{kind:'doubleJump',id:crypto.randomUUID(),roundId:this.round.id,at:now,playerId:e.session.id,life:e.session.life,position:{...e.controller.position}}});
-        if (e.controller.position.y < MOVEMENT.killY) {
+        const unsafe = unsafeMovement(e.controller.position, this.activeMap.layout);
+        if (unsafe || e.controller.position.y < MOVEMENT.killY) {
+          this.trace('movement_recovery', { reason: unsafe ?? 'kill_plane', id: e.session.id,
+            life: e.session.life, map: this.round.mapId, position: { ...e.controller.position } });
+          // Existing authoritative death/validated respawn flow, once per life. No
+          // enemy reward and no repeated teleport/penetration-correction loop.
           this.eliminate(e, null);
+          if (unsafe === 'non_finite') {
+            // Dead snapshots still require valid motion on the wire. Sanitize
+            // corrupted state at a geometry-validated spawn, without reviving it.
+            const safe = selectSpawn(this.activeMap.layout, this.activeMap.world, []);
+            if (safe) e.controller.teleport({ x: safe.pos[0], y: safe.pos[1], z: safe.pos[2] }, safe.heading);
+          }
           eliminated = true;
           e.queue.length = 0;
           e.received = e.session.ack;
@@ -876,13 +910,16 @@ export class PublicRoom extends DurableObject<Bindings> {
       e.session.motion = e.controller.capture();
       e.session.combat.gun = e.gun?.capture() ?? null;
     }
-    const views = this.careers.views(Date.now()), pending = this.careers.capture();
-    return this.ctx.storage.put({ ...pending.records, powerups:this.powerups.state, environment:{roundId:this.round.id,mapVersion:this.activeMap.revision,seq:this.environmentSeq,states:this.environment.capture()},grenades:this.grenades,explosions:this.explosions,'team-scores': this.scores, 'round-ledger': this.ledger, 'round-result': this.lastResult,
-      sessions: [...this.players.values()].map((e) => e.session) }).then(() => { this.careers.committed(pending.versions); this.sendCareerViews(views); });
+    const views = this.careers.views(Date.now()), pending = this.careers.capture(), stats=this.statistics.capture();
+    return this.ctx.storage.put({ ...pending.records, ...stats.records, powerups:this.powerups.state, environment:{roundId:this.round.id,mapVersion:this.activeMap.revision,seq:this.environmentSeq,states:this.environment.capture()},grenades:this.grenades,explosions:this.explosions,'team-scores': this.scores, 'round-ledger': this.ledger, 'round-result': this.lastResult,
+      sessions: [...this.players.values()].map((e) => e.session) }).then(() => { this.ctx.waitUntil(this.statistics.project()); this.careers.committed(pending.versions); this.statistics.committed(stats.versions,new Set([...this.players.values()].flatMap(e=>e.session.profileId?[e.session.profileId]:[]))); this.sendCareerViews(views); });
   }
-  private advanceCareer(e: Entry, event: ChallengeEvent, at: number): void {
+  private advanceCareer(e: Entry, event: ChallengeEvent, at: number): number {
     const id = e.session.profileId, profile = id ? this.careers.profiles.get(id) : null;
-    if (profile && id) { const revision=profile.revision;advanceChallenges(profile, id, event, at);if(profile.revision!==revision)this.careers.mark(id); }
+    if (!profile || !id) return 0;
+    const gems=profile.gems, revision=profile.revision;
+    advanceChallenges(profile, id, event, at);if(profile.revision!==revision)this.careers.mark(id);
+    return profile.gems-gems;
   }
   private finishCareerRound(result: RoundResult): void {
     const eligible = new Set<string>();
@@ -892,8 +929,10 @@ export class PublicRoom extends DurableObject<Bindings> {
       const standing=result.players?.find(s=>s.id===e.session.id);
       if(!standing)continue;
       eligible.add(id);p.lastMatchRound=result.roundId;this.careers.mark(id);
-      advanceChallenges(p,id,{kind:'round',won:!result.draw&&(result.mode==='teams'?standing.team===result.winningTeam:result.winner?.id===standing.id),
-        mvp:result.mvp?.id===standing.id,complete:participation.firstSpawn<=result.endedAt-600000+30000},result.endedAt);
+      const event:ChallengeEvent={kind:'round',won:!result.draw&&(result.mode==='teams'?standing.team===result.winningTeam:result.winner?.id===standing.id),
+        mvp:result.mvp?.id===standing.id,complete:participation.firstSpawn<=result.endedAt-600000+30000};
+      const gems=this.advanceCareer(e,event,result.endedAt);
+      this.statistics.event(id,{...event,round:result.roundId,id:`round:${result.roundId}`,at:result.endedAt,gems});
     }
   }
   private sendCareerViews(views: Map<string, CareerView>): void {

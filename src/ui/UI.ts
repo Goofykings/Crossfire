@@ -1,3 +1,4 @@
+import { LeaderboardPage } from './LeaderboardPage';
 import { PowerupHud } from './PowerupHud';
 import { readinessDeadline } from '../core/assetReadiness';
 import { ChallengesPanel } from './ChallengesPanel';
@@ -22,7 +23,7 @@ import type { RoundResult } from '../../shared/scoring';
 import { createRoundResults } from './RoundResults';
 import type { PlayerTeam } from '../../shared/combat';
 
-export type Screen = 'menu' | 'loading' | 'start' | 'spectate' | 'results' | 'weapons' | 'hud' | 'pause' | 'settings' | 'error';
+export type Screen = 'menu' | 'leaderboard' | 'loading' | 'start' | 'spectate' | 'results' | 'weapons' | 'hud' | 'pause' | 'settings' | 'error';
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, html?: string): HTMLElementTagNameMap[K] {
   const e = document.createElement(tag);
@@ -126,7 +127,6 @@ export class UI {
   private onlineCount!: HTMLElement;
   private homeHeader!: HTMLElement;
   private homeTabs: HTMLButtonElement[] = [];
-  private homeIndicator!: HTMLElement;
   private selectedName!: HTMLElement;
   private selectedPreview!: HTMLImageElement;
   private spawnButton!: HTMLButtonElement;
@@ -151,6 +151,7 @@ export class UI {
   readonly combatFeed: CombatFeed;
   readonly matchHud: MatchHud;
   readonly challenges: ChallengesPanel;
+  readonly leaderboard: LeaderboardPage;
   private resultBody!: HTMLElement;
 
   constructor(
@@ -164,6 +165,7 @@ export class UI {
     this.buildMenu();
     this.challenges = new ChallengesPanel(this.screens.get('menu')!);
     this.root.appendChild(this.challenges.account);
+    this.leaderboard = new LeaderboardPage(this.screen('leaderboard'), () => this.show('menu'));
     this.buildLoading();
     try { const saved = localStorage.getItem('crossfire.pending-weapon'); if (validWeapon(saved)) this.pendingWeapon = saved; } catch { /* Optional preference. */ }
     this.buildStart();
@@ -281,15 +283,11 @@ export class UI {
     const nav = el('nav', 'home-nav');
     nav.setAttribute('aria-label', 'Main navigation');
     this.homeTabs = [
-      this.button('Play', '', 'nav-button', () => { if (this.currentScreen === 'settings') this.closeSettings(); }),
+      this.button('Play', '', 'nav-button', () => { if (this.currentScreen === 'settings') this.closeSettings(); else this.show('menu'); }),
       this.button('Settings', '', 'nav-button', () => { if (this.currentScreen !== 'settings') this.openSettings('menu'); }),
+      this.button('Leaderboard', '', 'nav-button', () => { if (this.currentScreen === 'settings') this.closeSettings(); this.show('leaderboard'); }),
     ];
-    const indicator = el('span', 'nav-indicator');
-    this.homeIndicator = indicator;
-    indicator.setAttribute('aria-hidden', 'true');
-    const hoverIndicator = el('span', 'nav-hover-indicator');
-    hoverIndicator.setAttribute('aria-hidden', 'true');
-    nav.append(...this.homeTabs, hoverIndicator, indicator);
+    nav.append(...this.homeTabs);
     header.appendChild(nav);
     const actions = el('div', 'home-actions');
     actions.appendChild(this.button('Play', '', 'primary', () => this.onPlay()));
@@ -298,18 +296,6 @@ export class UI {
     actions.appendChild(this.onlineCount);
     s.append(backdropFrame, actions);
     this.root.appendChild(header);
-    const labels = new ResizeObserver(() => this.updateHomeIndicator());
-    for (const tab of this.homeTabs) labels.observe(tab.firstElementChild!);
-  }
-
-  private updateHomeIndicator(): void {
-    this.homeTabs.forEach((tab, index) => {
-      const text = tab.firstElementChild as HTMLElement;
-      if (text.offsetWidth) this.homeIndicator.parentElement!.style.setProperty(index === 0 ? '--play-underline-width' : '--settings-underline-width', `${text.offsetWidth + 24}px`);
-    });
-    const label = this.homeTabs.find((tab) => tab.hasAttribute('aria-current'))?.firstElementChild as HTMLElement | undefined;
-    // Use layout width so hover scaling never changes the underline's target size.
-    if (label?.offsetWidth) this.homeIndicator.style.setProperty('--underline-width', `${label.offsetWidth + 24}px`);
   }
 
   private buildLoading(): void {
@@ -973,16 +959,17 @@ export class UI {
     this.currentScreen = screen;
     document.body.dataset.screen = screen;
     const homeSettings = screen === 'settings' && this.settingsReturn === 'menu';
+    const ranking = screen === 'leaderboard';
     const home = screen === 'menu' || homeSettings;
-    document.body.dataset.homePage = homeSettings ? 'settings' : home ? 'play' : '';
+    document.body.dataset.homePage = ranking ? 'leaderboard' : homeSettings ? 'settings' : home ? 'play' : '';
     this.homeHeader.hidden = !home;
     this.challenges.account.hidden = screen !== 'menu';
-    this.homeHeader.dataset.page = homeSettings ? 'settings' : 'play';
+    this.homeHeader.dataset.page = ranking ? 'leaderboard' : homeSettings ? 'settings' : 'play';
     this.homeTabs.forEach((tab, i) => {
-      if (i === (homeSettings ? 1 : 0)) tab.setAttribute('aria-current', 'page');
+      if (i === (ranking ? 2 : homeSettings ? 1 : 0)) tab.setAttribute('aria-current', 'page');
       else tab.removeAttribute('aria-current');
     });
-    if (home) this.updateHomeIndicator();
+    if (ranking) this.leaderboard.show(); else this.leaderboard.hide();
     this.screens.get('settings')!.classList.toggle('home-settings', homeSettings);
     this.screens.get('menu')!.inert = homeSettings;
     this.screens.get('menu')!.setAttribute('aria-hidden', String(homeSettings || !home));

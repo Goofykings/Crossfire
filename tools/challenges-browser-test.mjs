@@ -58,7 +58,7 @@ try{
 
       window.fetch=(input,init)=>{const path=new URL(String(input),location.href).pathname;if(path==='/profile')window.__profileRequests.push(init?.method??'GET');
 
-        return realFetch(['/presence','/profile'].includes(path)?new URL(path,backend):input,init);};
+        const url=new URL(String(input),location.href);return realFetch(['/presence','/profile','/leaderboard','/stats'].includes(path)?new URL(url.pathname+url.search,backend):input,init);};
 
     },backend);
 
@@ -124,7 +124,7 @@ try{
   const seconds=text=>{const m=text.match(/(\d{2}):(\d{2}):(\d{2})/);return Number(m[1])*3600+Number(m[2])*60+Number(m[3]);};
   check(seconds(before)-seconds(after)>=0&&seconds(before)-seconds(after)<=2,'countdown is unaffected by an edited device clock');
 
-  await a.click('.home-nav .nav-button:last-of-type');await a.click('#tab-gameplay');
+  await a.click('.home-nav .nav-button:nth-of-type(2)');await a.click('#tab-gameplay');
 
   await a.$eval('.profile-setting input',e=>{e.value='Renamed Hero';e.dispatchEvent(new Event('input',{bubbles:true}));});await a.click('.settings-foot .primary');
 
@@ -180,6 +180,35 @@ try{
 
   check(await a.evaluate(()=>window.__profileRequests.every(method=>method==='GET')),'refresh reuses credential instead of minting a new guest');
 
+  const sockets=await a.evaluate(()=>window.__sockets.length);
+  check(await a.$$eval('.home-nav .nav-button',nodes=>nodes.map(n=>n.textContent).join(',')==='Play,Settings,Leaderboard'),'third home navigation option preserves the existing list');
+  await a.hover('.home-nav .nav-button:nth-of-type(2)');await delay(240);
+  check(await a.$eval('.home-nav .nav-button:nth-of-type(2)',e=>{const s=getComputedStyle(e,'::before');return s.opacity==='1'&&s.transform==='none'&&s.transitionProperty==='opacity'&&s.transitionDuration==='0.18s';}),'hover highlight fades independently with no sliding transform');
+  await a.mouse.move(0,0);await delay(240);
+  check(await a.$eval('.home-nav .nav-button:nth-of-type(2)',e=>getComputedStyle(e,'::before').opacity==='0'),'hover highlight fades out after pointer leaves');
+  check(await a.$$('.nav-indicator').then(nodes=>nodes.length===0),'shared sliding navigation indicator removed');
+  await a.click('.home-nav .nav-button:nth-of-type(3)');await a.waitForSelector('#leaderboard.visible');
+  await until(()=>a.$eval('.global-rankings',e=>e.textContent.includes('Renamed Hero')),'actual killer in global leaderboard');
+  check(await a.$eval('[data-period="all"]',e=>e.getAttribute('aria-pressed')==='true')&&await a.$eval('[data-metric="kills"]',e=>e.getAttribute('aria-pressed')==='true'),'default ALL and KILLS');
+  for(const period of ['daily','weekly','all'])for(const metric of ['kills','points','wins']){
+    await a.click(`[data-period="${period}"]`);await a.click(`[data-metric="${metric}"]`);
+    await until(()=>a.$eval('.leaderboard-status',e=>!e.textContent.includes('Loading')),'ranking response');
+    check(await a.$$eval('.leaderboard-tabs',groups=>groups.every(g=>g.querySelectorAll('[aria-pressed="true"]').length===1)),`${period}/${metric}: one active choice per group`);
+    check(await a.$$eval('.global-rankings tbody tr',(rows,metric)=>metric==='wins'?rows.length===0:rows.length===1&&rows[0].classList.contains('local')&&rows[0].cells[2].textContent===(metric==='kills'?'1':'150'),metric),`${period}/${metric}: real authoritative totals or honest empty state`);
+  }
+  await a.click('[data-metric="kills"]');await until(()=>a.$eval('.global-rankings tbody',e=>e.textContent.includes('Renamed Hero')),'return to real kills for visual inspection');
+  await a.click('.stats-button');
+  check(await a.$eval('.personal-stats',e=>!e.hidden&&e.textContent.includes('1,050')&&e.textContent.includes('0.0%')&&e.textContent.includes('\u2014')),'My Stats shows lifetime earned gems and safe ratios');
+  await a.click('.leaderboard-heading h2');check(await a.$eval('.personal-stats',e=>e.hidden),'outside click closes My Stats');
+  await a.click('.stats-button');await a.click('.stats-button');check(await a.$eval('.personal-stats',e=>e.hidden),'My Stats toggles closed');
+  for(const [width,height]of [[1280,720],[960,540],[640,480],[390,640]]){
+    await a.setViewport({width,height});await a.click('.stats-button');
+    check(await a.evaluate(()=>{const p=document.querySelector('.personal-stats').getBoundingClientRect(),heading=document.querySelector('.leaderboard-heading').getBoundingClientRect(),body=document.querySelector('.leaderboard-content').getBoundingClientRect();return p.left>=0&&p.right<=innerWidth&&p.bottom<=innerHeight&&heading.top>=0&&body.bottom<=innerHeight;}),`${width}x${height}: page and statistics panel fit`);
+    await a.screenshot({path:`${out}/leaderboard-${width}x${height}.png`});await a.keyboard.press('Escape');
+  }
+  await a.setViewport({width:1280,height:720});
+  await a.click('.leaderboard-heading > .btn');check(await a.$('#menu.visible'),'Back returns home');
+  check(await a.evaluate(n=>window.__sockets.length===n,sockets),'leaderboard and stats requests create no additional gameplay sockets');
   check(errors.length===0,`no browser, HTTP or asset failures: ${errors.join(', ')}`);
 
   fs.writeFileSync(`${out}/results.json`,JSON.stringify({checks,errors},null,2));

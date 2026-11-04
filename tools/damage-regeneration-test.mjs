@@ -36,7 +36,7 @@ try {
   while (round.mapId !== 'european-town') round = await room.advanceMapForTest();
   const executablePath = [process.env.CHROME_PATH, 'C:/Program Files/Google/Chrome/Application/chrome.exe',
     'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'].filter(Boolean).find((p) => fs.existsSync(p));
-  browser = await puppeteer.launch({ executablePath, headless: true, pipe: true, protocolTimeout: 240000,
+  browser = await puppeteer.launch({ executablePath, headless: true, pipe: true, timeout: 120000, protocolTimeout: 240000,
     defaultViewport: { width: 800, height: 600 },
     args: ['--ignore-gpu-blocklist', '--enable-gpu', '--use-angle=d3d11', '--disable-background-timer-throttling', '--disable-renderer-backgrounding'] });
   const context = await browser.createBrowserContext(); page = await context.newPage();
@@ -68,7 +68,7 @@ try {
       const c = window.__damageCase, e = document.querySelector('.damage-edges');
       if (!c || !e || !c.shots.length || performance.now() - c.hitAt > 900) return;
       c.samples.push({ age: performance.now() - c.hitAt, hit: c.shots.length, opacity: Number(e.style.opacity), css: e.style.cssText,
-        weights: Object.fromEntries(['left', 'right', 'top', 'bottom'].map((k) => [k, Number(e.style.getPropertyValue(`--damage-${k}`))])) });
+        weights: Object.fromEntries(['left', 'right', 'top', 'bottom'].map((k) => [k, Number(e.style.getPropertyValue(`--edge-${k}`))])) });
     }, 16);
   }, backend);
   page.on('pageerror', (e) => errors.push(String(e)));
@@ -108,14 +108,15 @@ try {
     await page.evaluate((name) => { window.__crossfire.look(0, 0); window.__damageCase = { name, shots: [], samples: [] }; }, name);
     const source = arena.sources[name]; await room.placeForCombatTest(id, source);
     await shoot(source);
+    if (name === 'right') { await delay(100); await page.screenshot({path:`${out}/damage-gameplay.png`}); }
     if (name === 'left') { await delay(200); await shoot(source, false); }
-    await delay(720);
+    await delay(900);
     const data = await page.evaluate(() => window.__damageCase); results.push(data);
     const peak = data.samples.filter((s) => s.hit === 1 && s.age < 160).sort((a, b) => b.opacity - a.opacity)[0];
-    check(peak?.opacity > .2 && peak.opacity <= .8, `${name}: quick, bounded actual-hit effect`);
-    check(data.samples.filter((s) => s.age >= 560).every((s) => s.opacity === 0), `${name}: fades completely in about 0.5s`);
+    check(peak?.opacity > .2 && peak.opacity <= .9, `${name}: quick, bounded actual-hit effect`);
+    check(data.samples.filter((s) => s.age >= 700).every((s) => s.opacity === 0), `${name}: fades completely in 625ms`);
     if (name === 'right') check(data.samples.some((s) => s.age > 200 && s.age < 450 && s.weights.top > s.weights.right), 'turning current camera moves the real-hit haze to the front');
-    if (name === 'left') check(data.shots.length === 2 && data.samples.every((s) => s.opacity <= .8), 'consecutive confirmed hits refresh without excess brightness');
+    if (name === 'left') check(data.shots.length === 2 && data.samples.every((s) => s.opacity <= .9), 'consecutive confirmed hits refresh without excess brightness');
     // Freeze only a clone of the real recorded HUD style for deterministic CSS
     // pixel inspection; this never calls hit(), supplies packets or changes health.
     await page.evaluate((css) => {
@@ -128,7 +129,11 @@ try {
       const img = new Image(); img.src = `data:image/png;base64,${png}`; await img.decode();
       const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const ctx = c.getContext('2d'); ctx.drawImage(img, 0, 0);
       const sample = (x, y, w = 12, h = 12) => { const p = ctx.getImageData(x, y, w, h).data; let red = 0; for (let k = 0; k < p.length; k += 4) red += Math.max(0, p[k] - p[k + 1]); return red / (p.length / 4); };
-      return { left: sample(0, 294), right: sample(788, 294), top: sample(394, 0), bottom: sample(394, 588), center: sample(394, 294) };
+      // Irregular lobes intentionally leave gaps; sample the edge band rather
+      // than assuming the old uniform gradient is brightest at its midpoint.
+      const positions = [.15,.3,.5,.7,.85], mean = values => values.reduce((a,b)=>a+b,0)/values.length;
+      return { left: mean(positions.map(t=>sample(0,588*t))), right: mean(positions.map(t=>sample(788,588*t))),
+        top: mean(positions.map(t=>sample(788*t,0))), bottom: mean(positions.map(t=>sample(788*t,588))), center: sample(394,294) };
     }, pixels);
     const p = data.pixels;
     check(p.center === 0, `${name}: center pixels remain completely clear`);
@@ -136,7 +141,17 @@ try {
       : name === 'front' ? p.top > p.bottom + 10 : p.bottom > p.top && p.left > 3 && p.right > 3, `${name}: actual CSS gradient pixels match attack direction`);
     await page.evaluate(() => document.querySelector('#damage-css-probe').remove());
   }
-  await page.evaluate(() => { window.__damageCase = null; });
+  await page.evaluate(() => {
+    window.__damageCase = null; window.__healingSamples = [];
+    window.__healthSampler = setInterval(() => {
+      const n = window.__crossfire.network(), self = n.snapshot?.players.find(p => p.id === n.selfId);
+      if (!self) return;
+      const nodes = [...document.querySelectorAll('.healing-plus')].filter(e => Number(e.style.opacity) > 0);
+      const edge = document.querySelector('.healing-edges');
+      window.__healingSamples.push({ at: performance.now(), serverTime: n.snapshot.serverTime, health: self.health,
+        opacity: Number(edge.style.opacity), css: edge.style.cssText, symbols: nodes.map(e => ({left:e.style.left,top:e.style.top,transform:e.style.transform,opacity:e.style.opacity})) });
+    }, 20);
+  });
   await shoot(arena.sources.behind, false);
   const damaged = await room.healthForTest(victimId);
   check(damaged.health > 0 && damaged.health < 100 && damaged.regenAt !== null, 'real damaged life has a server regeneration deadline');
@@ -147,6 +162,43 @@ try {
   check(network.hud === Math.ceil(self.health) && self.health > hp, 'existing HUD displays authoritative regenerated health');
   const peer = await until(() => messages.findLast((m) => m.type === 'snapshot' && m.snapshot.serverTime === network.network.snapshot.serverTime), 'matching peer health snapshot');
   check(peer.snapshot.players.find((p) => p.id === victimId).health === self.health, 'real peer and browser receive identical regenerated health');
+  await page.waitForFunction(() => window.__crossfire.damageFeedback().healing > .1, {timeout:3000});
+  await delay(700);
+  const healing = await page.evaluate(() => ({ feedback:window.__crossfire.damageFeedback(), samples:window.__healingSamples,
+    css:document.querySelector('.healing-edges').style.cssText,
+    inputs:[...document.querySelectorAll('.damage-edges,.healing-edges,.healing-plus')].every(e=>getComputedStyle(e).pointerEvents==='none') }));
+  await page.screenshot({path:`${out}/healing-gameplay.png`});
+  check(healing.feedback.healing > 0 && healing.feedback.symbols > 0, 'confirmed regeneration shows green haze and floating symbols');
+  check(healing.inputs, 'all effect layers ignore gameplay input');
+  check(healing.samples.filter(s=>s.opacity>0).every(s=>s.health<100), 'no green at maximum health');
+  check(await page.$$eval('.healing-plus',nodes=>nodes.length===6), 'six reused symbol nodes');
+  for(const size of [[800,600],[1280,720],[640,480]]){
+    await page.setViewport({width:size[0],height:size[1]});
+    await page.evaluate(css=>{
+      const panel=document.createElement('div');panel.id='healing-css-probe';panel.style.cssText='position:fixed;inset:0;z-index:999999;background:#000';
+      const e=document.createElement('div');e.className='healing-edges';e.style.cssText=css;panel.append(e);document.body.append(panel);
+    },healing.css);
+    const png=Buffer.from(await page.screenshot({path:`${out}/healing-${size.join('x')}.png`})).toString('base64');
+    const pixels=await page.evaluate(async png=>{
+      const image=new Image();image.src=`data:image/png;base64,${png}`;await image.decode();const c=document.createElement('canvas');c.width=image.width;c.height=image.height;
+      const ctx=c.getContext('2d');ctx.drawImage(image,0,0);const sample=(x,y)=>{const d=ctx.getImageData(x,y,1,1).data;return Math.max(0,d[1]-d[0]);};
+      return {center:sample(c.width/2,c.height/2),edge:sample(5,c.height*.3),mask:getComputedStyle(document.querySelector('.healing-edges')).maskImage};
+    },png);
+    check(pixels.center===0&&pixels.edge>5&&pixels.mask!=='none', `green irregular CSS pixels retain clear center at ${size.join('x')}`);
+    await page.evaluate(()=>document.querySelector('#healing-css-probe').remove());
+  }
+  await page.setViewport({width:800,height:600});
+  await shoot(arena.sources.behind,false);
+  await page.waitForFunction(()=>window.__crossfire.damageFeedback().edges>0,{timeout:3000});
+  check(await page.evaluate(()=>{const d=window.__crossfire.damageFeedback();return d.healing===0&&d.symbols===0;}), 'real damage immediately cancels green haze and symbols');
+  await delay(800);check(await page.evaluate(()=>window.__crossfire.damageFeedback().healing===0),'no green during real regeneration delay');
+  await page.waitForFunction(()=>window.__crossfire.damageFeedback().healing>.1,{timeout:8000});
+  check(true,'green resumes only after real regeneration restarts');
+  await page.waitForFunction(()=>{const n=window.__crossfire.network();return n.snapshot.players.find(p=>p.id===n.selfId).health===100;},{timeout:15000});
+  await page.waitForFunction(()=>window.__crossfire.damageFeedback().healing===0&&window.__crossfire.damageFeedback().symbols===0,{timeout:1000});
+  check(true,'maximum health clears haze and symbols');
+  results.push({healing});
+  await page.evaluate(()=>clearInterval(window.__healthSampler));
   await page.evaluate(() => window.__crossfire.networkLeave()); send({ type: 'leave' });
   check(errors.length === 0, `no uncaught browser/asset errors: ${errors.join('; ')}`);
 } finally {

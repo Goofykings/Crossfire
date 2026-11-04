@@ -19,7 +19,7 @@ export function createMapWorld(collision: CollisionFile, layout: MapLayout, cata
 }
 
 export function mapVersion(collision: CollisionFile, layout: MapLayout, catalog: PropCatalog, environment?:EnvironmentDefinition): string {
-  const data = JSON.stringify([collision, layout, catalog, ...(environment?[environment]:[])]);
+  const data = JSON.stringify(['swept-cylinder-v2', collision, layout, catalog, ...(environment?[environment]:[])]);
   let hash = 2166136261;
   for (let i = 0; i < data.length; i++) hash = Math.imul(hash ^ data.charCodeAt(i), 16777619);
   return `town-${(hash >>> 0).toString(16)}`;

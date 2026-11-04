@@ -1,3 +1,18 @@
+## Global statistics and rankings (2026-11-03)
+
+See docs/GLOBAL_STATISTICS.md and latest PROGRESS.md. Gameplay remains protocol
+v17; statistics HTTP schema is separately shared/versioned at 1. Reuse the server
+career capability, not local guest UUID/name, and never expose its hash/tokens in
+rankings. statistics:<identity> records and immutable revision journals must stay
+in the same atomic room KV batch as scores/sessions/wallets. SQLite is a replayable
+indexed projection; never grant statistics from HTTP/client claims or delete the
+Durable Object to migrate it. Preserve elimination/round deduplication, UTC challenge
+boundaries and conservative completion eligibility. Earned gems are cumulative,
+separate from wallet spending; earlier unrecorded match history cannot be backfilled.
+Clearing the guest capability loses access. No account recovery or Node game-server
+migration was added. Existing backend-first CI publishes the new HTTP endpoints
+before the matching frontend when authorized; no deployment was performed here.
+
 ## Powerups mode (2026-11-03)
 
 Current shared protocol is v17; see docs/POWERUPS.md and latest PROGRESS.md.

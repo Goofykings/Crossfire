@@ -274,6 +274,69 @@ export class CollisionWorld {
     return { x, z, contacts };
   }
 
+  /** Sweep a circle against rounded OBB footprints, clipping remaining motion along contacts.
+   * Never depenetrates/teleports: existing overlaps permit escape, not motion further inward.
+   * The vertical band is chosen by the controller (legal grounded steps vs airborne feet).
+   */
+  moveCylinder(x: number, z: number, dx: number, dz: number, radius: number,
+    bottom: number, top: number, contacts: CylinderContact[] = []): { x: number; z: number; contacts: CylinderContact[] } {
+    contacts.length = 0;
+    for (let pass = 0; pass < 5 && Math.hypot(dx, dz) > 1e-9; pass++) {
+      let fraction = 1, nx = 0, nz = 0, collider: Collider | undefined;
+      const candidates = this.query(Math.min(x, x + dx) - radius, bottom, Math.min(z, z + dz) - radius,
+        Math.max(x, x + dx) + radius, top, Math.max(z, z + dz) + radius);
+      for (const c of candidates) {
+        if (!c.solid || c.maxY <= bottom || c.minY >= top) continue;
+        const lx = (x - c.cx) * c.cos - (z - c.cz) * c.sin;
+        const lz = (x - c.cx) * c.sin + (z - c.cz) * c.cos;
+        const vx = dx * c.cos - dz * c.sin, vz = dx * c.sin + dz * c.cos;
+        const consider = (t: number, ax: number, az: number) => {
+          if (t < -1e-8 || t > fraction || vx * ax + vz * az >= -1e-10) return;
+          fraction = Math.max(0, t); nx = ax * c.cos + az * c.sin; nz = -ax * c.sin + az * c.cos; collider = c;
+        };
+        // Starting overlap can follow growth/turning or old persisted state. Do not choose
+        // another exit face and propel the body through an adjacent wall.
+        const ox = lx - Math.max(-c.hx, Math.min(c.hx, lx));
+        const oz = lz - Math.max(-c.hz, Math.min(c.hz, lz));
+        const distance = Math.hypot(ox, oz);
+        if (distance < radius - 1e-8) {
+          if (distance > 1e-9) consider(0, ox / distance, oz / distance);
+          else if (c.hx - Math.abs(lx) < c.hz - Math.abs(lz)) consider(0, lx >= 0 ? 1 : -1, 0);
+          else consider(0, 0, lz >= 0 ? 1 : -1);
+          continue;
+        }
+        for (const sign of [-1, 1]) {
+          if (Math.abs(vx) > 1e-12) {
+            const t = (sign * (c.hx + radius) - lx) / vx;
+            if (Math.abs(lz + vz * t) <= c.hz + 1e-8) consider(t, sign, 0);
+          }
+          if (Math.abs(vz) > 1e-12) {
+            const t = (sign * (c.hz + radius) - lz) / vz;
+            if (Math.abs(lx + vx * t) <= c.hx + 1e-8) consider(t, 0, sign);
+          }
+          for (const sz of [-1, 1]) {
+            const ax = lx - sign * c.hx, az = lz - sz * c.hz;
+            const a = vx * vx + vz * vz, b = ax * vx + az * vz;
+            const discriminant = b * b - a * (ax * ax + az * az - radius * radius);
+            if (discriminant < 0) continue;
+            const t = (-b - Math.sqrt(discriminant)) / a;
+            const px = ax + vx * t, pz = az + vz * t;
+            if (px * sign >= -1e-8 && pz * sz >= -1e-8) consider(t, px / radius, pz / radius);
+          }
+        }
+      }
+      // Stop microscopically short, without adding outward displacement on each tick.
+      const travel = Math.max(0, fraction - 1e-6 / Math.max(1e-6, Math.hypot(dx, dz)));
+      x += dx * (collider ? travel : 1); z += dz * (collider ? travel : 1);
+      if (!collider) break;
+      contacts.push({ nx, nz, depth: 0, collider });
+      dx *= 1 - fraction; dz *= 1 - fraction;
+      const into = dx * nx + dz * nz;
+      if (into < 0) { dx -= into * nx; dz -= into * nz; }
+    }
+    return { x, z, contacts };
+  }
+
   /** True when a cylinder would overlap any solid collider. */
   overlapsCylinder(x: number, z: number, radius: number, bottom: number, top: number): boolean {
     const cands = this.query(x - radius, bottom, z - radius, x + radius, top, z + radius);

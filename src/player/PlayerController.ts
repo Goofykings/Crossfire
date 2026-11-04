@@ -247,7 +247,7 @@ export class PlayerController {
     if (crouchTarget < this.crouch) {
       // only stand up if there is head room for the taller body
       const standTop = p.y + c.standHeight;
-      const ceiling = this.world.ceilingHeight(p.x, p.z, c.radius * 0.95, p.y + c.stepHeight + 0.01);
+      const ceiling = this.world.ceilingHeight(p.x, p.z, c.radius, p.y + c.stepHeight + 0.01);
       if (ceiling < standTop) crouchTarget = this.crouch;
     }
     const crouchStep = c.crouchRate * dt;
@@ -441,10 +441,11 @@ export class PlayerController {
     const h = this.height;
     const oldX = p.x, oldZ = p.z;
 
-    // horizontal move + wall resolution
-    p.x += v.x * dt;
-    p.z += v.z * dt;
-    const res = this.world.resolveCylinder(p.x, p.z, c.radius, p.y + c.stepHeight, p.y + h, this.contacts);
+    // Only a grounded body may step over a riser. Airborne feet must collide too;
+    // ignoring them let descending players enter raised walls before push-out.
+    const bottom = p.y + (this.grounded && v.y <= 0 ? c.stepHeight : .00001);
+    const res = this.world.moveCylinder(p.x, p.z, v.x * dt, v.z * dt,
+      c.radius, bottom, p.y + h, this.contacts);
     p.x = res.x;
     p.z = res.z;
     for (const ct of res.contacts) {
@@ -485,13 +486,10 @@ export class PlayerController {
             // actual model, especially at the lowered slide eye height.
             const half = (distance > .5 * this.bodyScale ? .06 : .16) * this.bodyScale;
             const y = p.y + stepLift + this.eyeHeight - .08 * this.bodyScale + Math.sin(this.pitch) * distance;
-            const probe = this.world.resolveCylinder(p.x + dx, p.z + dz, (distance > .5 * this.bodyScale ? .06 : .14) * this.bodyScale, y - half, y + half, this.contacts);
+            const probe = this.world.moveCylinder(oldX + dx, oldZ + dz, p.x - oldX, p.z - oldZ,
+              (distance > .5 * this.bodyScale ? .06 : .14) * this.bodyScale, y - half, y + half, this.contacts);
+            p.x = probe.x - dx; p.z = probe.z - dz;
             for (const ct of probe.contacts) {
-              const movedInto = -((p.x - oldX) * ct.nx + (p.z - oldZ) * ct.nz);
-              if (movedInto <= 0) continue;
-              const correction = Math.min(movedInto, ct.depth + .00001);
-              p.x += ct.nx * correction;
-              p.z += ct.nz * correction;
               const into = v.x * ct.nx + v.z * ct.nz;
               if (into < 0) { v.x -= ct.nx * into; v.z -= ct.nz * into; }
             }
@@ -500,20 +498,34 @@ export class PlayerController {
       }
     }
 
+    // Weapon contacts can redirect a diagonal move: sweep that final path against
+    // the body as well, so one envelope cannot slide the other through a corner.
+    const body = this.world.moveCylinder(oldX, oldZ, p.x - oldX, p.z - oldZ,
+      c.radius, bottom, p.y + h, this.contacts);
+    p.x = body.x; p.z = body.z;
+    for (const ct of body.contacts) {
+      const into = v.x * ct.nx + v.z * ct.nz;
+      if (into < 0) { v.x -= ct.nx * into; v.z -= ct.nz * into; }
+    }
+
     // A climbable stair can still be too close to a ceiling for the current body.
-    const nextGround = this.world.groundHeight(p.x, p.z, c.radius * 0.7, p.y + c.stepHeight);
-    const ceiling = this.world.ceilingHeight(p.x, p.z, c.radius * 0.95, p.y + c.stepHeight + 0.01);
+    const nextGround = this.world.groundHeight(p.x, p.z, c.radius, p.y + c.stepHeight);
+    const ceiling = this.world.ceilingHeight(p.x, p.z, c.radius, p.y + c.stepHeight + 0.01);
     if (nextGround > p.y + 0.0005 && nextGround + h > ceiling + 0.0005) {
       p.x = oldX; p.z = oldZ;
       v.x = v.z = 0;
     }
 
-    // vertical move
+    // Query from the old vertical position: a thin ceiling/floor may have been
+    // crossed by the endpoint, even with bounded high-speed substeps.
+    const oldY = p.y;
+    const overhead = this.world.ceilingHeight(p.x, p.z, c.radius, oldY + h - .00001,
+      oldY + h + Math.max(0, v.y * dt) + .001);
     p.y += v.y * dt;
 
     // ceiling
     if (v.y > 0) {
-      const ceil = this.world.ceilingHeight(p.x, p.z, c.radius * 0.95, p.y + c.stepHeight * 0.5);
+      const ceil = overhead;
       if (p.y + h > ceil) {
         p.y = ceil - h;
         v.y = 0;
@@ -521,9 +533,9 @@ export class PlayerController {
     }
 
     // ground probe: highest surface we could be standing on
-    const probeR = c.radius * 0.7;
+    const probeR = c.radius;
     const reach = v.y > 0.01 ? 0 : c.stepHeight;
-    const ground = this.world.groundHeight(p.x, p.z, probeR, p.y + reach);
+    const ground = this.world.groundHeight(p.x, p.z, probeR, Math.max(oldY, p.y) + reach);
     const snap = this.grounded && wasGrounded && v.y <= 0 ? c.snapDown : 0.0005;
     if (v.y <= 0 && ground > -Infinity && p.y <= ground + snap) {
       if (ground > p.y) this.stepUpDelta += ground - p.y;

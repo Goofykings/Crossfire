@@ -1,3 +1,4 @@
+import { validLeaderboard, validPersonalStats, type LeaderboardView, type PersonalStats, type StatsPeriod, type StatsMetric } from '../../shared/statistics';
 import { validCareerView, type CareerView } from '../../shared/challenges';
 import { PROTOCOL_VERSION } from '../../shared/protocol';
 import { presenceEndpoint } from './endpoint';
@@ -57,6 +58,18 @@ export class CareerClient {
       this.accept(data.profile);
     } catch (error) { this.error = (error as Error).name === 'AbortError' ? 'Challenges timed out. Retry shortly.' : (error as Error).message; this.onChange(); throw error; }
     finally { clearTimeout(timeout); }
+  }
+  async statistics(period: StatsPeriod, metric: StatsMetric, signal: AbortSignal): Promise<{ board: LeaderboardView; personal: PersonalStats | null }> {
+    if (!this.view) await this.ensure().catch(() => {});
+    const headers = this.joinCredential() ? { Authorization: `Bearer ${this.credential}` } : undefined;
+    const board = new URL(this.endpoint); board.pathname='/leaderboard';board.search=new URLSearchParams({period,stat:metric}).toString();
+    const stats = new URL(this.endpoint); stats.pathname='/stats';
+    const responses=await Promise.all([fetch(board,{headers,signal,cache:'no-store'}),headers ? fetch(stats,{headers,signal,cache:'no-store'}) : Promise.resolve(null)]);
+    if(responses.some(r=>r&&!r.ok))throw new Error('Leaderboards unavailable. Please retry shortly.');
+    const [ranking,personal]=await Promise.all(responses.map(r=>r?r.json() as Promise<unknown>:null));
+    if(!validLeaderboard(ranking)||ranking.period!==period||ranking.metric!==metric||(personal!==null&&!validPersonalStats(personal)))
+      throw new Error('Leaderboard response is incompatible. Publish matching frontend and backend.');
+    return {board:ranking,personal};
   }
   start(visible: () => boolean): void {
     if (this.timer) return;

@@ -1,3 +1,219 @@
+# Global leaderboards, lifetime statistics and home navigation
+
+Completed and verified locally 2026-11-03. See `docs/GLOBAL_STATISTICS.md`.
+Previous uncommitted damage/healing/collision work was preserved. No commit,
+push, public Cloudflare deployment or GitHub Pages deployment was performed.
+
+Implemented the third LEADERBOARD home-navigation option and independent 180 ms
+opacity hover highlights; removed the shared sliding indicator/ResizeObserver.
+Home Play and ranking controls use more transparent gray treatments. A dedicated
+page preserves the existing blurred asset, clean typography, Back navigation,
+exclusive DAILY/WEEKLY/ALL and KILLS/POINTS/WINS selectors (default ALL/KILLS),
+compact top ten, stable tie-breaking, local highlighting, optional own rank beyond
+ten and honest empty/error states. Native buttons retain keyboard focus, and
+MY STATS toggles a compact translucent panel that closes outside or with Escape.
+The final table is centered and the panel leaves the leaderboard behind it.
+No game map or extra gameplay WebSocket is loaded by ranking navigation.
+
+Persistent statistics reuse the existing server-issued guest capability and
+canonical SQLite-backed public-main Durable Object. No new account system,
+database service, binding, secret, Worker name, URL or Wrangler migration.
+`statistics:<private identity>` records hold lifetime kills/deaths/points/wins/
+completed games/earned gems plus daily/weekly kills/points/wins. Each has a
+separate public UUID. Records and immutable projection journal entries share
+the room's atomic KV save with sessions, scores and challenge/wallet state.
+A revision-checked SQLite projection supplies indexed top-ten queries and owner
+rank; crash/restart journal replay cannot increment totals or regress revisions.
+Background drain keeps journals small. Loaded records are bounded apart from
+active/dirty identities. Rankings never scan all KV profiles on each request.
+
+Common authoritative eliminations immediately record kills, exact points including
+existing bonuses, deaths and actual challenge gem deltas before match end.
+Existing alive/life guards plus elimination IDs suppress duplicates. Finalized
+round IDs and participation markers protect wins/completions across replay and
+reconstruction. Completed-game/win eligibility preserves the conservative existing
+challenge policy: spawn within the first 30 seconds, remain connected through
+finalization, no abandoned round, and an actual winning result for a win. A
+late/incomplete or abandoned round does not add a global win/game; prior earned
+kills/deaths/points/gems remain. Existing late-join challenge rewards are unchanged.
+The existing disconnect path marks the round abandoned even if the guest resumes.
+
+Daily boundaries are 00:00 UTC; weekly boundaries Monday 00:00 UTC, shared with
+challenges. Authoritative event timestamps choose buckets, queries automatically
+exclude stale buckets, and lifetime totals never reset. A historical event cannot
+enter a newer period. Lifetime gems earned are separate from current wallet gems.
+Known existing wallet gems seed a legacy profile's historical earned total because
+no spending/shop exists yet; older kills/points/deaths/wins/games were not stored
+and cannot be fabricated. Those counters begin with this release. Future wallet
+spending must never decrement earned gems. Clearing browser credentials or using
+another device loses guest access; this is not a recoverable account system.
+
+New HTTP APIs: validated GET /leaderboard?period=...&stat=... (public top ten,
+optional authorized own row), and private GET /stats. Origin/method/parameter and
+capability checks are enforced; tokens/private hashes are never in ranking output
+or URLs. API schema version 1 and validators are shared. Gameplay WebSocket
+protocol remains v17 with no message/schema changes. Five-second page-only polling
+replaces validated data without blanking rows; selection changes abort old work,
+and closing stops requests/timers. Public rankings remain usable if wallet
+bootstrap fails; unavailable personal statistics are never fabricated.
+
+My Stats displays the requested seven lifetime values. Win ratio is one decimal
+percent, 0.0% with zero completions. K/D uses two decimals, 0.00 at zero kills and
+zero deaths, and an em dash for positive kills with zero deaths. Current gem
+balance remains the existing independent home wallet.
+
+Executed validation:
+- Frontend `npm test`: **572 passed**, one existing opt-in performance test skipped
+  (56 files passed / one skipped). Includes award deduplication, UTC midnight and
+  Monday rollover, stale historical events, lifetime retention, ratios, API schema
+  and private-header/public-fallback client tests.
+- Frontend typecheck and production `npm run build`: passed after final UI polish.
+  Existing large Babylon bundle warning remains non-fatal.
+- Worker typecheck and dry build: passed. Full `npm test --prefix server`:
+  **62 passed**, including all previous combat/grenade/scoring/collision/powerup
+  cases, strengthened real authenticated challenge/statistics cases and the new
+  persistent indexed ranking test. Final focused statistics + challenge run:
+  **5 passed**. Final Worker typecheck rerun: passed.
+- Real workerd persistence tests cover all nine selections, more than ten profiles,
+  descending sorting and UUID ties, own rank, rename without changing identity,
+  duplicate awards, no credentials in results, rejected parameters/methods/origins,
+  old daily/weekly buckets, lifetime retention and complete runtime restart. A
+  deliberately missing SQL projection is rebuilt from a saved journal after
+  restart. Final extended persistence test: **1 passed**, including an already-
+  committed journal replay, legacy earned-gem migration, a simulated wallet debit
+  that cannot reduce lifetime gems, and independent earned gems after restart.
+  Test-only seeded profiles/events exist only in isolated local fixtures.
+- Real authenticated combat verifies one actual headshot kill adds 1 kill and 150
+  points before match end, the victim gains 1 death, and 1,050 actual seeded-near-
+  completion challenge gems are earned once. Duplicate death replay, reconnect,
+  eligible/late/abandoned rounds and persisted totals across restarts are checked.
+- `npm run test:protocol`: **1 passed**, actual frontend transport/production Worker.
+  `npm run test:deployment`: **7 passed**. Existing CI configuration is untouched.
+- Production Pages-base Chrome QA against a local Worker: **69 checks passed**
+  using two real browser clients and an actual elimination. All nine UI selections,
+  exclusive selection state, defaults, local row/totals, empty wins, saved profile/
+  wallet on refresh, independent hover fading, no sliding indicator, Back, stats
+  toggle/outside/Escape, ratios, no added match sockets and existing challenges/
+  settings rename all pass. No browser, HTTP or asset errors.
+- Final screenshots of a real scored row/panel were visually inspected. Leaderboard
+  and panel fit 1280x720, 960x540, 640x480 and 390x640; existing home/challenge layout
+  also fits 320x568. Results/screenshots: ignored test-results/challenges/.
+
+Feature files created: `shared/statistics.ts`, `server/src/statistics.ts`,
+`server/tests/statistics.mjs`, `src/ui/LeaderboardPage.ts`,
+`tests/statistics.test.ts`, `docs/GLOBAL_STATISTICS.md`.
+Feature files modified: `server/src/index.ts`, `server/package.json`,
+`server/tests/runtime-fixture.mjs`, `server/tests/challenges.mjs`,
+`src/network/CareerClient.ts`, `src/ui/UI.ts`, `src/game/Game.ts`, `src/styles.css`,
+`tests/careerClient.test.ts`, `tools/challenges-browser-test.mjs`,
+`tools/home-test.mjs`, `CLAUDE.md`, and this log. Earlier collision/VFX files remain
+uncommitted as they were at the start; they were not discarded or restarted.
+
+Limitations/deployment: no pre-release unrecorded match history, account recovery,
+public-host validation or massive-population load test. Own-rank indexed counting
+can require more work at much larger populations; top ten remains indexed. The
+future Node scaffold is still incomplete, but pure statistics rules are reusable.
+When authorized, release matching Worker then GitHub Pages through the existing
+backend-first CI pipeline. SQL tables/indexes initialize in-place; do not delete
+or recreate the Durable Object. No new secrets, asset export or protocol bump.
+Old v17 gameplay remains compatible; new statistics UI needs the new HTTP endpoints.
+STOP after this feature.
+
+# Damage/healing edge feedback and swept collision safety
+
+Completed and verified locally 2026-11-03. See
+`docs/DAMAGE_HEALING_COLLISION.md` for implementation and reproduction details.
+No commit, push, deployment or public Cloudflare validation performed.
+
+Confirmed collision causes: endpoint-only cylinder push-out could accumulate
+penetration between adjacent walls; four iterations did not guarantee separation
+or bound corrections to attempted movement. A controlled acute 2 cm wall seam
+reproduced a full slide escape and a 0.700759 m single-tick correction. Separately,
+Industrial Complex W11 reproduced a 0.207845 m correction for a 0.05875 m intended
+step: the old solver ignored the bottom 0.42 m even in flight, while a narrower
+70%-radius ground probe lost support beside the raised wall. Weapon endpoint
+corrections could also redirect movement without validating the body path.
+The exact original user's complete map-escape route was not recorded/reproduced;
+these are confirmed solver defects and a controlled full escape, not a claim to
+have exhaustively reproduced every reported trajectory.
+
+Implemented shared swept circular-cylinder movement against OBB faces and rounded
+corners, bounded contact sliding without outward depenetration, airborne foot
+collision, consistent full-radius landing/standing headroom, and old-to-new
+vertical floor/ceiling queries. Existing fixed 120 Hz simulation, high-speed
+substeps, grounded stair stepping, slide timing, ladders, leaning, weapons and
+powerup rules remain. Weapon envelopes now sweep movement, followed by a final
+body sweep. No wall-driven gun pushback was added.
+
+All three maps (European Town, Industrial Complex, Modern City) were audited for
+finite solid transforms/positive extents, continuous ground and existing thick
+closed perimeter boxes. No missing global floor or perimeter geometry was found;
+no new barriers, GLB exports, map layout changes or asset replacements were made.
+Secondary authoritative safety detects outside-perimeter/below-ground/invalid
+state and invokes existing no-attacker death + validated respawn with its normal
+cooldown. It wakes invalid idle players, logs debug-only movement_recovery, and
+prevents repeated deaths/rewards. Non-finite dead motion is sanitized at a
+geometry-validated spawn so protocol validation remains intact. Practice retains
+its existing respawn flow.
+
+Damage presentation now uses eight overlapping irregular blurred red patches,
+a completely clear center, damage-scaled bounded strength, 75 ms attack and
+550 ms release. Repeated hits interpolate from current opacity; the original
+camera-relative directional arrow/math is preserved. Confirmed non-ray damage
+gets no invented attacker direction. Green has a softer 90 ms attack/short release
+and appears only after real same-life authoritative HP gains; spawn, new round,
+Giant maximum-health changes, stale/duplicate frames and waiting for regen never
+create healing. Damage cancels it immediately and maximum HP clears it. Six
+pooled, input-transparent plus nodes emit about twice per second near edges,
+rise 20-40 px and fade over 500-900 ms; no catch-up bursts or extra gameplay timers.
+
+Validation:
+- `npm test`: **565 passed**, one existing opt-in performance test skipped;
+  55 files passed / one skipped. Final strengthened symbol cadence test: 4 passed.
+- `npm test --prefix server`: **61 passed**, including scoring, grenades/crouch,
+  authoritative regen/resume, powers, anti-forgery, all-map stairs/ladders and the
+  new two-peer wall/recovery integration test. The final extended recovery test
+  was rerun separately: **1 passed**, also validating non-finite motion recovery.
+- Frontend `npm run build` (including TypeScript): passed. Worker typecheck and
+  dry build: passed. Existing large Babylon bundle warning remains non-fatal.
+- `npm run test:protocol`: **1 passed** with actual frontend transport/workerd.
+  `npm run test:deployment`: **7 passed**. `npm run assets:verify`: all maps passed.
+- Collision regressions: thin/rotated walls, rounded corners, acute seams,
+  repeated direct/diagonal slides, all four guns, jump cancellation, Giant and
+  double jump, high initial speed, thin floor/ceiling, all-map stress, identical
+  30/60/144 Hz simulation and delayed authoritative snapshot replay. Existing
+  stair-slide tests still pass both directions on all three maps/all guns.
+- A longer seeded diagnostic completed **750 runs / 1,200,000 fixed ticks** across
+  all maps without escape or large sideways corrections. The automated map test
+  also samples continuous ground on a 1 m grid and sweeps every perimeter side.
+- Chrome against the production Pages-base build and real local Worker/shooter:
+  four actual damage directions, camera rotation, repeated hits, fade timing,
+  actual regeneration/HUD/peer HP, damage priority, regen restart, max-HP stop,
+  bounded symbols and input transparency passed with no browser/asset errors.
+  Actual gradient pixels passed clear-center/direction checks; healing checks
+  passed at **800x600, 1280x720 and 640x480**. Gameplay and isolated CSS-probe
+  screenshots/results are under ignored `test-results/health-browser/`.
+- Earlier verification failures were resolved: the old timing assertion was
+  updated for the requested envelope; idle recovery now wakes the simulation;
+  irregular CSS is measured across five edge samples rather than assuming the
+  old uniform midpoint. No collision/score/protocol assertion was disabled.
+
+Files: `src/physics/CollisionWorld.ts`, `src/player/PlayerController.ts`,
+`shared/movementSafety.ts`, `shared/world.ts`, `server/src/index.ts`,
+`src/ui/HealthFeedback.ts`, `src/ui/DamageFeedback.ts`, `src/game/Game.ts`,
+`src/styles.css`, `tests/collisionSafety.test.ts`, `tests/healthFeedback.test.ts`,
+`tests/damageFeedback.test.ts`, `server/tests/runtime-fixture.mjs`,
+`server/tests/traversal.mjs`, `tools/damage-regeneration-test.mjs`, this log and
+`docs/DAMAGE_HEALING_COLLISION.md`.
+
+Limits/release: local tests cannot establish public Cloudflare behavior, every
+possible map trajectory, every GLB triangle/normal or performance on all devices.
+Rendered map assets were not manually re-inspected because no geometry changed.
+Matching frontend + Worker release is required: protocol remains **v17**, while
+an explicit movement revision participates in the existing map-version hash to
+reject incompatible physics. Use the existing backend-first CI/Pages pipeline
+only when the user authorizes publishing. No map asset rebuild is needed. STOP.
+
 # Shotgun combat integration scoring assertion
 
 Completed and verified locally 2026-11-03. Focused fix in
