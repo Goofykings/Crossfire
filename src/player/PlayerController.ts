@@ -6,7 +6,7 @@ import type { WeaponId } from '../weapons/Weapon';
 // Eye-to-muzzle distances include a small margin for view-model sway. Based on
 // the existing model anchors and the most forward of the hip and ADS poses.
 export const WEAPON_CLEARANCE: Record<WeaponId, number> = {
-  smg: .88, rifle: 1.12, shotgun: 1.13, sniper: 1.31,
+  smg: .88, rifle: 1.12, shotgun: 1.13, sniper: 1.26,
 };
 
 /** Per-tick intent, produced by the input layer (or a network packet in the future). */
@@ -49,6 +49,11 @@ export interface ControllerState {
   jumpBufferTimer: number;
   jumpedThisAirborne: boolean;
   lean: number;
+  scale?: 1 | 1.5;
+  eyeScale?: number;
+  doubleJump?: boolean;
+  extraJumpUsed?: boolean;
+  extraJumpCount?: number;
 }
 
 /**
@@ -80,6 +85,29 @@ export class PlayerController {
   slideCooldown = 0;
   slideHeld = false;
   private slideYaw = 0;
+  scale: 1 | 1.5 = 1;
+  eyeScale=1;
+  prevEyeScale=1;
+  doubleJump = false;
+  extraJumpUsed = false;
+  extraJumpCount = 0;
+  private scaledConfig: MovementConfig | null = null;
+  private configSize=0;
+  private configSpeed=0;
+  get bodyScale(): number { return Math.max(this.scale,this.eyeScale); }
+  get cfg(): MovementConfig {
+    const size=this.bodyScale,speed=this.scale;
+    if(size===1 && speed===1)return this.baseConfig;
+    if(this.configSize===size && this.configSpeed===speed && this.scaledConfig)return this.scaledConfig;
+    this.configSize=size;this.configSpeed=speed;
+    return this.scaledConfig = { ...this.baseConfig,
+      radius: this.baseConfig.radius * size, standHeight: this.baseConfig.standHeight * size,
+      crouchHeight: this.baseConfig.crouchHeight * size, standEye: this.baseConfig.standEye * size,
+      crouchEye: this.baseConfig.crouchEye * size, walkSpeed: this.baseConfig.walkSpeed * speed,
+      slideSpeed: this.baseConfig.slideSpeed * speed, crouchSpeed: this.baseConfig.crouchSpeed * speed,
+      aimSpeed: this.baseConfig.aimSpeed * speed, groundAccel: this.baseConfig.groundAccel * speed,
+      groundDecel: this.baseConfig.groundDecel * speed, airAccel: this.baseConfig.airAccel * speed };
+  }
 
   get sliding(): boolean { return this.slideRemaining > 0; }
   /** Derived from trusted map geometry and the existing snapshot; no new client position field. */
@@ -96,7 +124,7 @@ export class PlayerController {
 
   constructor(
     private readonly world: CollisionWorld,
-    readonly cfg: MovementConfig = MOVEMENT,
+    private readonly baseConfig: MovementConfig = MOVEMENT,
   ) {}
 
   get height(): number {
@@ -104,7 +132,7 @@ export class PlayerController {
   }
 
   get eyeHeight(): number {
-    return this.cfg.standEye + (this.cfg.crouchEye - this.cfg.standEye) * this.crouch;
+    return (this.baseConfig.standEye + (this.baseConfig.crouchEye - this.baseConfig.standEye) * this.crouch) * this.eyeScale;
   }
 
   get horizontalSpeed(): number {
@@ -115,10 +143,14 @@ export class PlayerController {
     return { position: { ...this.position }, velocity: { ...this.velocity }, yaw: this.yaw, pitch: this.pitch,
       grounded: this.grounded, crouch: this.crouch, airTime: this.airTime, jumpBufferTimer: this.jumpBufferTimer,
       slideRemaining: this.slideRemaining, slideCooldown: this.slideCooldown, slideHeld: this.slideHeld, slideYaw: this.slideYaw,
-      jumpedThisAirborne: this.jumpedThisAirborne, lean: this.lean };
+      jumpedThisAirborne: this.jumpedThisAirborne, lean: this.lean, scale: this.scale, eyeScale: this.eyeScale, doubleJump: this.doubleJump,
+      extraJumpUsed: this.extraJumpUsed, extraJumpCount: this.extraJumpCount };
   }
 
   restore(s: ControllerState): void {
+    this.eyeScale=this.prevEyeScale=s.eyeScale??s.scale??1;
+    this.scale = s.scale ?? 1; this.doubleJump = s.doubleJump ?? false;
+    this.extraJumpUsed = s.extraJumpUsed ?? false; this.extraJumpCount = s.extraJumpCount ?? 0;
     Object.assign(this.position, s.position);
     Object.assign(this.prevPosition, s.position);
     Object.assign(this.velocity, s.velocity);
@@ -156,6 +188,8 @@ export class PlayerController {
     this.slideRemaining = this.slideCooldown = this.slideYaw = 0;
     this.slideHeld = false;
     this.jumpedThisAirborne = false;
+    this.extraJumpUsed = false; this.extraJumpCount = 0;
+    this.eyeScale=this.prevEyeScale=this.scale;
     this.grounded = false;
     this.airTime = 0;
     this.jumpBufferTimer = 0;
@@ -192,6 +226,8 @@ export class PlayerController {
     this.stepUpDelta = 0;
     this.landedSpeed = 0;
     this.prevCrouch = this.crouch;
+    this.prevEyeScale=this.eyeScale;
+    this.eyeScale+=Math.max(-dt*2,Math.min(dt*2,this.scale-this.eyeScale));
     this.prevLean = this.lean;
 
     if (!this.sliding) this.slideCooldown = Math.max(0, this.slideCooldown - dt);
@@ -293,6 +329,15 @@ export class PlayerController {
       this.jumpBufferTimer = 0;
     }
 
+    // A second physical key edge consumes the one airborne charge. It never
+    // changes horizontal momentum or bypasses the ordinary ceiling solver.
+    else if (intent.jumpPressed && this.doubleJump && !this.grounded && !climbing
+      && !this.extraJumpUsed && this.airTime > 0 && !this.sliding) {
+      v.y = c.jumpSpeed * Math.SQRT2;
+      this.extraJumpUsed = true; this.extraJumpCount++;
+      this.jumpedThisAirborne = true; this.jumpBufferTimer = 0;
+    }
+
     // --- gravity ------------------------------------------------------------------------------
     if (!this.grounded && !climbing) v.y -= c.gravity * dt;
 
@@ -313,14 +358,14 @@ export class PlayerController {
 
     if (this.grounded) {
       this.airTime = 0;
-      this.jumpedThisAirborne = false;
+      this.jumpedThisAirborne = false; this.extraJumpUsed = false;
     } else {
       this.airTime += dt;
     }
 
     const leanTarget = this.grounded && !this.sliding && !intent.jumpPressed ? (intent.lean ?? 0) : 0;
     const nextLean = this.lean + (leanTarget - this.lean) * (1 - Math.exp(-LEAN_RATE * dt));
-    this.lean = safeLean(this.world, p, this.yaw, this.eyeHeight, nextLean);
+    this.lean = safeLean(this.world, p, this.yaw, this.eyeHeight, nextLean, this.bodyScale);
     if (Math.abs(this.lean) < .0001) this.lean = 0;
 
     if (p.y < c.killY) {
@@ -375,12 +420,12 @@ export class PlayerController {
 
   /** Collision-limited eye origin, shared by the authoritative server and prediction. */
   leanEye(): Vec3 {
-    const offset = leanOffset(this.yaw, this.lean);
+    const offset = leanOffset(this.yaw, this.lean, this.bodyScale);
     return { x: this.position.x + offset.x, y: this.position.y + this.eyeHeight, z: this.position.z + offset.z };
   }
 
   safeViewLean(position: Vec3, amount: number, eyeHeight: number): number {
-    return safeLean(this.world, position, this.yaw, eyeHeight, amount);
+    return safeLean(this.world, position, this.yaw, eyeHeight, amount, this.bodyScale);
   }
 
   /** Visual stair smoothing must not lift the eye through an overhead surface. */
@@ -418,16 +463,29 @@ export class PlayerController {
     if (this.weaponClearance && Math.hypot(p.x - oldX, p.z - oldZ) > 1e-8) {
       const forward = this.forward();
       const rightX = Math.cos(this.yaw), rightZ = -Math.sin(this.yaw);
-      const lean = leanOffset(this.yaw, this.lean);
-      const length = WEAPON_CLEARANCE[this.weaponClearance];
+      const lean = leanOffset(this.yaw, this.lean, this.bodyScale);
+      const length = WEAPON_CLEARANCE[this.weaponClearance] * this.bodyScale;
       const horizontal = Math.cos(this.pitch);
+      // Test the weapon at the legal step-up height of this very movement.
+      // Previously crouched guns hit the riser before the ground solver could
+      // raise the body, consuming all slide momentum. Never lift over a wall
+      // or into a ceiling, and never grant this clearance during a jump.
+      const support = this.grounded && v.y <= 0
+        ? this.world.groundHeight(p.x, p.z, c.radius * .7, p.y + c.stepHeight) : p.y;
+      const headroom = this.world.ceilingHeight(p.x, p.z, c.radius * .95, p.y + c.stepHeight + .01);
+      const stepLift = support > p.y && support + h <= headroom + .0005 ? support - p.y : 0;
+
       for (let pass = 0; pass < 2; pass++) {
         for (let distance = length; distance > .25; distance -= .18) {
-          for (const lateral of [0, .19]) {
-            const dx = lean.x + forward.x * distance * horizontal + rightX * lateral;
-            const dz = lean.z + forward.z * distance * horizontal + rightZ * lateral;
-            const y = p.y + this.eyeHeight - .18 + Math.sin(this.pitch) * distance;
-            const probe = this.world.resolveCylinder(p.x + dx, p.z + dz, .14, y - .16, y + .16, this.contacts);
+          for (const lateral of [0, .1, .19]) {
+            const dx = lean.x + forward.x * distance * horizontal + rightX * lateral * this.bodyScale;
+            const dz = lean.z + forward.z * distance * horizontal + rightZ * lateral * this.bodyScale;
+            // The long front section is a barrel/handguard, not a 32 cm
+            // tall receiver. The old full-height band hit steps well below the
+            // actual model, especially at the lowered slide eye height.
+            const half = (distance > .5 * this.bodyScale ? .06 : .16) * this.bodyScale;
+            const y = p.y + stepLift + this.eyeHeight - .08 * this.bodyScale + Math.sin(this.pitch) * distance;
+            const probe = this.world.resolveCylinder(p.x + dx, p.z + dz, (distance > .5 * this.bodyScale ? .06 : .14) * this.bodyScale, y - half, y + half, this.contacts);
             for (const ct of probe.contacts) {
               const movedInto = -((p.x - oldX) * ct.nx + (p.z - oldZ) * ct.nz);
               if (movedInto <= 0) continue;

@@ -1,3 +1,137 @@
+# Powerups multiplayer mode
+
+Completed locally 2026-11-03, including the final verification requested in the
+follow-up. No commit, push or deployment. Rules, balance, hosting boundary and QA
+commands: [docs/POWERUPS.md](docs/POWERUPS.md). Earlier uncommitted work below was
+preserved; no map assets were changed for this mode.
+
+- Added POWERUPS to subsequent random round rotation, with FFA relationships,
+  scoring, results and MVP. Existing running rounds keep their persisted mode
+  across releases. FFA, Teams, round timing, weapon/ammo, grenades and movement
+  remain intact.
+- Added server-owned, exactly-once collectible cubes and one active ability per
+  life: 15-second GIANT, DOUBLE JUMP, FIRE and SHIELD. All three maps use pools
+  validated against authored ground navigation, floor support, reachability,
+  bounds, wide flat clearance and actual collision geometry. Spawning uses alive
+  connected counts: caps 2/3/4/5 and intervals 20/15/10/10 seconds.
+- Giant reserves collision clearance before growth, preserves health percentage
+  at 100/150 maximum HP, scales speed/firearm damage by 1.5, and shares the
+  250 ms eye transition with server firing/prediction. Hitboxes, gun clearance,
+  leaning, remote character/weapon scale and safe shrinking follow the size.
+  Blocked activation leaves the pickup in place, without teleporting.
+- Double Jump consumes one extra airborne press, preserves horizontal momentum,
+  uses sqrt(2) launch velocity for twice normal jump height, respects ceilings
+  and survives replay/resume without extra charges. Uses the existing Jump action
+  and customized bindings, with a confirmed remote foot burst.
+- Fire uses confirmed shot traces and one elapsed-time burn cursor: 10 HP/s for
+  five seconds, refreshed rather than stacked, with latest-applier ownership.
+  Regeneration waits after burn damage. Burn kills award normal/combo points,
+  elimination grenade rewards and appropriate challenges, including posthumous
+  credit, without a headshot bonus or a live combo timer on a dead applier.
+- Shield absorbs 75 points before HP, including partial overflow, burn and blast
+  damage. Added a subtle remote shell/hit pulse, bounded flames, rotating/bobbing
+  cubes and ground indicators, pickup notice, smooth HUD timer/bar/shield points,
+  compact leaderboard ability labels and a fire kill-feed symbol.
+- Death, respawn and round change clear effects. Reconnect/reconstruction retain
+  absolute deadlines, remaining shield, burn cursor/owner, jump consumption,
+  identity, life, ammo and score. Room alarms handle idle spawning/expiry;
+  simulation runs for movement, burns and active transitions. Fixed the new
+  mode's initially continuous idle tick, which interfered with hibernation.
+  Normal heartbeat timeouts and intentional-leave cleanup remain tested.
+- Shared protocol is now v17, with strict matching client/server validation and
+  no client-granted abilities, damage, size or positions. The existing coordinated
+  Worker/Pages CI remains unchanged and includes the new backend test. Shared
+  pure rules and field state remain reusable by a future dedicated server.
+
+Final checks, all completed successfully:
+
+- Frontend: **543 passing, 1 existing opt-in performance test skipped**; production
+  build including TypeScript checks passed. Logs:
+  `test-results/powerups-final-frontend-tests.log` and
+  `test-results/powerups-final-frontend-build.log`.
+- Worker: typecheck and dry-run build passed; full suite **60/60 passing**, including
+  existing FFA/Teams combat, ammunition, grenades, regeneration, maps, stairs,
+  ladders, room lifecycle, careers and the new real-WebSocket Powerups test.
+  Logs: `test-results/powerups-final-backend-typecheck.log` and
+  `test-results/powerups-final-backend-tests.log`.
+- Real frontend/Worker protocol gate **1/1**, deployment gates **7/7**, future
+  dedicated transport checks/typecheck/build **7/7**, asset verification passed.
+  Logs: `test-results/powerups-final-{protocol,deployment,dedicated,assets}.log`.
+- An explicit POWERUPS room lifecycle run also passed **23/23** checks, including
+  eviction, real missing-heartbeat disconnect, intentional leave and resume.
+- Two actual Chrome clients against local workerd and the production Pages-style
+  `/crossfire/` build: **33 passing checks, 11 screenshots**, 62.5 seconds of
+  connected play, one intentional reconnect, no duplicate players and no
+  browser/asset errors. Verified actual 15-second Giant/shield expiration, second
+  jump, shield absorption, burn, synchronized movement, leaderboard, HUD and
+  960x540 layout. Reviewed representative cube, Giant, shield, fire and airborne
+  screenshots. Evidence: `test-results/powerups-browser/results.json` and PNGs.
+- `git diff --check` passed. Temporary browser/Worker instances and the local
+  static preview server were stopped.
+
+Limits/release: validation is local; public Cloudflare and physical Chromebook
+performance were not tested. Spawn balance and simple bounded cosmetic effects
+are initial tuning. The dedicated Node scaffold still does not host gameplay.
+Both frontend and Worker need a matching v17 release through the existing CI
+when authorized; no hosting configuration or credentials were changed. STOPPED
+at completion of Powerups and its checks; no further stage started.
+
+# Major bug fixes and quality update
+
+Completed locally 2026-11-03. Stopped after this update. No commit,
+push or deployment. Detailed causes, exact changed files, screenshot observations,
+QA commands, limitations and release steps: [docs/MAJOR_QUALITY_UPDATE.md](docs/MAJOR_QUALITY_UPDATE.md).
+
+- Outward slide streaks now spend their lifetime on screen and fade without phase
+  snapping. Shared collision uses legal step support and measured barrel envelopes;
+  all four guns slide both ways on both interior flights and exterior stairs on
+  all three maps, with wall collision, cooldown and jump behavior preserved.
+- Fixed the black sniper aperture: hidden spectator/local SVGs shared IDs. A
+  geometric cutout and unique gradient IDs preserve the reticle on all graphics
+  modes. View-model-only near clipping and hip framing expose previously clipped
+  grips/components without changing weapon assets, ADS anchors or animation timing.
+- Live blurred selection uses the loaded map, actual synchronized players and
+  collision-limited following; empty/unavailable targets use a landmark orbit.
+  No pre-spawn life, extra connection, name-tag reveal or duplicate map scene.
+- Server-owned hold/release grenade charge reaches full strength at 1.5 seconds;
+  keyboard and HUD pointer controls share cancellation for menus/focus/network/life
+  changes. Shared protocol v16 strictly distinguishes cancel from release. The
+  server caps charge by elapsed AND simulated time; no client strength claims.
+- Configurable 100 HP center / smooth 4.2 m occluded blast falloff; unchanged fuse,
+  swept physics, kill/score/combo/reward transaction and inventory authority.
+  Bounded cosmetic explosion roll preserves the optical aim axis. Larger fiery
+  burst/ring/light, denser five-second smoke, 48 swept cosmetic rocks, 24 projected
+  scorch marks and a 30% larger visible grenade (collision sphere unchanged).
+- Captured/reviewed 39 map views plus four targeted prop follow-ups after an initial
+  33-frame inspection. Replaced floating stair-rail segments on all maps with
+  continuous supported slopes; fixed Industrial insulator cores. Regenerated
+  Blender sources, affected GLBs, collision/debug exports and navigation metadata.
+- Enlarged only the working damage arrow (48 to 70 px).
+
+Validation completed:
+
+- Frontend: **521 passed**, one existing optional performance benchmark skipped;
+  frontend typecheck and production build pass. Backend typecheck and dry-run build
+  pass; final full backend suite **59 passed**. Real frontend/Worker protocol gate
+  **1 passed**, including held/cancel grenade frames; deployment gate **7 passed**.
+  Dedicated scaffold **7 passed**; generated asset verification passes.
+- Actual local Chrome + workerd: **44 grenade/loading/reconnect checks** and
+  **9 selection-background checks**, with zero browser/asset errors. Rendering/input
+  browser suite: **14 checks**, all four gun rigs and scope on Low/Medium/High/Ultra.
+  **17 explosion renders** verify normal/reduced modes and persistent ground marks.
+- Visually reviewed 39 map views plus four targeted follow-ups; initial 33-frame
+  evidence and all per-view findings are in the detailed report. SVG reproduction
+  confirms the hidden duplicate caused the black scope aperture.
+- A fresh-press guard prevents OS key-repeat from restarting a cancelled grenade
+  charge after menus/focus loss; customized binding and movement behavior tested.
+- Earlier failed tuning/fixture runs and timing failures are documented, with
+  resolutions and successful reruns. No assertion or protocol validation disabled.
+
+**Release later:** matching frontend/assets and Cloudflare Worker are required
+(protocol v16 plus changed map revisions), using the existing coordinated CI.
+Worker identity/URL, Durable Object, origins, credentials, Vite and Pages base are
+preserved. Public-server behavior has not been validated or deployed here.
+
 # Third-person character animation pass 2
 
 Completed locally 2026-11-03. Stopped at this request. No commit, push or deployment.

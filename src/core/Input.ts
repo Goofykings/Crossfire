@@ -41,6 +41,7 @@ export class Input {
   private locked = false;
   /** When false (menus open) game actions are ignored. */
   enabled = false;
+  onClear: () => void = () => {};
   readonly lockListeners = new Set<(locked: boolean) => void>();
   private readonly disposers: (() => void)[] = [];
 
@@ -59,6 +60,9 @@ export class Input {
       if (e.defaultPrevented || isTextInput(e.target)) return;
       const action = this.actionFor(e.code) ?? (e.code === 'F3' ? 'toggleFps' : e.code === 'F2' ? 'debugCollision' : undefined);
       if (!action) return;
+      // A cancelled charge must require a fresh press. OS key-repeat after
+      // closing chat/settings or refocusing must not silently start another.
+      if (action === 'grenade' && e.repeat && !this.down.has(action)) return;
       if (this.enabled || action === 'toggleFps') {
         // keep the browser from scrolling / triggering shortcuts while playing
         if (this.enabled) e.preventDefault();
@@ -186,6 +190,7 @@ export class Input {
   }
 
   clearState(): void {
+    this.onClear();
     this.down.clear();
     this.heldControls.clear();
     this.pressedEdges.clear();

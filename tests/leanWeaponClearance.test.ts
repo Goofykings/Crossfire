@@ -18,7 +18,7 @@ describe('equipped weapon movement clearance', () => {
     it(`stops ${id} before the wall and permits sliding and backing away`, () => {
       const player = scene(id);
       for (let i = 0; i < 180; i++) player.fixedUpdate(1 / 60, { ...NO_INTENT, z: 1 });
-      expect(player.position.z).toBeGreaterThanOrEqual(-2.9 + WEAPON_CLEARANCE[id] + .13 - .02);
+      expect(player.position.z).toBeGreaterThanOrEqual(-2.9 + WEAPON_CLEARANCE[id] + .06 - .02);
       const stopped = player.position.z;
       for (let i = 0; i < 60; i++) player.fixedUpdate(1 / 60, { ...NO_INTENT, x: 1, z: 1, aim: true });
       expect(player.position.x).toBeGreaterThan(1);
@@ -34,6 +34,14 @@ describe('equipped weapon movement clearance', () => {
     const before = player.position.z;
     player.fixedUpdate(1 / 60, { ...NO_INTENT, z: 1 });
     expect(player.position.z).toBeLessThanOrEqual(before + .00001);
+  });
+
+  it('covers the full barrel width, including the space between the center and hip probes', () => {
+    const world=new CollisionWorld();world.add({c:[0,-.5,0],h:[20,.5,20]});
+    world.add({c:[.095,1,-3],h:[.009,1,.02]});
+    const player=new PlayerController(world);player.weaponClearance='sniper';player.teleport({x:0,y:0,z:0});
+    for(let i=0;i<240;i++)player.fixedUpdate(1/120,{...NO_INTENT,z:1,crouch:true});
+    expect(player.position.z).toBeGreaterThanOrEqual(-2.98+WEAPON_CLEARANCE.sniper+.04);
   });
 
   it('produces the same movement for prediction and authoritative simulation', () => {

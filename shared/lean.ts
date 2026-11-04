@@ -8,26 +8,26 @@ export const LEAN_ANGLE = 14 * Math.PI / 180;
 export const LEAN_RATE = 20; // exponential response: ~95% in 150 ms
 export const LEAN_RADIUS = .20;
 
-export function leanOffset(yaw: number, amount: number): { x: number; z: number } {
-  const offset = Math.max(-1, Math.min(1, amount)) * LEAN_OFFSET;
+export function leanOffset(yaw: number, amount: number, scale=1): { x: number; z: number } {
+  const offset = Math.max(-1, Math.min(1, amount)) * LEAN_OFFSET * scale;
   return { x: Math.cos(yaw) * offset, z: -Math.sin(yaw) * offset };
 }
 
 /** Sweep the upper body from the authoritative center; small increments also catch thin walls. */
-export function safeLean(world: CollisionWorld, position: Vec3, yaw: number, eyeHeight: number, desired: number): number {
+export function safeLean(world: CollisionWorld, position: Vec3, yaw: number, eyeHeight: number, desired: number, scale=1): number {
   const amount = Math.max(-1, Math.min(1, desired));
   // Neutral players need no additional collision sweeps on every simulation tick.
   if (Math.abs(amount) < 1e-8) return 0;
-  const displacement = leanOffset(yaw, amount);
-  const steps = Math.max(1, Math.ceil(Math.abs(amount * LEAN_OFFSET) / .02));
+  const displacement = leanOffset(yaw, amount, scale);
+  const steps = Math.max(1, Math.ceil(Math.abs(amount * LEAN_OFFSET * scale) / .02));
   let clear = 0;
   for (let i = 1; i <= steps; i++) {
     const k = i / steps;
     const x = position.x + displacement.x * k, z = position.z + displacement.z * k;
-    const height = eyeHeight + .16;
-    if (world.overlapsCylinder(x, z, LEAN_RADIUS, position.y + Math.max(.45, eyeHeight - .65), position.y + eyeHeight + .16)
+    const height = eyeHeight + .16 * scale;
+    if (world.overlapsCylinder(x, z, LEAN_RADIUS * scale, position.y + Math.max(.45 * scale, eyeHeight - .65 * scale), position.y + eyeHeight + .16 * scale)
       || world.overlapsCylinder(position.x + displacement.x * k * .5, position.z + displacement.z * k * .5,
-        MOVEMENT.radius, position.y + height * .5, position.y + height - .4)) break;
+        MOVEMENT.radius * scale, position.y + height * .5, position.y + height - .4 * scale)) break;
     clear = k;
   }
   return amount * clear;

@@ -1,3 +1,4 @@
+import { PowerupHud } from './PowerupHud';
 import { readinessDeadline } from '../core/assetReadiness';
 import { ChallengesPanel } from './ChallengesPanel';
 import { assetUrl } from '../core/assets';
@@ -39,17 +40,17 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, html?: 
  * with mil-dots and thicker posts toward the edge. The viewBox is square; `preserveAspectRatio slice` keeps the circle
  * round on any screen while the outer rectangle covers the whole view.
  */
-const SCOPE_SVG = `<svg viewBox="-100 -100 200 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+const scopeSvg = (id: string) => `<svg viewBox="-100 -100 200 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
   <defs>
-    <radialGradient id="scope-edge" cx="0" cy="0" r="46" gradientUnits="userSpaceOnUse">
+    <radialGradient id="${id}-edge" cx="0" cy="0" r="46" gradientUnits="userSpaceOnUse">
       <stop offset="0.9" stop-color="#000" stop-opacity="0"/>
       <stop offset="0.985" stop-color="#000" stop-opacity="0.85"/>
       <stop offset="1" stop-color="#000" stop-opacity="1"/>
     </radialGradient>
-    <mask id="scope-hole"><rect x="-400" y="-400" width="800" height="800" fill="#fff"/><circle r="46" fill="#000"/></mask>
+
   </defs>
-  <rect x="-400" y="-400" width="800" height="800" fill="#000" mask="url(#scope-hole)"/>
-  <circle r="46" fill="url(#scope-edge)"/>
+  <path fill="#000" fill-rule="evenodd" d="M-400-400H400V400H-400Z M46 0a46 46 0 1 0-92 0a46 46 0 1 0 92 0Z"/>
+  <circle r="46" fill="url(#${id}-edge)"/>
   <g stroke="#080808" fill="#080808">
     <line x1="-46" y1="0" x2="46" y2="0" stroke-width="0.16"/>
     <line x1="0" y1="-46" x2="0" y2="46" stroke-width="0.16"/>
@@ -76,7 +77,8 @@ export class UI {
   private finishGuestSetup: () => void = () => {};
 
   // callbacks set by the game
-  onGrenade: () => void = () => {};
+  onGrenade: (held: boolean, cancel?: boolean) => void = () => {};
+  private chargeRing!: HTMLElement;
   onPlay: () => void = () => {};
   onStart: () => void = () => {};
   onResume: () => void = () => {};
@@ -95,6 +97,7 @@ export class UI {
   // HUD elements
   private crosshair!: HTMLElement;
   private hitmarker!: HTMLElement;
+  powerupHud!: PowerupHud;
   private healthValue!: HTMLElement;
   private healthBar!: HTMLElement;
   private slideLines!: HTMLElement;
@@ -389,7 +392,7 @@ export class UI {
 
   private buildSpectate(): void {
     const s = this.screen('spectate');
-    this.spectatorScope = el('div', 'scope', SCOPE_SVG);
+    this.spectatorScope = el('div', 'scope', scopeSvg('spectator'));
     s.appendChild(this.spectatorScope);
     this.spectateBy = el('div', 'spectate-by');
     const bottom = el('div', 'spectate-bottom');
@@ -473,6 +476,8 @@ export class UI {
     const ch = el('div', 'crosshair', '<i class="h l"></i><i class="h r"></i><i class="v t"></i><i class="v b"></i><i class="dot"></i>');
     this.crosshair = ch;
     s.appendChild(ch);
+    this.chargeRing = el('div', 'grenade-charge', '<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="17" pathLength="100"/></svg>');
+    this.chargeRing.setAttribute('aria-hidden', 'true'); s.appendChild(this.chargeRing);
     this.hitmarker = el('div', 'hitmarker', '<i></i><i></i><i></i><i></i>');
     s.appendChild(this.hitmarker);
     const tl = el('div', 'hud-tl');
@@ -486,6 +491,7 @@ export class UI {
     tr.appendChild(this.statsBox);
     s.appendChild(tr);
     const bl = el('div', 'hud-bl');
+    this.powerupHud=new PowerupHud(bl);
     const health = el('div', 'health');
     health.appendChild(el('div', 'cross'));
     const hcol = el('div');
@@ -512,14 +518,22 @@ export class UI {
     this.grenadeButton = el('button', 'grenade-count'); this.grenadeButton.type = 'button';
     this.grenadeButton.innerHTML = weaponIcon('grenade') + '<span>0</span>';
     this.grenadeButton.addEventListener('mousedown', (e) => e.preventDefault());
-    this.grenadeButton.addEventListener('click', () => this.onGrenade());
+    this.grenadeButton.title = 'Hold to charge; release to throw';
+    this.grenadeButton.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0 || this.grenadeButton.disabled) return;
+      e.preventDefault(); this.grenadeButton.setPointerCapture(e.pointerId); this.onGrenade(true);
+    });
+    this.grenadeButton.addEventListener('pointerup', () => this.onGrenade(false));
+    this.grenadeButton.addEventListener('pointercancel', () => this.onGrenade(false, true));
+    this.grenadeButton.addEventListener('lostpointercapture', () => this.onGrenade(false));
+    this.grenadeButton.addEventListener('click', (e) => { if (e.detail === 0) { this.onGrenade(true); this.onGrenade(false); } });
     ammoRow.append(this.grenadeButton, this.ammoBox); br.appendChild(ammoRow);
     br.appendChild(this.reloadBar);
     br.appendChild(this.weaponName);
     br.appendChild(this.weaponSlots);
     s.appendChild(br);
     // sniper scope: black surround, the round field of view with a mil-dot reticle (SVG, crisp at any resolution)
-    this.scope = el('div', 'scope', SCOPE_SVG);
+    this.scope = el('div', 'scope', scopeSvg('local'));
     s.insertBefore(this.scope, s.firstChild);
     this.toast = el('div', 'toast');
     s.appendChild(this.toast);
@@ -1062,6 +1076,11 @@ export class UI {
     window.setTimeout(() => popup.remove(), 800);
   }
 
+  setGrenadeCharge(progress: number): void {
+    if (!this.chargeRing) return;
+    this.chargeRing.classList.toggle('visible', progress > .065);
+    this.chargeRing.style.setProperty('--charge', String(Math.max(0, Math.min(1, progress))));
+  }
   setGrenades(count: number): void {
     this.grenadeButton.querySelector('span')!.textContent = String(count);
     this.grenadeButton.disabled = count === 0;

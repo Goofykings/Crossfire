@@ -1,3 +1,6 @@
+import { PowerupView } from './PowerupView';
+import { maxHealth, POWERUP_STYLE } from '../../shared/powerups';
+import { GrenadeCharge } from '../../shared/grenadeCharge';
 import { CareerClient } from '../network/CareerClient';
 import { meshesReady } from '../core/assetReadiness';
 import { abortable } from '../core/cancellation';
@@ -20,7 +23,7 @@ import { RenderContext } from '../rendering/RenderContext';
 import { UI } from '../ui/UI';
 import { Effects } from '../weapons/Effects';
 import { GrenadeView } from '../weapons/GrenadeView';
-import { GRENADE, advanceGrenade, throwGrenade, blastDamage, type GrenadeEvent, type GrenadeState } from '../../shared/grenades';
+import { GRENADE, advanceGrenade, throwGrenade, blastDamage, sweepSphere, type GrenadeEvent, type GrenadeState } from '../../shared/grenades';
 import { applySpread, damageAt, Loadout, WEAPONS, Weapon, type WeaponEvent } from '../weapons/Weapon';
 import { RIG_CONFIGS, WeaponView } from '../weapons/WeaponView';
 import { DamageSystem, type Attacker, type HitZone } from './Damage';
@@ -89,6 +92,8 @@ export class Game {
   private grenadeCount: number = GRENADE.perLife;
   private grenadeClick = false;
   private grenadeHeld = false;
+  private readonly grenadeCharge = new GrenadeCharge();
+  private grenadePointerHeld = false;
   private readonly damage = new DamageSystem();
   state: State = 'menu';
   private acc = 0;
@@ -129,6 +134,7 @@ export class Game {
     VITE_MULTIPLAYER_URL: import.meta.env.VITE_MULTIPLAYER_URL,
     VITE_CUSTOM_MULTIPLAYER_URL: import.meta.env.VITE_CUSTOM_MULTIPLAYER_URL,
   });
+  private readonly powerupView: PowerupView;
   private readonly remotePlayers: RemotePlayers;
   private readonly homeCharacter: HomeCharacter;
   private shownResult = '';
@@ -147,6 +153,7 @@ export class Game {
     this.homeCharacter = new HomeCharacter(uiRoot.querySelector('#menu')!);
     this.materials = new MaterialLibrary(this.ctx.scene);
     this.maps = new MapManager(this.ctx, this.materials, () => GRAPHICS_PRESETS[this.settings.value.graphicsQuality].batchCell, !options.multiplayer);
+    this.powerupView=new PowerupView(this.ctx.scene);
     this.remotePlayers = new RemotePlayers(this.ctx.scene, uiRoot, this.materials);
     this.postfx = new PostFX(this.ctx.scene, this.ctx.camera);
     this.instrumentation = new SceneInstrumentation(this.ctx.scene);
@@ -183,7 +190,13 @@ export class Game {
     this.settings.onChange((v, changed) => this.applySettings(v, changed));
 
     // Public Play has no silent practice fallback.
-    this.ui.onGrenade = () => { if (this.state === 'playing') this.grenadeClick = true; };
+    this.input.onClear = () => this.cancelGrenadeCharge();
+    this.ui.onGrenade = (held, cancel) => {
+      if (cancel) { this.cancelGrenadeCharge(); return; }
+      if (this.state !== 'playing') return;
+      this.grenadePointerHeld = held;
+      if (held) this.grenadeClick = true;
+    };
     this.ui.onPlay = () => void this.play(this.wantedMap);
     this.ui.onStart = () => void this.spawnSelected();
     this.ui.onResume = () => {
@@ -420,9 +433,11 @@ export class Game {
         network.onChatError = (message) => { if (!signal.aborted && this.network === network) this.ui.showToast(message, 'warn'); };
         network.onShot = (shot) => {
           if (signal.aborted || this.network !== network) return;
-          if (shot.shooterId !== network.selfId && (this.state === 'playing' || this.state === 'spectating' || this.state === 'paused')) {
+          if(this.networkReady)this.powerupView.shot(shot);
+          if (shot.shooterId !== network.selfId && (this.state === 'playing' || this.state === 'spectating' || this.state === 'paused' || this.state === 'start')) {
             const shooter = network.latest?.players.find((p) => p.id === shot.shooterId && p.alive);
             if (shooter) {
+              this.recentCombat.set(shot.shooterId, Date.now() + network.clockOffset);
               this.remotePlayers.fire(shot.shooterId, shot.weapon, Date.now() + network.clockOffset);
               const camera = this.ctx.camera;
               const delta = new Vector3(shooter.motion.position.x, shooter.motion.position.y + MOVEMENT.standEye, shooter.motion.position.z).subtract(camera.globalPosition);
@@ -446,6 +461,11 @@ export class Game {
             hits: shot.hits.length, damage: shot.hits.reduce((n, h) => n + h.amount, 0), head, target: shot.hits[0].id };
         };
         network.onEnvironment=(frame)=>{if(!signal.aborted&&this.network===network&&this.networkReady&&frame.roundId===this.loadedRound)this.map?.props.sync(frame);};
+        network.onPowerup = event => {
+          if(signal.aborted || this.network!==network || !this.networkReady)return;
+          this.powerupView.event(event);
+          if(event.kind==='pickup' && event.playerId===network.selfId)this.ui.showToast(`${POWERUP_STYLE[event.ability].name} activated`, 'blue', 2);
+        };
         network.onGrenade = (event) => {
           if (!signal.aborted && this.network === network && this.networkReady) this.presentGrenade(event);
         };
@@ -458,7 +478,7 @@ export class Game {
         network.onSnapshot = (snapshot) => { if (!signal.aborted && this.network === network) this.acceptSnapshot(snapshot); };
         network.onState = (state, message) => {
           if (signal.aborted || this.network !== network) return;
-          if (state !== 'connected') { this.remotePlayers.clear(); this.ui.scoreboard.setVisible(false); }
+          if (state !== 'connected') { this.cancelGrenadeCharge(); this.remotePlayers.clear(); this.ui.scoreboard.setVisible(false); }
           if (state === 'connected' && !this.networkReady) {
             void this.prepareNetworkMap().catch((e) => { if (!signal.aborted) this.connectionError((e as Error).message); });
           }
@@ -527,7 +547,7 @@ export class Game {
         this.networkReady = true;
         this.acceptSnapshot(network.latest);
         if (this.ui.currentScreen === 'results') return;
-        this.ui.setMapTitle(this.map!.def.name, target.match.mode === 'teams' ? 'Teams' : target.match.mode === 'ffa' ? 'Free for all' : 'Public match');
+        this.ui.setMapTitle(this.map!.def.name, target.match.mode === 'teams' ? 'Teams' : target.match.mode === 'powerups' ? 'Powerups' : target.match.mode === 'ffa' ? 'Free for all' : 'Public match');
         this.excludeViewFromSun(this.map!);
         const self = network.latest.players.find((p) => p.id === network.selfId);
         if (!self) throw new Error('Server did not assign a player');
@@ -571,7 +591,7 @@ export class Game {
     if (!self) return;
     this.grenadeCount = self.grenades; this.ui.setGrenades(self.grenades);
     this.health = self.health;
-    this.ui.setHealth(self.health, PLAYER_MAX_HEALTH);
+    this.ui.setHealth(self.health, maxHealth(self));
     if (self.alive) {
       if ((self.life !== this.networkLife || self.id !== this.appliedPlayerId) && self.weapon) {
         this.lastUsedWeapon.remember(self.weapon);
@@ -796,7 +816,7 @@ export class Game {
     }
     this.preSpawnPaused = false;
     this.network?.disconnect();
-    this.network = null;
+    this.network = null; this.selectionTarget = null; this.selectionFocus = null; this.recentCombat.clear();
     this.networkReady = false;
     this.loadedRound = -1;
     this.networkLife = -1;
@@ -845,6 +865,8 @@ export class Game {
     this.homeCharacter.setWeapon(this.lastUsedWeapon.value ?? this.ui.selectedWeapon);
     this.homeCharacter.setName(this.guestProfile.value.username);
     this.homeCharacter.setVisible(this.state === 'menu' && this.ui.currentScreen === 'menu' && !this.options.autoplay);
+    if (this.grenadeCharge.active && (this.state !== 'playing' || !this.input.enabled
+      || (this.options.multiplayer && this.network?.state !== 'connected'))) this.cancelGrenadeCharge();
     if (this.state === 'menu') { this.ui.update(rawDt); this.input.endFrame(); return; }
     const dt = Math.min(MAX_FRAME_DT, Math.max(0, rawDt));
     this.fps.frames++;
@@ -857,7 +879,7 @@ export class Game {
     if (this.state === 'playing' && this.player && this.map) {
       this.simulate(dt);
     } else if (this.map && (this.state === 'start' || this.state === 'loading')) {
-      this.menuCamera(dt);
+      this.selectionCamera(dt);
     }
     this.updateScoreboard();
     this.remotePlayers.setPresentationVisible(this.ui.currentScreen === 'hud' || this.state === 'spectating');
@@ -886,6 +908,7 @@ export class Game {
         spectatorScoped = scope > .98 && this.ui.currentScreen === 'spectate';
         this.weaponView?.update(dt, w, { sprinting: false, speed: pose.speed, grounded: pose.grounded,
           verticalSpeed: pose.verticalSpeed, sliding: pose.sliding, crouch: pose.crouch, reducedMotion: this.reducedMotion.matches });
+        this.weaponView?.setPlayerScale(this.network?.latest?.players.find(p=>p.id===death.killerId)?.motion.scale??1,dt);
         this.weaponView?.setHidden(scope > .98);
         this.weaponView?.setVisible(this.ui.currentScreen === 'spectate');
         this.ui.setScope(scope);
@@ -906,6 +929,10 @@ export class Game {
       this.grenadeView?.setReduced(this.settings.value.reducedEffects || this.settings.value.graphicsQuality === 'low');
       this.grenadeView?.update(dt, Date.now() + (this.network?.clockOffset ?? 0), this.map.world);
     }
+    const powerSnapshot=this.network?.state==='connected' && this.networkReady?this.network.latest:null;
+    const serverNow=Date.now()+(this.network?.clockOffset??0);
+    this.powerupView.update(powerSnapshot,serverNow,dt,this.remotePlayers,!!powerSnapshot&&!!this.map&&this.state!=='loading'&&this.state!=='results');
+    this.ui.powerupHud.update(powerSnapshot?.players.find(p=>p.id===this.network?.selfId)?.powerup,serverNow);
     this.ui.update(dt);
     const cameraAngles = this.ctx.camera.rotationQuaternion?.toEulerAngles();
     this.ui.damage.update(cameraAngles?.y ?? this.player?.yaw ?? 0, cameraAngles?.x ?? this.player?.pitch ?? 0);
@@ -924,7 +951,37 @@ export class Game {
     if (show) this.ui.scoreboard.update(this.network?.latest ?? null, this.network?.selfId ?? '', Date.now() + (this.network?.clockOffset ?? 0));
   }
 
-  private menuCamera(dt: number): void {
+  private selectionTarget: string | null = null;
+  private selectionTargetAt = 0;
+  private selectionFocus: Vector3 | null = null;
+  private readonly recentCombat = new Map<string, number>();
+  private selectionCamera(dt: number): void {
+    if (!this.map) return;
+    const now = Date.now() + (this.network?.clockOffset ?? 0);
+    const self = this.network?.latest?.players.find(p => p.id === this.network?.selfId);
+    const candidates = this.network?.latest?.players.filter(p => p.alive && p.id !== this.network?.selfId
+      && (this.network?.latest?.match.mode !== 'teams' || !self?.team || p.team === self.team)) ?? [];
+    const current = candidates.find(p => p.id === this.selectionTarget);
+    if (!current || now - this.selectionTargetAt > 6000) {
+      candidates.sort((a,b) => (this.recentCombat.get(b.id) ?? 0) - (this.recentCombat.get(a.id) ?? 0) || a.id.localeCompare(b.id));
+      this.selectionTarget = candidates[0]?.id ?? null; this.selectionTargetAt = now;
+    }
+    const pose = this.selectionTarget ? this.remotePlayers.spectatePose(this.selectionTarget) : null;
+    if (pose) {
+      const anchor = pose.position.clone();
+      const behind = new Vector3(0, .8, 3.2).applyRotationQuaternion(Quaternion.RotationYawPitchRoll(pose.rotation.toEulerAngles().y, 0, 0));
+      const hit = sweepSphere(this.map.world, anchor, behind, .22);
+      const desired = anchor.add(behind.scale(hit ? Math.max(0, hit.fraction - .05) : 1));
+      const cam = this.ctx.camera, blend = 1 - Math.exp(-dt * 4);
+      const next = Vector3.Lerp(cam.position, desired, blend);
+      // Recheck the interpolated camera, including on a target switch across a wall.
+      const delta = next.subtract(anchor), safe = sweepSphere(this.map.world, anchor, delta, .22);
+      cam.position.copyFrom(anchor.add(delta.scale(safe ? Math.max(0, safe.fraction - .02) : 1)));
+      this.selectionFocus ??= anchor.clone(); Vector3.LerpToRef(this.selectionFocus, anchor, blend, this.selectionFocus);
+      cam.setTarget(this.selectionFocus); this.ctx.setFov(72); this.weaponView?.setVisible(false); return;
+    }
+    this.selectionFocus = null;
+
     this.menuOrbit += dt * 0.04;
     const cam = this.ctx.camera;
     const [w, d] = this.map?.def.dimensions ?? [66, 66];
@@ -989,13 +1046,15 @@ export class Game {
       const wasGrounded = player.grounded;
       player.weaponClearance = this.weapon.stats.id;
       player.fixedUpdate(FIXED_DT, it);
-      const throwing = input.isDown('grenade') || grenadeEdge || this.grenadeClick;
+      const throwing = input.isDown('grenade') || grenadeEdge || this.grenadeClick || this.grenadePointerHeld;
       // A quick key tap can be released between render frames. Forward its
       // press edge as one authoritative input tick instead of losing the action.
       this.network?.fixedInput(player, it, { trigger: input.isDown('fire'), reload: input.isDown('reload') || reloadEdge, grenade: throwing, ...rig.aimAngles(this.scope) });
-      if (!this.options.multiplayer && throwing && !this.grenadeHeld && this.grenadeCount > 0 && this.weapon.action === 'idle' && !player.sliding) {
+      const charge = this.grenadeCharge.update(throwing, Date.now(), FIXED_DT,
+        this.grenadeCount > 0 && this.weapon.action === 'idle' && !player.sliding);
+      if (!this.options.multiplayer && charge !== null) {
         const projectile = throwGrenade(map.world, player.leanEye(), { x: player.position.x, y: player.position.y + player.eyeHeight, z: player.position.z },
-          player.lookDirection(), player.velocity, { id: crypto.randomUUID(), ownerId: 'player', ownerLife: 1, roundId: 0, at: Date.now() });
+          player.lookDirection(), player.velocity, { id: crypto.randomUUID(), ownerId: 'player', ownerLife: 1, roundId: 0, at: Date.now() }, charge);
         if (projectile) { this.grenadeCount--; this.practiceGrenades.push(projectile); this.grenadeView?.sync(this.practiceGrenades);
           this.presentGrenade({ kind: 'throw', id: `throw:${projectile.id}`, projectile }); }
       }
@@ -1033,6 +1092,7 @@ export class Game {
     const shown = this.viewOverride ? ({ ...this.viewOverride, stats: w.stats } as unknown as Weapon) : w;
     this.weaponView?.update(dt, shown, { sprinting: false, speed: player.horizontalSpeed,
       grounded: player.grounded, verticalSpeed: player.velocity.y, sliding: player.sliding, crouch: player.crouch, reducedMotion: this.reducedMotion.matches });
+    this.weaponView?.setPlayerScale(player.scale,dt);
     this.weaponView?.setHidden(this.scope > 0.98);
     this.ui.setScope(this.scope);
 
@@ -1046,8 +1106,17 @@ export class Game {
     this.ui.setAmmo(w.ammo, w.reserve, w.stats.magazine, w.reloading, w.reloadProgress);
     this.ui.setWeaponSlots(this.options.multiplayer ? [w.stats.name] : this.loadout.weapons.map((x) => x.stats.name), this.options.multiplayer ? 0 : this.loadout.switchingTo ?? this.loadout.currentIndex);
     this.ui.setGrenades(this.grenadeCount);
-    this.ui.setHealth(this.health, PLAYER_MAX_HEALTH);
+    this.ui.setGrenadeCharge(this.grenadeCharge.progress(Date.now()));
+    this.ui.setHealth(this.health, this.player ? PLAYER_MAX_HEALTH*this.player.scale : PLAYER_MAX_HEALTH);
     this.ui.setSlideEffect(player.sliding, player.horizontalSpeed, player.slideRemaining / MOVEMENT.slideDuration);
+  }
+
+  private cancelGrenadeCharge(): void {
+    if (this.player && this.options.multiplayer && (this.grenadeCharge.active || this.grenadeHeld)) {
+      this.network?.fixedInput(this.player, NO_INTENT, { trigger: false, reload: false, grenadeCancel: true });
+    }
+    this.grenadeCharge.reset(); this.grenadeHeld = this.grenadeClick = this.grenadePointerHeld = false;
+    this.ui?.setGrenadeCharge(0);
   }
 
   private presentGrenade(event: GrenadeEvent): void {
@@ -1058,6 +1127,9 @@ export class Game {
     }
     const now = Date.now() + (this.network?.clockOffset ?? 0);
     this.grenadeView?.explode(event, now);
+    if (now - event.at < 300 && this.state === 'playing' && this.player) {
+      this.cameraRig?.explosion(Math.hypot(this.player.position.x - event.position.x, this.player.position.y - event.position.y, this.player.position.z - event.position.z));
+    }
     if (now - event.at > 600) return; // History restores smoke, never old sound or hit feedback.
     const camera = this.ctx.camera, delta = new Vector3(event.position.x, event.position.y, event.position.z).subtract(camera.globalPosition);
     this.audio.playSpatial('grenade_explosion', { x: Vector3.Dot(delta, camera.getDirection(Vector3.Right())),
@@ -1232,6 +1304,7 @@ export class Game {
         fov: this.ctx.camera.fov * 180 / Math.PI, viewWeapon: this.weaponView?.currentId ?? null,
         viewVisible: this.weaponView?.root.isEnabled() ?? false,
         target: this.spectatingDeath?.killerId ? this.remotePlayers.spectatePose(this.spectatingDeath.killerId)?.position.asArray() ?? null : null }),
+      selectionView: () => ({ target: this.selectionTarget, camera: this.ctx.camera.position.asArray() }),
       loadingState: () => ({ round: this.loadedRound, networkReady: this.networkReady, mapLoad: this.loading?.id,
         roundLoad: !!this.roundLoad, sceneReady: this.ctx.scene.isReady() }),
       teleport: (x: number, y: number, z: number, heading = 0, pitch = 0) => {
@@ -1301,6 +1374,7 @@ export class Game {
           cameraBlocked: this.map?.world.overlapsCylinder(p.x, p.z, .1, p.y - .1, p.y + .1),
           muzzleBlocked: muzzle && this.map?.world.overlapsCylinder(muzzle.x, muzzle.z, .1, muzzle.y - .1, muzzle.y + .1) };
       },
+      powerups: () => this.powerupView.inspect(),
       characterAsset: () => this.remotePlayers.characters.inspect(),
       homeCharacter: () => this.homeCharacter.inspect(),
       /** Pose lab on the isolated home preview (same rig as remote players); null restores it. */

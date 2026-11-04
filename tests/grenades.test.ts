@@ -47,22 +47,24 @@ describe('continuous shared grenade physics', () => {
     advanceGrenade(g,g.explodeAt,floor());advanceGrenade(old,old.explodeAt,floor());
     const ratio=(Math.abs(g.position.z)-.38)/(Math.abs(old.position.z)-.38);
     expect(ratio).toBeGreaterThan(1.8);expect(ratio).toBeLessThan(2.8);
-    expect(GRENADE.damage).toBe(100);expect(GRENADE.damageRadius).toBe(1.8);expect(GRENADE.fuseMs).toBe(2000);
+    expect(GRENADE.damage).toBe(100);expect(GRENADE.damageRadius).toBe(4.2);expect(GRENADE.fuseMs).toBe(2000);
   });
 });
 describe('authoritative radial damage', () => {
-  it('caps at 100, falls linearly and reaches zero at 1.8m', () => {
+  it('has a lethal center, smooth falloff and zero damage at the main cloud boundary', () => {
     const w=floor(),motion=new PlayerController(w).capture(),at={x:0,y:.065,z:0};
     expect(blastDamage(w,at,motion)).toBe(100);
     motion.position.x=1e-14;expect(blastDamage(w,at,motion)).toBe(100);
-    motion.position.x=.9;expect(blastDamage(w,at,motion)).toBeCloseTo(50);
-    motion.position.x=1.8;expect(blastDamage(w,at,motion)).toBe(0);
+    motion.position.x=GRENADE.lethalRadius;expect(blastDamage(w,at,motion)).toBe(100);
+    let previous=100;
+    for(const x of [.7,1,2,3,4,4.19]){motion.position.x=x;const hp=blastDamage(w,at,motion);expect(hp).toBeLessThan(previous);expect(hp).toBeGreaterThan(0);previous=hp;}
+    motion.position.x=4.2;expect(blastDamage(w,at,motion)).toBe(0);
   });
   it('uses actual lowered/airborne body extents and solid occlusion', () => {
     const w=floor(),m=new PlayerController(w).capture();m.position.x=1;
     expect(blastDamage(w,{x:0,y:.1,z:0},m)).toBeGreaterThan(0);
     w.add({c:[.5,1,0],h:[.015,1,1]});expect(blastDamage(w,{x:0,y:.1,z:0},m)).toBe(0);
-    m.position={x:0,y:3,z:0};expect(blastDamage(floor(),{x:0,y:.1,z:0},m)).toBe(0);
+    m.position={x:0,y:5,z:0};expect(blastDamage(floor(),{x:0,y:.1,z:0},m)).toBe(0);
     m.position.y=0;m.crouch=1;expect(blastDamage(floor(),{x:0,y:2.7,z:0},m)).toBeLessThan(blastDamage(floor(),{x:0,y:2.7,z:0},{...m,crouch:0}));
   });
 });

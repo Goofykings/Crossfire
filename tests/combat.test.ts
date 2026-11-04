@@ -25,7 +25,7 @@ it('uses relative teams, no friendly protection in FFA, and deterministic server
   expect(teammates('teams', 'red', 'blue')).toBe(false);
   expect(teammates('ffa', 'red', 'red')).toBe(false);
   expect(teammates('teams', null, null)).toBe(false);
-  expect(new Set(Array.from({ length: 20 }, (_, i) => roundMode(123, i))).size).toBe(2);
+  expect(new Set(Array.from({ length: 20 }, (_, i) => roundMode(123, i)))).toEqual(new Set(['ffa','teams','powerups']));
   expect(roundMode(123, 1)).toBe(roundMode(123, 1));
 });
 describe.each(WEAPONS)('$id authoritative weapon state', (stats) => {

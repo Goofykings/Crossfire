@@ -45,7 +45,7 @@ export class ExplosionBurst {
     this.lights = Array.from({ length: 2 }, (_, i) => {
       const light = new PointLight(`explosion-light:${i}`, new Vector3(0, -100, 0), scene);
       light.diffuse = new Color3(1, .48, .12); light.specular = new Color3(1, .7, .3);
-      light.range = 7; light.renderPriority = -10; light.intensity = 0; light.shadowEnabled = false; return light;
+      light.range = 9; light.renderPriority = -10; light.intensity = 0; light.shadowEnabled = false; return light;
     });
   }
   ready(signal?: AbortSignal): Promise<void> { return meshesReady([this.fire.mesh, this.glow.mesh, ...this.rings], signal); }
@@ -64,7 +64,7 @@ export class ExplosionBurst {
         const p = this.fire.particles[slot * 8 + i], angle = i * 2.399963 + slot;
         const radius = (.3 + (i % 3) * .25) * e.expansion;
         p.position.copyFrom(position).addInPlaceFromFloats(Math.cos(angle) * radius, (.15 + i % 3 * .32) * e.expansion, Math.sin(angle) * radius);
-        p.scaling.setAll(i < lobes && e.fire > 0 ? (.65 + e.expansion * (1.6 + i % 3 * .25)) * (1 + e.age * .5) : 0);
+        p.scaling.setAll(i < lobes && e.fire > 0 ? (.85 + e.expansion * (2.1 + i % 3 * .35)) * (1 + e.age * .5) : 0);
         const core = i % 3 === 0;
         p.color!.set(1, core ? Math.max(.15, .65 - e.age) : .19, core ? .08 : .018, i < lobes ? e.fire * (core ? .92 : .8) : 0);
       }
@@ -80,9 +80,9 @@ export class ExplosionBurst {
           core ? Math.max(e.flash * .85, e.fire * (i ? .4 : .7)) : i - 2 < sparks ? e.sparks : 0);
       }
       const ring = this.rings[slot];
-      ring.position.copyFrom(position); ring.position.y = (event?.position.y ?? 0) + .06; ring.scaling.setAll(.3 + e.expansion * 4.5);
-      ring.visibility = e.ring * (reduced ? .12 : .2);
-      if (event && e.light > 0) illumination.push({ id: event.id, position, intensity: e.light * (reduced ? 1 : 2) });
+      ring.position.copyFrom(position); ring.position.y = (event?.position.y ?? 0) + .06; ring.scaling.setAll(.3 + e.expansion * 6.2);
+      ring.visibility = e.ring * (reduced ? .15 : .3);
+      if (event && e.light > 0) illumination.push({ id: event.id, position, intensity: e.light * (reduced ? 1.3 : 3) });
     });
     illumination.sort((a, b) => b.intensity - a.intensity);
     this.lights.forEach((light, i) => {

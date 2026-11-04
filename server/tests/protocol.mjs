@@ -49,6 +49,11 @@ test('real frontend transport is compatible with the production Worker messages'
     player.yaw=.3;player.pitch=.1;
     for(let n=0;n<12;n++)a.fixedInput(player,{...NO_INTENT,crouch:true,aim:true});
     await until(()=>b.latest.players.some(p=>p.id===a.selfId&&p.ack>=12&&Math.abs(p.motion.yaw-.3)<.001),'Worker must accept real frontend input and synchronize orientation');
+    a.fixedInput(player,{...NO_INTENT},{trigger:false,reload:false,grenade:true});
+    a.fixedInput(player,{...NO_INTENT},{trigger:false,reload:false,grenadeCancel:true});
+    await until(()=>a.latest.players.find(p=>p.id===a.selfId)?.ack>=14,'Worker accepts real frontend grenade hold/cancellation frames');
+    assert.equal(a.latest.players.find(p=>p.id===a.selfId).grenades,1,'Cancellation must leave inventory intact');
+    assert.equal(a.latest.grenades.length,0,'Cancellation must never become a release');
     const chat=[];b.onChat=m=>chat.push(m);assert.equal(a.sendChat('Release compatibility check'),true);
     await until(()=>chat.some(m=>m.id===a.selfId&&m.text==='Release compatibility check'),'Real chat schema must round-trip');
     // Both directions use the same schemas, not just a matching version constant.

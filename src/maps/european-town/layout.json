@@ -3832,18 +3832,18 @@
    {
     "id": "circulation:B25:exit-post",
     "rect": [
-     -15.120000000000001,
+     -15.010000000000002,
      11.4,
-     -15.060000000000002,
+     -14.950000000000001,
      11.46
     ]
    },
    {
     "id": "circulation:B25:exit-post",
     "rect": [
-     -15.120000000000001,
+     -15.010000000000002,
      13.54,
-     -15.060000000000002,
+     -14.950000000000001,
      13.6
     ]
    },
@@ -3875,6 +3875,24 @@
     ]
    },
    {
+    "id": "circulation:B25:exit-slope-envelope",
+    "rect": [
+     -15.96,
+     11.4,
+     -15.68,
+     11.46
+    ]
+   },
+   {
+    "id": "circulation:B25:exit-slope-envelope",
+    "rect": [
+     -15.96,
+     13.54,
+     -15.68,
+     13.6
+    ]
+   },
+   {
     "id": "circulation:B25:exit-stair",
     "rect": [
      -16.240000000000002,
@@ -3884,7 +3902,7 @@
     ]
    },
    {
-    "id": "circulation:B25:exit-rail",
+    "id": "circulation:B25:exit-slope-envelope",
     "rect": [
      -16.240000000000002,
      11.4,
@@ -3895,14 +3913,14 @@
    {
     "id": "circulation:B25:exit-post",
     "rect": [
-     -16.240000000000002,
+     -16.130000000000003,
      11.4,
-     -16.18,
+     -16.07,
      11.46
     ]
    },
    {
-    "id": "circulation:B25:exit-rail",
+    "id": "circulation:B25:exit-slope-envelope",
     "rect": [
      -16.240000000000002,
      13.54,
@@ -3913,9 +3931,9 @@
    {
     "id": "circulation:B25:exit-post",
     "rect": [
-     -16.240000000000002,
+     -16.130000000000003,
      13.54,
-     -16.18,
+     -16.07,
      13.6
     ]
    },
@@ -3929,7 +3947,7 @@
     ]
    },
    {
-    "id": "circulation:B25:exit-rail",
+    "id": "circulation:B25:exit-slope-envelope",
     "rect": [
      -16.52,
      11.4,
@@ -3938,7 +3956,7 @@
     ]
    },
    {
-    "id": "circulation:B25:exit-rail",
+    "id": "circulation:B25:exit-slope-envelope",
     "rect": [
      -16.52,
      13.54,
@@ -3947,7 +3965,7 @@
     ]
    },
    {
-    "id": "circulation:B25:exit-rail",
+    "id": "circulation:B25:exit-slope-envelope",
     "rect": [
      -16.8,
      11.4,
@@ -3956,7 +3974,7 @@
     ]
    },
    {
-    "id": "circulation:B25:exit-rail",
+    "id": "circulation:B25:exit-slope-envelope",
     "rect": [
      -16.8,
      13.54,
@@ -3965,7 +3983,7 @@
     ]
    },
    {
-    "id": "circulation:B25:exit-rail",
+    "id": "circulation:B25:exit-slope-envelope",
     "rect": [
      -17.08,
      11.4,
@@ -3974,11 +3992,29 @@
     ]
    },
    {
-    "id": "circulation:B25:exit-rail",
+    "id": "circulation:B25:exit-post",
+    "rect": [
+     -16.970000000000002,
+     11.4,
+     -16.91,
+     11.46
+    ]
+   },
+   {
+    "id": "circulation:B25:exit-slope-envelope",
     "rect": [
      -17.08,
      13.54,
      -16.8,
+     13.6
+    ]
+   },
+   {
+    "id": "circulation:B25:exit-post",
+    "rect": [
+     -16.970000000000002,
+     13.54,
+     -16.91,
      13.6
     ]
    },

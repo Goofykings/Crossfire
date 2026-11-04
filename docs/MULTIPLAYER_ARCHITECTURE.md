@@ -1,5 +1,13 @@
 # Multiplayer architecture and migration plan
 
+Current local update (2026-11-03): **protocol v17** adds the authoritative
+POWERUPS FFA variant, shared ability/field rules, elapsed burn damage, shield,
+Giant dimensions and extra-jump state. Idle spawning/expiry use room alarms.
+The canonical Cloudflare room, coordinated CI and future Node transport boundary
+are preserved. See [Powerups rules and validation](POWERUPS.md) and latest
+PROGRESS.md. No public deployment was performed. Protocol/stage claims in the
+older entries below describe their historical updates.
+
 Deployment update (2026-11-02): [coordinated CI/CD](DEPLOYMENT.md) builds and tests
 both packages, checks actual frontend/Worker message compatibility, deploys the
 existing Worker, verifies protocol + Git release SHA and only then publishes

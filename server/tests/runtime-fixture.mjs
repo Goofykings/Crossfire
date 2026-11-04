@@ -4,6 +4,38 @@
 import { PublicRoom as ProductionRoom } from '../dist/index.js';
 export { default } from '../dist/index.js';
 export class PublicRoom extends ProductionRoom {
+  async powerupArenaForTest() {
+    const world=this.activeMap.world;
+    for(const target of this.powerups.pool) for(const source of this.powerups.pool) {
+      const delta={x:target.x-source.x,y:0,z:target.z-source.z},distance=Math.hypot(delta.x,delta.z);
+      if(distance<5||distance>9)continue;
+      if(Math.abs(target.y-source.y)>.05)continue;
+      if(world.raycast(source.x,source.y+1.2,source.z,delta.x/distance,0,delta.z/distance,distance))continue;
+      if(world.raycast(source.x,source.y+2.46,source.z,delta.x/distance,0,delta.z/distance,distance))continue;
+      const parking=this.powerups.pool.find(p=>Math.hypot(p.x-source.x,p.z-source.z)>15&&Math.hypot(p.x-target.x,p.z-target.z)>15);
+      if(!parking)continue;
+      return {parking:[parking.x,parking.y,parking.z],target:[target.x,target.y,target.z],source:[source.x,source.y,source.z],yaw:Math.atan2(-delta.x,-delta.z),distance};
+    }
+    throw new Error('No open pickup arena on actual navigation');
+  }
+  async pickupForTest(type,position) {
+    if(!['giant','doubleJump','fire','shield'].includes(type))throw new Error('Unknown powerup');
+    const p=this.powerups.pool.find(p=>p.x===position[0]&&p.y===position[1]&&p.z===position[2]);
+    if(!p)throw new Error('Fixture must use a validated navigable pickup location');
+    const pickup={id:crypto.randomUUID(),type,position:{...p}};
+    // Controlled visual/combat cases replace the field, rather than inserting a
+    // third cube into a two-player room and correctly losing it to the cap.
+    this.powerups.state.pickups.splice(0,this.powerups.state.pickups.length,pickup);this.updatePickups(Date.now());
+    await this.persist();for(const e of this.players.values())this.attach(e);
+    this.broadcast();this.start();return pickup;
+  }
+  async powerupClockForTest() { return {state:this.powerups.state,pool:this.powerups.pool.length}; }
+  async duePowerupForTest() { this.powerups.state.nextSpawn=Date.now()+100;await this.scheduleCleanup(); }
+  async clearPickupsForTest() { this.powerups.state.pickups.length=0;this.powerups.state.nextSpawn=Date.now()+20000;await this.persist();this.broadcast(); }
+  async soonExpirePowerupForTest(id) {
+    const e=this.players.get(id);if(!e?.session.powerup)throw new Error('Requires a real collected ability');
+    e.session.powerup.expiresAt=Date.now()+100;this.attach(e);this.start();return this.snapshot();
+  }
   async seedCareerForTest(id, mode='kills', eligibility='eligible') {
     const e=this.players.get(id),p=e?.session.profileId?this.careers.profiles.get(e.session.profileId):null;
     if(!e||!p)throw new Error('Requires a real credential-authorized joined session');
@@ -129,6 +161,8 @@ export class PublicRoom extends ProductionRoom {
     const [x, y, z] = pos;
     if (this.activeMap.world.overlapsCylinder(x, z, .34, y + .42, y + 1.8)) throw new Error('Arena position intersects map solids');
     e.controller.teleport({ x, y, z }, heading);
+    this.updatePickups(Date.now());this.start();
+    await this.persist();for(const p of this.players.values())this.attach(p);
     this.attach(e);
     this.broadcast();
     return this.snapshot();

@@ -119,10 +119,11 @@ export class RemotePlayers {
     if (!a || a.death || !a.samples.length) return null;
     const player = a.samples.at(-1)!.player;
     if (!player.weapon || !player.combat.gun) return null;
-    const crouch = Math.max(0, Math.min(1, (1.8 - a.height) / .65));
-    const offset = leanOffset(a.root.rotation.y, a.lean);
+    const scale=a.root.scaling.x;
+    const crouch = Math.max(0, Math.min(1, (1.8 - a.height/scale) / .65));
+    const offset = leanOffset(a.root.rotation.y, a.lean, scale);
     return { position: new Vector3(a.root.position.x + offset.x,
-      a.root.position.y + MOVEMENT.standEye + (MOVEMENT.crouchEye - MOVEMENT.standEye) * crouch,
+      a.root.position.y + (MOVEMENT.standEye + (MOVEMENT.crouchEye - MOVEMENT.standEye) * crouch)*scale,
       a.root.position.z + offset.z),
       rotation: Quaternion.RotationYawPitchRoll(a.root.rotation.y, a.look.rotation.x, -a.lean * LEAN_ANGLE),
       weapon: player.weapon, gun: { ...player.combat.gun, ads: a.weaponAds },
@@ -137,6 +138,7 @@ export class RemotePlayers {
   fire(id: string, weapon: WeaponId, serverNow: number): void {
     this.avatars.get(id)?.shots.receive(serverNow, shotInterval(weapon));
   }
+  effectAnchor(id: string): TransformNode | null { const a=this.avatars.get(id);return a&&!a.death?a.root:null; }
   private remove(a: Avatar): void {
     this.silhouettes?.remove(a.meshes); a.weapon?.dispose(); a.character?.dispose(); a.root.dispose(); a.label.remove();
     for (const material of a.death?.materials ?? []) material.dispose(false, false);
@@ -251,8 +253,10 @@ export class RemotePlayers {
         body.position.x = a.lean * .06;
         a.look.position.x = a.lean * .28;
       }
-      a.height = 1.8 - crouch * .65;
-      a.root.scaling.y = a.character ? 1 : a.height / 1.8;
+      const targetScale=n.scale??1;
+      const size=a.root.scaling.x+Math.max(-dt*2,Math.min(dt*2,targetScale-a.root.scaling.x));
+      a.height = (1.8 - crouch * .65)*size;
+      a.root.scaling.set(size, a.character ? size : a.height/1.8, size);
       a.character?.update({ crouch, grounded: k < .5 ? m.grounded : n.grounded,
         slideRemaining: m.slideRemaining + (n.slideRemaining - m.slideRemaining) * k,
         velocity: animationVelocity(m, n, (newer.at - older.at) / 1000, k) }, dt);
@@ -308,7 +312,7 @@ export class RemotePlayers {
 
   inspect() {
     return [...this.avatars].map(([id, a]) => ({ id, x: a.root.position.x, y: a.root.position.y, z: a.root.position.z,
-      yaw: a.root.rotation.y, height: a.height, lean: a.lean, friendly: a.friendly, visible: a.visible,
+      yaw: a.root.rotation.y, scale: a.root.scaling.x, height: a.height, lean: a.lean, friendly: a.friendly, visible: a.visible,
       labelVisible: !a.label.hidden && !this.labels.hidden, outline: !a.death && a.visible && (this.silhouettes?.has(a.meshes) ?? false),
       death: a.death ? { elapsed: a.death.elapsed, ...deathPose(a.death.elapsed, a.death.direction),
         alpha: a.meshes[0].material?.alpha, rotation: a.root.rotationQuaternion?.asArray() } : null,

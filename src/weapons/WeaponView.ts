@@ -144,6 +144,9 @@ export class WeaponView {
   throwGrenade(): void { this.throwTime = .36; }
   readonly motion = new WeaponMotion();
   private hidden = false;
+  private savedNear: number | null = null;
+  private readonly beforeGroup;
+  private readonly afterGroup;
   /** Every weapon mesh: excluded from the sun by the game. */
   readonly meshes: AbstractMesh[] = [];
   /** Last frame's pose, for tests. */
@@ -160,6 +163,19 @@ export class WeaponView {
     this.pivot = new TransformNode('weapon-pivot', scene);
     this.pivot.parent = this.root;
     scene.setRenderingAutoClearDepthStencil(WEAPON_RENDER_GROUP, true, true, false);
+    // The world needs its 10 cm near plane for distant depth precision; the
+    // camera-mounted stock/grip can legitimately sit closer. Change projection
+    // ONLY for the already depth-isolated weapon group, then restore it.
+    this.beforeGroup = scene.onBeforeRenderingGroupObservable.add(info => {
+      if (info.renderingGroupId !== WEAPON_RENDER_GROUP || scene.activeCamera !== ctx.camera) return;
+      this.savedNear = ctx.camera.minZ; ctx.camera.minZ = .012;
+      scene.setTransformMatrix(ctx.camera.getViewMatrix(), ctx.camera.getProjectionMatrix(true));
+    });
+    this.afterGroup = scene.onAfterRenderingGroupObservable.add(info => {
+      if (info.renderingGroupId !== WEAPON_RENDER_GROUP || this.savedNear === null) return;
+      ctx.camera.minZ = this.savedNear; this.savedNear = null;
+      scene.setTransformMatrix(ctx.camera.getViewMatrix(), ctx.camera.getProjectionMatrix(true));
+    });
   }
 
   async load(signal?: AbortSignal): Promise<void> {
@@ -354,6 +370,11 @@ export class WeaponView {
     if (hidden) this.current?.flash.setEnabled(false);
   }
 
+  setPlayerScale(scale: number, dt: number): void {
+    const next=this.root.scaling.x+Math.max(-dt*2,Math.min(dt*2,scale-this.root.scaling.x));
+    this.root.scaling.setAll(next);
+  }
+
   update(
     dt: number,
     w: Weapon,
@@ -368,6 +389,7 @@ export class WeaponView {
     const motion = this.motion.update(dt, { ...s, ads });
     const sight = rig.anchors.get('sight') ?? Vector3.Zero();
     const hip = v3(rig.cfg.hip);
+    hip.y += .105; // The former low hip framing put grips below the viewport.
     const adsPos = new Vector3(-sight.x, -sight.y, -rig.cfg.eye - sight.z);
     const pos = Vector3.Lerp(hip, adsPos, ads);
     pos.x += motion.x;
@@ -455,6 +477,8 @@ export class WeaponView {
   }
 
   dispose(): void {
+    this.ctx.scene.onBeforeRenderingGroupObservable.remove(this.beforeGroup);
+    this.ctx.scene.onAfterRenderingGroupObservable.remove(this.afterGroup);
     this.flashLight?.dispose();
     for (const container of this.containers) container.dispose();
     this.containers.length = 0;

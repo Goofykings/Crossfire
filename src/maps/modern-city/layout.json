@@ -3927,18 +3927,18 @@
    {
     "id": "circulation:C28:exit-post",
     "rect": [
-     17.84,
+     17.950000000000003,
      13.7,
-     17.9,
+     18.009999999999998,
      13.759999999999998
     ]
    },
    {
     "id": "circulation:C28:exit-post",
     "rect": [
-     17.84,
+     17.950000000000003,
      15.84,
-     17.9,
+     18.009999999999998,
      15.899999999999999
     ]
    },
@@ -3970,6 +3970,24 @@
     ]
    },
    {
+    "id": "circulation:C28:exit-slope-envelope",
+    "rect": [
+     18.68,
+     13.7,
+     18.96,
+     13.759999999999998
+    ]
+   },
+   {
+    "id": "circulation:C28:exit-slope-envelope",
+    "rect": [
+     18.68,
+     15.84,
+     18.96,
+     15.899999999999999
+    ]
+   },
+   {
     "id": "circulation:C28:exit-stair",
     "rect": [
      18.96,
@@ -3979,7 +3997,7 @@
     ]
    },
    {
-    "id": "circulation:C28:exit-rail",
+    "id": "circulation:C28:exit-slope-envelope",
     "rect": [
      18.96,
      13.7,
@@ -3990,14 +4008,14 @@
    {
     "id": "circulation:C28:exit-post",
     "rect": [
-     18.96,
+     19.07,
      13.7,
-     19.020000000000003,
+     19.130000000000003,
      13.759999999999998
     ]
    },
    {
-    "id": "circulation:C28:exit-rail",
+    "id": "circulation:C28:exit-slope-envelope",
     "rect": [
      18.96,
      15.84,
@@ -4008,9 +4026,9 @@
    {
     "id": "circulation:C28:exit-post",
     "rect": [
-     18.96,
+     19.07,
      15.84,
-     19.020000000000003,
+     19.130000000000003,
      15.899999999999999
     ]
    },
@@ -4024,7 +4042,7 @@
     ]
    },
    {
-    "id": "circulation:C28:exit-rail",
+    "id": "circulation:C28:exit-slope-envelope",
     "rect": [
      19.240000000000002,
      13.7,
@@ -4033,7 +4051,7 @@
     ]
    },
    {
-    "id": "circulation:C28:exit-rail",
+    "id": "circulation:C28:exit-slope-envelope",
     "rect": [
      19.240000000000002,
      15.84,
@@ -4042,7 +4060,7 @@
     ]
    },
    {
-    "id": "circulation:C28:exit-rail",
+    "id": "circulation:C28:exit-slope-envelope",
     "rect": [
      19.52,
      13.7,
@@ -4051,7 +4069,7 @@
     ]
    },
    {
-    "id": "circulation:C28:exit-rail",
+    "id": "circulation:C28:exit-slope-envelope",
     "rect": [
      19.52,
      15.84,
@@ -4060,7 +4078,7 @@
     ]
    },
    {
-    "id": "circulation:C28:exit-rail",
+    "id": "circulation:C28:exit-slope-envelope",
     "rect": [
      19.8,
      13.7,
@@ -4069,11 +4087,29 @@
     ]
    },
    {
-    "id": "circulation:C28:exit-rail",
+    "id": "circulation:C28:exit-post",
+    "rect": [
+     19.910000000000004,
+     13.7,
+     19.97,
+     13.759999999999998
+    ]
+   },
+   {
+    "id": "circulation:C28:exit-slope-envelope",
     "rect": [
      19.8,
      15.84,
      20.08,
+     15.899999999999999
+    ]
+   },
+   {
+    "id": "circulation:C28:exit-post",
+    "rect": [
+     19.910000000000004,
+     15.84,
+     19.97,
      15.899999999999999
     ]
    },

@@ -11,11 +11,16 @@ const camera=new FreeCamera('camera',new Vector3(5,3.5,-7),scene);camera.setTarg
 const fill=new HemisphericLight('sky',Vector3.Up(),scene);fill.intensity=.7;
 const sun=new DirectionalLight('sun',new Vector3(-1,-2,1),scene);sun.intensity=.9;
 const material=new StandardMaterial('rough concrete',scene);material.diffuseColor=new Color3(.35,.35,.32);material.specularColor=Color3.Black();
-const floor=MeshBuilder.CreateGround('floor',{width:30,height:30},scene);floor.material=material;
+const floor=MeshBuilder.CreateGround('batch:fixture-floor',{width:30,height:30},scene);floor.material=material;
 const wall=MeshBuilder.CreateBox('wall',{width:8,height:3,depth:.3},scene);wall.position.set(0,1.5,3);wall.material=material;
 const effect=new GrenadeView(scene),world=new CollisionWorld();
+world.add({c:[0,-.5,0],h:[15,.5,15]});world.add({c:[0,1.5,3],h:[4,1.5,.15]});
 await meshesReady(scene.meshes);
 const event={id:'render-fixture',grenadeId:'fixture',ownerId:'fixture',ownerLife:1,roundId:1,at:1000,position:{x:0,y:.1,z:0},hits:[]};
-const lab={async frame(age,reduced=false){effect.clear();effect.setReduced(reduced);effect.explode(event,1000+age);effect.update(0,1000+age,world);await meshesReady(scene.meshes);scene.render();return effect.inspect();}};
+const lab={async persistedMark(){
+  effect.clear();effect.explode(event,1000);effect.update(0,1000,world);
+  await new Promise(resolve=>setTimeout(resolve,950)); // transient dust uses actual presentation elapsed time
+  effect.update(0,8000,world);await meshesReady(scene.meshes);scene.render();return effect.inspect();
+},async frame(age,reduced=false){effect.clear();effect.setReduced(reduced);effect.explode(event,1000+age);effect.update(0,1000+age,world);await meshesReady(scene.meshes);scene.render();return effect.inspect();}};
 await lab.frame(1000);window.lab=lab;
 </script></body></html>

@@ -15,6 +15,24 @@ function setup() {
 }
 
 describe('camera stairs and impulses', () => {
+  it('decays a distance-scaled explosion impulse without changing the optical axis or aim', () => {
+    const run=(distance:number,reduced=false)=>{
+      const {rig,camera}=setup();rig.update(1/60,1,90,1);const aim=rig.aimAngles();
+      rig.explosion(distance);let peak=0;
+      for(let i=0;i<120;i++){
+        rig.update(1/60,1,90,1,0,reduced);
+        peak=Math.max(peak,Math.abs(camera.rotationQuaternion.toEulerAngles().z));
+        expect(rig.aimAngles()).toEqual(aim);
+        const forward=new Vector3(0,0,-1).applyRotationQuaternion(camera.rotationQuaternion);
+        expect(forward.x).toBeCloseTo(0,10);expect(forward.y).toBeCloseTo(0,10);
+      }
+      expect(camera.rotationQuaternion.toEulerAngles().z).toBeCloseTo(0,7);
+      return peak;
+    };
+    const center=run(0),middle=run(2),edge=run(4);
+    expect(center).toBeGreaterThan(middle*2);expect(middle).toBeGreaterThan(edge*10);
+    expect(center).toBeLessThan(.06);expect(run(0,true)).toBeLessThan(center*.15);expect(run(5)).toBe(0);
+  });
   it.each([.18, -.18])('smooths a %s m grounded change and settles at the real eye height', (step) => {
     const { player, camera, rig } = setup();
     player.position.y = player.prevPosition.y = .3;

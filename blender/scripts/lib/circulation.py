@@ -84,8 +84,11 @@ def local_parts(b):
         h=LEVEL*(16-k)/16
         yield [a,-.08,door-1.1,bb,h,door+1.1],floor,'exit-stair'
         for z in (door-1.1,door+1.04):
-            yield [a,h+.84,z,bb,h+.92,z+.06],trim,'exit-rail'
-            if k%4==0:yield [a,h,z,a+.06,h+.92,z+.06],trim,'exit-post'
+            yield [a,h+.84-LEVEL/16,z,bb,h+.92,z+.06],trim,'exit-slope-envelope'
+            if k%4==0 or k==15:
+                u=edge+sign*(1.6+(k+.5)*.28)
+                rail_h=LEVEL*(1-(k+.5)/16)+.88
+                yield [u-.03,h,z,u+.03,rail_h+.04,z+.06],trim,'exit-post'
     for z in (door-1.1,door+1.04):
         yield [lo,LEVEL+.84,z,hi,LEVEL+.92,z+.06],trim,'exit-rail'
         for u in (lo,hi-.06):yield [u,LEVEL,z,u+.06,LEVEL+.92,z+.06],trim,'exit-post'
@@ -113,5 +116,16 @@ def path(b):
 def generate(b):
     from meshkit import MeshData
     md=MeshData()
-    for r,mat,_ in parts(b):md.box(*r,mat)
+    for r,mat,kind in parts(b):
+        if kind!='exit-slope-envelope':md.box(*r,mat)
+    # A continuous rail welded to the landing rail and tread-mounted uprights.
+    # The authoritative yaw-only OBBs conservatively enclose each short slope
+    # section; visible geometry is a closed tube, rather than floating stairlets.
+    c=b['circulation'];w,_=dimensions(b);edge=0 if c['exit']=='w' else w;sign=-1 if c['exit']=='w' else 1
+    trim='wood_dark' if c['style']=='town' else 'steel_grey' if c['style']=='industrial' else 'aluminium'
+    for z in (c['doorV']-1.07,c['doorV']+1.07):
+        a=point(b,edge+sign*1.6,LEVEL+.88,z)
+        end=point(b,edge+sign*(1.6+16*.28),.88,z)
+        md.tube(a,end,.04,trim,segments=8)
+
     return md,[]

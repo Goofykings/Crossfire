@@ -1,3 +1,4 @@
+import { POWERUP_STYLE } from '../../shared/powerups';
 import type { PlayerState, Snapshot } from '../../shared/protocol';
 import { weaponIcon } from './WeaponIcons';
 import { playerColor, displayTeam, teamOrder } from './teamColors';
@@ -42,8 +43,8 @@ export class Scoreboard {
   update(snapshot: Snapshot | null, selfId: string, serverNow: number): void {
     const mode = snapshot?.match.mode;
     const end = snapshot?.match.endsAt;
-    this.header.textContent = `${mode === 'teams' ? 'TEAMS' : mode === 'ffa' ? 'FREE FOR ALL' : 'Mode unavailable'} · ${matchCountdown(end ?? null, serverNow)}`;
-    const signature = JSON.stringify([selfId, snapshot?.match, snapshot?.players.map((p) => [p.id, p.name, p.score, p.kills, p.deaths, p.team, p.weapon])]);
+    this.header.textContent = `${mode === 'teams' ? 'TEAMS' : mode === 'powerups' ? 'POWERUPS' : mode === 'ffa' ? 'FREE FOR ALL' : 'Mode unavailable'} · ${matchCountdown(end ?? null, serverNow)}`;
+    const signature = JSON.stringify([selfId, snapshot?.match, snapshot?.players.map((p) => [p.id, p.name, p.score, p.kills, p.deaths, p.team, p.weapon, p.powerup?.type, !!p.powerup && p.powerup.expiresAt>serverNow])]);
     if (signature === this.signature) return;
     this.signature = signature;
     this.body.replaceChildren();
@@ -61,6 +62,11 @@ export class Scoreboard {
         const name = row.insertCell();
         name.className = `score-name-${snapshot ? scoreboardRelationship(snapshot, selfId, p) : 'opponent'}`;
         name.textContent = p.name;
+        if(p.powerup && p.powerup.expiresAt>serverNow) {
+          const style=POWERUP_STYLE[p.powerup.type], ability=document.createElement('small');
+          ability.className='score-powerup';ability.textContent=`${style.icon} ${style.name}`;ability.style.color=style.color;
+          name.appendChild(ability);
+        }
         row.insertCell().innerHTML = weaponIcon(p.weapon);
         const score = row.insertCell(); score.textContent = formatScore(p.score); score.title = `${p.score} points`; score.dataset.score = String(p.score);
         for (const value of [p.kills, p.deaths]) row.insertCell().textContent = String(value);

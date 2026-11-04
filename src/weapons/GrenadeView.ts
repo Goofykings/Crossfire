@@ -1,3 +1,4 @@
+import { ExplosionGround } from './ExplosionGround';
 import { ExplosionBurst } from './ExplosionBurst';
 import { Color3, Color4, Scene as BabylonScene, MeshBuilder, SolidParticleSystem, StandardMaterial, Texture, TransformNode,
   Vector3, type AssetContainer, type Scene } from '@babylonjs/core';
@@ -12,6 +13,7 @@ import type { CollisionWorld } from '../physics/CollisionWorld';
 /** Shared GLB, pooled fiery burst and bounded smoke batches; presentation never changes damage/physics. */
 export class GrenadeView {
   private readonly burst: ExplosionBurst;
+  private readonly ground: ExplosionGround;
   private container: AssetContainer | null = null;
   private readonly objects = new Map<string, { root: TransformNode; state: GrenadeState; smoke: number; authority: number }>();
   private readonly particles: SolidParticleSystem;
@@ -29,7 +31,7 @@ export class GrenadeView {
   private readonly cloudParticles: SolidParticleSystem;
   private readonly cloudMaterial: StandardMaterial;
   constructor(private readonly scene: Scene) {
-    this.burst = new ExplosionBurst(scene);
+    this.burst = new ExplosionBurst(scene); this.ground = new ExplosionGround(scene);
     this.material = new StandardMaterial('grenade-fx', scene);
     this.material.diffuseTexture = new Texture(assetUrl('assets/textures/shared/fx/glow.png'), scene);
     this.material.diffuseTexture.hasAlpha = true;
@@ -85,6 +87,7 @@ export class GrenadeView {
       if (!object && this.container) {
         const entries = this.container.instantiateModelsToScene((name) => `grenade:${g.id}:${name}`, false);
         const root = new TransformNode(`grenade:${g.id}`, this.scene);
+        root.scaling.setAll(1.3); // Visual size only; the shared sphere stays 0.065 m.
         for (const node of entries.rootNodes) node.parent = root;
         for (const mesh of root.getChildMeshes()) mesh.isPickable = false;
         object = { root, state: structuredClone(g), smoke: 0, authority: g.updatedAt }; this.objects.set(g.id, object);
@@ -103,10 +106,10 @@ export class GrenadeView {
     // Expand the brief flash/burst separately from the seven-second smoke;
     // presentation sizes never change the authoritative blast radius.
     this.burst.explode(event, serverTime);
+    this.ground.explode(event, serverTime, this.reduced);
     if (serverTime - event.at > 300) return; // Do not replay expired flash/debris on resume.
     const scale = 4;
-    for (let i = 0; i < 5; i++) this.emit(event.position, .35, .035 * scale, false,
-      new Vector3((Math.random() - .5) * 5, 2 + Math.random() * 2, (Math.random() - .5) * 5).scaleInPlace(scale), true);
+
     for (let i = 0; i < 18; i++) {
       const flash = false; // The dedicated additive burst owns the flash.
       this.emit(event.position, flash ? .19 : .55 + Math.random() * .25, (flash ? .75 : .16) * scale,
@@ -147,6 +150,7 @@ export class GrenadeView {
     }
     this.particles.setParticles();
     this.burst.update(serverTime, this.reduced);
+    this.ground.update(serverTime, world);
     this.serverTime = serverTime;
     this.inside = 0;
     const eye = this.scene.activeCamera?.globalPosition;
@@ -167,7 +171,7 @@ export class GrenadeView {
         const r = radius * Math.sqrt((i + .5) / count) * .76;
         p.position.set(cloud.position.x + Math.cos(angle) * r, cloud.position.y + .5 + (i % 5) * .42 + Math.max(0, age) * (.00008 + (i % 7) * .000015), cloud.position.z + Math.sin(angle) * r);
         p.scaling.setAll((.85 + .3 * Math.abs(Math.sin(phase + i * 13.7))) * (this.reduced ? 3.8 : 2.9) * (.55 + .45 * Math.min(1, age / 500)));
-        p.color!.set(.43, .45, .47, opacity * (.85 + .15 * Math.abs(Math.sin(phase + i * 9.1))) * (this.reduced ? .78 : .65));
+        p.color!.set(.43, .45, .47, opacity * (.85 + .15 * Math.abs(Math.sin(phase + i * 9.1))) * (this.reduced ? .9 : .78));
       }
     }
     for (; slot < this.cloudParticles.nbParticles; slot++) { const p = this.cloudParticles.particles[slot]; p.scaling.setAll(0); p.color!.a = 0; }
@@ -178,7 +182,7 @@ export class GrenadeView {
   }
   inspect() {
     const mesh=this.particles.mesh;
-    return { burst: this.burst.inspect(this.serverTime), clouds: [...this.clouds.values()].map(c => ({ id:c.id, age:this.serverTime-c.at, opacity:smokeEnvelope(this.serverTime-c.at), position:c.position })), inside:this.inside, reduced:this.reduced, cloudBudget:this.cloudParticles.nbParticles, projectiles: this.objects.size, particles: this.lives.filter((p) => p.life > 0).length,
+    return { ground: this.ground.inspect(), burst: this.burst.inspect(this.serverTime), clouds: [...this.clouds.values()].map(c => ({ id:c.id, age:this.serverTime-c.at, opacity:smokeEnvelope(this.serverTime-c.at), position:c.position })), inside:this.inside, reduced:this.reduced, cloudBudget:this.cloudParticles.nbParticles, projectiles: this.objects.size, particles: this.lives.filter((p) => p.life > 0).length,
       rendering: { active:this.scene.getActiveMeshes().data.includes(mesh),enabled:mesh.isEnabled(),visible:mesh.isVisible,
         ready:mesh.isReady(),alpha:mesh.hasVertexAlpha,texture:this.material.diffuseTexture?.isReady(),disposed:mesh.isDisposed(),
         blending:this.material.needAlphaBlendingForMesh(mesh),vertices:mesh.getTotalVertices() },
@@ -186,7 +190,7 @@ export class GrenadeView {
         color:this.particles.particles[i].color?.asArray(),size:this.particles.particles[i].scaling.x}]:[]).slice(-24) };
   }
   clear(): void {
-    this.burst.clear();
+    this.burst.clear(); this.ground.clear();
     this.clouds.clear(); this.seen.clear(); this.inside = 0; this.restoreFog();
     for (const p of this.cloudParticles.particles) { p.scaling.setAll(0); p.color!.a = 0; }
     this.cloudParticles.setParticles();
@@ -196,5 +200,5 @@ export class GrenadeView {
     this.particles.setParticles();
   }
   dispose(): void { this.clear(); this.scene.onBeforeRenderObservable.remove(this.before); this.scene.onAfterRenderObservable.remove(this.after);
-    this.burst.dispose(); this.container?.dispose(); this.cloudParticles.dispose(); this.cloudMaterial.dispose(); this.particles.dispose(); this.material.dispose(true, true); }
+    this.burst.dispose(); this.ground.dispose(); this.container?.dispose(); this.cloudParticles.dispose(); this.cloudMaterial.dispose(); this.particles.dispose(); this.material.dispose(true, true); }
 }

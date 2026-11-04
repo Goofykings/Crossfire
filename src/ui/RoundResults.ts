@@ -19,7 +19,7 @@ export function createRoundResults(result: RoundResult, selfId: string, team: Pl
   const outcome = resultOutcome(result, selfId, team);
   const panel = node('div', 'round-results'); panel.dataset.outcome = outcome.toLowerCase();
   const banner = node('header', 'result-banner');
-  banner.append(node('small', 'result-mode', result.mode === 'teams' ? 'TEAMS · MATCH COMPLETE' : 'FREE FOR ALL · MATCH COMPLETE'), node('h1', 'result-title', outcome));
+  banner.append(node('small', 'result-mode', result.mode === 'teams' ? 'TEAMS · MATCH COMPLETE' : result.mode==='powerups' ? 'POWERUPS · MATCH COMPLETE' : 'FREE FOR ALL · MATCH COMPLETE'), node('h1', 'result-title', outcome));
   const winner = node('p', 'result-winner', result.draw ? 'Match drawn' : result.mode === 'teams'
     ? `${displayTeam(result.winningTeam, team)?.toUpperCase()} TEAM WINS` : `${result.winner?.name} wins`);
   banner.append(winner); panel.append(banner);

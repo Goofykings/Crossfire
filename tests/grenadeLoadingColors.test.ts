@@ -33,7 +33,7 @@ describe('authoritative smoke timing and spatial density',()=>{
     for(const age of [300,1000,4999,5000])expect(smokeEnvelope(age)).toBe(1);
     expect(smokeEnvelope(6000)).toBeCloseTo(.5);expect(smokeEnvelope(6999)).toBeLessThan(.001);
     expect(smokeEnvelope(7000)).toBe(0);expect(smokeEnvelope(9000)).toBe(0);
-    expect(GRENADE.damageRadius).toBe(1.8);expect(GRENADE.damage).toBe(100);
+    expect(GRENADE.damageRadius).toBe(4.2);expect(GRENADE.damage).toBe(100);
   });
   it('hides revealing presentation across smoke without blocking unrelated sightlines',()=>{
     const cloud={x:0,y:0,z:0},from={x:-6,y:1,z:0},to={x:6,y:1,z:0};

@@ -4,7 +4,8 @@ import type { ControllerState, Vec3 } from '../src/player/PlayerController';
 
 /** Metres, seconds and HP. One shared balance definition for server and HUD. */
 export const GRENADE = Object.freeze({ perLife: 1, radius: .065, fuseMs: 2000, speed: 15.6,
-  lift: 1.5, gravity: MOVEMENT.gravity, restitution: .42, friction: .68, damage: 100, damageRadius: 1.8 });
+  lift: 1.5, gravity: MOVEMENT.gravity, restitution: .42, friction: .68, damage: 100, damageRadius: 4.2, lethalRadius: .65, falloffPower: 1.15,
+  chargeMs: 1500, minSpeed: 3.2, maxSpeed: 24.5 });
 /** Presentation/history only; independent of blast damage and physics. */
 export const GRENADE_SMOKE_MS = 7000;
 export const GRENADE_SMOKE_DENSE_MS = 5000;
@@ -48,7 +49,7 @@ export function sweepSphere(world: CollisionWorld, start: Vec3, delta: Vec3, rad
 }
 
 export function throwGrenade(world: CollisionWorld, eye: Vec3, bodyEye: Vec3, direction: Vec3,
-  inherited: Vec3, data: Pick<GrenadeState,'id'|'ownerId'|'ownerLife'|'roundId'|'at'>): GrenadeState | null {
+  inherited: Vec3, data: Pick<GrenadeState,'id'|'ownerId'|'ownerLife'|'roundId'|'at'>, charge?: number): GrenadeState | null {
   if(world.pointInside(eye.x,eye.y,eye.z)||world.pointInside(bodyEye.x,bodyEye.y,bodyEye.z))return null;
   const toEye={x:eye.x-bodyEye.x,y:eye.y-bodyEye.y,z:eye.z-bodyEye.z};
   if(sweepSphere(world,bodyEye,toEye,GRENADE.radius))return null;
@@ -58,8 +59,9 @@ export function throwGrenade(world: CollisionWorld, eye: Vec3, bodyEye: Vec3, di
   if(fraction<.25)return null;
   const position={x:eye.x+offset.x*fraction,y:eye.y+offset.y*fraction,z:eye.z+offset.z*fraction};
   if(world.overlapsCylinder(position.x,position.z,GRENADE.radius,position.y-GRENADE.radius,position.y+GRENADE.radius))return null;
-  return {...data,position,velocity:{x:direction.x*GRENADE.speed+inherited.x*.35,
-    y:direction.y*GRENADE.speed+GRENADE.lift+Math.max(0,inherited.y)*.35,z:direction.z*GRENADE.speed+inherited.z*.35},
+  const speed = charge === undefined ? GRENADE.speed : GRENADE.minSpeed + (GRENADE.maxSpeed - GRENADE.minSpeed) * Math.max(0, Math.min(1, charge));
+  return {...data,position,velocity:{x:direction.x*speed+inherited.x*.35,
+    y:direction.y*speed+GRENADE.lift+Math.max(0,inherited.y)*.35,z:direction.z*speed+inherited.z*.35},
     updatedAt:data.at,explodeAt:data.at+GRENADE.fuseMs};
 }
 
@@ -95,13 +97,14 @@ export function advanceGrenade(g: GrenadeState, now: number, world: CollisionWor
 }
 
 export function blastDamage(world: CollisionWorld, origin: Vec3, motion: ControllerState): number {
-  const p=motion.position,height=MOVEMENT.standHeight+(MOVEMENT.crouchHeight-MOVEMENT.standHeight)*motion.crouch;
+  const p=motion.position,height=(MOVEMENT.standHeight+(MOVEMENT.crouchHeight-MOVEMENT.standHeight)*motion.crouch)*Math.max(motion.scale??1,motion.eyeScale??1);
   const dy=Math.max(p.y-origin.y,origin.y-(p.y+height),0);
   const distance=Math.hypot(p.x-origin.x,dy,p.z-origin.z);
   if(distance>=GRENADE.damageRadius)return 0;
   const target={x:p.x,y:Math.max(p.y+.25,Math.min(p.y+height-.2,origin.y)),z:p.z};
   const d={x:target.x-origin.x,y:target.y-origin.y,z:target.z-origin.z},length=Math.hypot(d.x,d.y,d.z);
   if(length>.0001&&world.raycast(origin.x,origin.y,origin.z,d.x/length,d.y/length,d.z/length,length-.001,c=>c.solid))return 0;
-  // Sub-micrometre drift at a settled center is numerical noise, not residual HP.
-  return Math.min(GRENADE.damage,Math.max(0,GRENADE.damage*(1-(distance < 1e-6 ? 0 : distance)/GRENADE.damageRadius)));
+  // A lethal center, then a smooth, configurable curve with zero slope at both ends.
+  const t = Math.max(0, Math.min(1, (distance - GRENADE.lethalRadius) / (GRENADE.damageRadius - GRENADE.lethalRadius)));
+  return GRENADE.damage * (1 - t * t * (3 - 2 * t)) ** GRENADE.falloffPower;
 }

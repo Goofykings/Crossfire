@@ -2,6 +2,7 @@ import { Quaternion } from '@babylonjs/core';
 import type { RenderContext } from '../rendering/RenderContext';
 import type { PlayerController, Vec3 } from './PlayerController';
 import { LEAN_ANGLE, LEAN_OFFSET, leanOffset } from '../../shared/lean';
+import { GRENADE } from '../../shared/grenades';
 import { DampedSpring } from '../core/DampedSpring';
 
 const DEG = Math.PI / 180;
@@ -21,6 +22,7 @@ export class PlayerCamera {
   private readonly dip = new DampedSpring(Math.sqrt(120), 14 / (2 * Math.sqrt(120)));
   private readonly kickPitch = new DampedSpring(Math.sqrt(260), 22 / (2 * Math.sqrt(260)));
   private kickYaw = 0;
+  private readonly blastRoll = new DampedSpring(39, .26);
   private fov = 90;
   private swayTime = 0;
   private readonly tmp: Vec3 = { x: 0, y: 0, z: 0 };
@@ -52,6 +54,12 @@ export class PlayerCamera {
     this.player.yaw += yawDeg * DEG * 0.25 * (Math.random() - 0.5);
   }
 
+  /** Cosmetic roll about the optical axis: the center aim/ray never changes. */
+  explosion(distance: number): void {
+    const t = Math.max(0, 1 - Math.max(0, distance) / GRENADE.damageRadius);
+    this.blastRoll.velocity = Math.min(2.6, this.blastRoll.velocity + 2.4 * t * t);
+  }
+
   /** Called once per fixed tick with the controller's snap/landing info. */
   onTick(): void {
     if (this.player.landedSpeed > 3) this.dip.velocity -= Math.min(1.2, this.player.landedSpeed * 0.09);
@@ -59,7 +67,7 @@ export class PlayerCamera {
 
   resetMotion(): void {
     this.groundY = null; this.wasGrounded = false;
-    this.dip.reset(); this.kickPitch.reset(); this.kickYaw = 0;
+    this.dip.reset(); this.blastRoll.reset(); this.kickPitch.reset(); this.kickYaw = 0;
     this.bobWeight = this.bobX = this.bobY = 0;
   }
 
@@ -109,15 +117,15 @@ export class PlayerCamera {
 
     const cam = this.ctx.camera;
     const heightBlend = p.prevCrouch + (p.crouch - p.prevCrouch) * alpha;
-    const desiredEye = p.cfg.standEye + (p.cfg.crouchEye - p.cfg.standEye) * heightBlend
+    const desiredEye = (p.cfg.standEye + (p.cfg.crouchEye - p.cfg.standEye) * heightBlend)*(p.prevEyeScale+(p.eyeScale-p.prevEyeScale)*alpha)/p.bodyScale
       + this.groundY - pos.y + this.bobY + this.dip.value * .1 * cosmetic;
     const eye = p.safeViewEye(pos, desiredEye);
     const lean = p.prevLean + (p.lean - p.prevLean) * alpha;
     // Include bob in the sweep so visual motion cannot nudge the camera through a wall.
     const safe = p.safeViewLean(pos, lean + this.bobX / LEAN_OFFSET, eye);
-    const offset = leanOffset(p.yaw, safe);
+    const offset = leanOffset(p.yaw, safe, p.bodyScale);
     cam.position.set(pos.x + offset.x, pos.y + eye, pos.z + offset.z);
-    const roll = this.bobX * 0.35 - lean * LEAN_ANGLE;
+    const roll = this.bobX * 0.35 - lean * LEAN_ANGLE + this.blastRoll.update(dt) * cosmetic;
     cam.rotationQuaternion ??= Quaternion.Identity();
     this.swayTime += dt;
     const aim = this.aimAngles(scopeSway);

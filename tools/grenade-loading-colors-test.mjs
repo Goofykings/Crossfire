@@ -143,6 +143,13 @@ try {
   // Actual key binding persists across settings updates, with mouse throw also exposed in the HUD.
   check((await a.evaluate(()=>window.__crossfire.settings())).keyBindings.grenade[0]==='KeyG','G grenade default');
   check((await a.evaluate(()=>window.__crossfire.settings())).keyBindings.reload[0]==='KeyR','R reload default');
+  await a.keyboard.down('g');await delay(350);
+  check(await a.$eval('.grenade-charge',e=>e.classList.contains('visible')),'held grenade shows a clockwise charge ring');
+  check((await me(a)).grenades===1,'charging does not consume inventory');
+  await a.screenshot({path:`${out}/charge-meter.png`});
+  await a.evaluate(()=>window.dispatchEvent(new Event('blur')));await a.keyboard.up('g');await delay(250);
+  check((await me(a)).grenades===1&&(await net(a)).snapshot.grenades.length===0,'focus-loss cancellation never releases a throw');
+  check(await a.$eval('.grenade-charge',e=>!e.classList.contains('visible')),'cancel hides the meter');
   await a.evaluate(()=>window.__grenadeCapture.arm());
   await a.evaluate(()=>window.__crossfire.look(0,-80));await delay(150);
   await a.keyboard.press('g');await until(async()=>(await a.evaluate(()=>window.__crossfire.grenades())).count===0,'authoritative inventory consumption');
@@ -227,7 +234,12 @@ try {
   check((await me(b)).grenades===1,'respawn restores the grenade HUD');
   const extra=process.argv.includes('--multikill')?await open('Second actual target'):null;
   if(extra){await room.placeForCombatTest(b.id,arena.center);await b.evaluate(()=>window.__crossfire.look(0,-80));await delay(250);}
-  await b.bringToFront();await delay(300);await b.click('.grenade-count');
+  await b.bringToFront();await delay(300);
+  const button=await b.$('.grenade-count'),bounds=await button.boundingBox();
+  await b.mouse.move(bounds.x+bounds.width/2,bounds.y+bounds.height/2);await b.mouse.down();await delay(1800);
+  check((await me(b)).grenades===1,'mouse held for full charge still waits for release');
+  check(await b.$eval('.grenade-charge',e=>Number(e.style.getPropertyValue('--charge'))>.95),'full charge caps the ring');
+  await b.mouse.up();
   await until(async()=>(await me(b)).grenades===0,'HUD mouse throw reaches server');
   check((await b.evaluate(()=>window.__crossfire.grenades())).projectiles===1,'mouse-accessible HUD throw');
   if(extra){

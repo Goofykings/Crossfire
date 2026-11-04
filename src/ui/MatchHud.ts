@@ -30,7 +30,7 @@ export class MatchHud {
   update(snapshot: Snapshot | null, serverNow: number, visible: boolean, selfId = ''): void {
     this.root.hidden = !visible || !snapshot;
     if (!snapshot) return;
-    const mode = snapshot.match.mode === 'teams' ? 'TEAMS' : snapshot.match.mode === 'ffa' ? 'FFA' : '';
+    const mode = snapshot.match.mode === 'teams' ? 'TEAMS' : snapshot.match.mode === 'powerups' ? 'POWERUPS' : snapshot.match.mode === 'ffa' ? 'FFA' : '';
     const time = matchCountdown(snapshot.match.endsAt, serverNow);
     if (this.mode.textContent !== mode) this.mode.textContent = mode;
     if (this.timer.textContent !== time) this.timer.textContent = time;

@@ -20,7 +20,7 @@ const options = convertV4MiniflareOptions({
   resourcePersistencePath: persistence, host: '127.0.0.1', port: 0,
   // Runtime reconstruction can exceed 3s on a cohosted browser/build machine.
   // Test expiry explicitly below; keep production settings unchanged.
-  bindings: { ALLOWED_ORIGINS: origin, SESSION_GRACE_MS: '10000', HEARTBEAT_TIMEOUT_MS: '3000' },
+  bindings: { ALLOWED_ORIGINS: origin, SESSION_GRACE_MS: '10000', HEARTBEAT_TIMEOUT_MS: '3000', NETWORK_DEBUG:process.env.CROSSFIRE_NETWORK_TEST_DEBUG??'false', ...(process.env.CROSSFIRE_TEST_MODE?{MATCH_MODE:process.env.CROSSFIRE_TEST_MODE}:{}) },
   log: new Log(LogLevel.ERROR),
 });
 
@@ -49,7 +49,7 @@ test('Public room: real Workers runtime and real WebSocket clients', { timeout: 
     clients.push(client);
     await new Promise((resolve, reject) => { ws.once('open', resolve); ws.once('error', reject); });
     const timer = heartbeat ? setInterval(() => { if (ws.readyState === WebSocket.OPEN) client.send({ type: 'ping', at: Date.now() }); }, 200) : null;
-    ws.once('close', () => { if (timer) clearInterval(timer); });
+    ws.once('close', (code,reason) => { if (timer) clearInterval(timer);if(process.env.CROSSFIRE_NETWORK_TEST_DEBUG)console.log('CLIENT CLOSE',client.welcome?.selfId,code,String(reason)); });
     if (join) {
       client.send({ type: 'join', name, ...(resumeToken ? { resumeToken } : {}) });
       client.welcome = await client.wait((m) => m.type === 'welcome' || m.type === 'error');

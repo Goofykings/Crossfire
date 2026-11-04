@@ -1,3 +1,4 @@
+import type { PowerupEvent } from '../../shared/powerups';
 import type { CareerView } from '../../shared/challenges';
 import type { EnvironmentFrame } from '../../shared/environment';
 import { FIXED_DT } from '../config/constants';
@@ -30,6 +31,7 @@ export class MultiplayerClient {
   clockOffset = 0;
   onCareer: (profile: CareerView) => void = () => {};
   onSnapshot: (snapshot: Snapshot) => void = () => {};
+  onPowerup: (event: PowerupEvent) => void = () => {};
   onShot: (shot: ShotResult) => void = () => {};
   onElimination: (event: Elimination) => void = () => {};
   onGrenade: (event: GrenadeEvent) => void = () => {};
@@ -257,6 +259,8 @@ export class MultiplayerClient {
       } else if (m.type === 'grenade') {
         const round = m.event.kind === 'throw' ? m.event.projectile.roundId : m.event.roundId;
         if (round === this.latest?.roundId && this.firstCombatEvent(m.event.id)) this.onGrenade(m.event);
+      } else if (m.type === 'powerup') {
+        if(m.event.roundId===this.latest?.roundId && this.firstCombatEvent(m.event.id))this.onPowerup(m.event);
       } else if (m.type === 'system') {
         if (!this.systemEvents.has(m.id)) {
           this.systemEvents.add(m.id);
@@ -272,7 +276,7 @@ export class MultiplayerClient {
           || this.latest.players.find((p) => p.id === m.elimination.victimId)?.life !== m.elimination.victimLife) return;
         // Presentation must retain the existing living instance before the dead snapshot removes it.
         this.onElimination(m.elimination);
-        this.latest = { ...this.latest, players: this.latest.players.map((p) => p.id === m.elimination.victimId ? { ...p, health: 0, alive: false, death: m.elimination } : p) };
+        this.latest = { ...this.latest, players: this.latest.players.map((p) => p.id === m.elimination.victimId ? { ...p, health: 0, alive: false, powerup: null, burn: null, motion: {...p.motion, scale:1, doubleJump:false}, death: m.elimination } : p) };
         this.onSnapshot(this.latest);
       } else if (m.type === 'left' && this.latest) {
         this.latest = { ...this.latest, players: this.latest.players.filter((p) => p.id !== m.id) };
@@ -379,7 +383,7 @@ export class MultiplayerClient {
     if (player.grounded && Math.hypot(player.velocity.x, player.velocity.y, player.velocity.z) < 0.001
       && player.crouch === 0 && !intent.crouch && !player.sliding && player.slideCooldown === 0 && !this.lastSlide && !intent.slide && !intent.jumpPressed && intent.x === 0 && intent.z === 0
       && !intent.aim && !this.lastAim && !intent.lean && !this.lastLean && player.lean === 0
-      && !combat.grenade && !this.lastCombat.grenade && !combat.trigger && !combat.reload && !this.lastCombat.trigger && !this.lastCombat.reload
+      && !combat.grenadeCancel && !combat.grenade && !this.lastCombat.grenade && !combat.trigger && !combat.reload && !this.lastCombat.trigger && !this.lastCombat.reload
       && yaw === this.lastYaw && player.pitch === this.lastPitch) return;
     if (this.pending.length >= 120) {
       if (Date.now() - this.lastBackpressure >= 1000) {

@@ -41,7 +41,7 @@ export function finalizeRound(ledger: RoundLedger, teamScores: { blue: number; r
   const draw = ledger.mode === 'teams' ? teamScores.blue === teamScores.red
     : !mvp || (ranked.length > 1 && ranked[1].score === mvp.score);
   return { roundId: ledger.roundId, mapId: ledger.mapId, mode: ledger.mode, endedAt: ledger.endsAt, draw,
-    winner: ledger.mode === 'ffa' && !draw ? mvp : null,
+    winner: ledger.mode !== 'teams' && !draw ? mvp : null,
     winningTeam: ledger.mode === 'teams' && !draw ? teamScores.blue > teamScores.red ? 'blue' : 'red' : null,
     mvp, teamScores: ledger.mode === 'teams' ? { ...teamScores } : null, players: ranked };
 }

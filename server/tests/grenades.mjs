@@ -40,10 +40,11 @@ for (const mode of ['ffa','teams']) test(`grenades and held crouch: inventory, r
       c.send({type:'spawn',roundId:c.snapshot.roundId,mapVersion:c.snapshot.mapVersion,weapon:'rifle',requestId:crypto.randomUUID()});
       await until(()=>self(c).alive);await delay(350);
     }
-    async function input(c,{grenade=false,crouch=false,pitch=-1.4}={}) {
+    async function input(c,{grenade=false,crouch=false,pitch=-1.4,release=true,grenadeCancel=false}={}) {
       const seq=++c.seq;c.send({type:'input',roundId:c.snapshot.roundId,mapVersion:c.snapshot.mapVersion,
-        frames:[{seq,yaw:0,pitch,intent:{x:0,z:0,slide:false,aim:false,jumpPressed:false,crouch},combat:{trigger:false,reload:false,grenade}}]});
+        frames:[{seq,yaw:0,pitch,intent:{x:0,z:0,slide:false,aim:false,jumpPressed:false,crouch},combat:{trigger:false,reload:false,grenade,grenadeCancel}}]});
       await until(()=>self(c).ack>=seq);
+      if(grenade&&release)await input(c,{grenade:false,crouch,pitch});
     }
     let a=await open();const b=await open(),c=await open();assert.equal(self(a).grenades,0);
     await spawn(a);await spawn(b);await spawn(c);assert.equal(self(a).grenades,1);
@@ -52,6 +53,9 @@ for (const mode of ['ffa','teams']) test(`grenades and held crouch: inventory, r
     assert.equal(self(a).motion.crouch,1,'server retains held crouch between sparse frames');
     assert.equal(b.snapshot.players.find(p=>p.id===a.id).motion.crouch,1,'peer receives the same lowered collider');
     await input(a);await delay(250);assert.equal(self(a).motion.crouch,0);
+    // Real transport cancellation never consumes inventory or releases a charge.
+    await input(a,{grenade:true,release:false});await input(a,{grenadeCancel:true});await input(a);
+    assert.equal(self(a).grenades,1);assert.equal(a.snapshot.grenades.length,0);
     c.holdDeathSnapshots=mode==='ffa';
     const mark=b.messages.length;await input(a,{grenade:true});
     const thrown=await until(()=>b.messages.slice(mark).find(m=>m.type==='grenade'&&m.event.kind==='throw'));
@@ -124,7 +128,18 @@ for (const mode of ['ffa','teams']) test(`grenades and held crouch: inventory, r
     assert.equal(self(b).grenades,1,'posthumous kill rewards exactly once');
     assert.equal(self(b).score,100,'posthumous elimination retains credit');assert.equal(self(b).comboCount,0,'dead owner retains no live combo');
     assert.equal(self(a).death.weapon,'grenade');
-    await spawn(b);await room.placeForCombatTest(b.id,arena.center);await input(b,{grenade:true});
+    await spawn(b);await room.placeForCombatTest(b.id,arena.center);
+    const start=Date.now();
+    // Feed actual 120 Hz held frames in 20 Hz batches; elapsed server time caps charge.
+    while(Date.now()-start<1750){
+      const frames=Array.from({length:6},()=>({seq:++b.seq,yaw:0,pitch:-1.4,intent:{x:0,z:0,slide:false,aim:false,jumpPressed:false},combat:{trigger:false,reload:false,grenade:true}}));
+      b.send({type:'input',roundId:b.snapshot.roundId,mapVersion:b.snapshot.mapVersion,frames});await delay(50);
+    }
+    assert.equal(self(b).grenades,1,'holding never throws or consumes inventory');
+    const chargeMark=b.messages.length;await input(b);
+    const charged=await until(()=>b.messages.slice(chargeMark).find(m=>m.type==='grenade'&&m.event.kind==='throw'));
+    assert.ok(Math.abs(charged.event.projectile.velocity.z)>4,'server credits a real full hold, not only the release tick');
+    assert.ok(Math.abs(charged.event.projectile.velocity.z)<=24.5*Math.cos(1.4)+.01,'authoritative charge speed is bounded');
     assert.equal((await room.snapshotForTest()).grenades.length,1);
     const next=await room.advanceMapForTest();assert.equal(next.grenades.length,0);
     assert.ok(next.players.every(p=>p.grenades===0),'new round removes old-life inventory');

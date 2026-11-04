@@ -17,13 +17,16 @@ try{
   for(const reduced of [false,true])for(const age of [0,40,120,250,450,1500,5500,7000]){
     const sample=await page.evaluate((age,reduced)=>window.lab.frame(age,reduced),age,reduced);
     samples.push({age,reduced,sample});console.log('Rendered',age,reduced);
-    assert.ok(sample.particles<=128);assert.ok(sample.burst.active.length<=4);
+    assert.ok(sample.particles<=128);assert.ok(sample.ground.rocks<=48);assert.ok(sample.ground.marks<=24);assert.ok(sample.burst.active.length<=4);
     if(age===120){assert.ok(sample.burst.active[0].fire>0);assert.equal(sample.burst.visibleFire,reduced?4:8);assert.equal(sample.burst.visibleGlow,reduced?6:12);}
     if(age===450)assert.equal(sample.burst.active[0].fire,0);
     if(age===1500)assert.equal(sample.clouds[0].opacity,1);
-    if(age===7000)assert.equal(sample.clouds.length,0);
+    if(age===7000){assert.equal(sample.clouds.length,0);assert.equal(sample.ground.marks,0,'expired history must not recreate an effect');}
     await page.screenshot({path:`${out}/${reduced?'reduced':'normal'}-${age}.png`});
   }
+  const persisted=await page.evaluate(()=>window.lab.persistedMark());
+  assert.equal(persisted.ground.marks,1,'a previously created surface mark persists after smoke');
+  assert.equal(persisted.clouds.length,0);assert.equal(persisted.particles,0);await page.screenshot({path:`${out}/persistent-mark.png`});
   assert.deepEqual(errors,[]);fs.writeFileSync(`${out}/results.json`,JSON.stringify({samples,errors},null,2));
-  console.log('PASS 16 deterministic Babylon renders, bounded pools, fire/smoke timing, normal/reduced modes');
+  console.log('PASS 17 deterministic Babylon renders, bounded pools, fire/smoke timing, normal/reduced modes');
 }finally{await browser.close();}

@@ -1,3 +1,8 @@
+import { leanOffset, safeLean } from '../../shared/lean';
+import { activatePowerup, expirePowerup, absorbDamage, applyBurn, advanceBurn, maxHealth, powerupScale, canGrow, pickupLocations, PowerupField, type PowerupFieldState, type PowerupPlayer } from '../../shared/powerups';
+import { sweepSphere } from '../../shared/grenades';
+import { WEAPON_CLEARANCE } from '../../src/player/PlayerController';
+import { GrenadeCharge } from '../../shared/grenadeCharge';
 import { Careers, careerIdentity } from './careers';
 import { advanceChallenges, type ChallengeEvent, type CareerView } from '../../shared/challenges';
 import { GRENADE_SMOKE_MS } from '../../shared/grenades';
@@ -29,7 +34,7 @@ interface Bindings {
   COMBO_WINDOW_MS?: string;
   RELEASE_SHA?: string;
 }
-interface Session extends ScoreState {
+interface Session extends ScoreState, PowerupPlayer {
   profileId?: string;
   participation?: { roundId: number; firstSpawn: number; abandoned: boolean };
   crouchHeld?: boolean;
@@ -59,6 +64,9 @@ interface Session extends ScoreState {
 }
 interface Attachment { openedAt: number; session?: Session }
 interface Entry {
+  /** Only room reconstruction gets time to process queued heartbeats. */
+  restoredUntil?: number;
+  grenadeCharge?: GrenadeCharge;
   session: Session;
   controller: PlayerController;
   queue: InputFrame[];
@@ -141,6 +149,7 @@ export class PublicRoom extends DurableObject<Bindings> {
   private environmentSeq=0;
   private environmentSent=0;
   private environmentUpdated=Date.now();
+  private powerups!: PowerupField;
   private grenades: GrenadeState[] = [];
   private explosions: GrenadeExplosion[] = [];
   private tickBusy = false;
@@ -169,6 +178,7 @@ export class PublicRoom extends DurableObject<Bindings> {
         // into a revised map would leave fruit floating above the new container.
         if(props.mapVersion===this.activeMap.revision&&props.states.every(validPropState))this.environment.restore(props.states);
       }
+      this.powerups=new PowerupField(this.mode==='powerups'?pickupLocations(this.activeMap.layout,this.activeMap.world):[],this.round.id,Date.now(), await ctx.storage.get<PowerupFieldState>('powerups'));
       const stored = await ctx.storage.get<Session[]>('sessions') ?? [];
       const attachments = ctx.getWebSockets().map(s => (s.deserializeAttachment() as Attachment)?.session);
       await Promise.all([...new Set([...stored, ...attachments].flatMap(s => s?.profileId ? [s.profileId] : []))].map(id => this.careers.load(id)));
@@ -194,7 +204,9 @@ export class PublicRoom extends DurableObject<Bindings> {
         e.socket = socket;
         this.players.set(s.id, e);
       }
+      for(const e of this.players.values()){this.updateAbility(e,Date.now());regenerate(e.session,Date.now());}
       if (ledger && ledger.roundId < this.round.id && this.lastResult) this.finishCareerRound(this.lastResult);
+      for(const e of this.players.values())if(e.socket)e.restoredUntil=Date.now()+Math.min(this.timeout,2000);
       this.trace('restore', { sockets: ctx.getWebSockets().length, sessions: this.players.size });
       this.prune();
       await this.persist();
@@ -208,7 +220,9 @@ export class PublicRoom extends DurableObject<Bindings> {
     if (this.env.NETWORK_DEBUG === 'true') console.log(JSON.stringify({ service: 'crossfire-network', at: Date.now(), event, ...detail }));
   }
   private get mode(): MatchMode {
-    return this.env.MATCH_MODE === 'ffa' || this.env.MATCH_MODE === 'teams' ? this.env.MATCH_MODE : roundMode(this.schedule.seed, this.round.id);
+    if(this.env.MATCH_MODE === 'ffa' || this.env.MATCH_MODE === 'teams' || this.env.MATCH_MODE === 'powerups')return this.env.MATCH_MODE;
+    // A code deployment must not change the mode of an already running round.
+    return this.ledger?.roundId===this.round.id ? this.ledger.mode : roundMode(this.schedule.seed,this.round.id);
   }
   private chooseTeam(): PlayerTeam {
     if (this.mode !== 'teams') return null;
@@ -217,6 +231,8 @@ export class PublicRoom extends DurableObject<Bindings> {
   }
 
   private entry(session: Session): Entry {
+    session.powerup ??= null; session.burn ??= null;
+    if(this.mode!=='powerups' || session.roundId!==this.round.id || !session.alive) {session.powerup=null;session.burn=null;}
     session.revision ??= 0;
     session.grenades ??= 0; // Never grant a fresh grenade to an already active legacy life.
     // Migrate the movement-only records without treating them as approved spawns.
@@ -257,7 +273,7 @@ export class PublicRoom extends DurableObject<Bindings> {
       if (changedRound) { session.score = 0; resetCombo(session); }
       session.motion = controller.capture();
     } else controller.restore(session.motion);
-    regenerate(session, Date.now());
+    this.syncAbility({session,controller});
     expireCombo(session, Date.now());
     const stats = WEAPONS.find((w) => w.id === session.weapon);
     const gun = stats ? new Weapon(stats) : null;
@@ -292,7 +308,7 @@ export class PublicRoom extends DurableObject<Bindings> {
   }
 
   private simulationNeeded(): boolean {
-    return this.environment.active>0 || this.grenades.length>0 || [...this.players.values()].some((e) => e.socket && e.session.alive && (e.queue.length > 0 || !e.controller.grounded
+    return (this.mode==='powerups' && [...this.players.values()].some(e=>e.session.alive && (!!e.session.burn || Math.abs(e.controller.eyeScale-e.controller.scale)>1e-8))) || this.environment.active>0 || this.grenades.length>0 || [...this.players.values()].some((e) => e.socket && e.session.alive && (e.queue.length > 0 || !e.controller.grounded
       || (e.controller.crouch !== Number(e.crouchHeld) && (e.crouchHeld || this.activeMap.world.ceilingHeight(
           e.controller.position.x, e.controller.position.z, MOVEMENT.radius * .95,
           e.controller.position.y + MOVEMENT.stepHeight + .01) >= e.controller.position.y + MOVEMENT.standHeight))
@@ -334,7 +350,7 @@ export class PublicRoom extends DurableObject<Bindings> {
     const now = Date.now();
     if (now - e.rateAt >= 1000) { e.rateAt = now; e.rateCount = 0; }
     if (++e.rateCount > 80) { this.error(socket, 'rate_limit', 'Too many messages', true); return; }
-    e.lastSeen = now;
+    e.lastSeen = now;e.restoredUntil=0;
     if ((message.type === 'input' || message.type === 'spawn') && message.roundId !== this.round.id) {
       this.error(socket, 'round_changed', 'The map changed. Wait for the new map to load.');
       this.send(socket, { v: PROTOCOL_VERSION, type: 'snapshot', snapshot: this.snapshot() });
@@ -363,6 +379,7 @@ export class PublicRoom extends DurableObject<Bindings> {
         opponent: !teammates(this.mode, e.session.team, p.session.team),
       })));
       if (!spawn) { this.error(socket, 'spawn_busy', 'No clear spawn available. Try again.'); return; }
+      e.session.powerup=null; e.session.burn=null; e.controller.scale=1; e.controller.doubleJump=false;
       e.controller.teleport({ x: spawn.pos[0], y: spawn.pos[1], z: spawn.pos[2] }, spawn.heading);
       e.leanHeld = 0;
       e.crouchHeld = false;
@@ -423,6 +440,7 @@ export class PublicRoom extends DurableObject<Bindings> {
       this.players.set(e.session.id, e);
     }
     // A valid resume credential preserves the session, while display names remain editable.
+    this.updateAbility(e, Date.now());
     regenerate(e.session, Date.now());
     expireCombo(e.session, Date.now());
     e.session.profileId = profileId;
@@ -434,6 +452,7 @@ export class PublicRoom extends DurableObject<Bindings> {
     e.queue.length = 0;
     e.session.combat.triggerHeld = e.session.combat.reloadHeld = e.session.combat.aimHeld = false;
     e.session.combat.grenadeHeld = false;
+    e.grenadeCharge?.reset();
     e.received = e.session.ack;
     e.lastSeen = Date.now();
     this.attach(e);
@@ -469,9 +488,10 @@ export class PublicRoom extends DurableObject<Bindings> {
       score: e.session.score, comboCount: e.session.comboCount, comboUntil: e.session.comboUntil,
       lastPlayedRound: e.session.lastPlayedRound, lastPlayedTeam: e.session.lastPlayedTeam,
       name: e.session.name, motion: e.controller.capture(), ack: e.session.ack, alive: e.session.alive, life: e.session.life,
+      powerup: e.session.powerup ?? null, burn: e.session.burn ?? null,
       health: e.session.health, combat: { ...e.session.combat, gun: e.gun?.capture() ?? null },
       weapon: e.session.weapon, kills: e.session.kills, deaths: e.session.deaths, team: e.session.team, death: e.session.death }));
-    return { ...(full?{environment:this.environmentFrame(true)}:{}),grenades: this.grenades, explosions: this.explosions, result: this.lastResult, room: PUBLIC_ROOM, mapId: this.round.mapId, roundId: this.round.id, mapVersion: this.activeMap.revision, serverTime: Date.now(), players,
+    return { pickups: this.mode==='powerups'?this.powerups.state.pickups:[], ...(full?{environment:this.environmentFrame(true)}:{}),grenades: this.grenades, explosions: this.explosions, result: this.lastResult, room: PUBLIC_ROOM, mapId: this.round.mapId, roundId: this.round.id, mapVersion: this.activeMap.revision, serverTime: Date.now(), players,
       match: { mode: this.mode, endsAt: this.round.endsAt, teamScores: this.mode === 'teams' ? { blue: this.scores.blue, red: this.scores.red } : null } };
   }
 
@@ -498,11 +518,13 @@ export class PublicRoom extends DurableObject<Bindings> {
     this.scores = { roundId: next.id, blue: 0, red: 0 };
     this.accumulator = 0;
     this.grenades = [];this.explosions = [];
+    this.powerups=new PowerupField(this.mode==='powerups'?pickupLocations(this.activeMap.layout,this.activeMap.world):[],this.round.id,Date.now());
     this.lastTick = Date.now();
     for (const e of this.players.values()) {
       e.session.roundId = next.id;
-      e.session.alive = false;
+      e.session.alive = false; e.grenadeCharge?.reset();
       e.session.health = 0;
+      e.session.powerup=null; e.session.burn=null;
       e.session.regenAt = null;
       e.session.combat = { gun: null, triggerHeld: false, reloadHeld: false, aimHeld: false, grenadeHeld: false };
       e.gun = null;
@@ -528,8 +550,11 @@ export class PublicRoom extends DurableObject<Bindings> {
     void this.scheduleCleanup();
   }
 
+  private heartbeatDeadline(e: Entry | undefined, openedAt: number): number {
+    return e ? Math.max(e.lastSeen+this.timeout,e.restoredUntil??0) : openedAt+5000;
+  }
   private connected(): Entry[] {
-    return [...this.players.values()].filter((e) => e.socket?.readyState === WebSocket.OPEN && Date.now() - e.lastSeen <= this.timeout);
+    return [...this.players.values()].filter((e) => e.socket?.readyState === WebSocket.OPEN && Date.now() <= this.heartbeatDeadline(e,0));
   }
 
   private broadcast(): void {
@@ -543,10 +568,11 @@ export class PublicRoom extends DurableObject<Bindings> {
     for (const e of this.connected()) this.send(e.socket!, message);
   }
 
-  private eliminate(victim: Entry, killer: Entry | null, head = false, direction: { x: number; y: number; z: number } | null = null, weapon?: 'grenade'): void {
+  private eliminate(victim: Entry, killer: Entry | null, head = false, direction: { x: number; y: number; z: number } | null = null, weapon?: 'grenade' | 'burn'): void {
     if (!victim.session.alive) return;
-    victim.session.alive = false;
+    victim.session.alive = false; victim.grenadeCharge?.reset();
     victim.session.health = 0;
+    victim.session.powerup=null;victim.session.burn=null;this.syncAbility(victim);
     victim.session.regenAt = null;
     resetCombo(victim.session);
     victim.session.deaths++;
@@ -561,6 +587,7 @@ export class PublicRoom extends DurableObject<Bindings> {
       if (this.mode === 'teams' && credited.session.team) this.scores[credited.session.team]++;
       this.advanceCareer(credited, { kind:'kill', weapon:weapon ?? credited.session.weapon!, head, points:award!.total }, at);
       this.recordStanding(credited);
+      if(!credited.session.alive)resetCombo(credited.session);
     }
     this.recordStanding(victim);
     const elimination: import('../../shared/protocol').Elimination = { id: crypto.randomUUID(), victimLife: victim.session.life,
@@ -574,42 +601,46 @@ export class PublicRoom extends DurableObject<Bindings> {
   }
 
   private fire(e: Entry, spread: number, control: InputFrame['combat']): boolean {
+    const at=Date.now();this.updateAbility(e,at);if(!e.session.alive)return false;
     const gun = e.gun!;
     const p = e.controller;
     const origin = p.leanEye();
     const yaw = control.aimYaw ?? p.yaw, pitch = control.aimPitch ?? p.pitch, cp = Math.cos(pitch);
     const aim = applySpread({ x: -Math.sin(yaw) * cp, y: Math.sin(pitch), z: -Math.cos(yaw) * cp }, spread);
-    const result: ShotResult = { id: crypto.randomUUID(), roundId: this.round.id, shooterId: e.session.id, weapon: gun.stats.id, hits: [] };
+    const result: ShotResult = { id: crypto.randomUUID(), roundId: this.round.id, shooterId: e.session.id, weapon: gun.stats.id, fire: e.session.powerup?.type==='fire', hits: [] };
     for (let k = 0; k < gun.stats.pellets; k++) {
       const dir = gun.stats.pellets > 1 ? applySpread(aim, gun.stats.pelletSpread) : aim;
       const wall = this.activeMap.world.raycast(origin.x, origin.y, origin.z, dir.x, dir.y, dir.z, gun.stats.range);
       let nearest: { entry: Entry; distance: number; zone: 'head' | 'body' } | null = null;
       for (const target of this.connected()) {
+        this.updateAbility(target,at);
         if (target === e || !target.session.alive) continue;
         const hit = rayPlayer(origin, dir, target.controller.capture());
         if (hit && hit.distance <= gun.stats.range && (!nearest || hit.distance < nearest.distance)) nearest = { entry: target, ...hit };
       }
+      if(result.fire) { const distance=Math.min(gun.stats.range,wall?.distance??Infinity,nearest?.distance??Infinity);
+        (result.traces??=[]).push({from:{...origin},to:{x:origin.x+dir.x*distance,y:origin.y+dir.y*distance,z:origin.z+dir.z*distance}}); }
       this.environment.shoot(origin,dir,Math.min(gun.stats.range,wall?.distance??Infinity,nearest?.distance??Infinity),gun.stats.id);
       if (!nearest || (wall && wall.distance <= nearest.distance + .0001)
         || teammates(this.mode, e.session.team, nearest.entry.session.team)) continue;
       const target = nearest.entry;
-      const before = target.session.health;
+      let appliedDamage=0;
       const point = { x: origin.x + dir.x * nearest.distance, y: origin.y + dir.y * nearest.distance, z: origin.z + dir.z * nearest.distance };
       this.damage.tryApply({ id: e.session.id, position: () => p.position }, {
         id: target.session.id, alive: target.session.alive, position: () => target.controller.position,
         applyDamage: (amount) => {
-          target.session.health = Math.max(0, target.session.health - amount);
-          target.session.regenAt = Date.now() + REGEN_DELAY_MS;
+          appliedDamage=absorbDamage(target.session,amount,at);
+          if(e.session.powerup?.type==='fire' && target.session.health>0) applyBurn(target.session,e.session.id,at);
           if (target.session.health === 0) this.eliminate(target, e, nearest!.zone === 'head', { ...dir });
         },
-      }, { bodyDamage: damageAt(gun.stats, nearest.distance), zone: nearest.zone, point, weapon: gun.stats.id });
+      }, { bodyDamage: damageAt(gun.stats, nearest.distance) * powerupScale(e.session), zone: nearest.zone, point, weapon: gun.stats.id });
       const previous = result.hits.find((h) => h.id === target.session.id);
       if (previous) {
-        previous.amount += before - target.session.health;
+        previous.amount += appliedDamage;
         previous.health = target.session.health;
         previous.head ||= nearest.zone === 'head';
         previous.killed ||= !target.session.alive;
-      } else result.hits.push({ id: target.session.id, life: target.session.life, direction: { ...dir }, amount: before - target.session.health, health: target.session.health,
+      } else result.hits.push({ id: target.session.id, life: target.session.life, direction: { ...dir }, amount: appliedDamage, health: target.session.health,
         head: nearest.zone === 'head', killed: !target.session.alive });
     }
     this.publish({ v: PROTOCOL_VERSION, type: 'shot', shot: result });
@@ -618,15 +649,17 @@ export class PublicRoom extends DurableObject<Bindings> {
 
   private tick(): void {
     if(this.tickBusy)return;
-    const durable=this.grenades.length>0||[...this.players.values()].some(e=>e.queue.some(f=>f.combat.grenade));
+    const durable=this.mode==='powerups'||this.grenades.length>0||[...this.players.values()].some(e=>e.queue.some(f=>f.combat.grenade));
     if(!durable){this.runTick();return;}
     this.tickBusy=true;
     void this.ctx.blockConcurrencyWhile(async()=>{
       this.deferred=[];
       try {
         this.runTick();
-        for(const e of this.players.values())e.session.revision++;
-        await this.persist();
+        if(this.mode!=='powerups' || this.deferred.some(m=>m.type==='powerup'&&m.event.kind==='pickup'||m.type==='elimination'||m.type==='grenade') || Date.now()-this.lastSave>=1000) {
+          for(const e of this.players.values())e.session.revision++;
+          this.lastSave=Date.now(); await this.persist();
+        }
         const events=this.deferred;this.deferred=null;
         for(const e of this.players.values())this.attach(e);
         for(const event of events)this.publish(event);
@@ -635,11 +668,52 @@ export class PublicRoom extends DurableObject<Bindings> {
     });
   }
 
-  private launchGrenade(e: Entry, now: number): void {
+  private syncAbility(e: Pick<Entry,'session'|'controller'>): void {
+    e.controller.scale=powerupScale(e.session) as 1|1.5;
+    e.controller.doubleJump=e.session.powerup?.type==='doubleJump';
+    e.controller.lean=e.controller.safeViewLean(e.controller.position,e.controller.lean,e.controller.eyeHeight);
+  }
+  private updateAbility(e: Entry, now: number): void {
+    const tick=advanceBurn(e.session,now);
+    if(tick && e.session.health===0 && e.session.alive) this.eliminate(e,this.players.get(tick.ownerId)??null,false,null,'burn');
+    expirePowerup(e.session,now); this.syncAbility(e);
+  }
+  private updatePickups(now: number): void {
+    if(this.mode!=='powerups')return;
+    const active=this.connected().filter(e=>e.session.alive);
+    this.powerups.spawn(now,active.length,()=>crypto.randomUUID());
+    for(const e of active) {
+      const pickup=this.powerups.collect(e.controller.position,p=>{
+        // An unobstructed path prevents collection through a thin wall.
+        const eye=e.controller.leanEye(), delta={x:p.position.x-eye.x,y:p.position.y+.7-eye.y,z:p.position.z-eye.z};
+        const length=Math.hypot(delta.x,delta.y,delta.z);
+        if(length && this.activeMap.world.raycast(eye.x,eye.y,eye.z,delta.x/length,delta.y/length,delta.z/length,length))return false;
+        if(p.type==='giant') {
+          if(!canGrow(this.activeMap.world,e.controller.position))return false;
+          const c=e.controller,direction=c.lookDirection(),reach=WEAPON_CLEARANCE[e.session.weapon??'rifle']*1.5;
+          const grownEye=(MOVEMENT.standEye+(MOVEMENT.crouchEye-MOVEMENT.standEye)*c.crouch)*1.5;
+          // Check the entire camera/gun transition, including crouch and lean,
+          // so growth cannot put a fixed-position muzzle through a low barrier.
+          for(let eye=Math.min(c.eyeHeight,grownEye);eye<=Math.max(c.eyeHeight,grownEye)+.099;eye+=.1) {
+            const height=Math.min(eye,Math.max(c.eyeHeight,grownEye));
+            const offset=leanOffset(c.yaw,safeLean(this.activeMap.world,c.position,c.yaw,height,c.lean,1.5),1.5);
+            for(const side of [0,.15,.285]) {
+              const origin={x:c.position.x+offset.x+Math.cos(c.yaw)*side,y:c.position.y+height-.12,z:c.position.z+offset.z-Math.sin(c.yaw)*side};
+              if(sweepSphere(this.activeMap.world,origin,{x:direction.x*reach,y:direction.y*reach,z:direction.z*reach},.12))return false;
+            }
+          }
+        }
+        activatePowerup(e.session,p.type,now);this.syncAbility(e);return true;
+      });
+      if(pickup)this.publish({v:PROTOCOL_VERSION,type:'powerup',event:{kind:'pickup',id:crypto.randomUUID(),roundId:this.round.id,at:now,playerId:e.session.id,life:e.session.life,position:{...e.controller.position},pickupId:pickup.id,ability:pickup.type}});
+    }
+  }
+
+  private launchGrenade(e: Entry, now: number, charge: number): void {
     if(!e.session.alive||e.session.grenades<=0||e.gun?.action!=='idle'||e.controller.sliding||this.grenades.length>=32)return;
     const p=e.controller;
     const g=throwGrenade(this.activeMap.world,p.leanEye(),{x:p.position.x,y:p.position.y+p.eyeHeight,z:p.position.z},p.lookDirection(),p.velocity,
-      {id:crypto.randomUUID(),ownerId:e.session.id,ownerLife:e.session.life,roundId:this.round.id,at:now});
+      {id:crypto.randomUUID(),ownerId:e.session.id,ownerLife:e.session.life,roundId:this.round.id,at:now}, charge);
     if(!g)return;
     e.session.grenades--;this.grenades.push(g);
     this.publish({v:PROTOCOL_VERSION,type:'grenade',event:{kind:'throw',id:`throw:${g.id}`,projectile:g}});
@@ -658,12 +732,12 @@ export class PublicRoom extends DurableObject<Bindings> {
         const amount=blastDamage(this.activeMap.world,g.position,victim.controller.capture());
         if(amount<=0)continue;
         const p=victim.controller.position, dx=p.x-g.position.x,dy=p.y+victim.controller.eyeHeight-g.position.y,dz=p.z-g.position.z,len=Math.hypot(dx,dy,dz)||1;
-        const direction={x:dx/len,y:dy/len,z:dz/len},before=victim.session.health;
+        const direction={x:dx/len,y:dy/len,z:dz/len};let appliedDamage=0;
         this.damage.tryApply({id:g.ownerId,position:()=>g.position},{id:victim.session.id,alive:true,position:()=>p,applyDamage:(damage)=>{
-          victim.session.health=Math.max(0,victim.session.health-damage);victim.session.regenAt=now+REGEN_DELAY_MS;
+          appliedDamage=absorbDamage(victim.session,damage,now);
           if(victim.session.health===0)this.eliminate(victim,owner??null,false,direction,'grenade');
         }},{bodyDamage:amount,zone:'body',point:p,weapon:'grenade'});
-        event.hits.push({id:victim.session.id,life:victim.session.life,amount:before-victim.session.health,health:victim.session.health,killed:!victim.session.alive,direction});
+        event.hits.push({id:victim.session.id,life:victim.session.life,amount:appliedDamage,health:victim.session.health,killed:!victim.session.alive,direction});
       }
       // Posthumous kills still score, but dead sessions must never retain a live combo timer.
       if(owner&&!owner.session.alive)resetCombo(owner.session);
@@ -676,10 +750,11 @@ export class PublicRoom extends DurableObject<Bindings> {
     this.ensureRound();
     let eliminated = false;
     let regeneratedToFull = false;
-    for (const e of this.players.values()) if (e.socket) {
+    for (const e of this.players.values()) {
+      this.updateAbility(e,now);
       expireCombo(e.session, now);
       const healed = regenerate(e.session, now);
-      regeneratedToFull ||= healed > 0 && e.session.health === PLAYER_MAX_HEALTH;
+      regeneratedToFull ||= healed > 0 && e.session.health === maxHealth(e.session);
     }
     this.accumulator += Math.min(0.25, Math.max(0, (now - this.lastTick) / 1000));
     this.lastTick = now;
@@ -692,7 +767,9 @@ export class PublicRoom extends DurableObject<Bindings> {
         frames.set(e, frame);
         if (frame) { e.controller.yaw = frame.yaw; e.controller.pitch = frame.pitch; e.session.ack = frame.seq; e.leanHeld = frame.intent.lean ?? 0; e.crouchHeld=frame.intent.crouch??false; }
         e.controller.weaponClearance = e.session.weapon;
+        const jumps=e.controller.extraJumpCount;
         e.controller.fixedUpdate(FIXED_DT, frame?.intent ?? { ...NO_INTENT, slide: e.controller.slideHeld, lean: e.leanHeld, crouch:e.crouchHeld });
+        if(e.controller.extraJumpCount!==jumps)this.publish({v:PROTOCOL_VERSION,type:'powerup',event:{kind:'doubleJump',id:crypto.randomUUID(),roundId:this.round.id,at:now,playerId:e.session.id,life:e.session.life,position:{...e.controller.position}}});
         if (e.controller.position.y < MOVEMENT.killY) {
           this.eliminate(e, null);
           eliminated = true;
@@ -705,7 +782,10 @@ export class PublicRoom extends DurableObject<Bindings> {
         if (!e.session.alive || !e.gun) continue;
         const intent = frame?.combat ?? NO_COMBAT;
         const combat = e.session.combat;
-        if(intent.grenade&&!combat.grenadeHeld)this.launchGrenade(e,now);
+        e.grenadeCharge ??= new GrenadeCharge();
+        const strength = e.grenadeCharge.update(frame ? !!intent.grenade : undefined, now, FIXED_DT,
+          e.session.grenades > 0 && e.gun.action === 'idle' && !e.controller.sliding, !!intent.grenadeCancel);
+        if (strength !== null) this.launchGrenade(e, now, strength);
         const events = e.gun.update(FIXED_DT, { trigger: intent.trigger,
           triggerPressed: intent.trigger && !combat.triggerHeld, reloadPressed: intent.reload && !combat.reloadHeld,
           aim: frame?.intent.aim ?? combat.aimHeld, moveFactor: e.controller.horizontalSpeed / MOVEMENT.weaponMoveReference,
@@ -716,6 +796,7 @@ export class PublicRoom extends DurableObject<Bindings> {
       this.accumulator -= FIXED_DT;
     }
     this.updateGrenades(now);
+    this.updatePickups(now);
     const environmentWasActive=this.environment.active>0;
     this.environment.advance(Math.min(.25,Math.max(0,(now-(this.environmentUpdated??now))/1000)));
     const environmentSettled=environmentWasActive&&this.environment.active===0;
@@ -728,7 +809,7 @@ export class PublicRoom extends DurableObject<Bindings> {
     for (const socket of this.ctx.getWebSockets()) {
       const e = this.current(socket);
       const a = socket.deserializeAttachment() as Attachment;
-      if (now - (e?.lastSeen ?? a.openedAt) > (e ? this.timeout : 5000)) {
+      if (now > this.heartbeatDeadline(e,a.openedAt)) {
         this.trace('heartbeat_timeout', { source: 'tick', id: e?.session.id, lastSeen: e?.lastSeen ?? a.openedAt, timeout: e ? this.timeout : 5000 });
         void this.disconnect(socket);
         socket.close(4000, 'heartbeat_timeout');
@@ -757,12 +838,14 @@ export class PublicRoom extends DurableObject<Bindings> {
       if(profile){profile.abandonedRound=this.round.id;this.careers.mark(e.session.profileId!);}
     }
     this.careerSent.delete(e.session.id);
-    e.socket = undefined;
+    e.socket = undefined; e.grenadeCharge?.reset();
     e.queue.length = 0;
     e.session.expiresAt = Date.now() + this.grace;
     if (forget) {
       const live=this.grenades.filter(g=>g.ownerId===e.session.id);
+      const burns=[...this.players.values()].filter(p=>p.session.burn?.ownerId===e.session.id);
       if(live.length){e.session.token=token();e.session.expiresAt=Math.max(...live.map(g=>g.explodeAt))+100;}
+      else if(burns.length){e.session.token=token();e.session.expiresAt=Math.max(...burns.map(p=>p.session.burn!.expiresAt))+100;}
       else this.players.delete(e.session.id);
     }
     for (const p of this.players.values()) if (p.socket) this.send(p.socket, { v: PROTOCOL_VERSION, type: 'left', id: e.session.id });
@@ -794,7 +877,7 @@ export class PublicRoom extends DurableObject<Bindings> {
       e.session.combat.gun = e.gun?.capture() ?? null;
     }
     const views = this.careers.views(Date.now()), pending = this.careers.capture();
-    return this.ctx.storage.put({ ...pending.records, environment:{roundId:this.round.id,mapVersion:this.activeMap.revision,seq:this.environmentSeq,states:this.environment.capture()},grenades:this.grenades,explosions:this.explosions,'team-scores': this.scores, 'round-ledger': this.ledger, 'round-result': this.lastResult,
+    return this.ctx.storage.put({ ...pending.records, powerups:this.powerups.state, environment:{roundId:this.round.id,mapVersion:this.activeMap.revision,seq:this.environmentSeq,states:this.environment.capture()},grenades:this.grenades,explosions:this.explosions,'team-scores': this.scores, 'round-ledger': this.ledger, 'round-result': this.lastResult,
       sessions: [...this.players.values()].map((e) => e.session) }).then(() => { this.careers.committed(pending.versions); this.sendCareerViews(views); });
   }
   private advanceCareer(e: Entry, event: ChallengeEvent, at: number): void {
@@ -826,9 +909,13 @@ export class PublicRoom extends DurableObject<Bindings> {
       if (socket.readyState !== WebSocket.OPEN) continue;
       const e = this.current(socket);
       const a = socket.deserializeAttachment() as Attachment;
-      deadlines.push(e ? e.lastSeen + this.timeout : a.openedAt + 5000);
+      deadlines.push(this.heartbeatDeadline(e,a.openedAt));
     }
     if (this.connected().length) deadlines.push(this.round.endsAt);
+    if(this.mode==='powerups') {
+      if(this.connected().some(e=>e.session.alive))deadlines.push(this.powerups.state.nextSpawn);
+      for(const e of this.players.values())if(e.session.powerup)deadlines.push(e.session.powerup.expiresAt);
+    }
     if (deadlines.length) await this.ctx.storage.setAlarm(Math.min(...deadlines));
     else await this.ctx.storage.deleteAlarm();
   }
@@ -837,14 +924,29 @@ export class PublicRoom extends DurableObject<Bindings> {
     for (const socket of this.ctx.getWebSockets()) {
       const e = this.current(socket);
       const a = socket.deserializeAttachment() as Attachment;
-      if (Date.now() - (e?.lastSeen ?? a.openedAt) >= (e ? this.timeout : 5000)) {
+      if (Date.now() >= this.heartbeatDeadline(e,a.openedAt)) {
         this.trace('heartbeat_timeout', { source: 'alarm', id: e?.session.id, lastSeen: e?.lastSeen ?? a.openedAt, timeout: e ? this.timeout : 5000 });
         await this.disconnect(socket);
         socket.close(4000, 'heartbeat_timeout');
       }
     }
     this.prune();
-    await this.persist();
+    if(this.mode==='powerups') {
+      await this.ctx.blockConcurrencyWhile(async()=>{
+        this.deferred=[];
+        try {
+          const now=Date.now();
+          for(const e of this.players.values()){this.updateAbility(e,now);regenerate(e.session,now);e.session.revision++;}
+          this.updatePickups(now);
+          await this.persist();
+          const events=this.deferred;this.deferred=null;
+          for(const e of this.players.values())this.attach(e);
+          for(const event of events)this.publish(event);
+          this.broadcast();
+        } finally {this.deferred=null;}
+      });
+      this.start();
+    } else await this.persist();
     await this.scheduleCleanup();
   }
 }

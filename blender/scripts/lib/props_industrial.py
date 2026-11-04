@@ -371,6 +371,8 @@ def transformer() -> MeshData:
             md.box(x - 0.012, 0.35, z0, x + 0.012, 1.6, z1, "steel_green", skip=("pz",) if zs < 0 else ("nz",))
     for x in (-0.45, 0.0, 0.45):
         md.cylinder((x, 1.85, 0.0), 0.06, 0.12, "steel_dark", segments=8)
+        # Continuous insulator core supports the separated ceramic sheds.
+        md.cylinder((x, 1.95, 0.0), 0.04, 0.33, "ceramic", segments=10)
         for k in range(4):
             md.cylinder((x, 1.97 + k * 0.07, 0.0), 0.075 - k * 0.004, 0.05, "ceramic", segments=10)
         md.cylinder((x, 2.25, 0.0), 0.02, 0.06, "galvanized", segments=6)
