@@ -234,7 +234,9 @@ MATERIALS.update({
                      "alpha_cutoff": 0.5, "decal": True},
     "paint_white": {"albedo": URBAN_DIR + "paint_wear.png", "tile": 1.6, "tint": [0.86, 0.86, 0.84], "roughness": 0.7,
                     "alpha_cutoff": 0.5, "decal": True},
-    "oil_stain": {"albedo": URBAN_DIR + "oil_stains.png", "tile": 3.0, "roughness": 0.35, "alpha_cutoff": 0.3,
+    # old, soaked-in drips read as dark matte blotches: the decal has no AO map, so any gloss (0.35 before)
+    # mirrored the sky at street-level grazing angles as white patches, brighter than the ground around it
+    "oil_stain": {"albedo": URBAN_DIR + "oil_stains.png", "tile": 3.0, "roughness": 0.92, "alpha_cutoff": 0.3,
                   "decal": True},
     "hazard": {"albedo": URBAN_DIR + "hazard_stripes.jpg", "tile": 0.8, "roughness": 0.6},
     "chainlink": {"albedo": URBAN_DIR + "chainlink.png", "tile": 0.5, "roughness": 0.5, "metallic": 0.7,

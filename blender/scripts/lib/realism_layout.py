@@ -1,54 +1,71 @@
 """Targeted, idempotent finishing pass over the existing compact layouts."""
+import math
 import sys
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parent))
 from circulation import BASE, LEVEL, point, path
 
 
+# One enclosed two-storey circulation building per map. Town and later overhauled maps select
+# it by the authored through-room rectangle, so regenerating lots cannot retarget it silently.
+CIRCULATION = {
+    'european-town': {'room': [-12, 9, -5, 12], 'style': 'town', 'flip': False, 'exit': 'w', 'door': 6.8,
+                      'stair': 7, 'extra': [], 'purpose': 'Garden provisions shop and apartment'},
+    'industrial-complex': {'interior': 'dispatch_hall', 'style': 'industrial', 'flip': True, 'exit': 'w', 'door': 6.,
+                           'stair': 7, 'extra': [['s', 6.], ['n', 9.]], 'purpose': 'Warehouse dispatch and elevated office'},
+    'modern-city': {'interior': 'commerce_hall', 'style': 'city', 'flip': False, 'exit': 'e', 'door': 5.8,
+                    'stair': 5.7, 'extra': [['n', 6.7], ['s', 4.]], 'purpose': 'Commercial service building and upper office'},
+}
+
+
+def circulation_building(layout):
+    spec = CIRCULATION[layout['id']]
+    if 'room' in spec:
+        found = [b for b in layout['buildings'] if any(r['rect'] == spec['room'] for r in b.get('rooms', []))]
+    elif 'interior' in spec:
+        found = [b for b in layout['buildings'] if any(i['id'] == spec['interior'] for i in b.get('interiors', []))]
+    else:
+        found = [b for b in layout['buildings'] if b['id'] == spec['building']]
+    assert len(found) == 1, f"{layout['id']}: circulation building not found"
+    return found[0], spec
+
+
+def _blocks_route(p,route,half=1.2,end=1.0):
+    from catalog import PROPS
+    collider=PROPS.get(p['type'],{}).get('collider')
+    if not collider:
+        return False  # wall fittings and flush grates have no body to block anyone
+    sx,_,sz=collider
+    r=math.hypot(sx,sz)*.5;x,z=p['pos'][0],p['pos'][2]
+    def seg(a,c):
+        dx,dz=c[0]-a[0],c[2]-a[2];L=dx*dx+dz*dz
+        t=0 if L==0 else max(0,min(1,((x-a[0])*dx+(z-a[2])*dz)/L))
+        return math.hypot(x-a[0]-t*dx,z-a[2]-t*dz)
+    hit=seg(route[0],route[0])<r+end or seg(route[-1],route[-1])<r+end or seg(route[-3],route[-1])<r+half
+    if hit:print(f"circulation clearance: dropped {p['type']} at {p['pos']}")
+    return hit
+
+
 def author(layout):
     mid=layout['id']
-    bid,style,flip,exit_side,door={
-        'european-town':('B25','town',False,'w',6.5),
-        'industrial-complex':('I37','industrial',True,'w',6.),
-        'modern-city':('C28','city',False,'e',5.8),
-    }[mid]
-    b=next(b for b in layout['buildings'] if b['id']==bid)
-    b['circulation']={'style':style,'flipZ':flip,'exit':exit_side,'doorV':door,'stairWidth':7 if style!='city' else 5.7,
-                      'extraDoors':[] if style=='town' else [['s',6.],['n',9.]] if style=='industrial' else [['n',6.7],['s',4.]]}
+    b, spec = circulation_building(layout)
+    bid,style,flip,exit_side,door=b['id'],spec['style'],spec['flip'],spec['exit'],spec['door']
+    b['circulation']={'style':style,'flipZ':flip,'exit':exit_side,'doorV':door,'stairWidth':spec['stair'],
+                      'extraDoors':[list(e) for e in spec['extra']]}
     # Keep old route cavities as navigation annotations; the new shared solids
     # author the actual enclosed envelope, doors, floors and both staircases.
     layout.setdefault('circulationRoutes',[])
     layout['circulationRoutes']=[r for r in layout['circulationRoutes'] if r['id']!=bid]
     layout['circulationRoutes'].append({'id':bid,'height':LEVEL,'waypoints':path(b)})
-    b['purpose']={'town':'Garden provisions shop and apartment','industrial':'Warehouse dispatch and elevated office','city':'Commercial service building and upper office'}[style]
+    b['purpose']=spec['purpose']
     layout['version']=3
-    # Relocate decorations affected by the new circulation; keep each against a facade.
-    for p in layout['props']:
-        if mid=='european-town' and p['type']=='flower_pot_large' and p['pos'][0]==-13:p['pos']=[-12,0,15.2]
-        if mid=='industrial-complex' and p['type']=='pallet_goods' and p['pos'][0]==-4.6:p['pos']=[-4.6,BASE,12.1]
-        if mid=='industrial-complex' and p['type']=='crate_large' and p['pos'][0]==4.5:p['pos']=[4.5,BASE,12.2]
-        if mid=='industrial-complex' and p['type']=='pallet_goods' and p['pos'][0]==1.5:p['pos']=[4.4,BASE,19.]
-        if mid=='modern-city' and p['type']=='utility_box' and p['pos'][0]==17.4:p['pos']=[19.5,0,10.7]
-        if mid=='modern-city' and p['type']=='bench_modern' and p['pos'][0]==7.4:p['pos']=[6.85,BASE,16.4]
-    if mid=='european-town':
-        next(w for w in layout['walls'] if w['id']=='W17')['rect'][2]=-17.5
-    if mid=='industrial-complex':
-        # Move the existing doorway canopy above the new upstairs exit, rather
-        # than leaving its old roof intersecting the raised walking surface.
-        next(a for a in layout['arches'] if a['id']=='hall_canopyr')['spring']=5.4
-    if mid=='modern-city':
-        next(w for w in layout['walls'] if w['id']=='W15')['rect'][0]=13.9
-        arcade=next(v for v in layout['buildings'] if v['id']=='C27')['passages'][0]
-        arcade['rect']=[1,13.3,6,16.3]
-        for region in layout['ground']['covered']+layout['navigation']['coveredRoutes']:
-            if region['id']=='shop_west':region['rect']=[1,13.3,6,16.3]
-        for region in layout['ground']['zones']+layout['navigation']['groundRoutes']:
-            if region['id']=='shop_north':region['rect'][2]=13.9
-        # Opposing attached street build-outs create a shallow S bend, with
-        # 3+ m passages and long repositionable views on either side.
-        for wid,rect in [('north_service_kiosk',[-4,-25,-2,-20]),('north_corner_store',[2,-20.5,4,-17])]:
-            if not any(w['id']==wid for w in layout['walls']):
-                layout['walls'].append({'id':wid,'rect':rect,'height':2.7,'style':'brick','gates':[], 'purpose':'Attached service enclosure / street sightline offset'})
+    # Dressing placed before the fit-out (racks, pallets) would stand in the new stairs and
+    # aisle; the circulation solids carry their own counters, cabinets and shelves.
+    x0,z0,x1,z1=b['rect']
+    layout['props']=[p for p in layout['props'] if not (x0<p['pos'][0]<x1 and z0<p['pos'][2]<z1)]
+    # The clearance pass ran before these solids existed: keep the street approach to the
+    # entry, the exterior exit stair and the landing at its foot clear as well.
+    layout['props']=[p for p in layout['props'] if not _blocks_route(p,path(b))]
     # Two short-range practical lights, anchored to solid ceiling/wall fixtures.
     layout['lights']=[l for l in layout['lights'] if l.get('circulation')!=bid]
     w=b['rect'][2]-b['rect'][0];d=b['rect'][3]-b['rect'][1]

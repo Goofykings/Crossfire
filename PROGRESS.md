@@ -1,3 +1,79 @@
+# Map overhaul: all three maps redesigned and rebuilt
+
+Completed locally 2026-11-05. See `docs/MAP_OVERHAUL.md` for the design, shared
+systems and tools. No commit, push or deployment was performed. Layouts, collision
+and map revisions changed, so frontend assets and the Worker need a matching release
+when authorized.
+
+Design (footprints unchanged: Town 52 x 52 m, Industrial and City 54 x 54 m):
+
+- **European Town:** an irregular Piazza del Pozzo around the roofed well; Borgo Alto
+  raised 1.26 m with three stairs; a 2.8 m loggia; winding lanes, four covered
+  passages and two arches between five courts; B37 shop/apartment with an internal
+  stair, 3.22 m floor and exterior exit. `cistern_passage` is a cellar under the
+  square with two dogleg entrances, about 18.5 m long, 2.3 m clear.
+- **Industrial Complex:** stores hall, fenced utility yard (electrical compound /
+  pump and cable store) and machine hall to the north; west yard, dispatch hall I21
+  (3.22 m office, exterior exit), loading yard, 1.1 m dock and workshop yard in the
+  middle; 4.5 m service roofs reached by three ladders; 2.8 m loading catwalk,
+  storage yard, goods office, warehouse B and container yard to the south.
+- **Modern City:** avenue and Main Street meet at a T; civic plaza and south plaza
+  joined by `metro_underpass` (two straight entrances, about 14.2 m); a 2.8 m avenue
+  skywalk; commerce hall C27 with internal stair, 3.22 m office and exterior exit;
+  west arcade, courts, parking lot and canopied alleys.
+
+Defects fixed at their sources (this pass, after the earlier rebuild): decals,
+manholes and storm drains drawn over stairwells; glossy oil stains showing as white
+blotches (roughness 0.35 -> 0.92, stains only on vehicle surfaces); hand-placed
+props silently dropped by the clearance pass (City benches, cafe sets, hydrant,
+second car; Industrial valve manifold, forklift, skip bin; all Town street lanterns,
+upper-town benches and pots); props on circulation approaches and exit landings;
+spawn S01 (Industrial) facing an exit stair 2.9 m away; a utility pole through the
+north-east alley canopy; a flower pot at a stair head and a lantern on stair treads.
+Earlier fixes are listed in the doc's root-cause table. Spawns facing past 180 degrees
+exposed a Worker test-harness bug: `room-harness.mjs` frames (and one integration
+helper) echoed the server's yaw below -pi, which protocol validation rightly rejects;
+they now wrap it as the frontend does (`MultiplayerClient.ts`). Gameplay code is unchanged.
+
+Visual review: 140 final views (Town 48, Industrial 47, City 45) in
+`test-results/map-review-final`, every one inspected, plus close-up checks of each
+suspect area. Graphics presets low/medium/high/ultra and Chromebook mode were
+captured for 4-5 views per map (`test-results/map-review-presets`): all geometry
+present, no errors, differences limited to shadows and resolution.
+
+Measurements (headless Chrome, Intel Iris Xe, high preset; view sets follow each
+layout, so they differ from the baseline's):
+
+| Map | Load s (base -> now) | Draw calls median/max | CPU frame ms median/max |
+|---|---|---|---|
+| Town | 46.8 -> 25.2 | 132/185 -> 109/182 | 8.3/12.5 -> 5.1/7.3 |
+| Industrial | 18.1 -> 9.2 | 100/129 -> 94/145 | 6.7/11.8 -> 4.2/6.3 |
+| City | 7.6 -> 5.5 | 116/152 -> 110/162 | 4.6/7.0 -> 4.7/7.3 |
+
+The first map in each run includes Vite transform time; frames are vsync-capped at
+60 fps. Eye-level axis sightlines (props and structures block): longest
+47.5/49.5/49.5 m -> 36.5/35.5/36.5 m; median per-point maximum 23.5/26.5/29.5 m ->
+18.5/14.5/22.5 m. All 16 spawns per map reach each other by walking. Distinct walking
+routes between spawn pairs (each new route must avoid a 2.5 m corridor around the
+previous ones): pairs with three or more routes Town 89/120, Industrial 105/120,
+City 92/120; median 6/5/5; minimum 1/1/2. HEAD's open ring roads scored 115-119/120
+on this measure because wide parallel lanes count as separate routes.
+
+Verification: `npm.cmd test` 598 passed, 1 skipped; Worker 68/68; protocol
+gate 1/1; deployment gate 7/7; frontend and server typecheck; `npm.cmd run build`;
+`npm.cmd run assets:verify` (214 materials; 13/9/8 models). The map audit has no
+errors; warnings are jump-reachable prop tops, downpipes/tyres/rails without
+collision and one split 0.3 m wall reported as two thin boxes. `tools/maps-test.mjs`:
+loading, materials, spawns, walking, leaderboard, headshots, settings and console
+checks pass; the two leak checks fail on bounded texture retention (Town +10,
+Industrial +5 after the first switch, identical over four rounds). The cause is
+`MaterialLibrary.prune` keeping every tile variant of an image still in use; that
+rule is in HEAD and unchanged, so this is not a growing leak and was not changed here.
+
+Limits: no new prop models (catalogue reused; cart wheel fixed). Gable roofs above
+the eaves are visual-only. Some spawn pairs have fewer than three distinct routes.
+Public deployment and live multiplayer validation were not performed.
+
 # Phase 2: multiplayer room browser and custom matches
 
 Completed and verified locally 2026-11-04. See `docs/MULTIPLAYER_ROOMS.md` for

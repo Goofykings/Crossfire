@@ -1,3 +1,24 @@
+## Map overhaul (2026-11-05)
+
+See docs/MAP_OVERHAUL.md and the newest PROGRESS.md entry. All three maps are
+re-authored in tools/compact_layouts.py and rebuilt; protocol is unchanged, but
+layouts, collision and map revisions changed, so assets and Worker need a matching
+release when authorized. blender/scripts/lib/underground.py owns underground
+passages: one set of solids for mesh, collision, navigation obstacles, spawn and
+dressing exclusion and movementSafety's lowest floor. ground_holes/ground_openings
+cut the street slab and base plane; decals must skip stairwells. Underground lamp
+light is baked into vertex colours (four-lights-per-material limit). The clearance
+pass drops conflicting props silently: diagnose before moving one, keep solid props
+off stair flights, and let realism_layout keep circulation approaches, exit stairs
+and landings clear. Spawns face the longest line props and structures leave open.
+tests/mapIntegrity.test.ts (audit, open stairwells) and tests/mapOverhaul.test.ts
+(underground walks, guards, spawn connectivity, sightlines < 40 m) guard the maps.
+The audit's crouched flood is seeded from every spawn, so it cannot see isolated
+regions; connectivity uses the controller's body above step height. Review with
+tools/map-review.mjs (--quality, --settings, --views). maps-test's two leak checks
+fail on bounded texture retention in MaterialLibrary.prune (present in HEAD).
+No commit, push or deployment was performed.
+
 ## Logical multiplayer rooms Phase 2 (2026-11-04)
 
 Current gameplay protocol is v19; statistics HTTP schema remains v2. See

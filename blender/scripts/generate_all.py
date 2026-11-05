@@ -249,6 +249,9 @@ def stage_map(key: str, previews: bool):
 
     tcol = exporter.collection("Terrain", town_col)
     terrain = terrain_cls(layout).build()
+    import underground
+    for passage in layout.get("underground", []):
+        terrain.merge(underground.generate(passage))
     tobj = terrain.to_object("terrain", tcol)
     path = out_dir / "terrain.glb"
     exporter.export_glb([tobj], path)

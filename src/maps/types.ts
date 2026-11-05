@@ -88,6 +88,23 @@ export interface LightDef {
   range: number;
 }
 
+/** A passage below the street (blender/scripts/lib/underground.py): clear rectangles at one floor
+ * level, reached by stair entrances whose stairwells are the only openings in the street slab. */
+export interface UndergroundPassage {
+  id: string;
+  style: 'cellar' | 'metro';
+  purpose?: string;
+  floor: number;
+  ceiling: number;
+  rect: Rect;
+  segments: Rect[];
+  piers?: [number, number][];
+  entrances: { id: string; type: 'dogleg' | 'straight'; rect: Rect; side: 'n' | 's' | 'e' | 'w'; hand?: 'left' | 'right' }[];
+  route?: [number, number][];
+  /** Walkable polyline from the first entrance's street side to the last one's. */
+  waypoints: Vec3Tuple[];
+}
+
 export interface MapLayout {
   id: string;
   name: string;
@@ -99,6 +116,7 @@ export interface MapLayout {
   upperRoutes?: (Terrace & { style: 'gallery' | 'catwalk' | 'sky_passage' })[];
   ladders?: LadderRegion[];
   circulationRoutes?: { id: string; height: number; waypoints: Vec3Tuple[] }[];
+  underground?: UndergroundPassage[];
   navigation?: {
     version: number;
     groundRoutes: { id: string; kind: string; rect: Rect }[];

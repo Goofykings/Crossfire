@@ -9,6 +9,8 @@ export function unsafeMovement(position: Vec3, layout: MapLayout): string | null
   if (![x, y, z].every(Number.isFinite)) return 'non_finite';
   const [minX, minZ, maxX, maxZ] = layout.playArea;
   if (x < minX - 1 || x > maxX + 1 || z < minZ - 1 || z > maxZ + 1) return 'outside_perimeter';
-  const lowest = Math.min(layout.ground.baseHeight, ...layout.ground.zones.map(zone => zone.height));
+  // Underground passages are legal ground below the street.
+  const lowest = Math.min(layout.ground.baseHeight, ...layout.ground.zones.map(zone => zone.height),
+    ...(layout.underground ?? []).map(passage => passage.floor));
   return y < lowest - 1 ? 'below_ground' : null;
 }

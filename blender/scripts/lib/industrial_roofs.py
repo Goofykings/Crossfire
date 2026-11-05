@@ -3,24 +3,48 @@ from meshkit import MeshData, Transform
 import kit_industrial as kit
 
 
+# Rooftop workshop cluster (2026-11 overhaul): every lot inside this block becomes a 4.5 m
+# workshop with an accessible gravel deck. Three ladders give it three approaches (dock lane,
+# workshop yard, service lane); HVAC plant breaks up the roof as cover.
+ROOF_BLOCK = [17, -14, 35, -2]
+LADDERS = [
+    {'id': 'dock_lane', 'wall': [17, -8.5], 'out': [-1, 0], 'bottom': 0., 'top': 4.5},
+    {'id': 'workshop_yard', 'wall': [25, -2], 'out': [0, 1], 'bottom': 0., 'top': 4.5},
+    {'id': 'service_lane', 'wall': [23, -14], 'out': [0, -1], 'bottom': 0., 'top': 4.5},
+]
+EQUIPMENT = [
+    {'kind': 'hvac', 'pos': [24.2, 4.5, -8.6], 'size': [1.8, .9, 1.1]},
+    {'kind': 'fan', 'pos': [19.6, 4.5, -11.6], 'size': [.84, .9, .84]},
+    {'kind': 'box', 'pos': [20.0, 4.5, -5.0], 'size': [.8, .75, .55]},
+    {'kind': 'vent', 'pos': [25.4, 4.5, -4.6], 'size': [.44, 1., .44]},
+]
+
+
 def author(layout):
-    selected = ([2,6,6,11], [6,7,14,11], [6,11,12,14])
-    for b in layout['buildings']:
-        if b['rect'] in selected:
-            assert b['height'] == 4.5, 'Reauthor the service access if these lots change height'
-            b['serviceRoof'] = True
-    assert sum(bool(b.get('serviceRoof')) for b in layout['buildings']) == 3
-    layout['ladders'] = [
-        {'id':'loading_west', 'wall':[2,8.4], 'out':[-1,0], 'bottom':0., 'top':4.5},
-        {'id':'loading_north', 'wall':[10,7], 'out':[0,-1], 'bottom':0., 'top':4.5},
-        {'id':'loading_south', 'wall':[8.3,14], 'out':[0,1], 'bottom':0., 'top':4.5},
-    ]
-    layout['roofEquipment'] = [
-        {'kind':'hvac','pos':[12.1,4.5,9.1], 'size':[1.8,.9,1.1]},
-        {'kind':'fan','pos':[4.8,4.5,7.3], 'size':[.84,.9,.84]},
-        {'kind':'box','pos':[10.5,4.5,12.8], 'size':[.8,.75,.55]},
-        {'kind':'vent','pos':[11.2,4.5,12.8], 'size':[.44,1.,.44]},
-    ]
+    x0, z0, x1, z1 = ROOF_BLOCK
+    roofs = [b for b in layout['buildings'] if x0 <= b['rect'][0] and b['rect'][2] <= x1 and z0 <= b['rect'][1] and b['rect'][3] <= z1]
+    assert roofs, 'rooftop workshop block has no lots'
+    play_x1 = layout['playArea'][2]
+    for b in list(roofs):
+        b['height'] = 4.5
+        b['floors'] = 1
+        b['roof'] = {'type': 'flat'}
+        b['serviceRoof'] = True
+        rx0, rz0, rx1, rz1 = b['rect']
+        if rx1 > play_x1:
+            # The workshop roof stops at the play boundary; a taller backdrop block beyond it
+            # closes the view (a perimeter lot used to extend the deck over the world's edge).
+            b['rect'] = [rx0, rz0, play_x1, rz1]
+            b['doors'] = [d for d in b.get('doors', []) if d['side'] != 'e' and
+                          (d['side'] not in ('n', 's') or d['at'] + d['width'] / 2 < play_x1 - rx0 - .3)]
+            layout['buildings'].append({'id': b['id'] + 'B', 'type': 'backdrop', 'rect': [play_x1, rz0, rx1, rz1],
+                                        'height': 10.0, 'floors': 1, 'palette': 'concrete', 'seed': b.get('seed', 0) + 7,
+                                        'roof': {'type': 'flat'}, 'front': 'w', 'doors': [], 'sign': 0})
+    for l in LADDERS:
+        x, z = l['wall']
+        assert any(b['rect'][0] - 1e-6 <= x <= b['rect'][2] + 1e-6 and b['rect'][1] - 1e-6 <= z <= b['rect'][3] + 1e-6 for b in roofs),             f"ladder {l['id']} is not on a rooftop workshop wall"
+    layout['ladders'] = [dict(l) for l in LADDERS]
+    layout['roofEquipment'] = [dict(e) for e in EQUIPMENT]
 
 
 def parts(layout):

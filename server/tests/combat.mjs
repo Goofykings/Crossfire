@@ -314,7 +314,7 @@ for (const mode of (process.env.CROSSFIRE_SCORING_ONLY ? ['ffa'] : ['ffa', 'team
     await t.test('actual map walls block player damage', async () => {
       const a = await open('sniper'), b = await open();
       const arena = await stub.wallArenaForTest();
-      assert.ok(arena.wall.startsWith('wall:'));
+      assert.match(arena.wall, /^(wall:|building:|(circulation|underground):.*:wall$)/);
       await place(a, b, arena.pair); await aim(a, b);
       assert.deepEqual((await shot(a, b)).hits, []);
       assert.equal(me(b).health, 100);
@@ -357,7 +357,7 @@ for (const mode of (process.env.CROSSFIRE_SCORING_ONLY ? ['ffa'] : ['ffa', 'team
         await delay(50);
       }
       await wait(a, (m) => m.type === 'snapshot' && m.snapshot.players.some((p) => p.id === a.id && p.motion.lean > .9));
-      assert.ok((await stub.shotWallForTest(a.id))?.tag.startsWith('wall:'));
+      assert.match((await stub.shotWallForTest(a.id))?.tag ?? '', /^(wall:|building:|(circulation|underground):.*:wall$)/);
       const mark = a.messages.length;
       send(a, [Object.assign(frame(a, b, .9, true), { intent: { x: 0, z: 0, slide: false, aim: true, jumpPressed: false, lean: 1 } })]);
       assert.deepEqual((await wait(a, (m) => m.type === 'shot' && m.shot.shooterId === a.id, mark)).shot.hits, []);

@@ -34,6 +34,9 @@ export async function harness(t,bindings={}){
  return {get mf(){return mf;},get base(){return base;},get central(){return central;},room,api,profile,create,admission,open,spawn,leave,clients,restart};
 }
 export const self=c=>c.snapshot?.players.find(p=>p.id===c.id);
-export function frames(c,{yaw=self(c).motion.yaw,pitch=0,x=0,z=0,reload=false,trigger=false,grenade=false,aim=false}={}){c.send({type:'input',roundId:c.snapshot.roundId,mapVersion:c.snapshot.mapVersion,frames:Array.from({length:6},(_,k)=>({seq:++c.seq,yaw,pitch,intent:{x,z,slide:false,aim,jumpPressed:false},combat:{trigger:trigger&&k===0,reload,grenade}}))});return c.seq;}
+// Inputs carry yaw in [-pi, pi], wrapped as the frontend sends it; a spawn heading past 180 degrees
+// leaves the server's own yaw below -pi.
+export const wrapYaw=a=>Math.atan2(Math.sin(a),Math.cos(a));
+export function frames(c,{yaw=wrapYaw(self(c).motion.yaw),pitch=0,x=0,z=0,reload=false,trigger=false,grenade=false,aim=false}={}){c.send({type:'input',roundId:c.snapshot.roundId,mapVersion:c.snapshot.mapVersion,frames:Array.from({length:6},(_,k)=>({seq:++c.seq,yaw,pitch,intent:{x,z,slide:false,aim,jumpPressed:false},combat:{trigger:trigger&&k===0,reload,grenade}}))});return c.seq;}
 export async function ack(c,seq=c.seq){return until(()=>self(c)?.ack>=seq,'movement acknowledgment');}
 export async function aim(c,target){const p=c.position,q=target.position,dx=q[0]-p[0],dz=q[2]-p[2];const look={yaw:Math.atan2(-dx,-dz),pitch:Math.atan2(q[1]+.9-p[1]-1.64,Math.hypot(dx,dz)),aim:true};for(let i=0;i<13;i++){frames(c,look);await delay(50);}await ack(c);return look;}

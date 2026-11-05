@@ -15,145 +15,13 @@
   "baseHeight": 0.0,
   "zones": [
    {
-    "id": "loading_square",
-    "kind": "yard",
-    "rect": [
-     -6,
-     -5,
-     6,
-     6
-    ],
-    "height": 0.0,
-    "material": "concrete_floor"
-   },
-   {
-    "id": "west_service",
-    "kind": "street",
-    "rect": [
-     -25,
-     -25,
-     -21,
-     9
-    ],
-    "height": 0.0,
-    "material": "asphalt"
-   },
-   {
-    "id": "west_south",
-    "kind": "street",
-    "rect": [
-     -23,
-     9,
-     -19,
-     23
-    ],
-    "height": 0.0,
-    "material": "asphalt"
-   },
-   {
-    "id": "west_jog",
-    "kind": "street",
-    "rect": [
-     -25,
-     5,
-     -19,
-     10
-    ],
-    "height": 0.0,
-    "material": "asphalt"
-   },
-   {
-    "id": "north_service",
-    "kind": "street",
-    "rect": [
-     -25,
-     -25,
-     23,
-     -21
-    ],
-    "height": 0.0,
-    "material": "asphalt"
-   },
-   {
-    "id": "east_service",
-    "kind": "street",
-    "rect": [
-     21,
-     -21,
-     25,
-     25
-    ],
-    "height": 0.0,
-    "material": "asphalt"
-   },
-   {
-    "id": "south_service",
-    "kind": "street",
-    "rect": [
-     -23,
-     21,
-     25,
-     25
-    ],
-    "height": 0.0,
-    "material": "asphalt"
-   },
-   {
-    "id": "hall_north",
-    "kind": "alley",
-    "rect": [
-     -4,
-     -21,
-     0,
-     -20
-    ],
-    "height": 0.0,
-    "material": "concrete_floor"
-   },
-   {
-    "id": "hall_south",
-    "kind": "alley",
-    "rect": [
-     -3,
-     -10,
-     1,
-     -5
-    ],
-    "height": 0.0,
-    "material": "concrete_floor"
-   },
-   {
-    "id": "west_cross",
-    "kind": "street",
-    "rect": [
-     -21,
-     -9,
-     -6,
-     -4
-    ],
-    "height": 0.0,
-    "material": "asphalt"
-   },
-   {
-    "id": "workshop_north",
-    "kind": "alley",
-    "rect": [
-     -18,
-     -21,
-     -14,
-     -18
-    ],
-    "height": 0.0,
-    "material": "concrete_floor"
-   },
-   {
-    "id": "workshop_east",
+    "id": "stores_east",
     "kind": "alley",
     "rect": [
      -11,
-     -16,
-     -7,
-     -12
+     -25,
+     -8,
+     -21
     ],
     "height": 0.0,
     "material": "concrete_floor"
@@ -162,549 +30,531 @@
     "id": "utility_yard",
     "kind": "yard",
     "rect": [
-     9,
-     -17,
-     21,
-     -7
-    ],
-    "height": 0.0,
-    "material": "concrete_floor"
-   },
-   {
-    "id": "utility_west",
-    "kind": "alley",
-    "rect": [
-     5,
-     -16,
-     9,
-     -12
-    ],
-    "height": 0.0,
-    "material": "concrete_floor"
-   },
-   {
-    "id": "utility_north",
-    "kind": "alley",
-    "rect": [
-     14,
-     -21,
-     18,
+     -8,
+     -25,
+     6,
      -17
     ],
     "height": 0.0,
     "material": "concrete_floor"
    },
    {
-    "id": "utility_south",
+    "id": "utility_east",
     "kind": "alley",
     "rect": [
-     13,
+     6,
+     -21,
+     9,
+     -17
+    ],
+    "height": 0.0,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "service_lane_w",
+    "kind": "street",
+    "rect": [
+     -26,
+     -17,
+     -6,
+     -14
+    ],
+    "height": 0.0,
+    "material": "asphalt"
+   },
+   {
+    "id": "service_lane_e",
+    "kind": "street",
+    "rect": [
+     6,
+     -17,
+     26,
+     -14
+    ],
+    "height": 0.0,
+    "material": "asphalt"
+   },
+   {
+    "id": "west_alley",
+    "kind": "alley",
+    "rect": [
+     -26,
+     -14,
+     -23,
+     -11
+    ],
+    "height": 0.0,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "west_yard",
+    "kind": "yard",
+    "rect": [
+     -27,
+     -11,
+     -19,
+     5
+    ],
+    "height": 0.0,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "dispatch_north",
+    "kind": "alley",
+    "rect": [
+     -15,
+     -14,
+     -11,
+     -8
+    ],
+    "height": 0.0,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "dispatch_south",
+    "kind": "alley",
+    "rect": [
+     -12,
+     2,
      -7,
-     17,
+     9
+    ],
+    "height": 0.0,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "loading_yard",
+    "kind": "yard",
+    "rect": [
+     -7,
+     -11,
+     10,
      3
     ],
     "height": 0.0,
     "material": "concrete_floor"
    },
    {
-    "id": "east_cross",
+    "id": "loading_dock",
+    "kind": "terrace",
+    "rect": [
+     10,
+     -11,
+     13,
+     3
+    ],
+    "height": 1.1,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "dock_lane",
     "kind": "street",
     "rect": [
-     6,
-     2,
-     21,
-     7
+     13,
+     -14,
+     17,
+     6
     ],
     "height": 0.0,
     "material": "asphalt"
    },
    {
-    "id": "hall_s_link",
-    "kind": "alley",
+    "id": "workshop_yard",
+    "kind": "yard",
     "rect": [
+     17,
      -2,
-     6,
-     2,
-     11
+     27,
+     3
     ],
     "height": 0.0,
     "material": "concrete_floor"
    },
    {
-    "id": "warehouse_east",
-    "kind": "alley",
+    "id": "south_lane",
+    "kind": "street",
     "rect": [
-     6,
-     14,
-     12,
-     18
-    ],
-    "height": 0.0,
-    "material": "concrete_floor"
-   },
-   {
-    "id": "warehouse_west",
-    "kind": "alley",
-    "rect": [
-     -14,
+     -7,
+     3,
      13,
+     9
+    ],
+    "height": 0.0,
+    "material": "asphalt"
+   },
+   {
+    "id": "storage_yard",
+    "kind": "yard",
+    "rect": [
+     -26,
+     9,
+     -12,
+     21
+    ],
+    "height": 0.0,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "goods_alley",
+    "kind": "alley",
+    "rect": [
+     -9,
+     9,
      -6,
+     21
+    ],
+    "height": 0.0,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "container_link",
+    "kind": "alley",
+    "rect": [
+     9,
+     13,
+     13,
      17
     ],
     "height": 0.0,
     "material": "concrete_floor"
    },
    {
-    "id": "south_storage",
+    "id": "container_north",
+    "kind": "alley",
+    "rect": [
+     21,
+     3,
+     24,
+     9
+    ],
+    "height": 0.0,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "container_yard",
     "kind": "yard",
     "rect": [
-     12,
-     11,
-     21,
+     13,
+     9,
+     27,
      21
     ],
     "height": 0.0,
     "material": "concrete_floor"
    },
    {
-    "id": "storage_north",
-    "kind": "alley",
-    "rect": [
-     14,
-     7,
-     18,
-     11
-    ],
-    "height": 0.0,
-    "material": "concrete_floor"
-   },
-   {
-    "id": "south_gallery_lane",
+    "id": "south_service",
     "kind": "street",
     "rect": [
-     -19,
-     -4,
-     -13,
-     15
+     -15,
+     21,
+     18,
+     25
     ],
     "height": 0.0,
     "material": "asphalt"
-   },
-   {
-    "id": "west_goods",
-    "kind": "yard",
-    "rect": [
-     -13,
-     4,
-     -6,
-     10
-    ],
-    "height": 0.0,
-    "material": "concrete_floor"
-   },
-   {
-    "id": "goods_link",
-    "kind": "alley",
-    "rect": [
-     -8,
-     1,
-     -6,
-     6
-    ],
-    "height": 0.0,
-    "material": "concrete_floor"
-   },
-   {
-    "id": "west_south_link",
-    "kind": "alley",
-    "rect": [
-     -19,
-     17,
-     -14,
-     21
-    ],
-    "height": 0.0,
-    "material": "concrete_floor"
-   },
-   {
-    "id": "west_south_court",
-    "kind": "yard",
-    "rect": [
-     -17,
-     13,
-     -11,
-     21
-    ],
-    "height": 0.0,
-    "material": "concrete_floor"
    }
   ],
   "covered": [
    {
-    "id": "workshop",
+    "id": "stores_hall",
     "kind": "interior",
     "rect": [
-     -18,
-     -17.7,
+     -23.7,
+     -25,
      -11.3,
-     -9.3
+     -17.3
     ]
    },
    {
-    "id": "workshop_door0",
-    "kind": "doorway",
-    "rect": [
-     -16.8,
-     -18,
-     -15.2,
-     -17.7
-    ]
-   },
-   {
-    "id": "workshop_door1",
+    "id": "stores_hall_door0",
     "kind": "doorway",
     "rect": [
      -11.3,
-     -14.8,
+     -23.8,
      -11,
-     -13.2
+     -22.2
     ]
    },
    {
-    "id": "workshop_door2",
+    "id": "stores_hall_door1",
     "kind": "doorway",
     "rect": [
-     -16.3,
-     -9.3,
-     -12.7,
-     -9
+     -19.3,
+     -17.3,
+     -15.7,
+     -17
     ]
    },
    {
-    "id": "warehouse_n",
+    "id": "machine_hall",
     "kind": "interior",
     "rect": [
-     -6.7,
-     -19.7,
-     4.7,
-     -10.3
+     9.3,
+     -25,
+     23.7,
+     -17.3
     ]
    },
    {
-    "id": "warehouse_n_door0",
+    "id": "machine_hall_door0",
     "kind": "doorway",
     "rect": [
-     -2.8,
-     -20,
-     -1.2,
-     -19.7
+     14.7,
+     -17.3,
+     18.3,
+     -17
     ]
    },
    {
-    "id": "warehouse_n_door1",
+    "id": "machine_hall_door1",
     "kind": "doorway",
     "rect": [
-     4.7,
-     -14.8,
-     5,
-     -13.2
+     9,
+     -19.8,
+     9.3,
+     -18.2
     ]
    },
    {
-    "id": "warehouse_n_door2",
-    "kind": "doorway",
+    "id": "dispatch_hall",
+    "kind": "interior",
     "rect": [
-     -1.8,
-     -10.3,
-     -0.2,
-     -10
-    ]
-   },
-   {
-    "id": "warehouse_n_door3",
-    "kind": "doorway",
-    "rect": [
+     -19,
+     -5.0,
      -7,
-     -14.8,
-     -6.7,
-     -13.2
+     -3.0
     ]
    },
    {
     "id": "goods_office",
     "kind": "interior",
     "rect": [
-     -12.7,
-     -3,
-     -6.3,
-     0.7
+     -11.7,
+     9.3,
+     -9.3,
+     15
     ]
    },
    {
     "id": "goods_office_door0",
     "kind": "doorway",
     "rect": [
-     -6.3,
-     -1.8,
-     -6,
-     -0.2
+     -11.3,
+     9,
+     -9.7,
+     9.3
     ]
    },
    {
     "id": "goods_office_door1",
     "kind": "doorway",
     "rect": [
-     -7.8,
-     0.7,
-     -6.2,
-     1
+     -9.3,
+     10.2,
+     -9,
+     13.8
     ]
    },
    {
     "id": "goods_office_door2",
     "kind": "doorway",
     "rect": [
-     -13,
-     -1.8,
-     -12.7,
-     -0.2
+     -12,
+     10.2,
+     -11.7,
+     13.8
     ]
    },
    {
-    "id": "warehouse_s",
+    "id": "warehouse_b",
     "kind": "interior",
     "rect": [
-     -6,
-     14.0,
-     6,
-     16.0
-    ]
-   },
-   {
-    "id": "north_gate",
-    "kind": "passage",
-    "rect": [
-     -13,
-     -25,
-     -9,
-     -21
-    ]
-   },
-   {
-    "id": "east_gate",
-    "kind": "passage",
-    "rect": [
-     21,
-     -3,
-     25,
-     1
-    ]
-   },
-   {
-    "id": "south_gate",
-    "kind": "passage",
-    "rect": [
-     7,
-     21,
-     11,
-     25
-    ]
-   },
-   {
-    "id": "warehouse_s_door0",
-    "kind": "doorway",
-    "rect": [
-     -6,
-     13.95,
      -5.7,
-     16.05
+     9.3,
+     8.7,
+     20.7
     ]
    },
    {
-    "id": "warehouse_s_door1",
+    "id": "warehouse_b_door0",
     "kind": "doorway",
     "rect": [
-     5.699999999999999,
-     13.95,
-     6.0,
-     16.05
+     -0.3,
+     9,
+     3.3,
+     9.3
     ]
    },
    {
-    "id": "warehouse_s_door2",
+    "id": "warehouse_b_door1",
     "kind": "doorway",
     "rect": [
-     -1.0499999999999998,
-     11.0,
-     1.0499999999999998,
-     11.3
+     8.7,
+     14.2,
+     9,
+     15.8
     ]
    },
    {
-    "id": "warehouse_s_door3",
+    "id": "warehouse_b_door2",
     "kind": "doorway",
     "rect": [
-     1.9500000000000002,
+     -0.3,
      20.7,
-     4.050000000000001,
+     3.3,
      21
     ]
    },
    {
-    "id": "I37_circulation_0",
-    "kind": "interior",
+    "id": "warehouse_b_door3",
+    "kind": "doorway",
     "rect": [
-     -1.0499999999999998,
-     11,
-     1.0499999999999998,
-     15.0
+     -6,
+     13.2,
+     -5.7,
+     16.8
     ]
    },
    {
-    "id": "I37_circulation_1",
+    "id": "loading_gate",
+    "kind": "passage",
+    "rect": [
+     -1,
+     -17,
+     3,
+     -11
+    ]
+   },
+   {
+    "id": "dispatch_hall_door0",
+    "kind": "doorway",
+    "rect": [
+     -19,
+     -5.05,
+     -18.7,
+     -2.95
+    ]
+   },
+   {
+    "id": "dispatch_hall_door1",
+    "kind": "doorway",
+    "rect": [
+     -7.300000000000001,
+     -5.05,
+     -7.0,
+     -2.95
+    ]
+   },
+   {
+    "id": "dispatch_hall_door2",
+    "kind": "doorway",
+    "rect": [
+     -14.05,
+     -8.0,
+     -11.95,
+     -7.699999999999999
+    ]
+   },
+   {
+    "id": "dispatch_hall_door3",
+    "kind": "doorway",
+    "rect": [
+     -11.05,
+     1.7,
+     -8.95,
+     2
+    ]
+   },
+   {
+    "id": "I21_circulation_0",
     "kind": "interior",
     "rect": [
-     1.9500000000000002,
-     15.0,
-     4.050000000000001,
-     21
+     -14.05,
+     -8,
+     -11.95,
+     -4.0
+    ]
+   },
+   {
+    "id": "I21_circulation_1",
+    "kind": "interior",
+    "rect": [
+     -11.05,
+     -4.0,
+     -8.95,
+     2
     ]
    }
   ]
  },
- "terraces": [],
+ "terraces": [
+  {
+   "id": "loading_dock",
+   "rect": [
+    10,
+    -11,
+    13,
+    3
+   ],
+   "height": 1.1,
+   "stairs": [
+    {
+     "side": "w",
+     "from": -11,
+     "to": -8,
+     "steps": 6,
+     "rise": 0.1833,
+     "run": 0.3
+    }
+   ],
+   "style": "dock"
+  }
+ ],
  "buildings": [
   {
    "id": "I01",
-   "type": "warehouse",
+   "type": "backdrop",
    "rect": [
     -35,
     -35,
-    -25,
-    -22
+    -24,
+    -26
    ],
-   "height": 8.6,
+   "height": 12.0,
    "floors": 1,
-   "palette": "panel",
-   "seed": 4141,
+   "palette": "concrete",
+   "seed": 6534,
+   "roof": {
+    "type": "flat"
+   },
+   "front": "w",
+   "doors": [],
+   "sign": 13
+  },
+  {
+   "id": "I02",
+   "type": "workshop",
+   "rect": [
+    -11,
+    -35,
+    -2,
+    -25
+   ],
+   "height": 6.5,
+   "floors": 1,
+   "palette": "brick_clad",
+   "seed": 4384,
    "roof": {
     "type": "gable",
     "ridge": "z"
    },
-   "front": "e",
-   "doors": [
-    {
-     "side": "e",
-     "at": 12.0,
-     "width": 1.0,
-     "kind": "door"
-    }
-   ],
-   "sign": 6
-  },
-  {
-   "id": "I02",
-   "type": "warehouse",
-   "rect": [
-    -25,
-    -35,
-    -13,
-    -25
-   ],
-   "height": 9.1,
-   "floors": 1,
-   "palette": "brick_soot",
-   "seed": 2430,
-   "roof": {
-    "type": "gable",
-    "ridge": "x"
-   },
    "front": "s",
    "doors": [
     {
      "side": "s",
-     "at": 3.0,
-     "width": 3.8,
-     "kind": "roller"
-    },
-    {
-     "side": "s",
-     "at": 9.0,
-     "width": 3.8,
-     "kind": "roller"
-    },
-    {
-     "side": "s",
-     "at": 6.0,
-     "width": 1.0,
-     "kind": "door"
-    }
-   ],
-   "sign": 8
-  },
-  {
-   "id": "I03",
-   "type": "warehouse",
-   "rect": [
-    -9,
-    -35,
-    3,
-    -25
-   ],
-   "height": 9.1,
-   "floors": 1,
-   "palette": "clad_red",
-   "seed": 8269,
-   "roof": {
-    "type": "gable",
-    "ridge": "x"
-   },
-   "front": "s",
-   "doors": [
-    {
-     "side": "s",
-     "at": 3.0,
-     "width": 3.8,
-     "kind": "roller"
-    },
-    {
-     "side": "s",
-     "at": 9.0,
-     "width": 3.8,
-     "kind": "roller"
-    },
-    {
-     "side": "s",
-     "at": 6.0,
-     "width": 1.0,
-     "kind": "door"
-    }
-   ],
-   "sign": 3
-  },
-  {
-   "id": "I04",
-   "type": "warehouse",
-   "rect": [
-    3,
-    -35,
-    14,
-    -25
-   ],
-   "height": 7.6,
-   "floors": 1,
-   "palette": "clad_green",
-   "seed": 9687,
-   "roof": {
-    "type": "gable",
-    "ridge": "x"
-   },
-   "front": "s",
-   "doors": [
-    {
-     "side": "s",
-     "at": 5.5,
-     "width": 3.8,
+     "at": 5.0,
+     "width": 3.2,
      "kind": "roller"
     },
     {
@@ -717,18 +567,18 @@
    "sign": 11
   },
   {
-   "id": "I05",
+   "id": "I03",
    "type": "warehouse",
    "rect": [
-    14,
+    -2,
     -35,
-    25,
+    9,
     -25
    ],
-   "height": 8.6,
+   "height": 7.6,
    "floors": 1,
-   "palette": "brick_clad",
-   "seed": 632,
+   "palette": "clad_blue",
+   "seed": 2477,
    "roof": {
     "type": "gable",
     "ridge": "x"
@@ -737,263 +587,50 @@
    "doors": [
     {
      "side": "s",
-     "at": 4.5,
+     "at": 3.0,
      "width": 3.8,
      "kind": "roller"
     }
    ],
-   "sign": 9
+   "sign": 1
   },
   {
-   "id": "I06",
+   "id": "I04",
    "type": "backdrop",
    "rect": [
-    25,
+    24,
     -35,
     35,
-    -25
+    -26
    ],
-   "height": 10.0,
+   "height": 11.0,
    "floors": 1,
-   "palette": "concrete",
-   "seed": 6576,
+   "palette": "panel",
+   "seed": 4935,
    "roof": {
     "type": "flat"
    },
    "front": "w",
    "doors": [],
-   "sign": 13
+   "sign": 4
   },
   {
-   "id": "I07",
-   "type": "workshop",
-   "rect": [
-    -13,
-    -35,
-    -9,
-    -18
-   ],
-   "height": 6.5,
-   "floors": 1,
-   "palette": "brick_clad",
-   "seed": 7915,
-   "roof": {
-    "type": "shed",
-    "low": "w"
-   },
-   "front": "w",
-   "doors": [],
-   "sign": 1,
-   "passages": [
-    {
-     "rect": [
-      -13,
-      -25,
-      -9,
-      -21
-     ],
-     "style": "portal",
-     "clear": 4.2
-    }
-   ]
-  },
-  {
-   "id": "I08",
+   "id": "I05",
    "type": "warehouse",
    "rect": [
+    -24,
     -35,
-    -22,
-    -25,
-    -11
+    -11,
+    -17
    ],
-   "height": 7.6,
-   "floors": 1,
-   "palette": "brick_red",
-   "seed": 8776,
-   "roof": {
-    "type": "gable",
-    "ridge": "z"
-   },
-   "front": "e",
-   "doors": [
-    {
-     "side": "e",
-     "at": 5.5,
-     "width": 3.8,
-     "kind": "roller"
-    },
-    {
-     "side": "e",
-     "at": 2.0,
-     "width": 1.0,
-     "kind": "door"
-    }
-   ],
-   "sign": 6
-  },
-  {
-   "id": "I09",
-   "type": "shed",
-   "rect": [
-    -21,
-    -21,
-    -18,
-    -18
-   ],
-   "height": 4.5,
+   "height": 9.1,
    "floors": 1,
    "palette": "clad_green",
-   "seed": 7074,
-   "roof": {
-    "type": "shed",
-    "low": "w"
-   },
-   "front": "w",
-   "doors": [
-    {
-     "side": "w",
-     "at": 2.0,
-     "width": 1.0,
-     "kind": "door"
-    }
-   ],
-   "sign": 6
-  },
-  {
-   "id": "I10",
-   "type": "shed",
-   "rect": [
-    5,
-    -21,
-    9,
-    -16
-   ],
-   "height": 4.5,
-   "floors": 1,
-   "palette": "clad_red",
-   "seed": 5619,
-   "roof": {
-    "type": "shed",
-    "low": "s"
-   },
-   "front": "s",
-   "doors": [
-    {
-     "side": "s",
-     "at": 2.0,
-     "width": 2.8,
-     "kind": "roller"
-    }
-   ],
-   "sign": 10
-  },
-  {
-   "id": "I11",
-   "type": "workshop",
-   "rect": [
-    9,
-    -21,
-    14,
-    -17
-   ],
-   "height": 5.8,
-   "floors": 1,
-   "palette": "brick_soot",
-   "seed": 9839,
-   "roof": {
-    "type": "gable",
-    "ridge": "x"
-   },
-   "front": "s",
-   "doors": [
-    {
-     "side": "n",
-     "at": 2.5,
-     "width": 3.2,
-     "kind": "roller"
-    },
-    {
-     "side": "s",
-     "at": 2.5,
-     "width": 3.2,
-     "kind": "roller"
-    }
-   ],
-   "sign": 8
-  },
-  {
-   "id": "I12",
-   "type": "workshop",
-   "rect": [
-    18,
-    -21,
-    21,
-    -17
-   ],
-   "height": 6.2,
-   "floors": 1,
-   "palette": "rusty",
-   "seed": 7408,
+   "seed": 1255,
    "roof": {
     "type": "gable",
     "ridge": "z"
    },
-   "front": "w",
-   "doors": [
-    {
-     "side": "w",
-     "at": 2.0,
-     "width": 1.0,
-     "kind": "door"
-    }
-   ],
-   "sign": 5
-  },
-  {
-   "id": "I13",
-   "type": "warehouse",
-   "rect": [
-    25,
-    -25,
-    35,
-    -13
-   ],
-   "height": 8.1,
-   "floors": 1,
-   "palette": "brick_red",
-   "seed": 9887,
-   "roof": {
-    "type": "gable",
-    "ridge": "z"
-   },
-   "front": "w",
-   "doors": [
-    {
-     "side": "w",
-     "at": 8.0,
-     "width": 3.8,
-     "kind": "roller"
-    }
-   ],
-   "sign": 8
-  },
-  {
-   "id": "I14",
-   "type": "warehouse",
-   "rect": [
-    -21,
-    -18,
-    -11,
-    -9
-   ],
-   "height": 7.6,
-   "floors": 1,
-   "palette": "brick_clad",
-   "seed": 4463,
-   "roof": {
-    "type": "gable",
-    "ridge": "x"
-   },
    "front": "s",
    "doors": [
     {
@@ -1001,44 +638,27 @@
      "at": 2.0,
      "width": 1.0,
      "kind": "door"
-    },
-    {
-     "side": "w",
-     "at": 4.5,
-     "width": 3.8,
-     "kind": "roller"
     }
    ],
-   "sign": 13,
+   "sign": 11,
    "interiors": [
     {
-     "id": "workshop",
+     "id": "stores_hall",
      "rect": [
-      -18,
-      -17.7,
+      -23.7,
+      -25,
       -11.3,
-      -9.3
+      -17.3
      ],
      "clear": 5.6,
      "doors": [
       {
-       "side": "n",
-       "rect": [
-        -16.8,
-        -18,
-        -15.2,
-        -17.7
-       ],
-       "height": 2.4,
-       "kind": "doorway"
-      },
-      {
        "side": "e",
        "rect": [
         -11.3,
-        -14.8,
+        -23.8,
         -11,
-        -13.2
+        -22.2
        ],
        "height": 2.4,
        "kind": "doorway"
@@ -1046,10 +666,10 @@
       {
        "side": "s",
        "rect": [
-        -16.3,
-        -9.3,
-        -12.7,
-        -9
+        -19.3,
+        -17.3,
+        -15.7,
+        -17
        ],
        "height": 3.8,
        "kind": "roller_open"
@@ -1059,100 +679,21 @@
    ]
   },
   {
-   "id": "I15",
+   "id": "I06",
    "type": "warehouse",
    "rect": [
-    -7,
-    -20,
-    5,
-    -10
+    9,
+    -35,
+    24,
+    -17
    ],
-   "height": 8.1,
+   "height": 7.6,
    "floors": 1,
-   "palette": "clad_red",
-   "seed": 207,
+   "palette": "panel",
+   "seed": 6134,
    "roof": {
     "type": "gable",
-    "ridge": "x"
-   },
-   "front": "w",
-   "doors": [],
-   "sign": 7,
-   "interiors": [
-    {
-     "id": "warehouse_n",
-     "rect": [
-      -6.7,
-      -19.7,
-      4.7,
-      -10.3
-     ],
-     "clear": 5.6,
-     "doors": [
-      {
-       "side": "n",
-       "rect": [
-        -2.8,
-        -20,
-        -1.2,
-        -19.7
-       ],
-       "height": 2.4,
-       "kind": "doorway"
-      },
-      {
-       "side": "e",
-       "rect": [
-        4.7,
-        -14.8,
-        5,
-        -13.2
-       ],
-       "height": 2.4,
-       "kind": "doorway"
-      },
-      {
-       "side": "s",
-       "rect": [
-        -1.8,
-        -10.3,
-        -0.2,
-        -10
-       ],
-       "height": 2.4,
-       "kind": "doorway"
-      },
-      {
-       "side": "w",
-       "rect": [
-        -7,
-        -14.8,
-        -6.7,
-        -13.2
-       ],
-       "height": 2.4,
-       "kind": "doorway"
-      }
-     ]
-    }
-   ]
-  },
-  {
-   "id": "I16",
-   "type": "workshop",
-   "rect": [
-    -11,
-    -12,
-    -7,
-    -9
-   ],
-   "height": 5.8,
-   "floors": 1,
-   "palette": "brick_soot",
-   "seed": 5263,
-   "roof": {
-    "type": "gable",
-    "ridge": "x"
+    "ridge": "z"
    },
    "front": "s",
    "doors": [
@@ -1163,547 +704,182 @@
      "kind": "door"
     }
    ],
-   "sign": 3
+   "sign": 8,
+   "interiors": [
+    {
+     "id": "machine_hall",
+     "rect": [
+      9.3,
+      -25,
+      23.7,
+      -17.3
+     ],
+     "clear": 5.6,
+     "doors": [
+      {
+       "side": "s",
+       "rect": [
+        14.7,
+        -17.3,
+        18.3,
+        -17
+       ],
+       "height": 3.8,
+       "kind": "roller_open"
+      },
+      {
+       "side": "w",
+       "rect": [
+        9,
+        -19.8,
+        9.3,
+        -18.2
+       ],
+       "height": 2.4,
+       "kind": "doorway"
+      }
+     ]
+    }
+   ]
   },
   {
-   "id": "I17",
+   "id": "I07",
+   "type": "workshop",
+   "rect": [
+    -35,
+    -26,
+    -24,
+    -17
+   ],
+   "height": 6.5,
+   "floors": 1,
+   "palette": "brick_clad",
+   "seed": 9894,
+   "roof": {
+    "type": "shed",
+    "low": "s"
+   },
+   "front": "s",
+   "doors": [],
+   "sign": 1
+  },
+  {
+   "id": "I08",
    "type": "workshop",
    "rect": [
     6,
-    -10,
+    -25,
     9,
-    -7
+    -21
    ],
-   "height": 5.4,
+   "height": 5.8,
    "floors": 1,
-   "palette": "brick_red",
-   "seed": 2220,
+   "palette": "brick_clad",
+   "seed": 539,
    "roof": {
     "type": "gable",
-    "ridge": "x"
+    "ridge": "z"
    },
-   "front": "e",
+   "front": "w",
    "doors": [
     {
-     "side": "e",
+     "side": "w",
      "at": 2.0,
      "width": 1.0,
      "kind": "door"
     }
    ],
-   "sign": 8
+   "sign": 14
   },
   {
-   "id": "I18",
-   "type": "warehouse",
-   "rect": [
-    -35,
-    -11,
-    -25,
-    1
-   ],
-   "height": 7.6,
-   "floors": 1,
-   "palette": "brick_soot",
-   "seed": 6190,
-   "roof": {
-    "type": "gable",
-    "ridge": "z"
-   },
-   "front": "e",
-   "doors": [
-    {
-     "side": "e",
-     "at": 3.0,
-     "width": 3.8,
-     "kind": "roller"
-    },
-    {
-     "side": "e",
-     "at": 9.0,
-     "width": 3.8,
-     "kind": "roller"
-    },
-    {
-     "side": "e",
-     "at": 6.0,
-     "width": 1.0,
-     "kind": "door"
-    }
-   ],
-   "sign": 10
-  },
-  {
-   "id": "I19",
+   "id": "I09",
    "type": "workshop",
    "rect": [
-    -6,
-    -10,
-    -3,
-    -5
+    24,
+    -26,
+    35,
+    -17
    ],
-   "height": 5.4,
+   "height": 6.5,
    "floors": 1,
    "palette": "brick_clad",
-   "seed": 4185,
+   "seed": 9220,
    "roof": {
-    "type": "gable",
-    "ridge": "z"
+    "type": "shed",
+    "low": "s"
    },
-   "front": "e",
-   "doors": [
-    {
-     "side": "e",
-     "at": 2.5,
-     "width": 3.2,
-     "kind": "roller"
-    }
-   ],
-   "sign": 11
-  },
-  {
-   "id": "I20",
-   "type": "workshop",
-   "rect": [
-    1,
-    -10,
-    6,
-    -5
-   ],
-   "height": 5.4,
-   "floors": 1,
-   "palette": "clad_cream",
-   "seed": 7258,
-   "roof": {
-    "type": "gable",
-    "ridge": "x"
-   },
-   "front": "w",
-   "doors": [
-    {
-     "side": "s",
-     "at": 2.5,
-     "width": 3.2,
-     "kind": "roller"
-    },
-    {
-     "side": "w",
-     "at": 2.5,
-     "width": 3.2,
-     "kind": "roller"
-    }
-   ],
+   "front": "s",
+   "doors": [],
    "sign": 7
   },
   {
-   "id": "I21",
+   "id": "I10",
    "type": "workshop",
    "rect": [
-    17,
-    -7,
-    21,
-    -3
-   ],
-   "height": 5.8,
-   "floors": 1,
-   "palette": "rusty",
-   "seed": 3143,
-   "roof": {
-    "type": "gable",
-    "ridge": "x"
-   },
-   "front": "w",
-   "doors": [
-    {
-     "side": "w",
-     "at": 2.0,
-     "width": 1.0,
-     "kind": "door"
-    }
-   ],
-   "sign": 5
-  },
-  {
-   "id": "I22",
-   "type": "workshop",
-   "rect": [
-    25,
-    -13,
-    35,
-    -3
-   ],
-   "height": 6.5,
-   "floors": 1,
-   "palette": "brick_clad",
-   "seed": 7256,
-   "roof": {
-    "type": "shed",
-    "low": "w"
-   },
-   "front": "w",
-   "doors": [
-    {
-     "side": "w",
-     "at": 5.0,
-     "width": 3.2,
-     "kind": "roller"
-    },
-    {
-     "side": "w",
-     "at": 2.0,
-     "width": 1.0,
-     "kind": "door"
-    }
-   ],
-   "sign": 9
-  },
-  {
-   "id": "I23",
-   "type": "warehouse",
-   "rect": [
-    -13,
-    -4,
-    -6,
-    1
-   ],
-   "height": 9.1,
-   "floors": 1,
-   "palette": "brick_red",
-   "seed": 4950,
-   "roof": {
-    "type": "gable",
-    "ridge": "x"
-   },
-   "front": "n",
-   "doors": [
-    {
-     "side": "n",
-     "at": 3.5,
-     "width": 3.8,
-     "kind": "roller"
-    }
-   ],
-   "sign": 0,
-   "interiors": [
-    {
-     "id": "goods_office",
-     "rect": [
-      -12.7,
-      -3,
-      -6.3,
-      0.7
-     ],
-     "clear": 5.6,
-     "doors": [
-      {
-       "side": "e",
-       "rect": [
-        -6.3,
-        -1.8,
-        -6,
-        -0.2
-       ],
-       "height": 2.4,
-       "kind": "doorway"
-      },
-      {
-       "side": "s",
-       "rect": [
-        -7.8,
-        0.7,
-        -6.2,
-        1
-       ],
-       "height": 2.4,
-       "kind": "doorway"
-      },
-      {
-       "side": "w",
-       "rect": [
-        -13,
-        -1.8,
-        -12.7,
-        -0.2
-       ],
-       "height": 2.4,
-       "kind": "doorway"
-      }
-     ]
-    }
-   ]
-  },
-  {
-   "id": "I24",
-   "type": "workshop",
-   "rect": [
-    6,
-    -7,
-    13,
-    2
-   ],
-   "height": 5.8,
-   "floors": 1,
-   "palette": "brick_soot",
-   "seed": 9292,
-   "roof": {
-    "type": "shed",
-    "low": "e"
-   },
-   "front": "e",
-   "doors": [
-    {
-     "side": "e",
-     "at": 4.5,
-     "width": 3.2,
-     "kind": "roller"
-    },
-    {
-     "side": "e",
-     "at": 2.0,
-     "width": 1.0,
-     "kind": "door"
-    },
-    {
-     "side": "s",
-     "at": 3.5,
-     "width": 3.2,
-     "kind": "roller"
-    },
-    {
-     "side": "w",
-     "at": 5.5,
-     "width": 3.2,
-     "kind": "roller"
-    }
-   ],
-   "sign": 2
-  },
-  {
-   "id": "I25",
-   "type": "workshop",
-   "rect": [
-    17,
-    -3,
-    35,
-    1
-   ],
-   "height": 6.5,
-   "floors": 1,
-   "palette": "brick_soot",
-   "seed": 9735,
-   "roof": {
-    "type": "gable",
-    "ridge": "x"
-   },
-   "front": "w",
-   "doors": [],
-   "sign": 1,
-   "passages": [
-    {
-     "rect": [
-      21,
-      -3,
-      25,
-      1
-     ],
-     "style": "portal",
-     "clear": 4.2
-    }
-   ]
-  },
-  {
-   "id": "I26",
-   "type": "workshop",
-   "rect": [
-    -13,
-    1,
+    -11,
+    -21,
     -8,
-    4
+    -17
    ],
    "height": 6.2,
    "floors": 1,
-   "palette": "brick_soot",
-   "seed": 1480,
+   "palette": "clad_cream",
+   "seed": 4406,
    "roof": {
     "type": "gable",
-    "ridge": "x"
-   },
-   "front": "s",
-   "doors": [
-    {
-     "side": "s",
-     "at": 2.5,
-     "width": 3.2,
-     "kind": "roller"
-    }
-   ],
-   "sign": 15
-  },
-  {
-   "id": "I27",
-   "type": "workshop",
-   "rect": [
-    -35,
-    1,
-    -25,
-    11
-   ],
-   "height": 6.5,
-   "floors": 1,
-   "palette": "clad_cream",
-   "seed": 6700,
-   "roof": {
-    "type": "shed",
-    "low": "e"
+    "ridge": "z"
    },
    "front": "e",
    "doors": [
     {
      "side": "e",
-     "at": 4.5,
-     "width": 3.2,
-     "kind": "roller"
-    },
-    {
-     "side": "e",
-     "at": 2.0,
+     "at": 1.0,
      "width": 1.0,
      "kind": "door"
     }
    ],
-   "sign": 11
+   "sign": 14
   },
   {
-   "id": "I28",
+   "id": "I11",
    "type": "office",
    "rect": [
-    25,
-    1,
-    35,
-    11
+    -35,
+    -17,
+    -26,
+    -11
    ],
-   "height": 7.6,
-   "floors": 2,
-   "palette": "brick_red",
-   "seed": 5941,
+   "height": 10.6,
+   "floors": 3,
+   "palette": "brick_clad",
+   "seed": 494,
    "roof": {
     "type": "flat"
    },
-   "front": "w",
+   "front": "e",
    "doors": [
     {
-     "side": "w",
+     "side": "e",
      "at": 2.0,
      "width": 1.8,
      "kind": "double"
     }
    ],
-   "sign": 4
+   "sign": 11
   },
   {
-   "id": "I29",
-   "type": "workshop",
+   "id": "I12",
+   "type": "shed",
    "rect": [
-    -13,
-    10,
-    -6,
-    13
+    -23,
+    -14,
+    -15,
+    -11
    ],
-   "height": 6.2,
+   "height": 4.5,
    "floors": 1,
    "palette": "rusty",
-   "seed": 7086,
-   "roof": {
-    "type": "gable",
-    "ridge": "x"
-   },
-   "front": "s",
-   "doors": [
-    {
-     "side": "n",
-     "at": 3.5,
-     "width": 3.2,
-     "kind": "roller"
-    },
-    {
-     "side": "s",
-     "at": 3.5,
-     "width": 3.2,
-     "kind": "roller"
-    }
-   ],
-   "sign": 4
-  },
-  {
-   "id": "I30",
-   "type": "shed",
-   "rect": [
-    -6,
-    6,
-    -2,
-    11
-   ],
-   "height": 4.5,
-   "floors": 1,
-   "palette": "clad_green",
-   "seed": 2492,
-   "roof": {
-    "type": "shed",
-    "low": "e"
-   },
-   "front": "e",
-   "doors": [
-    {
-     "side": "e",
-     "at": 2.5,
-     "width": 2.8,
-     "kind": "roller"
-    }
-   ],
-   "sign": 12
-  },
-  {
-   "id": "I31",
-   "type": "shed",
-   "rect": [
-    2,
-    6,
-    6,
-    11
-   ],
-   "height": 4.5,
-   "floors": 1,
-   "palette": "clad_red",
-   "seed": 3298,
-   "roof": {
-    "type": "shed",
-    "low": "w"
-   },
-   "front": "w",
-   "doors": [
-    {
-     "side": "w",
-     "at": 2.5,
-     "width": 2.8,
-     "kind": "roller"
-    }
-   ],
-   "sign": 4,
-   "serviceRoof": true
-  },
-  {
-   "id": "I32",
-   "type": "shed",
-   "rect": [
-    6,
-    7,
-    14,
-    11
-   ],
-   "height": 4.5,
-   "floors": 1,
-   "palette": "clad_blue",
-   "seed": 5481,
+   "seed": 6011,
    "roof": {
     "type": "shed",
     "low": "n"
@@ -1717,25 +893,132 @@
      "kind": "roller"
     }
    ],
-   "sign": 2,
-   "serviceRoof": true
+   "sign": 8
   },
   {
-   "id": "I33",
+   "id": "I13",
    "type": "workshop",
    "rect": [
-    18,
-    7,
-    21,
-    11
+    -11,
+    -14,
+    -6,
+    -11
+   ],
+   "height": 5.4,
+   "floors": 1,
+   "palette": "brick_soot",
+   "seed": 6720,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "n",
+   "doors": [
+    {
+     "side": "n",
+     "at": 2.5,
+     "width": 3.2,
+     "kind": "roller"
+    }
+   ],
+   "sign": 6
+  },
+  {
+   "id": "I14",
+   "type": "workshop",
+   "rect": [
+    -6,
+    -17,
+    6,
+    -11
+   ],
+   "height": 5.8,
+   "floors": 1,
+   "palette": "rusty",
+   "seed": 96,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "n",
+     "at": 4.5,
+     "width": 1.0,
+     "kind": "door"
+    },
+    {
+     "side": "s",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    }
+   ],
+   "sign": 14,
+   "passages": [
+    {
+     "rect": [
+      -1,
+      -17,
+      3,
+      -11
+     ],
+     "style": "portal",
+     "clear": 4.2
+    }
+   ]
+  },
+  {
+   "id": "I15",
+   "type": "workshop",
+   "rect": [
+    6,
+    -14,
+    13,
+    -11
    ],
    "height": 5.4,
    "floors": 1,
    "palette": "rusty",
-   "seed": 9809,
+   "seed": 5150,
    "roof": {
     "type": "gable",
-    "ridge": "z"
+    "ridge": "x"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "n",
+     "at": 3.5,
+     "width": 3.2,
+     "kind": "roller"
+    },
+    {
+     "side": "s",
+     "at": 4.0,
+     "width": 3.2,
+     "kind": "dock"
+    }
+   ],
+   "sign": 1
+  },
+  {
+   "id": "I16",
+   "type": "workshop",
+   "rect": [
+    26,
+    -17,
+    35,
+    -14
+   ],
+   "height": 6.5,
+   "floors": 1,
+   "palette": "clad_cream",
+   "seed": 6809,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
    },
    "front": "w",
    "doors": [
@@ -1746,137 +1029,194 @@
      "kind": "door"
     }
    ],
-   "sign": 0
+   "sign": 4
   },
   {
-   "id": "I34",
+   "id": "I17",
    "type": "shed",
    "rect": [
-    6,
-    11,
-    12,
-    14
+    -19,
+    -11,
+    -15,
+    -8
    ],
    "height": 4.5,
    "floors": 1,
-   "palette": "clad_cream",
-   "seed": 1686,
+   "palette": "clad_green",
+   "seed": 1507,
    "roof": {
     "type": "shed",
-    "low": "s"
-   },
-   "front": "s",
-   "doors": [
-    {
-     "side": "s",
-     "at": 3.0,
-     "width": 2.8,
-     "kind": "roller"
-    }
-   ],
-   "sign": 3,
-   "serviceRoof": true
-  },
-  {
-   "id": "I35",
-   "type": "backdrop",
-   "rect": [
-    -35,
-    11,
-    -25,
-    22
-   ],
-   "height": 10.0,
-   "floors": 1,
-   "palette": "clad_green",
-   "seed": 5268,
-   "roof": {
-    "type": "gable",
-    "ridge": "z"
+    "low": "w"
    },
    "front": "w",
-   "doors": [],
-   "sign": 8
-  },
-  {
-   "id": "I36",
-   "type": "workshop",
-   "rect": [
-    -11,
-    17,
-    -6,
-    21
-   ],
-   "height": 5.4,
-   "floors": 1,
-   "palette": "brick_soot",
-   "seed": 7121,
-   "roof": {
-    "type": "gable",
-    "ridge": "x"
-   },
-   "front": "s",
    "doors": [
     {
-     "side": "n",
-     "at": 2.5,
-     "width": 3.2,
-     "kind": "roller"
-    },
-    {
-     "side": "s",
-     "at": 2.5,
-     "width": 3.2,
-     "kind": "roller"
-    }
-   ],
-   "sign": 10
-  },
-  {
-   "id": "I37",
-   "type": "warehouse",
-   "rect": [
-    -6,
-    11,
-    6,
-    21
-   ],
-   "height": 9.1,
-   "floors": 1,
-   "palette": "concrete",
-   "seed": 8928,
-   "roof": {
-    "type": "gable",
-    "ridge": "x"
-   },
-   "front": "s",
-   "doors": [
-    {
-     "side": "s",
+     "side": "w",
      "at": 2.0,
      "width": 1.0,
      "kind": "door"
     }
    ],
+   "sign": 4
+  },
+  {
+   "id": "I18",
+   "type": "workshop",
+   "rect": [
+    -11,
+    -11,
+    -7,
+    -8
+   ],
+   "height": 6.2,
+   "floors": 1,
+   "palette": "clad_cream",
+   "seed": 2570,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "w",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    }
+   ],
+   "sign": 6
+  },
+  {
+   "id": "I19",
+   "type": "warehouse",
+   "rect": [
+    17,
+    -14,
+    27,
+    -2
+   ],
+   "height": 4.5,
+   "floors": 1,
+   "palette": "brick_soot",
+   "seed": 6518,
+   "roof": {
+    "type": "flat"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "w",
+     "at": 3.0,
+     "width": 3.8,
+     "kind": "roller"
+    },
+    {
+     "side": "w",
+     "at": 9.0,
+     "width": 3.8,
+     "kind": "roller"
+    },
+    {
+     "side": "w",
+     "at": 6.0,
+     "width": 1.0,
+     "kind": "door"
+    },
+    {
+     "side": "s",
+     "at": 5.0,
+     "width": 3.8,
+     "kind": "roller"
+    },
+    {
+     "side": "s",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    },
+    {
+     "side": "n",
+     "at": 4.5,
+     "width": 3.8,
+     "kind": "roller"
+    }
+   ],
    "sign": 6,
+   "serviceRoof": true
+  },
+  {
+   "id": "I20",
+   "type": "backdrop",
+   "rect": [
+    -35,
+    -11,
+    -27,
+    5
+   ],
+   "height": 12.0,
+   "floors": 1,
+   "palette": "clad_blue",
+   "seed": 9646,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "e",
+   "doors": [],
+   "sign": 14
+  },
+  {
+   "id": "I21",
+   "type": "warehouse",
+   "rect": [
+    -19,
+    -8,
+    -7,
+    2
+   ],
+   "height": 9.1,
+   "floors": 1,
+   "palette": "brick_red",
+   "seed": 5514,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "e",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    },
+    {
+     "side": "w",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    }
+   ],
+   "sign": 0,
    "interiors": [
     {
-     "id": "warehouse_s",
+     "id": "dispatch_hall",
      "rect": [
-      -5.7,
-      11.3,
-      5.7,
-      20.7
+      -18.7,
+      -7.7,
+      -7.3,
+      1.7
      ],
      "clear": 5.82,
      "doors": [
       {
        "side": "w",
        "rect": [
-        -6,
-        13.95,
-        -5.7,
-        16.05
+        -19,
+        -5.05,
+        -18.7,
+        -2.95
        ],
        "height": 2.5,
        "kind": "doorway"
@@ -1884,10 +1224,10 @@
       {
        "side": "e",
        "rect": [
-        5.699999999999999,
-        13.95,
-        6.0,
-        16.05
+        -7.300000000000001,
+        -5.05,
+        -7.0,
+        -2.95
        ],
        "height": 2.5,
        "kind": "doorway"
@@ -1895,10 +1235,10 @@
       {
        "side": "n",
        "rect": [
-        -1.0499999999999998,
-        11.0,
-        1.0499999999999998,
-        11.3
+        -14.05,
+        -8.0,
+        -11.95,
+        -7.699999999999999
        ],
        "height": 2.5,
        "kind": "doorway"
@@ -1906,10 +1246,10 @@
       {
        "side": "s",
        "rect": [
-        1.9500000000000002,
-        20.7,
-        4.050000000000001,
-        21
+        -11.05,
+        1.7,
+        -8.95,
+        2
        ],
        "height": 2.5,
        "kind": "doorway"
@@ -1937,18 +1277,253 @@
    "purpose": "Warehouse dispatch and elevated office"
   },
   {
-   "id": "I38",
+   "id": "I22",
+   "type": "shed",
+   "rect": [
+    -19,
+    2,
+    -12,
+    5
+   ],
+   "height": 4.5,
+   "floors": 1,
+   "palette": "clad_green",
+   "seed": 3695,
+   "roof": {
+    "type": "shed",
+    "low": "w"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "w",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    }
+   ],
+   "sign": 15
+  },
+  {
+   "id": "I23",
+   "type": "backdrop",
+   "rect": [
+    27,
+    -2,
+    35,
+    3
+   ],
+   "height": 11.0,
+   "floors": 1,
+   "palette": "concrete",
+   "seed": 6310,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "w",
+   "doors": [],
+   "sign": 12
+  },
+  {
+   "id": "I24",
+   "type": "workshop",
+   "rect": [
+    -35,
+    5,
+    -12,
+    9
+   ],
+   "height": 6.5,
+   "floors": 1,
+   "palette": "brick_soot",
+   "seed": 9665,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "s",
+     "at": 16.0,
+     "width": 3.2,
+     "kind": "roller"
+    },
+    {
+     "side": "s",
+     "at": 11.0,
+     "width": 1.0,
+     "kind": "door"
+    },
+    {
+     "side": "n",
+     "at": 12.0,
+     "width": 3.2,
+     "kind": "roller"
+    }
+   ],
+   "sign": 12
+  },
+  {
+   "id": "I25",
+   "type": "workshop",
+   "rect": [
+    13,
+    6,
+    17,
+    9
+   ],
+   "height": 5.8,
+   "floors": 1,
+   "palette": "rusty",
+   "seed": 9482,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "s",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    }
+   ],
+   "sign": 8
+  },
+  {
+   "id": "I26",
+   "type": "workshop",
+   "rect": [
+    17,
+    3,
+    21,
+    9
+   ],
+   "height": 6.2,
+   "floors": 1,
+   "palette": "brick_soot",
+   "seed": 6319,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "e",
+   "doors": [
+    {
+     "side": "e",
+     "at": 3.0,
+     "width": 3.2,
+     "kind": "roller"
+    }
+   ],
+   "sign": 8
+  },
+  {
+   "id": "I27",
+   "type": "workshop",
+   "rect": [
+    24,
+    3,
+    35,
+    9
+   ],
+   "height": 6.5,
+   "floors": 1,
+   "palette": "rusty",
+   "seed": 8900,
+   "roof": {
+    "type": "shed",
+    "low": "w"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "w",
+     "at": 3.0,
+     "width": 3.2,
+     "kind": "roller"
+    }
+   ],
+   "sign": 4
+  },
+  {
+   "id": "I28",
+   "type": "shed",
+   "rect": [
+    9,
+    9,
+    13,
+    13
+   ],
+   "height": 4.5,
+   "floors": 1,
+   "palette": "clad_green",
+   "seed": 399,
+   "roof": {
+    "type": "shed",
+    "low": "s"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "s",
+     "at": 2.0,
+     "width": 2.8,
+     "kind": "roller"
+    }
+   ],
+   "sign": 13
+  },
+  {
+   "id": "I29",
+   "type": "workshop",
+   "rect": [
+    -35,
+    9,
+    -26,
+    21
+   ],
+   "height": 6.5,
+   "floors": 1,
+   "palette": "rusty",
+   "seed": 3811,
+   "roof": {
+    "type": "shed",
+    "low": "e"
+   },
+   "front": "e",
+   "doors": [
+    {
+     "side": "e",
+     "at": 6.0,
+     "width": 3.2,
+     "kind": "roller"
+    },
+    {
+     "side": "e",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    }
+   ],
+   "sign": 8
+  },
+  {
+   "id": "I30",
    "type": "warehouse",
    "rect": [
-    25,
-    11,
-    35,
-    23
+    -12,
+    9,
+    -9,
+    21
    ],
-   "height": 8.1,
+   "height": 9.1,
    "floors": 1,
-   "palette": "clad_blue",
-   "seed": 1814,
+   "palette": "clad_red",
+   "seed": 8749,
    "roof": {
     "type": "gable",
     "ridge": "z"
@@ -1956,10 +1531,16 @@
    "front": "w",
    "doors": [
     {
-     "side": "w",
-     "at": 3.0,
+     "side": "e",
+     "at": 9.0,
      "width": 3.8,
      "kind": "roller"
+    },
+    {
+     "side": "e",
+     "at": 6.0,
+     "width": 1.0,
+     "kind": "door"
     },
     {
      "side": "w",
@@ -1974,105 +1555,246 @@
      "kind": "door"
     }
    ],
-   "sign": 15
-  },
-  {
-   "id": "I39",
-   "type": "office",
-   "rect": [
-    7,
-    18,
-    11,
-    35
-   ],
-   "height": 10.6,
-   "floors": 3,
-   "palette": "brick_clad",
-   "seed": 3439,
-   "roof": {
-    "type": "flat"
-   },
-   "front": "w",
-   "doors": [],
-   "sign": 15,
-   "passages": [
+   "sign": 5,
+   "interiors": [
     {
+     "id": "goods_office",
      "rect": [
-      7,
-      21,
-      11,
-      25
+      -11.7,
+      9.3,
+      -9.3,
+      15
      ],
-     "style": "portal",
-     "clear": 4.2
+     "clear": 5.6,
+     "doors": [
+      {
+       "side": "n",
+       "rect": [
+        -11.3,
+        9,
+        -9.7,
+        9.3
+       ],
+       "height": 2.4,
+       "kind": "doorway"
+      },
+      {
+       "side": "e",
+       "rect": [
+        -9.3,
+        10.2,
+        -9,
+        13.8
+       ],
+       "height": 3.8,
+       "kind": "roller_open"
+      },
+      {
+       "side": "w",
+       "rect": [
+        -12,
+        10.2,
+        -11.7,
+        13.8
+       ],
+       "height": 3.8,
+       "kind": "roller_open"
+      }
+     ]
     }
    ]
   },
   {
-   "id": "I40",
+   "id": "I31",
+   "type": "warehouse",
+   "rect": [
+    -6,
+    9,
+    9,
+    21
+   ],
+   "height": 9.1,
+   "floors": 1,
+   "palette": "clad_green",
+   "seed": 7544,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "n",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    },
+    {
+     "side": "s",
+     "at": 2.0,
+     "width": 1.0,
+     "kind": "door"
+    }
+   ],
+   "sign": 15,
+   "interiors": [
+    {
+     "id": "warehouse_b",
+     "rect": [
+      -5.7,
+      9.3,
+      8.7,
+      20.7
+     ],
+     "clear": 5.6,
+     "doors": [
+      {
+       "side": "n",
+       "rect": [
+        -0.3,
+        9,
+        3.3,
+        9.3
+       ],
+       "height": 3.8,
+       "kind": "roller_open"
+      },
+      {
+       "side": "e",
+       "rect": [
+        8.7,
+        14.2,
+        9,
+        15.8
+       ],
+       "height": 2.4,
+       "kind": "doorway"
+      },
+      {
+       "side": "s",
+       "rect": [
+        -0.3,
+        20.7,
+        3.3,
+        21
+       ],
+       "height": 3.8,
+       "kind": "roller_open"
+      },
+      {
+       "side": "w",
+       "rect": [
+        -6,
+        13.2,
+        -5.7,
+        16.8
+       ],
+       "height": 3.8,
+       "kind": "roller_open"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "I32",
    "type": "backdrop",
    "rect": [
-    -35,
-    22,
-    -25,
-    35
+    27,
+    9,
+    35,
+    21
    ],
-   "height": 10.0,
+   "height": 9.0,
    "floors": 1,
    "palette": "clad_blue",
-   "seed": 2064,
+   "seed": 8677,
    "roof": {
     "type": "gable",
     "ridge": "z"
    },
    "front": "w",
    "doors": [],
-   "sign": 0
+   "sign": 13
   },
   {
-   "id": "I41",
-   "type": "warehouse",
+   "id": "I33",
+   "type": "shed",
    "rect": [
-    -25,
-    25,
-    -14,
-    35
+    9,
+    17,
+    13,
+    21
    ],
-   "height": 7.6,
+   "height": 4.5,
    "floors": 1,
-   "palette": "brick_clad",
-   "seed": 3425,
+   "palette": "clad_red",
+   "seed": 8281,
    "roof": {
-    "type": "gable",
-    "ridge": "x"
+    "type": "shed",
+    "low": "s"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "s",
+     "at": 2.0,
+     "width": 2.8,
+     "kind": "roller"
+    }
+   ],
+   "sign": 15
+  },
+  {
+   "id": "I34",
+   "type": "workshop",
+   "rect": [
+    -35,
+    21,
+    -15,
+    25
+   ],
+   "height": 6.5,
+   "floors": 1,
+   "palette": "brick_red",
+   "seed": 5946,
+   "roof": {
+    "type": "shed",
+    "low": "n"
    },
    "front": "n",
    "doors": [
     {
      "side": "n",
-     "at": 6.5,
-     "width": 3.8,
+     "at": 18.0,
+     "width": 3.2,
      "kind": "roller"
+    },
+    {
+     "side": "n",
+     "at": 12.0,
+     "width": 1.0,
+     "kind": "door"
     }
    ],
-   "sign": 13
+   "sign": 11
   },
   {
-   "id": "I42",
+   "id": "I35",
    "type": "workshop",
    "rect": [
-    -14,
-    25,
-    -4,
-    35
+    18,
+    21,
+    35,
+    25
    ],
    "height": 6.5,
    "floors": 1,
    "palette": "brick_soot",
-   "seed": 5190,
+   "seed": 1594,
    "roof": {
-    "type": "shed",
-    "low": "n"
+    "type": "gable",
+    "ridge": "x"
    },
    "front": "n",
    "doors": [
@@ -2089,21 +1811,69 @@
      "kind": "door"
     }
    ],
-   "sign": 14
+   "sign": 10
   },
   {
-   "id": "I43",
+   "id": "I36",
+   "type": "backdrop",
+   "rect": [
+    -35,
+    25,
+    -23,
+    35
+   ],
+   "height": 13.0,
+   "floors": 1,
+   "palette": "clad_green",
+   "seed": 9931,
+   "roof": {
+    "type": "flat"
+   },
+   "front": "w",
+   "doors": [],
+   "sign": 8
+  },
+  {
+   "id": "I37",
    "type": "warehouse",
    "rect": [
-    -4,
+    -23,
     25,
-    7,
+    -12,
     35
    ],
    "height": 7.6,
    "floors": 1,
-   "palette": "panel",
-   "seed": 4495,
+   "palette": "brick_red",
+   "seed": 9216,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "n",
+   "doors": [
+    {
+     "side": "n",
+     "at": 10.0,
+     "width": 1.0,
+     "kind": "door"
+    }
+   ],
+   "sign": 0
+  },
+  {
+   "id": "I38",
+   "type": "warehouse",
+   "rect": [
+    -12,
+    25,
+    -1,
+    35
+   ],
+   "height": 8.6,
+   "floors": 1,
+   "palette": "clad_red",
+   "seed": 4205,
    "roof": {
     "type": "gable",
     "ridge": "x"
@@ -2123,21 +1893,21 @@
      "kind": "door"
     }
    ],
-   "sign": 8
+   "sign": 3
   },
   {
-   "id": "I44",
+   "id": "I39",
    "type": "warehouse",
    "rect": [
+    -1,
+    25,
     11,
-    25,
-    25,
     35
    ],
-   "height": 9.1,
+   "height": 8.6,
    "floors": 1,
-   "palette": "brick_soot",
-   "seed": 2394,
+   "palette": "concrete",
+   "seed": 4251,
    "roof": {
     "type": "gable",
     "ridge": "x"
@@ -2146,19 +1916,19 @@
    "doors": [
     {
      "side": "n",
-     "at": 4.0,
+     "at": 3.0,
      "width": 3.8,
      "kind": "roller"
     },
     {
      "side": "n",
-     "at": 10.0,
+     "at": 9.0,
      "width": 3.8,
      "kind": "roller"
     },
     {
      "side": "n",
-     "at": 7.0,
+     "at": 6.0,
      "width": 1.0,
      "kind": "door"
     }
@@ -2166,408 +1936,481 @@
    "sign": 4
   },
   {
-   "id": "I45",
+   "id": "I40",
    "type": "warehouse",
    "rect": [
+    11,
     25,
     23,
+    35
+   ],
+   "height": 8.1,
+   "floors": 1,
+   "palette": "brick_red",
+   "seed": 2994,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "n",
+   "doors": [
+    {
+     "side": "n",
+     "at": 3.5,
+     "width": 3.8,
+     "kind": "roller"
+    }
+   ],
+   "sign": 2
+  },
+  {
+   "id": "I41",
+   "type": "backdrop",
+   "rect": [
+    23,
+    25,
     35,
     35
    ],
-   "height": 9.1,
+   "height": 13.0,
    "floors": 1,
-   "palette": "brick_red",
-   "seed": 8184,
+   "palette": "panel",
+   "seed": 1782,
    "roof": {
-    "type": "gable",
-    "ridge": "z"
+    "type": "flat"
    },
    "front": "w",
    "doors": [],
-   "sign": 4
+   "sign": 15
+  },
+  {
+   "id": "I19B",
+   "type": "backdrop",
+   "rect": [
+    27,
+    -14,
+    35,
+    -2
+   ],
+   "height": 10.0,
+   "floors": 1,
+   "palette": "concrete",
+   "seed": 6525,
+   "roof": {
+    "type": "flat"
+   },
+   "front": "w",
+   "doors": [],
+   "sign": 0
   }
  ],
  "walls": [
   {
+   "id": "utility_divider",
    "rect": [
-    -7,
-    -21,
-    -4,
-    -20
-   ],
-   "height": 3.0,
-   "style": "concrete",
-   "gates": [],
-   "id": "W01"
-  },
-  {
-   "rect": [
-    0,
-    -21,
-    5,
-    -20
-   ],
-   "height": 3.0,
-   "style": "concrete",
-   "gates": [],
-   "id": "W02"
-  },
-  {
-   "rect": [
-    23,
+    -1.08,
     -25,
-    25,
-    -21
-   ],
-   "height": 3.0,
-   "style": "concrete",
-   "gates": [],
-   "id": "W03"
-  },
-  {
-   "rect": [
-    -14,
-    -21,
-    -13,
-    -18
-   ],
-   "height": 3.0,
-   "style": "concrete",
-   "gates": [],
-   "id": "W04"
-  },
-  {
-   "rect": [
-    -11,
-    -18,
-    -9,
-    -16
-   ],
-   "height": 3.0,
-   "style": "pillar",
-   "gates": [],
-   "id": "W05"
-  },
-  {
-   "rect": [
-    -9,
-    -21,
-    -7,
-    -16
-   ],
-   "height": 3.0,
-   "style": "concrete",
-   "gates": [],
-   "id": "W06"
-  },
-  {
-   "rect": [
-    -7,
-    -10,
-    -6,
-    -9
-   ],
-   "height": 3.0,
-   "style": "pillar",
-   "gates": [],
-   "id": "W07"
-  },
-  {
-   "rect": [
-    5,
-    -12,
-    9,
-    -10
-   ],
-   "height": 3.0,
-   "style": "concrete",
-   "gates": [],
-   "id": "W08"
-  },
-  {
-   "rect": [
-    -21,
-    -4,
-    -19,
-    5
-   ],
-   "height": 3.0,
-   "style": "concrete",
-   "gates": [],
-   "id": "W09"
-  },
-  {
-   "rect": [
-    17,
-    1,
-    21,
-    2
-   ],
-   "height": 3.0,
-   "style": "concrete",
-   "gates": [],
-   "id": "W10"
-  },
-  {
-   "rect": [
-    -25,
-    10,
-    -23,
-    25
-   ],
-   "height": 3.0,
-   "style": "concrete",
-   "gates": [],
-   "id": "W11"
-  },
-  {
-   "rect": [
-    -19,
-    15,
-    -17,
-    17
-   ],
-   "height": 3.0,
-   "style": "pillar",
-   "gates": [],
-   "id": "W12"
-  },
-  {
-   "rect": [
-    6,
-    18,
-    7,
-    21
-   ],
-   "height": 3.0,
-   "style": "concrete",
-   "gates": [],
-   "id": "W13"
-  },
-  {
-   "rect": [
-    11,
-    18,
-    12,
-    21
-   ],
-   "height": 3.0,
-   "style": "concrete",
-   "gates": [],
-   "id": "W14"
-  },
-  {
-   "id": "utility_divider_n",
-   "rect": [
-    15.92,
-    -15.5,
-    16.08,
-    -12
+    -0.92,
+    -20.5
    ],
    "height": 2.2,
    "style": "fence",
    "gates": [],
-   "purpose": "utility equipment / storage yard divider"
-  },
-  {
-   "id": "utility_divider_s",
-   "rect": [
-    15.92,
-    -9,
-    16.08,
-    -7.8
-   ],
-   "height": 2.2,
-   "style": "fence",
-   "gates": [],
-   "purpose": "utility equipment / storage yard divider"
+   "purpose": "electrical compound / pump and cable store divider"
   }
  ],
  "props": [
   {
    "type": "container_stack_a",
    "pos": [
-    0,
+    1.5,
     0.0,
-    0
+    -4.0
    ],
-   "heading": 0
+   "heading": 90
   },
   {
-   "type": "container_blue",
+   "type": "forklift",
    "pos": [
-    16.5,
+    7.0,
     0.0,
-    19
+    -7.5
    ],
    "heading": 0
   },
   {
    "type": "pallet_goods",
    "pos": [
-    13,
+    8.6,
     0.0,
-    12.5
+    -1.8
    ],
    "heading": 0
   },
   {
    "type": "pallet_wrapped",
    "pos": [
-    19.7,
+    8.6,
     0.0,
-    12.3
+    0.6
    ],
    "heading": 0
   },
   {
-   "type": "pump_skid",
+   "type": "jersey_barrier",
    "pos": [
-    18.5,
+    -3.0,
     0.0,
-    -14.5
+    1.6
    ],
-   "heading": 0
+   "heading": 90
   },
   {
-   "type": "valve_manifold",
+   "type": "pallet_stack",
    "pos": [
-    14,
+    -5.6,
     0.0,
-    -12.5
+    -9.6
    ],
    "heading": 0
   },
   {
    "type": "transformer",
    "pos": [
-    18.5,
+    -4.2,
     0.0,
-    -9.5
+    -21.2
    ],
    "heading": 0
   },
   {
    "type": "electrical_cabinet",
    "pos": [
-    20.5,
+    -6.2,
     0.0,
-    -12
+    -18.3
+   ],
+   "heading": 0
+  },
+  {
+   "type": "electrical_cabinet",
+   "pos": [
+    -3.2,
+    0.0,
+    -18.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "pump_skid",
+   "pos": [
+    3.0,
+    0.0,
+    -21.2
+   ],
+   "heading": 0
+  },
+  {
+   "type": "valve_manifold",
+   "pos": [
+    4.7,
+    0.0,
+    -19.5
    ],
    "heading": 90
   },
   {
-   "type": "pipe_bundle",
+   "type": "cable_reel",
    "pos": [
-    -3,
-    0.0,
-    -17
-   ],
-   "heading": 0
-  },
-  {
-   "type": "pallet_stack",
-   "pos": [
-    -5.4,
+    1.2,
     0.0,
     -18.6
    ],
-   "heading": 0
+   "heading": 90
   },
   {
-   "type": "shelving_rack",
+   "type": "pump_skid",
    "pos": [
-    2,
+    12.5,
     0.0,
-    -18.7
+    -22.6
    ],
    "heading": 0
   },
   {
-   "type": "oil_drum_red",
+   "type": "valve_manifold",
    "pos": [
-    -5.5,
+    17.0,
     0.0,
-    -11.1
+    -24.2
+   ],
+   "heading": 0
+  },
+  {
+   "type": "workbench",
+   "pos": [
+    21.5,
+    0.0,
+    -24.3
    ],
    "heading": 0
   },
   {
    "type": "ibc_tank",
    "pos": [
-    3.7,
+    19.5,
     0.0,
-    -11.1
+    -18.4
    ],
    "heading": 0
   },
   {
-   "type": "pallet_goods",
+   "type": "transformer",
+   "pos": [
+    21.8,
+    0.0,
+    -20.4
+   ],
+   "heading": 90
+  },
+  {
+   "type": "electrical_cabinet",
+   "pos": [
+    23.2,
+    0.0,
+    -23.0
+   ],
+   "heading": 270
+  },
+  {
+   "type": "gas_cage",
+   "pos": [
+    10.4,
+    0.0,
+    -24.2
+   ],
+   "heading": 0
+  },
+  {
+   "type": "shelving_rack",
+   "pos": [
+    -21.6,
+    0.0,
+    -24.25
+   ],
+   "heading": 0
+  },
+  {
+   "type": "shelving_rack",
+   "pos": [
+    -18.4,
+    0.0,
+    -24.25
+   ],
+   "heading": 0
+  },
+  {
+   "type": "shelving_rack",
+   "pos": [
+    -15.2,
+    0.0,
+    -24.25
+   ],
+   "heading": 0
+  },
+  {
+   "type": "shelving_rack",
+   "pos": [
+    -22.0,
+    0.0,
+    -20.6
+   ],
+   "heading": 0
+  },
+  {
+   "type": "shelving_rack",
+   "pos": [
+    -13.2,
+    0.0,
+    -20.6
+   ],
+   "heading": 0
+  },
+  {
+   "type": "pallet_wrapped",
+   "pos": [
+    -23.0,
+    0.0,
+    -18.2
+   ],
+   "heading": 0
+  },
+  {
+   "type": "pallet_stack",
+   "pos": [
+    -12.2,
+    0.0,
+    -18.2
+   ],
+   "heading": 0
+  },
+  {
+   "type": "shelving_rack",
+   "pos": [
+    -1.6,
+    0.0,
+    15.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "shelving_rack",
+   "pos": [
+    4.6,
+    0.0,
+    15.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "pallet_stack",
    "pos": [
     -4.6,
-    0.02,
-    12.1
+    0.0,
+    19.8
+   ],
+   "heading": 0
+  },
+  {
+   "type": "ibc_tank",
+   "pos": [
+    7.8,
+    0.0,
+    19.8
+   ],
+   "heading": 0
+  },
+  {
+   "type": "pallet_stack",
+   "pos": [
+    -22.4,
+    0.0,
+    12.6
    ],
    "heading": 0
   },
   {
    "type": "crate_large",
    "pos": [
-    4.5,
-    0.02,
-    12.2
-   ],
-   "heading": 0
-  },
-  {
-   "type": "oil_drum",
-   "pos": [
-    11.5,
+    -22.0,
     0.0,
-    -8
+    10.4
    ],
    "heading": 0
   },
   {
-   "type": "tire_stack",
+   "type": "drum_group",
    "pos": [
-    23.4,
+    -24.8,
     0.0,
-    10
+    19.6
    ],
    "heading": 0
   },
   {
-   "type": "pallet_goods",
+   "type": "pallet_wrapped",
    "pos": [
-    4.4,
-    0.02,
-    19.0
+    -18.5,
+    0.0,
+    15.0
+   ],
+   "heading": 90
+  },
+  {
+   "type": "cable_reel",
+   "pos": [
+    -20.0,
+    0.0,
+    19.8
    ],
    "heading": 0
+  },
+  {
+   "type": "container_stack_b",
+   "pos": [
+    19.5,
+    0.0,
+    15.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "drum_group",
+   "pos": [
+    24.9,
+    0.0,
+    11.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "pallet_stack",
+   "pos": [
+    24.9,
+    0.0,
+    13.2
+   ],
+   "heading": 0
+  },
+  {
+   "type": "forklift",
+   "pos": [
+    14.2,
+    0.0,
+    2.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "drum_group",
+   "pos": [
+    -25.8,
+    0.0,
+    -9.5
+   ],
+   "heading": 0
+  },
+  {
+   "type": "skip_bin",
+   "pos": [
+    -25.8,
+    0.0,
+    1.3
+   ],
+   "heading": 90
   },
   {
    "type": "floodlight_pole",
    "pos": [
-    -5.4,
+    5.4,
     0.0,
-    -4.4
-   ],
-   "heading": 135
-  },
-  {
-   "type": "floodlight_pole",
-   "pos": [
-    20.4,
-    0.0,
-    -7.6
+    -17.6
    ],
    "heading": 315
   },
   {
    "type": "floodlight_pole",
    "pos": [
-    20.4,
+    9.4,
+    0.0,
+    2.4
+   ],
+   "heading": 315
+  },
+  {
+   "type": "floodlight_pole",
+   "pos": [
+    26.4,
     0.0,
     20.4
    ],
@@ -2578,144 +2421,81 @@
   {
    "id": "T01",
    "pos": [
-    -23.0,
+    -24.5,
     0.0,
-    -8.0
+    -12.5
    ],
-   "heading": 0
+   "heading": 90
   },
   {
    "id": "T02",
    "pos": [
-    -21.0,
+    -23.0,
     0.0,
-    16.0
+    -3.0
    ],
    "heading": 0
   },
   {
    "id": "T03",
    "pos": [
-    -22.0,
+    -13.0,
     0.0,
-    7.5
+    -11.0
    ],
-   "heading": 90
+   "heading": 0
   },
   {
    "id": "T04",
    "pos": [
-    -1.0,
+    -9.5,
     0.0,
-    -23.0
+    5.5
    ],
-   "heading": 90
+   "heading": 0
   },
   {
    "id": "T05",
    "pos": [
-    1.0,
-    0.0,
-    23.0
+    11.5,
+    1.1,
+    -4.0
    ],
-   "heading": 90
+   "heading": 0
   },
   {
    "id": "T06",
    "pos": [
-    -1.0,
+    22.0,
     0.0,
-    -7.5
+    0.5
    ],
-   "heading": 0
+   "heading": 90
   },
   {
    "id": "T07",
    "pos": [
-    -13.5,
-    0.0,
-    -6.5
-   ],
-   "heading": 90
-  },
-  {
-   "id": "T08",
-   "pos": [
-    -9.0,
-    0.0,
-    -14.0
-   ],
-   "heading": 90
-  },
-  {
-   "id": "T09",
-   "pos": [
-    7.0,
-    0.0,
-    -14.0
-   ],
-   "heading": 90
-  },
-  {
-   "id": "T10",
-   "pos": [
-    16.0,
-    0.0,
-    -19.0
-   ],
-   "heading": 90
-  },
-  {
-   "id": "T11",
-   "pos": [
-    15.0,
-    0.0,
-    -2.0
-   ],
-   "heading": 0
-  },
-  {
-   "id": "T12",
-   "pos": [
-    13.5,
-    0.0,
-    4.5
-   ],
-   "heading": 90
-  },
-  {
-   "id": "T13",
-   "pos": [
-    -10.0,
+    11.0,
     0.0,
     15.0
    ],
    "heading": 90
   },
   {
-   "id": "T14",
+   "id": "T08",
    "pos": [
-    16.5,
+    22.5,
     0.0,
-    16.0
+    6.0
    ],
    "heading": 0
   },
   {
-   "id": "T15",
+   "id": "T09",
    "pos": [
-    16.0,
+    1.5,
     0.0,
-    9.0
-   ],
-   "heading": 90
-  },
-  {
-   "id": "T16",
-   "pos": [
-    -9.5,
-    0.0,
-    7.0
+    23.0
    ],
    "heading": 90
   }
@@ -2724,9 +2504,9 @@
   {
    "type": "point",
    "pos": [
-    0.0,
+    -13.0,
     2.2,
-    11.9
+    -7.1
    ],
    "color": [
     0.85,
@@ -2735,14 +2515,14 @@
    ],
    "intensity": 0.65,
    "range": 4.5,
-   "circulation": "I37"
+   "circulation": "I21"
   },
   {
    "type": "point",
    "pos": [
-    0.0,
+    -13.0,
     5.3,
-    11.9
+    -7.1
    ],
    "color": [
     0.85,
@@ -2751,84 +2531,84 @@
    ],
    "intensity": 0.65,
    "range": 4.5,
-   "circulation": "I37"
+   "circulation": "I21"
   }
  ],
  "arches": [
   {
-   "id": "hall_canopy",
+   "id": "stores_canopy",
    "rect": [
-    5,
-    -15,
-    9,
-    -14
+    -11,
+    -20.5,
+    -8,
+    -19.5
    ],
    "spring": 3.6,
    "style": "canopy",
    "axis": "x"
   },
   {
-   "id": "hall_canopyr",
+   "id": "machine_pipes",
    "rect": [
-    -9,
-    14,
-    -5,
-    15
+    19.5,
+    -17,
+    20.5,
+    -14
    ],
    "spring": 5.4,
-   "style": "canopy",
+   "style": "pipes",
+   "axis": "z"
+  },
+  {
+   "id": "south_pipes",
+   "rect": [
+    4,
+    21,
+    5,
+    25
+   ],
+   "spring": 5.0,
+   "style": "pipes",
+   "axis": "z"
+  },
+  {
+   "id": "container_pipes",
+   "rect": [
+    9,
+    14.5,
+    13,
+    15.5
+   ],
+   "spring": 5.2,
+   "style": "pipes",
    "axis": "x"
-  },
-  {
-   "id": "cross_pipe",
-   "rect": [
-    11.5,
-    2,
-    12.5,
-    7
-   ],
-   "spring": 5.2,
-   "style": "pipes",
-   "axis": "z"
-  },
-  {
-   "id": "cross_piper",
-   "rect": [
-    -12.5,
-    -7,
-    -11.5,
-    -2
-   ],
-   "spring": 5.2,
-   "style": "pipes",
-   "axis": "z"
   }
  ],
  "obstacles": [],
  "upperRoutes": [
   {
-   "id": "warehouse_catwalk",
+   "id": "loading_catwalk",
    "rect": [
-    -18,
-    -3,
-    -15,
-    14
+    -6,
+    6,
+    10,
+    9
    ],
    "height": 2.8,
    "style": "catwalk",
    "stairs": [
     {
-     "side": "n",
-     "from": -18,
-     "to": -15,
+     "side": "w",
+     "from": 6,
+     "to": 9,
      "steps": 16,
      "rise": 0.175,
      "run": 0.32
     },
     {
-     "side": "s",
-     "from": -18,
-     "to": -15,
+     "side": "e",
+     "from": 6,
+     "to": 9,
      "steps": 16,
      "rise": 0.175,
      "run": 0.32
@@ -2838,10 +2618,10 @@
  ],
  "ladders": [
   {
-   "id": "loading_west",
+   "id": "dock_lane",
    "wall": [
-    2,
-    8.4
+    17,
+    -8.5
    ],
    "out": [
     -1,
@@ -2851,27 +2631,27 @@
    "top": 4.5
   },
   {
-   "id": "loading_north",
+   "id": "workshop_yard",
    "wall": [
-    10,
-    7
+    25,
+    -2
    ],
    "out": [
     0,
-    -1
+    1
    ],
    "bottom": 0.0,
    "top": 4.5
   },
   {
-   "id": "loading_south",
+   "id": "service_lane",
    "wall": [
-    8.3,
-    14
+    23,
+    -14
    ],
    "out": [
     0,
-    1
+    -1
    ],
    "bottom": 0.0,
    "top": 4.5
@@ -2881,9 +2661,9 @@
   {
    "kind": "hvac",
    "pos": [
-    12.1,
+    24.2,
     4.5,
-    9.1
+    -8.6
    ],
    "size": [
     1.8,
@@ -2894,9 +2674,9 @@
   {
    "kind": "fan",
    "pos": [
-    4.8,
+    19.6,
     4.5,
-    7.3
+    -11.6
    ],
    "size": [
     0.84,
@@ -2907,9 +2687,9 @@
   {
    "kind": "box",
    "pos": [
-    10.5,
+    20.0,
     4.5,
-    12.8
+    -5.0
    ],
    "size": [
     0.8,
@@ -2920,9 +2700,9 @@
   {
    "kind": "vent",
    "pos": [
-    11.2,
+    25.4,
     4.5,
-    12.8
+    -4.6
    ],
    "size": [
     0.44,
@@ -2935,1432 +2715,1344 @@
   "version": 1,
   "groundRoutes": [
    {
-    "id": "loading_square",
-    "kind": "yard",
-    "rect": [
-     -6,
-     -5,
-     6,
-     6
-    ]
-   },
-   {
-    "id": "west_service",
-    "kind": "street",
-    "rect": [
-     -25,
-     -25,
-     -21,
-     9
-    ]
-   },
-   {
-    "id": "west_south",
-    "kind": "street",
-    "rect": [
-     -23,
-     9,
-     -19,
-     23
-    ]
-   },
-   {
-    "id": "west_jog",
-    "kind": "street",
-    "rect": [
-     -25,
-     5,
-     -19,
-     10
-    ]
-   },
-   {
-    "id": "north_service",
-    "kind": "street",
-    "rect": [
-     -25,
-     -25,
-     23,
-     -21
-    ]
-   },
-   {
-    "id": "east_service",
-    "kind": "street",
-    "rect": [
-     21,
-     -21,
-     25,
-     25
-    ]
-   },
-   {
-    "id": "south_service",
-    "kind": "street",
-    "rect": [
-     -23,
-     21,
-     25,
-     25
-    ]
-   },
-   {
-    "id": "hall_north",
-    "kind": "alley",
-    "rect": [
-     -4,
-     -21,
-     0,
-     -20
-    ]
-   },
-   {
-    "id": "hall_south",
-    "kind": "alley",
-    "rect": [
-     -3,
-     -10,
-     1,
-     -5
-    ]
-   },
-   {
-    "id": "west_cross",
-    "kind": "street",
-    "rect": [
-     -21,
-     -9,
-     -6,
-     -4
-    ]
-   },
-   {
-    "id": "workshop_north",
-    "kind": "alley",
-    "rect": [
-     -18,
-     -21,
-     -14,
-     -18
-    ]
-   },
-   {
-    "id": "workshop_east",
+    "id": "stores_east",
     "kind": "alley",
     "rect": [
      -11,
-     -16,
-     -7,
-     -12
+     -25,
+     -8,
+     -21
     ]
    },
    {
     "id": "utility_yard",
     "kind": "yard",
     "rect": [
-     9,
-     -17,
-     21,
-     -7
-    ]
-   },
-   {
-    "id": "utility_west",
-    "kind": "alley",
-    "rect": [
-     5,
-     -16,
-     9,
-     -12
-    ]
-   },
-   {
-    "id": "utility_north",
-    "kind": "alley",
-    "rect": [
-     14,
-     -21,
-     18,
+     -8,
+     -25,
+     6,
      -17
     ]
    },
    {
-    "id": "utility_south",
+    "id": "utility_east",
     "kind": "alley",
     "rect": [
-     13,
+     6,
+     -21,
+     9,
+     -17
+    ]
+   },
+   {
+    "id": "service_lane_w",
+    "kind": "street",
+    "rect": [
+     -26,
+     -17,
+     -6,
+     -14
+    ]
+   },
+   {
+    "id": "service_lane_e",
+    "kind": "street",
+    "rect": [
+     6,
+     -17,
+     26,
+     -14
+    ]
+   },
+   {
+    "id": "west_alley",
+    "kind": "alley",
+    "rect": [
+     -26,
+     -14,
+     -23,
+     -11
+    ]
+   },
+   {
+    "id": "west_yard",
+    "kind": "yard",
+    "rect": [
+     -27,
+     -11,
+     -19,
+     5
+    ]
+   },
+   {
+    "id": "dispatch_north",
+    "kind": "alley",
+    "rect": [
+     -15,
+     -14,
+     -11,
+     -8
+    ]
+   },
+   {
+    "id": "dispatch_south",
+    "kind": "alley",
+    "rect": [
+     -12,
+     2,
      -7,
-     17,
+     9
+    ]
+   },
+   {
+    "id": "loading_yard",
+    "kind": "yard",
+    "rect": [
+     -7,
+     -11,
+     10,
      3
     ]
    },
    {
-    "id": "east_cross",
-    "kind": "street",
+    "id": "loading_dock",
+    "kind": "terrace",
     "rect": [
-     6,
-     2,
-     21,
-     7
-    ]
-   },
-   {
-    "id": "hall_s_link",
-    "kind": "alley",
-    "rect": [
-     -2,
-     6,
-     2,
-     11
-    ]
-   },
-   {
-    "id": "warehouse_east",
-    "kind": "alley",
-    "rect": [
-     6,
-     14,
-     12,
-     18
-    ]
-   },
-   {
-    "id": "warehouse_west",
-    "kind": "alley",
-    "rect": [
-     -14,
+     10,
+     -11,
      13,
-     -6,
-     17
+     3
     ]
    },
    {
-    "id": "south_storage",
-    "kind": "yard",
-    "rect": [
-     12,
-     11,
-     21,
-     21
-    ]
-   },
-   {
-    "id": "storage_north",
-    "kind": "alley",
-    "rect": [
-     14,
-     7,
-     18,
-     11
-    ]
-   },
-   {
-    "id": "south_gallery_lane",
+    "id": "dock_lane",
     "kind": "street",
     "rect": [
-     -19,
-     -4,
-     -13,
-     15
-    ]
-   },
-   {
-    "id": "west_goods",
-    "kind": "yard",
-    "rect": [
-     -13,
-     4,
-     -6,
-     10
-    ]
-   },
-   {
-    "id": "goods_link",
-    "kind": "alley",
-    "rect": [
-     -8,
-     1,
-     -6,
+     13,
+     -14,
+     17,
      6
     ]
    },
    {
-    "id": "west_south_link",
-    "kind": "alley",
+    "id": "workshop_yard",
+    "kind": "yard",
     "rect": [
-     -19,
      17,
-     -14,
+     -2,
+     27,
+     3
+    ]
+   },
+   {
+    "id": "south_lane",
+    "kind": "street",
+    "rect": [
+     -7,
+     3,
+     13,
+     9
+    ]
+   },
+   {
+    "id": "storage_yard",
+    "kind": "yard",
+    "rect": [
+     -26,
+     9,
+     -12,
      21
     ]
    },
    {
-    "id": "west_south_court",
+    "id": "goods_alley",
+    "kind": "alley",
+    "rect": [
+     -9,
+     9,
+     -6,
+     21
+    ]
+   },
+   {
+    "id": "container_link",
+    "kind": "alley",
+    "rect": [
+     9,
+     13,
+     13,
+     17
+    ]
+   },
+   {
+    "id": "container_north",
+    "kind": "alley",
+    "rect": [
+     21,
+     3,
+     24,
+     9
+    ]
+   },
+   {
+    "id": "container_yard",
     "kind": "yard",
     "rect": [
-     -17,
      13,
-     -11,
+     9,
+     27,
      21
+    ]
+   },
+   {
+    "id": "south_service",
+    "kind": "street",
+    "rect": [
+     -15,
+     21,
+     18,
+     25
     ]
    }
   ],
   "coveredRoutes": [
    {
-    "id": "workshop",
+    "id": "stores_hall",
     "kind": "interior",
     "rect": [
-     -18,
-     -17.7,
+     -23.7,
+     -25,
      -11.3,
-     -9.3
+     -17.3
     ]
    },
    {
-    "id": "workshop_door0",
-    "kind": "doorway",
-    "rect": [
-     -16.8,
-     -18,
-     -15.2,
-     -17.7
-    ]
-   },
-   {
-    "id": "workshop_door1",
+    "id": "stores_hall_door0",
     "kind": "doorway",
     "rect": [
      -11.3,
-     -14.8,
+     -23.8,
      -11,
-     -13.2
+     -22.2
     ]
    },
    {
-    "id": "workshop_door2",
+    "id": "stores_hall_door1",
     "kind": "doorway",
     "rect": [
-     -16.3,
-     -9.3,
-     -12.7,
-     -9
+     -19.3,
+     -17.3,
+     -15.7,
+     -17
     ]
    },
    {
-    "id": "warehouse_n",
+    "id": "machine_hall",
     "kind": "interior",
     "rect": [
-     -6.7,
-     -19.7,
-     4.7,
-     -10.3
+     9.3,
+     -25,
+     23.7,
+     -17.3
     ]
    },
    {
-    "id": "warehouse_n_door0",
+    "id": "machine_hall_door0",
     "kind": "doorway",
     "rect": [
-     -2.8,
-     -20,
-     -1.2,
-     -19.7
+     14.7,
+     -17.3,
+     18.3,
+     -17
     ]
    },
    {
-    "id": "warehouse_n_door1",
+    "id": "machine_hall_door1",
     "kind": "doorway",
     "rect": [
-     4.7,
-     -14.8,
-     5,
-     -13.2
+     9,
+     -19.8,
+     9.3,
+     -18.2
     ]
    },
    {
-    "id": "warehouse_n_door2",
-    "kind": "doorway",
+    "id": "dispatch_hall",
+    "kind": "interior",
     "rect": [
-     -1.8,
-     -10.3,
-     -0.2,
-     -10
-    ]
-   },
-   {
-    "id": "warehouse_n_door3",
-    "kind": "doorway",
-    "rect": [
+     -19,
+     -5.0,
      -7,
-     -14.8,
-     -6.7,
-     -13.2
+     -3.0
     ]
    },
    {
     "id": "goods_office",
     "kind": "interior",
     "rect": [
-     -12.7,
-     -3,
-     -6.3,
-     0.7
+     -11.7,
+     9.3,
+     -9.3,
+     15
     ]
    },
    {
     "id": "goods_office_door0",
     "kind": "doorway",
     "rect": [
-     -6.3,
-     -1.8,
-     -6,
-     -0.2
+     -11.3,
+     9,
+     -9.7,
+     9.3
     ]
    },
    {
     "id": "goods_office_door1",
     "kind": "doorway",
     "rect": [
-     -7.8,
-     0.7,
-     -6.2,
-     1
+     -9.3,
+     10.2,
+     -9,
+     13.8
     ]
    },
    {
     "id": "goods_office_door2",
     "kind": "doorway",
     "rect": [
-     -13,
-     -1.8,
-     -12.7,
-     -0.2
+     -12,
+     10.2,
+     -11.7,
+     13.8
     ]
    },
    {
-    "id": "warehouse_s",
+    "id": "warehouse_b",
     "kind": "interior",
     "rect": [
-     -6,
-     14.0,
-     6,
-     16.0
-    ]
-   },
-   {
-    "id": "north_gate",
-    "kind": "passage",
-    "rect": [
-     -13,
-     -25,
-     -9,
-     -21
-    ]
-   },
-   {
-    "id": "east_gate",
-    "kind": "passage",
-    "rect": [
-     21,
-     -3,
-     25,
-     1
-    ]
-   },
-   {
-    "id": "south_gate",
-    "kind": "passage",
-    "rect": [
-     7,
-     21,
-     11,
-     25
-    ]
-   },
-   {
-    "id": "warehouse_s_door0",
-    "kind": "doorway",
-    "rect": [
-     -6,
-     13.95,
      -5.7,
-     16.05
+     9.3,
+     8.7,
+     20.7
     ]
    },
    {
-    "id": "warehouse_s_door1",
+    "id": "warehouse_b_door0",
     "kind": "doorway",
     "rect": [
-     5.699999999999999,
-     13.95,
-     6.0,
-     16.05
+     -0.3,
+     9,
+     3.3,
+     9.3
     ]
    },
    {
-    "id": "warehouse_s_door2",
+    "id": "warehouse_b_door1",
     "kind": "doorway",
     "rect": [
-     -1.0499999999999998,
-     11.0,
-     1.0499999999999998,
-     11.3
+     8.7,
+     14.2,
+     9,
+     15.8
     ]
    },
    {
-    "id": "warehouse_s_door3",
+    "id": "warehouse_b_door2",
     "kind": "doorway",
     "rect": [
-     1.9500000000000002,
+     -0.3,
      20.7,
-     4.050000000000001,
+     3.3,
      21
     ]
    },
    {
-    "id": "I37_circulation_0",
-    "kind": "interior",
+    "id": "warehouse_b_door3",
+    "kind": "doorway",
     "rect": [
-     -1.0499999999999998,
-     11,
-     1.0499999999999998,
-     15.0
+     -6,
+     13.2,
+     -5.7,
+     16.8
     ]
    },
    {
-    "id": "I37_circulation_1",
+    "id": "loading_gate",
+    "kind": "passage",
+    "rect": [
+     -1,
+     -17,
+     3,
+     -11
+    ]
+   },
+   {
+    "id": "dispatch_hall_door0",
+    "kind": "doorway",
+    "rect": [
+     -19,
+     -5.05,
+     -18.7,
+     -2.95
+    ]
+   },
+   {
+    "id": "dispatch_hall_door1",
+    "kind": "doorway",
+    "rect": [
+     -7.300000000000001,
+     -5.05,
+     -7.0,
+     -2.95
+    ]
+   },
+   {
+    "id": "dispatch_hall_door2",
+    "kind": "doorway",
+    "rect": [
+     -14.05,
+     -8.0,
+     -11.95,
+     -7.699999999999999
+    ]
+   },
+   {
+    "id": "dispatch_hall_door3",
+    "kind": "doorway",
+    "rect": [
+     -11.05,
+     1.7,
+     -8.95,
+     2
+    ]
+   },
+   {
+    "id": "I21_circulation_0",
     "kind": "interior",
     "rect": [
-     1.9500000000000002,
-     15.0,
-     4.050000000000001,
-     21
+     -14.05,
+     -8,
+     -11.95,
+     -4.0
+    ]
+   },
+   {
+    "id": "I21_circulation_1",
+    "kind": "interior",
+    "rect": [
+     -11.05,
+     -4.0,
+     -8.95,
+     2
     ]
    }
   ],
   "upperRoutes": [
    {
-    "id": "warehouse_catwalk",
+    "id": "loading_catwalk",
     "waypoints": [
      [
-      -16.5,
+      -6.65,
       0,
-      -3.65
+      7.5
      ],
      [
-      -16.5,
+      -0.3799999999999999,
       2.8,
-      2.62
+      7.5
      ],
      [
-      -16.5,
+      4.38,
       2.8,
-      8.379999999999999
+      7.5
      ],
      [
-      -16.5,
+      10.65,
       0,
-      14.65
+      7.5
      ]
     ]
    }
   ],
   "groundObstacles": [
    {
-    "id": "warehouse_catwalk:step",
+    "id": "loading_catwalk:step",
     "rect": [
-     -18,
-     -2.36,
-     -15,
-     -2.04
+     -5.36,
+     6,
+     -5.04,
+     9
     ]
    },
    {
-    "id": "warehouse_catwalk:step",
+    "id": "loading_catwalk:step",
     "rect": [
-     -18,
-     -2.04,
-     -15,
-     -1.72
+     -5.04,
+     6,
+     -4.72,
+     9
     ]
    },
    {
-    "id": "warehouse_catwalk:step",
+    "id": "loading_catwalk:step",
     "rect": [
-     -18,
-     -1.72,
-     -15,
-     -1.4
+     -4.72,
+     6,
+     -4.4,
+     9
     ]
    },
    {
-    "id": "warehouse_catwalk:step",
+    "id": "loading_catwalk:step",
     "rect": [
-     -18,
-     -1.4,
-     -15,
-     -1.08
+     -4.4,
+     6,
+     -4.08,
+     9
     ]
    },
    {
-    "id": "warehouse_catwalk:step",
+    "id": "loading_catwalk:step",
     "rect": [
-     -18,
-     -1.08,
-     -15,
-     -0.7599999999999998
+     -4.08,
+     6,
+     -3.76,
+     9
     ]
    },
    {
-    "id": "warehouse_catwalk:step",
+    "id": "loading_catwalk:step",
     "rect": [
-     -18,
-     -0.7599999999999998,
-     -15,
-     -0.43999999999999995
+     -3.76,
+     6,
+     -3.44,
+     9
     ]
    },
    {
-    "id": "warehouse_catwalk:step",
+    "id": "loading_catwalk:step",
     "rect": [
-     -18,
-     -0.43999999999999995,
-     -15,
-     -0.1200000000000001
+     -3.44,
+     6,
+     -3.12,
+     9
     ]
    },
    {
-    "id": "warehouse_catwalk:step",
+    "id": "loading_catwalk:step",
     "rect": [
-     -18,
-     -0.1200000000000001,
-     -15,
-     0.20000000000000018
+     -3.12,
+     6,
+     -2.8,
+     9
     ]
    },
    {
-    "id": "warehouse_catwalk:step",
+    "id": "loading_catwalk:step",
     "rect": [
-     -18,
-     0.20000000000000018,
-     -15,
-     0.52
+     -2.8,
+     6,
+     -2.48,
+     9
     ]
    },
    {
-    "id": "warehouse_catwalk:step",
+    "id": "loading_catwalk:step",
     "rect": [
-     -18,
-     0.52,
-     -15,
-     0.8399999999999999
+     -2.48,
+     6,
+     -2.16,
+     9
     ]
    },
    {
-    "id": "warehouse_catwalk:step",
+    "id": "loading_catwalk:step",
     "rect": [
-     -18,
-     0.8399999999999999,
-     -15,
-     1.1600000000000001
+     -2.16,
+     6,
+     -1.8399999999999999,
+     9
     ]
    },
    {
-    "id": "warehouse_catwalk:step",
+    "id": "loading_catwalk:step",
     "rect": [
-     -18,
-     1.1600000000000001,
-     -15,
-     1.4800000000000004
+     -1.8399999999999999,
+     6,
+     -1.5199999999999996,
+     9
     ]
    },
    {
-    "id": "warehouse_catwalk:step",
+    "id": "loading_catwalk:step",
     "rect": [
-     -18,
-     1.4800000000000004,
-     -15,
-     1.7999999999999998
+     -1.5199999999999996,
+     6,
+     -1.2000000000000002,
+     9
     ]
    },
    {
-    "id": "warehouse_catwalk:step",
+    "id": "loading_catwalk:step",
     "rect": [
-     -18,
-     1.7999999999999998,
-     -15,
-     2.12
+     -1.2000000000000002,
+     6,
+     -0.8799999999999999,
+     9
     ]
    },
    {
-    "id": "warehouse_catwalk:step",
+    "id": "loading_catwalk:step",
     "rect": [
-     -18,
-     13.04,
-     -15,
-     13.36
+     9.04,
+     6,
+     9.36,
+     9
     ]
    },
    {
-    "id": "warehouse_catwalk:step",
+    "id": "loading_catwalk:step",
     "rect": [
-     -18,
-     12.72,
-     -15,
-     13.04
+     8.72,
+     6,
+     9.04,
+     9
     ]
    },
    {
-    "id": "warehouse_catwalk:step",
+    "id": "loading_catwalk:step",
     "rect": [
-     -18,
-     12.4,
-     -15,
-     12.72
+     8.4,
+     6,
+     8.72,
+     9
     ]
    },
    {
-    "id": "warehouse_catwalk:step",
+    "id": "loading_catwalk:step",
     "rect": [
-     -18,
-     12.08,
-     -15,
-     12.4
+     8.08,
+     6,
+     8.4,
+     9
     ]
    },
    {
-    "id": "warehouse_catwalk:step",
+    "id": "loading_catwalk:step",
     "rect": [
-     -18,
-     11.76,
-     -15,
-     12.08
+     7.76,
+     6,
+     8.08,
+     9
     ]
    },
    {
-    "id": "warehouse_catwalk:step",
+    "id": "loading_catwalk:step",
     "rect": [
-     -18,
-     11.44,
-     -15,
-     11.76
+     7.4399999999999995,
+     6,
+     7.76,
+     9
     ]
    },
    {
-    "id": "warehouse_catwalk:step",
+    "id": "loading_catwalk:step",
     "rect": [
-     -18,
-     11.120000000000001,
-     -15,
-     11.44
+     7.12,
+     6,
+     7.4399999999999995,
+     9
     ]
    },
    {
-    "id": "warehouse_catwalk:step",
+    "id": "loading_catwalk:step",
     "rect": [
-     -18,
-     10.8,
-     -15,
-     11.120000000000001
+     6.8,
+     6,
+     7.12,
+     9
     ]
    },
    {
-    "id": "warehouse_catwalk:step",
+    "id": "loading_catwalk:step",
     "rect": [
-     -18,
-     10.48,
-     -15,
-     10.8
+     6.48,
+     6,
+     6.8,
+     9
     ]
    },
    {
-    "id": "warehouse_catwalk:step",
+    "id": "loading_catwalk:step",
     "rect": [
-     -18,
-     10.16,
-     -15,
-     10.48
+     6.16,
+     6,
+     6.48,
+     9
     ]
    },
    {
-    "id": "warehouse_catwalk:step",
+    "id": "loading_catwalk:step",
     "rect": [
-     -18,
-     9.84,
-     -15,
-     10.16
+     5.84,
+     6,
+     6.16,
+     9
     ]
    },
    {
-    "id": "warehouse_catwalk:step",
+    "id": "loading_catwalk:step",
     "rect": [
-     -18,
-     9.52,
-     -15,
-     9.84
+     5.52,
+     6,
+     5.84,
+     9
     ]
    },
    {
-    "id": "warehouse_catwalk:step",
+    "id": "loading_catwalk:step",
     "rect": [
-     -18,
-     9.2,
-     -15,
-     9.52
+     5.2,
+     6,
+     5.52,
+     9
     ]
    },
    {
-    "id": "warehouse_catwalk:step",
+    "id": "loading_catwalk:step",
     "rect": [
-     -18,
-     8.879999999999999,
-     -15,
-     9.2
+     4.88,
+     6,
+     5.2,
+     9
     ]
    },
    {
-    "id": "warehouse_catwalk:post",
+    "id": "loading_catwalk:post",
     "rect": [
-     -18.005000000000003,
-     2.1350000000000002,
-     -17.825000000000003,
-     2.2550000000000003
+     -0.8649999999999999,
+     5.995,
+     -0.7449999999999999,
+     6.175000000000001
     ]
    },
    {
-    "id": "warehouse_catwalk:post",
+    "id": "loading_catwalk:post",
     "rect": [
-     -18.005000000000003,
-     4.338333333333333,
-     -17.825000000000003,
-     4.458333333333333
+     1.94,
+     5.995,
+     2.06,
+     6.175000000000001
     ]
    },
    {
-    "id": "warehouse_catwalk:post",
+    "id": "loading_catwalk:post",
     "rect": [
-     -18.005000000000003,
-     6.541666666666666,
-     -17.825000000000003,
-     6.661666666666666
+     4.744999999999999,
+     5.995,
+     4.864999999999999,
+     6.175000000000001
     ]
    },
    {
-    "id": "warehouse_catwalk:post",
+    "id": "loading_catwalk:post",
     "rect": [
-     -18.005000000000003,
-     8.745,
-     -17.825000000000003,
-     8.864999999999998
+     -0.8649999999999999,
+     8.825000000000001,
+     -0.7449999999999999,
+     9.005
     ]
    },
    {
-    "id": "warehouse_catwalk:post",
+    "id": "loading_catwalk:post",
     "rect": [
-     -15.174999999999999,
-     2.1350000000000002,
-     -14.995,
-     2.2550000000000003
+     1.94,
+     8.825000000000001,
+     2.06,
+     9.005
     ]
    },
    {
-    "id": "warehouse_catwalk:post",
+    "id": "loading_catwalk:post",
     "rect": [
-     -15.174999999999999,
-     4.338333333333333,
-     -14.995,
-     4.458333333333333
+     4.744999999999999,
+     8.825000000000001,
+     4.864999999999999,
+     9.005
     ]
    },
    {
-    "id": "warehouse_catwalk:post",
+    "id": "circulation:I21:wall",
     "rect": [
-     -15.174999999999999,
-     6.541666666666666,
-     -14.995,
-     6.661666666666666
+     -19,
+     1.7,
+     -14.0,
+     2
     ]
    },
    {
-    "id": "warehouse_catwalk:post",
+    "id": "circulation:I21:wall",
     "rect": [
-     -15.174999999999999,
-     8.745,
-     -14.995,
-     8.864999999999998
+     -12.0,
+     1.7,
+     -11.05,
+     2
     ]
    },
    {
-    "id": "circulation:I37:wall",
+    "id": "circulation:I21:wall",
     "rect": [
-     -6,
-     20.7,
+     -14.0,
+     1.7,
+     -12.0,
+     2
+    ]
+   },
+   {
+    "id": "circulation:I21:wall",
+    "rect": [
+     -8.95,
+     1.7,
+     -7,
+     2
+    ]
+   },
+   {
+    "id": "circulation:I21:wall",
+    "rect": [
+     -19,
+     -8,
+     -14.05,
+     -7.699999999999999
+    ]
+   },
+   {
+    "id": "circulation:I21:wall",
+    "rect": [
+     -11.95,
+     -8,
+     -7,
+     -7.699999999999999
+    ]
+   },
+   {
+    "id": "circulation:I21:wall",
+    "rect": [
+     -19,
+     -2.95,
+     -18.7,
+     1.7
+    ]
+   },
+   {
+    "id": "circulation:I21:wall",
+    "rect": [
+     -19,
+     -7.699999999999999,
+     -18.7,
+     -5.05
+    ]
+   },
+   {
+    "id": "circulation:I21:wall",
+    "rect": [
+     -7.300000000000001,
+     -2.95,
+     -7,
+     1.7
+    ]
+   },
+   {
+    "id": "circulation:I21:wall",
+    "rect": [
+     -7.300000000000001,
+     -7.699999999999999,
+     -7,
+     -5.05
+    ]
+   },
+   {
+    "id": "circulation:I21:turn-landing",
+    "rect": [
+     -18.7,
      -1.0,
-     21
+     -12.3,
+     1.7
     ]
    },
    {
-    "id": "circulation:I37:wall",
+    "id": "circulation:I21:stair-b",
     "rect": [
-     1.0,
-     20.7,
-     1.9500000000000002,
-     21
+     -18.7,
+     -1.2999999999999998,
+     -16.4,
+     -1.0
     ]
    },
    {
-    "id": "circulation:I37:wall",
+    "id": "circulation:I21:stair-b",
     "rect": [
-     -1.0,
-     20.7,
-     1.0,
-     21
-    ]
-   },
-   {
-    "id": "circulation:I37:wall",
-    "rect": [
-     4.050000000000001,
-     20.7,
-     6,
-     21
-    ]
-   },
-   {
-    "id": "circulation:I37:wall",
-    "rect": [
-     -6,
-     11,
-     -1.0499999999999998,
-     11.3
-    ]
-   },
-   {
-    "id": "circulation:I37:wall",
-    "rect": [
-     1.0499999999999998,
-     11,
-     6,
-     11.3
-    ]
-   },
-   {
-    "id": "circulation:I37:wall",
-    "rect": [
-     -6,
-     16.05,
-     -5.7,
-     20.7
-    ]
-   },
-   {
-    "id": "circulation:I37:wall",
-    "rect": [
-     -6,
-     11.3,
-     -5.7,
-     13.95
-    ]
-   },
-   {
-    "id": "circulation:I37:wall",
-    "rect": [
-     5.699999999999999,
-     16.05,
-     6,
-     20.7
-    ]
-   },
-   {
-    "id": "circulation:I37:wall",
-    "rect": [
-     5.699999999999999,
-     11.3,
-     6,
-     13.95
-    ]
-   },
-   {
-    "id": "circulation:I37:turn-landing",
-    "rect": [
-     -5.7,
-     18.0,
-     0.7000000000000002,
-     20.7
-    ]
-   },
-   {
-    "id": "circulation:I37:stair-b",
-    "rect": [
-     -5.7,
-     17.7,
-     -3.4,
-     18.0
-    ]
-   },
-   {
-    "id": "circulation:I37:stair-b",
-    "rect": [
-     -5.7,
-     17.4,
-     -3.4,
-     17.7
-    ]
-   },
-   {
-    "id": "circulation:I37:stair-a",
-    "rect": [
+     -18.7,
      -1.5999999999999996,
-     16.2,
-     0.7000000000000002,
-     16.5
+     -16.4,
+     -1.2999999999999998
     ]
    },
    {
-    "id": "circulation:I37:stair-b",
+    "id": "circulation:I21:stair-a",
     "rect": [
-     -5.7,
-     17.1,
-     -3.4,
-     17.4
+     -14.6,
+     -2.8,
+     -12.3,
+     -2.5
     ]
    },
    {
-    "id": "circulation:I37:stair-a",
+    "id": "circulation:I21:stair-b",
     "rect": [
-     -1.5999999999999996,
-     16.5,
-     0.7000000000000002,
-     16.8
+     -18.7,
+     -1.9,
+     -16.4,
+     -1.6
     ]
    },
    {
-    "id": "circulation:I37:stair-b",
+    "id": "circulation:I21:stair-a",
     "rect": [
-     -5.7,
-     16.8,
-     -3.4,
-     17.1
+     -14.6,
+     -2.5,
+     -12.3,
+     -2.2
     ]
    },
    {
-    "id": "circulation:I37:stair-a",
+    "id": "circulation:I21:stair-b",
     "rect": [
-     -1.5999999999999996,
-     16.8,
-     0.7000000000000002,
-     17.1
+     -18.7,
+     -2.2,
+     -16.4,
+     -1.9
     ]
    },
    {
-    "id": "circulation:I37:stair-b",
+    "id": "circulation:I21:stair-a",
     "rect": [
-     -5.7,
-     16.5,
-     -3.4,
-     16.8
+     -14.6,
+     -2.2,
+     -12.3,
+     -1.9000000000000004
     ]
    },
    {
-    "id": "circulation:I37:stair-a",
+    "id": "circulation:I21:stair-b",
     "rect": [
-     -1.5999999999999996,
-     17.1,
-     0.7000000000000002,
-     17.4
+     -18.7,
+     -2.5,
+     -16.4,
+     -2.2
     ]
    },
    {
-    "id": "circulation:I37:stair-b",
+    "id": "circulation:I21:stair-a",
     "rect": [
-     -5.7,
-     16.2,
-     -3.4,
-     16.5
+     -14.6,
+     -1.9000000000000004,
+     -12.3,
+     -1.6000000000000005
     ]
    },
    {
-    "id": "circulation:I37:stair-a",
+    "id": "circulation:I21:stair-b",
     "rect": [
-     -1.5999999999999996,
-     17.4,
-     0.7000000000000002,
-     17.7
+     -18.7,
+     -2.8,
+     -16.4,
+     -2.5
     ]
    },
    {
-    "id": "circulation:I37:stair-b",
+    "id": "circulation:I21:stair-a",
     "rect": [
-     -5.7,
-     15.9,
-     -3.4,
-     16.2
+     -14.6,
+     -1.6,
+     -12.3,
+     -1.3000000000000003
     ]
    },
    {
-    "id": "circulation:I37:stair-a",
+    "id": "circulation:I21:stair-b",
     "rect": [
-     -1.5999999999999996,
-     17.7,
-     0.7000000000000002,
-     18.0
+     -18.7,
+     -3.0999999999999996,
+     -16.4,
+     -2.8
     ]
    },
    {
-    "id": "circulation:I37:stair-b",
+    "id": "circulation:I21:stair-a",
     "rect": [
-     -5.7,
-     15.600000000000001,
-     -3.4,
-     15.9
+     -14.6,
+     -1.3000000000000003,
+     -12.3,
+     -1.0000000000000004
     ]
    },
    {
-    "id": "circulation:I37:cabinet",
+    "id": "circulation:I21:stair-b",
     "rect": [
-     1.0999999999999996,
-     11.3,
-     2.3000000000000007,
-     11.78
+     -18.7,
+     -3.3999999999999995,
+     -16.4,
+     -3.0999999999999996
     ]
    },
    {
-    "id": "circulation:I37:counter",
+    "id": "circulation:I21:cabinet",
     "rect": [
-     1.0600000000000005,
-     11.28,
-     2.34,
-     11.8
+     -11.9,
+     -7.699999999999999,
+     -10.7,
+     -7.220000000000001
     ]
    },
    {
-    "id": "circulation:I37:exit-stair",
+    "id": "circulation:I21:counter",
     "rect": [
-     -7.88,
-     13.9,
-     -7.6,
-     16.1
+     -11.94,
+     -7.720000000000001,
+     -10.66,
+     -7.199999999999999
     ]
    },
    {
-    "id": "circulation:I37:exit-stair",
+    "id": "circulation:I21:exit-stair",
     "rect": [
-     -8.16,
-     13.9,
-     -7.88,
-     16.1
+     -20.88,
+     -5.1,
+     -20.6,
+     -2.9000000000000004
     ]
    },
    {
-    "id": "circulation:I37:exit-stair",
+    "id": "circulation:I21:exit-stair",
     "rect": [
-     -8.440000000000001,
-     13.9,
-     -8.16,
-     16.1
+     -21.16,
+     -5.1,
+     -20.88,
+     -2.9000000000000004
     ]
    },
    {
-    "id": "circulation:I37:exit-stair",
+    "id": "circulation:I21:exit-stair",
     "rect": [
-     -8.72,
-     13.9,
-     -8.440000000000001,
-     16.1
+     -21.44,
+     -5.1,
+     -21.16,
+     -2.9000000000000004
     ]
    },
    {
-    "id": "circulation:I37:exit-stair",
+    "id": "circulation:I21:exit-stair",
     "rect": [
-     -9.0,
-     13.9,
-     -8.72,
-     16.1
+     -21.72,
+     -5.1,
+     -21.44,
+     -2.9000000000000004
     ]
    },
    {
-    "id": "circulation:I37:exit-stair",
+    "id": "circulation:I21:exit-stair",
     "rect": [
-     -9.280000000000001,
-     13.9,
-     -9.0,
-     16.1
+     -22.0,
+     -5.1,
+     -21.72,
+     -2.9000000000000004
     ]
    },
    {
-    "id": "circulation:I37:exit-stair",
+    "id": "circulation:I21:exit-stair",
     "rect": [
-     -9.56,
-     13.9,
-     -9.280000000000001,
-     16.1
+     -22.28,
+     -5.1,
+     -22.0,
+     -2.9000000000000004
     ]
    },
    {
-    "id": "circulation:I37:exit-stair",
+    "id": "circulation:I21:exit-stair",
     "rect": [
-     -9.84,
-     13.9,
-     -9.56,
-     16.1
+     -22.560000000000002,
+     -5.1,
+     -22.28,
+     -2.9000000000000004
     ]
    },
    {
-    "id": "circulation:I37:exit-stair",
+    "id": "circulation:I21:exit-stair",
     "rect": [
-     -10.120000000000001,
-     13.9,
-     -9.84,
-     16.1
+     -22.84,
+     -5.1,
+     -22.560000000000002,
+     -2.9000000000000004
     ]
    },
    {
-    "id": "circulation:I37:exit-post",
+    "id": "circulation:I21:exit-stair",
     "rect": [
-     -10.010000000000002,
-     16.04,
-     -9.950000000000001,
-     16.1
+     -23.12,
+     -5.1,
+     -22.84,
+     -2.9000000000000004
     ]
    },
    {
-    "id": "circulation:I37:exit-post",
+    "id": "circulation:I21:exit-post",
     "rect": [
-     -10.010000000000002,
-     13.9,
-     -9.950000000000001,
-     13.96
+     -23.01,
+     -2.96,
+     -22.95,
+     -2.9000000000000004
     ]
    },
    {
-    "id": "circulation:I37:exit-stair",
+    "id": "circulation:I21:exit-post",
     "rect": [
-     -10.4,
-     13.9,
-     -10.120000000000001,
-     16.1
+     -23.01,
+     -5.1,
+     -22.95,
+     -5.04
     ]
    },
    {
-    "id": "circulation:I37:exit-stair",
+    "id": "circulation:I21:exit-stair",
     "rect": [
-     -10.68,
-     13.9,
-     -10.4,
-     16.1
+     -23.4,
+     -5.1,
+     -23.12,
+     -2.9000000000000004
     ]
    },
    {
-    "id": "circulation:I37:exit-stair",
+    "id": "circulation:I21:exit-stair",
     "rect": [
-     -10.96,
-     13.9,
-     -10.68,
-     16.1
+     -23.68,
+     -5.1,
+     -23.4,
+     -2.9000000000000004
     ]
    },
    {
-    "id": "circulation:I37:exit-slope-envelope",
+    "id": "circulation:I21:exit-stair",
     "rect": [
-     -10.96,
-     16.04,
-     -10.68,
-     16.1
+     -23.96,
+     -5.1,
+     -23.68,
+     -2.9000000000000004
     ]
    },
    {
-    "id": "circulation:I37:exit-slope-envelope",
+    "id": "circulation:I21:exit-slope-envelope",
     "rect": [
-     -10.96,
-     13.9,
-     -10.68,
-     13.96
+     -23.96,
+     -2.96,
+     -23.68,
+     -2.9000000000000004
     ]
    },
    {
-    "id": "circulation:I37:exit-stair",
+    "id": "circulation:I21:exit-slope-envelope",
     "rect": [
-     -11.24,
-     13.9,
-     -10.96,
-     16.1
+     -23.96,
+     -5.1,
+     -23.68,
+     -5.04
     ]
    },
    {
-    "id": "circulation:I37:exit-slope-envelope",
+    "id": "circulation:I21:exit-stair",
     "rect": [
-     -11.24,
-     16.04,
-     -10.96,
-     16.1
+     -24.240000000000002,
+     -5.1,
+     -23.96,
+     -2.9000000000000004
     ]
    },
    {
-    "id": "circulation:I37:exit-post",
+    "id": "circulation:I21:exit-slope-envelope",
     "rect": [
-     -11.13,
-     16.04,
-     -11.07,
-     16.1
+     -24.240000000000002,
+     -2.96,
+     -23.96,
+     -2.9000000000000004
     ]
    },
    {
-    "id": "circulation:I37:exit-slope-envelope",
+    "id": "circulation:I21:exit-post",
     "rect": [
-     -11.24,
-     13.9,
-     -10.96,
-     13.96
+     -24.130000000000003,
+     -2.96,
+     -24.07,
+     -2.9000000000000004
     ]
    },
    {
-    "id": "circulation:I37:exit-post",
+    "id": "circulation:I21:exit-slope-envelope",
     "rect": [
-     -11.13,
-     13.9,
-     -11.07,
-     13.96
+     -24.240000000000002,
+     -5.1,
+     -23.96,
+     -5.04
     ]
    },
    {
-    "id": "circulation:I37:exit-stair",
+    "id": "circulation:I21:exit-post",
     "rect": [
-     -11.52,
-     13.9,
-     -11.24,
-     16.1
+     -24.130000000000003,
+     -5.1,
+     -24.07,
+     -5.04
     ]
    },
    {
-    "id": "circulation:I37:exit-slope-envelope",
+    "id": "circulation:I21:exit-stair",
     "rect": [
-     -11.52,
-     16.04,
-     -11.24,
-     16.1
+     -24.52,
+     -5.1,
+     -24.240000000000002,
+     -2.9000000000000004
     ]
    },
    {
-    "id": "circulation:I37:exit-slope-envelope",
+    "id": "circulation:I21:exit-slope-envelope",
     "rect": [
-     -11.52,
-     13.9,
-     -11.24,
-     13.96
+     -24.52,
+     -2.96,
+     -24.240000000000002,
+     -2.9000000000000004
     ]
    },
    {
-    "id": "circulation:I37:exit-slope-envelope",
+    "id": "circulation:I21:exit-slope-envelope",
     "rect": [
-     -11.8,
-     16.04,
-     -11.52,
-     16.1
+     -24.52,
+     -5.1,
+     -24.240000000000002,
+     -5.04
     ]
    },
    {
-    "id": "circulation:I37:exit-slope-envelope",
+    "id": "circulation:I21:exit-slope-envelope",
     "rect": [
-     -11.8,
-     13.9,
-     -11.52,
-     13.96
+     -24.8,
+     -2.96,
+     -24.52,
+     -2.9000000000000004
     ]
    },
    {
-    "id": "circulation:I37:exit-slope-envelope",
+    "id": "circulation:I21:exit-slope-envelope",
     "rect": [
-     -12.08,
-     16.04,
-     -11.8,
-     16.1
+     -24.8,
+     -5.1,
+     -24.52,
+     -5.04
     ]
    },
    {
-    "id": "circulation:I37:exit-post",
+    "id": "circulation:I21:exit-slope-envelope",
     "rect": [
-     -11.970000000000002,
-     16.04,
-     -11.91,
-     16.1
+     -25.08,
+     -2.96,
+     -24.8,
+     -2.9000000000000004
     ]
    },
    {
-    "id": "circulation:I37:exit-slope-envelope",
+    "id": "circulation:I21:exit-post",
     "rect": [
-     -12.08,
-     13.9,
-     -11.8,
-     13.96
+     -24.970000000000002,
+     -2.96,
+     -24.91,
+     -2.9000000000000004
     ]
    },
    {
-    "id": "circulation:I37:exit-post",
+    "id": "circulation:I21:exit-slope-envelope",
     "rect": [
-     -11.970000000000002,
-     13.9,
-     -11.91,
-     13.96
+     -25.08,
+     -5.1,
+     -24.8,
+     -5.04
     ]
    },
    {
-    "id": "circulation:I37:exit-support",
+    "id": "circulation:I21:exit-post",
     "rect": [
-     -7.51,
-     15.98,
-     -7.39,
-     16.1
+     -24.970000000000002,
+     -5.1,
+     -24.91,
+     -5.04
     ]
    },
    {
-    "id": "circulation:I37:exit-support",
+    "id": "circulation:I21:exit-support",
     "rect": [
-     -7.51,
-     13.899999999999999,
-     -7.39,
-     14.02
+     -20.51,
+     -3.0200000000000005,
+     -20.39,
+     -2.9000000000000004
+    ]
+   },
+   {
+    "id": "circulation:I21:exit-support",
+    "rect": [
+     -20.51,
+     -5.1000000000000005,
+     -20.39,
+     -4.98
     ]
    }
   ]
  },
  "circulationRoutes": [
   {
-   "id": "I37",
+   "id": "I21",
    "height": 3.22,
    "waypoints": [
     [
-     7,
+     -6,
      0.02,
-     15.0
+     -4.0
     ],
     [
-     -0.6500000000000004,
+     -13.65,
      0.02,
-     15.0
+     -4.0
     ],
     [
-     -0.6500000000000004,
+     -13.65,
      1.62,
-     18.5
+     -0.5
     ],
     [
-     -3.9,
+     -16.9,
      1.62,
-     18.5
+     -0.5
     ],
     [
-     -3.9,
+     -16.9,
      3.22,
-     15.0
+     -4.0
     ],
     [
-     -6.9,
+     -19.9,
      3.22,
-     15.0
+     -4.0
     ],
     [
-     -12.65,
+     -25.65,
      0,
-     15.0
+     -4.0
     ]
    ]
   }
@@ -4373,30 +4065,30 @@
     0.0,
     0.0
    ],
-   "heading": 0
+   "heading": 330
   },
   {
    "id": "S02",
    "pos": [
-    24.0,
+    26.0,
     0.0,
-    24.0
+    19.0
    ],
-   "heading": 0
+   "heading": 285
   },
   {
    "id": "S03",
    "pos": [
-    20.0,
+    12.5,
     0.0,
-    -24.0
+    -16.0
    ],
-   "heading": 270
+   "heading": 165
   },
   {
    "id": "S04",
    "pos": [
-    -5.5,
+    -4.0,
     0.0,
     24.0
    ],
@@ -4405,110 +4097,110 @@
   {
    "id": "S05",
    "pos": [
-    -7.5,
+    -10.0,
     0.0,
-    -23.0
+    -22.0
    ],
    "heading": 90
   },
   {
    "id": "S06",
    "pos": [
-    5.0,
+    -0.5,
     0.0,
-    0.0
+    2.0
    ],
-   "heading": 210
+   "heading": 0
   },
   {
    "id": "S07",
    "pos": [
-    24.0,
+    26.0,
     0.0,
-    -4.5
+    -1.0
    ],
-   "heading": 180
+   "heading": 270
   },
   {
    "id": "S08",
    "pos": [
-    -22.0,
+    -22.5,
     0.0,
-    18.5
+    19.0
    ],
-   "heading": 0
+   "heading": 60
   },
   {
    "id": "S09",
    "pos": [
-    -24.0,
+    -24.5,
     0.0,
-    -18.0
+    -16.0
    ],
-   "heading": 180
+   "heading": 90
   },
   {
    "id": "S10",
    "pos": [
-    9.5,
+    11.5,
     0.0,
-    16.0
+    24.0
    ],
-   "heading": 75
+   "heading": 270
   },
   {
    "id": "S11",
    "pos": [
-    -9.0,
+    12.0,
     0.0,
-    -7.0
+    8.0
    ],
-   "heading": 270
+   "heading": 330
   },
   {
    "id": "S12",
    "pos": [
-    -8.0,
+    -13.0,
     0.0,
-    9.0
+    10.0
    ],
-   "heading": 285
+   "heading": 120
   },
   {
    "id": "S13",
    "pos": [
-    9.5,
-    0.0,
-    -14.0
-   ],
-   "heading": 270
-  },
-  {
-   "id": "S14",
-   "pos": [
-    22.0,
-    0.0,
-    9.5
-   ],
-   "heading": 0
-  },
-  {
-   "id": "S15",
-   "pos": [
-    3.5,
+    2.5,
     0.0,
     -24.0
    ],
    "heading": 270
   },
   {
+   "id": "S14",
+   "pos": [
+    -2.5,
+    0.0,
+    -10.0
+   ],
+   "heading": 165
+  },
+  {
+   "id": "S15",
+   "pos": [
+    24.5,
+    0.0,
+    -16.0
+   ],
+   "heading": 270
+  },
+  {
    "id": "S16",
    "pos": [
-    15.5,
+    14.5,
     0.0,
-    1.5
+    -4.0
    ],
-   "heading": 0
+   "heading": 225
   }
  ]
 }

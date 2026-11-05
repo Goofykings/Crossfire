@@ -146,6 +146,15 @@ def wall_boxes(w):
     x0, z0, x1, z1 = w["rect"]
     tag = f"wall:{w['id']}"
     boxes = [aabb(x0, 0.0, z0, x1, w["height"], z1)]
+    if w.get("style") == "railing":
+        # A railing lot is paved: only the steel railing on its centre line blocks (the whole
+        # 2 m lot used to be an invisible 1.4 m slab players could stand on).
+        if x1 - x0 >= z1 - z0:
+            cm = (z0 + z1) / 2
+            boxes = [aabb(x0, 0.0, cm - .06, x1, w["height"], cm + .06)]
+        else:
+            cm = (x0 + x1) / 2
+            boxes = [aabb(cm - .06, 0.0, z0, cm + .06, w["height"], z1)]
     holes = []
     for g in w.get("gates", []):
         gx0, gz0, gx1, gz1 = g["rect"]
@@ -239,7 +248,16 @@ def railing_boxes(t):
 def map_collision(layout: dict) -> dict:
     boxes = []
     lim = layout["outerLimit"] + 1
-    boxes.append(to_obb(aabb(-lim, -2.0, -lim, lim, 0.0, lim), "ground"))
+    # The street slab stays solid above underground passages; only stairwells open it.
+    from underground import ground_holes, passage_parts
+    for b in subtract_all([aabb(-lim, -2.0, -lim, lim, 0.0, lim)], ground_holes(layout)):
+        # Hole edges that differ only by float noise leave sub-millimetre slivers: drop them
+        # rather than export zero-thickness colliders.
+        if min(b[3] - b[0], b[4] - b[1], b[5] - b[2]) >= 1e-3:
+            boxes.append(to_obb(b, "ground"))
+    for p in layout.get("underground", []):
+        for box, _, part in passage_parts(p):
+            boxes.append(to_obb(box, f"underground:{p['id']}:{part}"))
     for b in layout["buildings"]:
         boxes.extend(building_boxes(b))
     for w in layout["walls"]:

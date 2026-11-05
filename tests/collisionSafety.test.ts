@@ -50,8 +50,15 @@ describe.each(MAP_IDS)('%s actual map safety', id => {
       expect(Math.min(c.hx,c.hy,c.hz)).toBeGreaterThan(0);
     }
     const [x0,z0,x1,z1] = layout.playArea;
-    for (let x = x0; x <= x1; x += 1) for (let z = z0; z <= z1; z += 1)
-      expect(world.groundHeight(x,z,0,.001)).toBeGreaterThanOrEqual(layout.ground.baseHeight);
+    // Underground stairwells are the only openings in the street slab: their stairs lead to the
+    // passage floor, never into the void.
+    const stairwells = (layout.underground ?? []).flatMap(p => p.entrances.map(e => ({ rect: e.rect, floor: p.floor })));
+    for (let x = x0; x <= x1; x += 1) for (let z = z0; z <= z1; z += 1) {
+      const well = stairwells.find(s => x >= s.rect[0] && x <= s.rect[2] && z >= s.rect[1] && z <= s.rect[3]);
+      // In a stairwell the support may be a step, a landing or the flights' 1 m divider.
+      // 1 mm probe: integer sample points can lie exactly on adjoining step edges.
+      expect(world.groundHeight(x,z,well ? .001 : 0,well ? 1.01 : .001)).toBeGreaterThanOrEqual(well ? well.floor : layout.ground.baseHeight);
+    }
     const boundaries = [...world.all()].filter(c => c.tag === 'boundary');
     expect(boundaries).toHaveLength(4);
     for (const c of boundaries) expect(Math.min(c.hx,c.hz)).toBeGreaterThanOrEqual(1);

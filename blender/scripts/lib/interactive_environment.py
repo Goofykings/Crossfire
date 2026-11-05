@@ -48,7 +48,8 @@ def stall_boxes():
     box([0,.425,-.4],[1.2,.425,.35])
     for x in [-1.25,1.25]:
         for z in [-.75,.75]: box([x,1.2,z],[.05,1.2,.05])
-    for z in [-.7,-.2,.3,.7]: box([0,2.35+(z+.8)/1.6*.25,z],[1.4,.035,.26])
+    # Canvas slats stop bullets but cannot carry a player (no unauthored rooftop perch).
+    for z in [-.7,-.2,.3,.7]: boxes.append({'c':[0,2.35+(z+.8)/1.6*.25,z],'h':[1.4,.035,.26],'yaw':0,'tag':'interactive-stall-canopy'})
     for i in range(3):
         x=-.8+i*.8
         # Conservative player/bullet shell; decorative spheres use the exact
@@ -65,14 +66,19 @@ def stall_boxes():
 def map_data(layout, collision, catalog):
     data={'version':1,'bodies':[],'signs':[],'lights':[],'basins':[],'replaceProps':[]}
     solids=list(collision['boxes'])
+    stalls=0
     for i,p in enumerate(layout['props']+layout['obstacles']):
         xf=Transform(*p['pos'],yaw=-math.radians(p['heading']))
         if p['type']=='market_stall':
+            stalls+=1
+            produce_stall=stalls==1
             converted=[]
             for b in stall_boxes():
                 converted.append({**b,'c':list(xf.point(b['c'])),'yaw':-math.radians(p['heading'])})
             data['replaceProps'].append({'index':i,'boxes':converted});solids+=converted
-            for bin_index in range(3):
+            # The 14-state interactive budget covers one stall's produce; any further stall
+            # keeps its precise collision but sells from empty bins (no basins or fruit).
+            for bin_index in (range(3) if produce_stall else ()):
                 data['basins'].append({'position':list(xf.point((-.8+bin_index*.8,produce.FLOOR,-.4))),
                     'yaw':-math.radians(p['heading']),'halfWidth':produce.HALF_X,'halfDepth':produce.HALF_Z,
                     'height':produce.RIM-produce.FLOOR,'flare':produce.FLARE})
@@ -98,9 +104,9 @@ def map_data(layout, collision, catalog):
             lx,lz=dx*c-dz*s,dx*s+dz*c
             if max(abs(lx)-b['h'][0],0)**2+max(abs(lz)-b['h'][2],0)**2<r*r:return False
         return True
-    desired={'european-town':[(14.9,-11.9),(14.9,-12.4)],
-             'industrial-complex':[(-5.8,-17.5),(-6.4,-17.5)],
-             'modern-city':[(-3,3.7),(-19.3,-7)]}
+    desired={'european-town':[(-18.3,-9.3),(10.4,12.3)],
+             'industrial-complex':[(-4.6,-9.6),(19.0,-0.5)],
+             'modern-city':[(-19.0,2.0),(21.5,-12.5)]}
     for n,(x,z) in enumerate(desired[layout['id']]):
         radius,half,mass,asset=(.23,.16,1.2,'loose_crate') if n==0 else (.20,.20,2.5,'loose_barrel')
         candidate=next(((x+dx,z+dz) for dx,dz in [(0,0),(.6,0),(-.6,0),(0,.6),(0,-.6),(.6,.6),(-.6,-.6)]

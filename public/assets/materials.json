@@ -1685,7 +1685,7 @@
     1.0
    ],
    "albedo": "assets/textures/urban/oil_stains.png",
-   "roughness": 0.35,
+   "roughness": 0.92,
    "alpha_cutoff": 0.3,
    "decal": true
   },

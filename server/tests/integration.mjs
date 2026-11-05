@@ -385,7 +385,8 @@ test('Public room: real Workers runtime and real WebSocket clients', { timeout: 
           const me = (await c.wait((m) => m.type === 'spawned' && m.snapshot.roundId === current.roundId)).snapshot.players.find((p) => p.id === c.welcome.selfId);
           const last = me.ack + 12;
           c.send({ type: 'input', roundId: current.roundId, mapVersion: current.mapVersion,
-            frames: Array.from({ length: 12 }, (_, k) => frame(me.ack + k + 1, me.motion.yaw)) });
+            // wrapped like the frontend's inputs: a spawn heading past 180 degrees leaves yaw below -pi
+            frames: Array.from({ length: 12 }, (_, k) => frame(me.ack + k + 1, Math.atan2(Math.sin(me.motion.yaw), Math.cos(me.motion.yaw)))) });
           const moved = await d.wait((m) => m.type === 'snapshot' && m.snapshot.roundId === current.roundId && m.snapshot.players.some((p) => p.id === me.id && p.ack === last));
           assert.equal(moved.snapshot.players.find((p) => p.id === me.id).motion.pitch, 0.25);
         }

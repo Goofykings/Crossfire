@@ -116,7 +116,9 @@ describe.each(MAPS)('tactical map of %s', (id) => {
       Math.max(0, ...layout.ground.zones.filter((g) => x >= g.rect[0] && x <= g.rect[2] && z >= g.rect[1] && z <= g.rect[3]).map((g) => g.height));
     const blockedInWorld = (x: number, z: number) => {
       const g = world.groundHeight(x, z, 0.01, zoneHeight(x, z) + MOVEMENT.stepHeight);
-      return world.overlapsCylinder(x, z, 0.01, g + MOVEMENT.stepHeight + 0.05, g + 1.7);
+      // 1 mm probe: the map outlines are the exact collider rectangles (a 1 cm probe misread a
+      // sample 7 mm beside a 12 cm skywalk post).
+      return world.overlapsCylinder(x, z, 0.001, g + MOVEMENT.stepHeight + 0.05, g + 1.7);
     };
     const blockedOnMap = (x: number, z: number) => classifyPoint(tactical, x, z) === 'blocked';
     let samples = 0;

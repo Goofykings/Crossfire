@@ -10,6 +10,9 @@ def finish_layout(layout, catalog):
     idx = LayoutIndex(layout)
     boxes = map_collision(layout)["boxes"]
     reserved = [r["rect"] for r in layout.get("upperRoutes", [])]
+    # Underground entrances: the structure plus a 1.2 m landing in front of every opening.
+    from underground import footprints
+    reserved += [[r[0] - .6, r[1] - .6, r[2] + .6, r[3] + .6] for r in footprints(layout)]
     for ladder in layout.get('ladders', []):
         x,z=ladder['wall']; nx,nz=ladder['out']
         reserved.append([min(x,x+nx*2.8)-.9,min(z,z+nz*2.8)-.9,
@@ -91,6 +94,13 @@ def finish_layout(layout, catalog):
     layout['navigation']={'version':1,'groundRoutes':[
         {k:z[k] for k in ('id','kind','rect')} for z in layout['ground']['zones'] if z['kind']!='sidewalk'],
         'coveredRoutes':layout['ground']['covered'], 'upperRoutes':[], 'groundObstacles':[]}
+    # Underground portals: the walls, divider and guards a walking player meets at street
+    # level (the stairwell itself stays open, as in the collision world).
+    from underground import passage_parts
+    for p in layout.get('underground', []):
+        for box, _, part in passage_parts(p):
+            if part.startswith('entrance-') and box[1] < 1.7 and box[4] > .47:
+                layout['navigation']['groundObstacles'].append({'id': f"underground:{p['id']}:{part}", 'rect': [box[0], box[2], box[3], box[5]]})
     for route in layout.get('upperRoutes',[]):
         for box, _, part in route_parts(route):
             if box[1]<1.7 and box[4]>.42:

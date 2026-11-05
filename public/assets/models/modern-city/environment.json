@@ -5,9 +5,9 @@
    "id": "loose-0",
    "asset": "loose_crate",
    "position": [
-    -3,
+    -19.0,
     0.161,
-    3.7
+    2.0
    ],
    "radius": 0.23,
    "halfHeight": 0.16,
@@ -18,9 +18,9 @@
    "id": "loose-1",
    "asset": "loose_barrel",
    "position": [
-    -19.3,
+    21.5,
     0.201,
-    -7
+    -12.5
    ],
    "radius": 0.2,
    "halfHeight": 0.2,
@@ -31,12 +31,12 @@
  "signs": [],
  "lights": [
   {
-   "id": "light-C28",
+   "id": "light-C27",
    "asset": "hanging_light",
    "position": [
-    13.05,
+    15.05,
     3.0,
-    16
+    11
    ],
    "yaw": 0
   }

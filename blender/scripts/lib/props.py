@@ -345,10 +345,12 @@ def cart() -> MeshData:
             for (ra, rb) in ((r, r - 0.06),):
                 p = [(x - 0.04, r + math.sin(a) * ra, 0.2 + math.cos(a) * ra), (x - 0.04, r + math.sin(b) * ra, 0.2 + math.cos(b) * ra),
                      (x + 0.04, r + math.sin(b) * ra, 0.2 + math.cos(b) * ra), (x + 0.04, r + math.sin(a) * ra, 0.2 + math.cos(a) * ra)]
-                md.face(p, "wood_dark")
+                # Tyre faces outward and the rim's inner face toward the hub (both were wound
+                # inside-out: the map audit saw the wheels from behind).
+                md.face(p[::-1], "wood_dark")
                 q = [(x - 0.04, r + math.sin(a) * rb, 0.2 + math.cos(a) * rb), (x + 0.04, r + math.sin(a) * rb, 0.2 + math.cos(a) * rb),
                      (x + 0.04, r + math.sin(b) * rb, 0.2 + math.cos(b) * rb), (x - 0.04, r + math.sin(b) * rb, 0.2 + math.cos(b) * rb)]
-                md.face(q, "wood_dark")
+                md.face(q[::-1], "wood_dark")
             for side in (-0.04, 0.04):
                 ring = [(x + side, r + math.sin(a) * r, 0.2 + math.cos(a) * r), (x + side, r + math.sin(b) * r, 0.2 + math.cos(b) * r),
                         (x + side, r + math.sin(b) * (r - 0.06), 0.2 + math.cos(b) * (r - 0.06)),

@@ -14,337 +14,217 @@
   "baseHeight": 0.0,
   "zones": [
    {
-    "id": "plaza",
+    "id": "square",
     "kind": "plaza",
     "rect": [
-     -6,
-     -6,
-     6,
-     6
+     -7,
+     -5,
+     7,
+     4
     ],
     "height": 0.0,
     "material": "slabs"
    },
    {
-    "id": "north_w",
-    "kind": "street",
+    "id": "square_ne",
+    "kind": "plaza",
     "rect": [
-     -24,
-     -24,
-     -4,
-     -20
-    ],
-    "height": 0.0,
-    "material": "cobble"
-   },
-   {
-    "id": "north_e",
-    "kind": "street",
-    "rect": [
-     -4,
-     -22,
-     24,
-     -18
-    ],
-    "height": 0.0,
-    "material": "cobble"
-   },
-   {
-    "id": "north_jog",
-    "kind": "street",
-    "rect": [
-     -7,
-     -22,
-     0,
-     -18
-    ],
-    "height": 0.0,
-    "material": "cobble"
-   },
-   {
-    "id": "south_w",
-    "kind": "street",
-    "rect": [
-     -24,
-     18,
-     1,
-     22
-    ],
-    "height": 0.0,
-    "material": "cobble"
-   },
-   {
-    "id": "south_e",
-    "kind": "street",
-    "rect": [
-     1,
-     20,
-     24,
-     24
-    ],
-    "height": 0.0,
-    "material": "cobble"
-   },
-   {
-    "id": "south_jog",
-    "kind": "street",
-    "rect": [
-     -2,
-     18,
-     4,
-     24
-    ],
-    "height": 0.0,
-    "material": "cobble"
-   },
-   {
-    "id": "west_n",
-    "kind": "street",
-    "rect": [
-     -24,
-     -24,
-     -20,
-     -8
-    ],
-    "height": 0.0,
-    "material": "cobble"
-   },
-   {
-    "id": "west_mid",
-    "kind": "street",
-    "rect": [
-     -22,
-     -8,
-     -18,
-     8
-    ],
-    "height": 0.0,
-    "material": "cobble"
-   },
-   {
-    "id": "west_s",
-    "kind": "street",
-    "rect": [
-     -24,
-     8,
-     -20,
-     22
-    ],
-    "height": 0.0,
-    "material": "cobble"
-   },
-   {
-    "id": "west_jog_n",
-    "kind": "street",
-    "rect": [
-     -24,
-     -11,
-     -18,
-     -7
-    ],
-    "height": 0.0,
-    "material": "cobble"
-   },
-   {
-    "id": "west_jog_s",
-    "kind": "street",
-    "rect": [
-     -24,
      7,
-     -18,
-     11
+     -5,
+     11,
+     1
     ],
     "height": 0.0,
-    "material": "cobble"
+    "material": "slabs"
    },
    {
-    "id": "east_n",
+    "id": "square_west",
+    "kind": "plaza",
+    "rect": [
+     -10,
+     -2,
+     -7,
+     4
+    ],
+    "height": 0.0,
+    "material": "slabs"
+   },
+   {
+    "id": "square_north",
     "kind": "street",
     "rect": [
-     20,
-     -18,
-     24,
+     -1,
+     -9,
+     3,
      -5
     ],
     "height": 0.0,
     "material": "cobble"
    },
    {
-    "id": "east_mid",
-    "kind": "street",
-    "rect": [
-     18,
-     -5,
-     22,
-     10
-    ],
-    "height": 0.0,
-    "material": "cobble"
-   },
-   {
-    "id": "east_s",
-    "kind": "street",
-    "rect": [
-     20,
-     10,
-     24,
-     24
-    ],
-    "height": 0.0,
-    "material": "cobble"
-   },
-   {
-    "id": "east_jog_n",
-    "kind": "street",
-    "rect": [
-     18,
-     -8,
-     24,
-     -4
-    ],
-    "height": 0.0,
-    "material": "cobble"
-   },
-   {
-    "id": "east_jog_s",
-    "kind": "street",
-    "rect": [
-     18,
-     8,
-     24,
-     12
-    ],
-    "height": 0.0,
-    "material": "cobble"
-   },
-   {
-    "id": "west_entry",
-    "kind": "street",
-    "rect": [
-     -20,
-     -2,
-     -6,
-     3
-    ],
-    "height": 0.0,
-    "material": "cobble"
-   },
-   {
-    "id": "east_entry",
-    "kind": "street",
+    "id": "upper_town",
+    "kind": "terrace",
     "rect": [
      6,
-     1,
+     -21,
      20,
-     6
+     -10
     ],
-    "height": 0.0,
+    "height": 1.26,
     "material": "cobble"
    },
    {
-    "id": "north_entry",
+    "id": "grand_steps",
     "kind": "street",
     "rect": [
-     0,
-     -20,
-     4,
-     -6
-    ],
-    "height": 0.0,
-    "material": "cobble"
-   },
-   {
-    "id": "south_entry",
-    "kind": "street",
-    "rect": [
-     -4,
-     6,
-     0,
-     20
-    ],
-    "height": 0.0,
-    "material": "cobble"
-   },
-   {
-    "id": "shop_lane",
-    "kind": "street",
-    "rect": [
-     -18,
-     -22,
-     -12,
-     3
-    ],
-    "height": 0.0,
-    "material": "cobble"
-   },
-   {
-    "id": "shop_court",
-    "kind": "court",
-    "rect": [
-     -16,
-     -16,
-     -8,
-     -8
-    ],
-    "height": 0.0,
-    "material": "slabs"
-   },
-   {
-    "id": "shop_north",
-    "kind": "street",
-    "rect": [
-     -12,
-     -20,
-     -8,
-     -16
-    ],
-    "height": 0.0,
-    "material": "cobble"
-   },
-   {
-    "id": "shop_plaza",
-    "kind": "street",
-    "rect": [
+     7,
      -10,
-     -8,
-     -6,
+     11,
+     -5
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "via_alta",
+    "kind": "street",
+    "rect": [
+     -5,
+     -21,
+     6,
+     -17
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "via_alta_s",
+    "kind": "street",
+    "rect": [
+     -1,
+     -17,
+     3,
+     -9
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "north_lane_e",
+    "kind": "street",
+    "rect": [
+     -14,
+     -24,
+     -1,
+     -21
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "north_lane_w",
+    "kind": "street",
+    "rect": [
+     -25,
+     -25,
+     -11,
+     -22
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "east_lane",
+    "kind": "street",
+    "rect": [
+     20,
+     -15,
+     24,
      -2
     ],
     "height": 0.0,
     "material": "cobble"
    },
    {
-    "id": "market_court",
+    "id": "east_lane_m",
+    "kind": "street",
+    "rect": [
+     20,
+     -2,
+     24,
+     8
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "market",
     "kind": "court",
     "rect": [
-     9,
+     -19,
      -16,
-     18,
+     -9,
      -8
     ],
     "height": 0.0,
     "material": "slabs"
    },
    {
-    "id": "market_east",
+    "id": "market_e",
     "kind": "street",
     "rect": [
-     18,
-     -12,
-     20,
+     -9,
+     -11,
+     -1,
      -8
     ],
     "height": 0.0,
     "material": "cobble"
    },
    {
-    "id": "market_plaza",
+    "id": "market_s",
     "kind": "street",
     "rect": [
-     6,
+     -17,
      -8,
-     10,
-     1
+     -13,
+     -4
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "west_lane",
+    "kind": "street",
+    "rect": [
+     -26,
+     -22,
+     -23,
+     3
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "west_yard",
+    "kind": "court",
+    "rect": [
+     -20,
+     -4,
+     -13,
+     4
+    ],
+    "height": 0.0,
+    "material": "slabs"
+   },
+   {
+    "id": "west_link",
+    "kind": "street",
+    "rect": [
+     -23,
+     0,
+     -20,
+     3
     ],
     "height": 0.0,
     "material": "cobble"
@@ -353,46 +233,106 @@
     "id": "garden",
     "kind": "court",
     "rect": [
-     -17,
-     10,
-     -11,
+     -20,
+     9,
+     -12,
      16
     ],
     "height": 0.0,
     "material": "slabs"
    },
    {
-    "id": "garden_west",
+    "id": "garden_n",
     "kind": "street",
     "rect": [
      -20,
-     12,
+     4,
      -17,
+     9
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "cistern_court",
+    "kind": "court",
+    "rect": [
+     -5,
+     4,
+     2,
+     14
+    ],
+    "height": 0.0,
+    "material": "slabs"
+   },
+   {
+    "id": "south_west",
+    "kind": "street",
+    "rect": [
+     -24,
+     20,
+     -2,
+     24
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "south_link",
+    "kind": "street",
+    "rect": [
+     -5,
+     14,
+     -2,
+     24
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "south_street",
+    "kind": "street",
+    "rect": [
+     2,
+     16,
+     24,
+     22
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "south_lane_a",
+    "kind": "street",
+    "rect": [
+     2,
+     4,
+     7,
+     10
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "south_lane_b",
+    "kind": "street",
+    "rect": [
+     6,
+     8,
+     9,
      16
     ],
     "height": 0.0,
     "material": "cobble"
    },
    {
-    "id": "garden_south",
+    "id": "east_street",
     "kind": "street",
     "rect": [
-     -15,
-     16,
-     -11,
-     20
-    ],
-    "height": 0.0,
-    "material": "cobble"
-   },
-   {
-    "id": "garden_north",
-    "kind": "street",
-    "rect": [
-     -16,
-     3,
-     -12,
-     10
+     11,
+     -5,
+     20,
+     -1
     ],
     "height": 0.0,
     "material": "cobble"
@@ -401,58 +341,46 @@
     "id": "baker_court",
     "kind": "court",
     "rect": [
+     9,
      8,
-     10,
-     16,
-     17
+     18,
+     13
     ],
     "height": 0.0,
     "material": "slabs"
    },
    {
-    "id": "baker_north",
+    "id": "baker_s",
     "kind": "street",
     "rect": [
-     10,
-     6,
-     14,
-     10
-    ],
-    "height": 0.0,
-    "material": "cobble"
-   },
-   {
-    "id": "baker_east",
-    "kind": "street",
-    "rect": [
-     16,
      12,
-     20,
-     16
-    ],
-    "height": 0.0,
-    "material": "cobble"
-   },
-   {
-    "id": "baker_south",
-    "kind": "street",
-    "rect": [
-     9,
-     17,
      13,
-     22
+     15,
+     16
     ],
     "height": 0.0,
     "material": "cobble"
    },
    {
-    "id": "baker_plaza",
+    "id": "baker_e",
     "kind": "street",
     "rect": [
-     0,
-     12,
+     18,
      8,
-     16
+     25,
+     13
+    ],
+    "height": 0.0,
+    "material": "cobble"
+   },
+   {
+    "id": "east_lane_s",
+    "kind": "street",
+    "rect": [
+     22,
+     13,
+     25,
+     18
     ],
     "height": 0.0,
     "material": "cobble"
@@ -460,22 +388,12 @@
   ],
   "covered": [
    {
-    "id": "west_gate",
+    "id": "market_gate",
     "kind": "passage",
     "rect": [
-     -20,
-     -12,
-     -18,
-     -9
-    ]
-   },
-   {
-    "id": "market_north",
-    "kind": "passage",
-    "rect": [
-     10,
-     -18,
-     14,
+     -19,
+     -22,
+     -15,
      -16
     ]
    },
@@ -483,65 +401,92 @@
     "id": "market_room",
     "kind": "room",
     "rect": [
-     4,
-     -15,
-     9,
-     -12
+     -23,
+     -14,
+     -19,
+     -11
     ]
    },
    {
-    "id": "garden_room",
-    "kind": "room",
-    "rect": [
-     -11,
-     11.5,
-     -4,
-     13.5
-    ]
-   },
-   {
-    "id": "east_arcade",
+    "id": "west_arch",
     "kind": "passage",
     "rect": [
-     10,
-     1,
-     14,
-     6
-    ]
-   },
-   {
-    "id": "west_arcade",
-    "kind": "passage",
-    "rect": [
-     -11,
-     -2,
-     -8,
+     -13,
+     0,
+     -10,
      3
     ]
    },
    {
-    "id": "north_arcade",
+    "id": "garden_gate",
     "kind": "passage",
     "rect": [
-     4,
-     -22,
-     8,
-     -18
+     -16,
+     16,
+     -13,
+     20
     ]
    },
    {
-    "id": "south_arcade",
+    "id": "provisions_room",
+    "kind": "room",
+    "rect": [
+     -12,
+     9.8,
+     -5,
+     11.8
+    ]
+   },
+   {
+    "id": "baker_arch",
     "kind": "passage",
     "rect": [
-     6,
-     20,
-     10,
-     24
+     12,
+     -1,
+     15,
+     8
     ]
    }
   ]
  },
- "terraces": [],
+ "terraces": [
+  {
+   "id": "upper_town",
+   "rect": [
+    6,
+    -21,
+    20,
+    -10
+   ],
+   "height": 1.26,
+   "stairs": [
+    {
+     "side": "e",
+     "from": -15,
+     "to": -10,
+     "steps": 7,
+     "rise": 0.18,
+     "run": 0.32
+    },
+    {
+     "side": "s",
+     "from": 7,
+     "to": 11,
+     "steps": 7,
+     "rise": 0.18,
+     "run": 0.32
+    },
+    {
+     "side": "w",
+     "from": -21,
+     "to": -17,
+     "steps": 7,
+     "rise": 0.18,
+     "run": 0.32
+    }
+   ]
+  }
+ ],
  "buildings": [
   {
    "id": "B01",
@@ -549,31 +494,56 @@
    "rect": [
     -34,
     -34,
-    -24,
-    -26
+    -26,
+    -25
    ],
    "floors": 4,
    "palette": "plaster_rose",
-   "seed": 7394,
+   "seed": 8054,
    "roof": {
     "type": "gable",
-    "ridge": "x"
+    "ridge": "z"
    },
    "front": "w",
    "doors": []
   },
   {
    "id": "B02",
-   "type": "balcony",
+   "type": "stone2",
    "rect": [
-    -24,
+    -26,
     -34,
-    -17,
-    -24
+    -18,
+    -25
    ],
    "floors": 3,
-   "palette": "plaster_red",
-   "seed": 5882,
+   "palette": "stone_blocks",
+   "seed": 7327,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "s",
+     "at": 4.5,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B03",
+   "type": "stone2",
+   "rect": [
+    -18,
+    -34,
+    -11,
+    -25
+   ],
+   "floors": 3,
+   "palette": "stone_warm",
+   "seed": 1953,
    "roof": {
     "type": "gable",
     "ridge": "z"
@@ -585,61 +555,29 @@
      "at": 3.5,
      "width": 1.1
     }
-   ],
-   "balcony": {
-    "side": "s",
-    "floor": 1
-   }
-  },
-  {
-   "id": "B03",
-   "type": "shop",
-   "rect": [
-    -17,
-    -34,
-    -10,
-    -24
-   ],
-   "floors": 3,
-   "palette": "plaster_beige",
-   "seed": 2823,
-   "roof": {
-    "type": "gable",
-    "ridge": "z"
-   },
-   "front": "s",
-   "doors": [
-    {
-     "side": "s",
-     "at": 3.5,
-     "width": 1.6
-    }
-   ],
-   "shopfront": {
-    "side": "s"
-   }
+   ]
   },
   {
    "id": "B04",
-   "type": "plaster3",
+   "type": "stone2",
    "rect": [
-    -10,
+    -11,
     -34,
-    -3,
+    -1,
     -24
    ],
    "floors": 3,
-   "palette": "plaster_beige",
-   "seed": 7690,
+   "palette": "stone_grey",
+   "seed": 2070,
    "roof": {
-    "type": "gable",
-    "ridge": "z"
+    "type": "hip",
+    "ridge": "x"
    },
    "front": "s",
    "doors": [
     {
      "side": "s",
-     "at": 3.0,
+     "at": 5.0,
      "width": 1.1
     }
    ]
@@ -648,33 +586,14 @@
    "id": "B05",
    "type": "backdrop",
    "rect": [
-    -3,
-    -34,
-    4,
-    -24
-   ],
-   "floors": 3,
-   "palette": "plaster_white",
-   "seed": 5304,
-   "roof": {
-    "type": "gable",
-    "ridge": "z"
-   },
-   "front": "w",
-   "doors": []
-  },
-  {
-   "id": "B06",
-   "type": "backdrop",
-   "rect": [
-    24,
+    25,
     -34,
     34,
-    -25
+    -29
    ],
    "floors": 4,
    "palette": "plaster_ochre",
-   "seed": 2802,
+   "seed": 2256,
    "roof": {
     "type": "gable",
     "ridge": "x"
@@ -683,59 +602,17 @@
    "doors": []
   },
   {
-   "id": "B07",
-   "type": "narrow_passage",
-   "rect": [
-    4,
-    -34,
-    8,
-    -18
-   ],
-   "floors": 4,
-   "palette": "stone_warm",
-   "seed": 177,
-   "roof": {
-    "type": "gable",
-    "ridge": "z"
-   },
-   "front": "w",
-   "doors": [
-    {
-     "side": "e",
-     "at": 14.0,
-     "width": 1.1
-    },
-    {
-     "side": "w",
-     "at": 14.0,
-     "width": 1.1
-    }
-   ],
-   "passages": [
-    {
-     "rect": [
-      4,
-      -22,
-      8,
-      -18
-     ],
-     "style": "lintel",
-     "clear": 3.2
-    }
-   ]
-  },
-  {
-   "id": "B08",
+   "id": "B06",
    "type": "balcony",
    "rect": [
-    8,
+    -1,
     -34,
-    15,
-    -22
+    9,
+    -21
    ],
    "floors": 3,
-   "palette": "plaster_rose",
-   "seed": 7892,
+   "palette": "plaster_ochre",
+   "seed": 676,
    "roof": {
     "type": "gable",
     "ridge": "z"
@@ -744,7 +621,12 @@
    "doors": [
     {
      "side": "s",
-     "at": 3.5,
+     "at": 5.0,
+     "width": 1.1
+    },
+    {
+     "side": "w",
+     "at": 11.5,
      "width": 1.1
     }
    ],
@@ -754,17 +636,17 @@
    }
   },
   {
-   "id": "B09",
+   "id": "B07",
    "type": "plaster3",
    "rect": [
-    15,
+    9,
     -34,
-    24,
-    -22
+    16,
+    -21
    ],
    "floors": 3,
-   "palette": "plaster_red",
-   "seed": 4333,
+   "palette": "plaster_worn",
+   "seed": 9798,
    "roof": {
     "type": "gable",
     "ridge": "z"
@@ -773,23 +655,67 @@
    "doors": [
     {
      "side": "s",
-     "at": 4.5,
+     "at": 5.5,
      "width": 1.1
     }
    ]
   },
   {
-   "id": "B10",
+   "id": "B08",
    "type": "stone2",
    "rect": [
+    16,
     -34,
-    -26,
-    -24,
-    -19
+    25,
+    -21
    ],
    "floors": 3,
-   "palette": "stone_blocks",
-   "seed": 5700,
+   "palette": "stone_grey",
+   "seed": 6084,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "s",
+     "at": 2.0,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B09",
+   "type": "backdrop",
+   "rect": [
+    25,
+    -29,
+    34,
+    -21
+   ],
+   "floors": 4,
+   "palette": "plaster_rose",
+   "seed": 9671,
+   "roof": {
+    "type": "hip",
+    "ridge": "x"
+   },
+   "front": "w",
+   "doors": []
+  },
+  {
+   "id": "B10",
+   "type": "plaster3",
+   "rect": [
+    -34,
+    -25,
+    -25,
+    -22
+   ],
+   "floors": 3,
+   "palette": "plaster_beige",
+   "seed": 5363,
    "roof": {
     "type": "gable",
     "ridge": "x"
@@ -798,79 +724,212 @@
    "doors": [
     {
      "side": "e",
-     "at": 4.5,
+     "at": 1.5,
      "width": 1.1
     }
    ]
   },
   {
    "id": "B11",
-   "type": "shop",
-   "rect": [
-    24,
-    -25,
-    34,
-    -17
-   ],
-   "floors": 3,
-   "palette": "plaster_beige",
-   "seed": 505,
-   "roof": {
-    "type": "gable",
-    "ridge": "x"
-   },
-   "front": "w",
-   "doors": [
-    {
-     "side": "w",
-     "at": 5.5,
-     "width": 1.6
-    }
-   ],
-   "shopfront": {
-    "side": "w"
-   }
-  },
-  {
-   "id": "B12",
-   "type": "shop",
+   "type": "stone2",
    "rect": [
     -34,
-    -19,
-    -24,
-    -12
+    -22,
+    -26,
+    -14
    ],
    "floors": 3,
    "palette": "stone_warm",
-   "seed": 6463,
+   "seed": 247,
    "roof": {
-    "type": "gable",
+    "type": "hip",
     "ridge": "x"
    },
    "front": "e",
    "doors": [
     {
      "side": "e",
-     "at": 3.5,
-     "width": 1.6
+     "at": 4.0,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B12",
+   "type": "archway",
+   "rect": [
+    -23,
+    -22,
+    -14,
+    -16
+   ],
+   "floors": 3,
+   "palette": "stone_warm",
+   "seed": 2376,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "n",
+   "doors": [
+    {
+     "side": "n",
+     "at": 4.5,
+     "width": 1.1
+    },
+    {
+     "side": "w",
+     "at": 3.0,
+     "width": 1.1
     }
    ],
-   "shopfront": {
-    "side": "e"
-   }
+   "passages": [
+    {
+     "rect": [
+      -19,
+      -22,
+      -15,
+      -16
+     ],
+     "style": "arch",
+     "clear": 3.2
+    }
+   ]
   },
   {
    "id": "B13",
-   "type": "plaster3",
+   "type": "shop",
    "rect": [
-    -8,
-    -18,
-    0,
-    -8
+    -14,
+    -21,
+    -9,
+    -16
    ],
    "floors": 3,
-   "palette": "plaster_red",
-   "seed": 7973,
+   "palette": "plaster_ochre",
+   "seed": 9862,
+   "roof": {
+    "type": "hip",
+    "ridge": "x"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "n",
+     "at": 2.5,
+     "width": 1.1
+    }
+   ],
+   "shopfront": {
+    "side": "s"
+   }
+  },
+  {
+   "id": "B14",
+   "type": "stone2",
+   "rect": [
+    -9,
+    -21,
+    -5,
+    -17
+   ],
+   "floors": 2,
+   "palette": "stone_blocks",
+   "seed": 7051,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "n",
+   "doors": [
+    {
+     "side": "n",
+     "at": 2.0,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B15",
+   "type": "plaster3",
+   "rect": [
+    20,
+    -21,
+    24,
+    -15
+   ],
+   "floors": 3,
+   "palette": "plaster_beige",
+   "seed": 6699,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "w",
+     "at": 3.0,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B16",
+   "type": "plaster3",
+   "rect": [
+    24,
+    -21,
+    34,
+    -14
+   ],
+   "floors": 3,
+   "palette": "plaster_worn",
+   "seed": 7864,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "w",
+   "doors": []
+  },
+  {
+   "id": "B17",
+   "type": "stone2",
+   "rect": [
+    -9,
+    -17,
+    -1,
+    -11
+   ],
+   "floors": 2,
+   "palette": "stone_blocks",
+   "seed": 3174,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "s",
+     "at": 4.0,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B18",
+   "type": "stone2",
+   "rect": [
+    3,
+    -17,
+    6,
+    -10
+   ],
+   "floors": 2,
+   "palette": "stone_warm",
+   "seed": 8404,
    "roof": {
     "type": "gable",
     "ridge": "z"
@@ -879,53 +938,48 @@
    "doors": [
     {
      "side": "e",
-     "at": 5.0,
-     "width": 1.1
-    },
-    {
-     "side": "w",
-     "at": 5.0,
+     "at": 3.5,
      "width": 1.1
     }
    ]
   },
   {
-   "id": "B14",
-   "type": "plaster3",
+   "id": "B19",
+   "type": "stone2",
    "rect": [
-    24,
-    -17,
-    34,
-    -9
+    -34,
+    -14,
+    -26,
+    -6
    ],
    "floors": 3,
-   "palette": "plaster_beige",
-   "seed": 513,
+   "palette": "stone_grey",
+   "seed": 1649,
    "roof": {
-    "type": "gable",
+    "type": "hip",
     "ridge": "x"
    },
-   "front": "w",
+   "front": "e",
    "doors": [
     {
-     "side": "w",
+     "side": "e",
      "at": 4.0,
      "width": 1.1
     }
    ]
   },
   {
-   "id": "B15",
+   "id": "B20",
    "type": "room",
    "rect": [
-    4,
+    -23,
     -16,
-    9,
+    -19,
     -8
    ],
    "floors": 2,
    "palette": "brick_old",
-   "seed": 8297,
+   "seed": 672,
    "roof": {
     "type": "gable",
     "ridge": "z"
@@ -941,10 +995,10 @@
    "rooms": [
     {
      "rect": [
-      4,
-      -15,
-      9,
-      -12
+      -23,
+      -14,
+      -19,
+      -11
      ],
      "clear": 3.0,
      "doorSides": [
@@ -955,67 +1009,17 @@
    ]
   },
   {
-   "id": "B16",
-   "type": "stone2",
-   "rect": [
-    -34,
-    -12,
-    -24,
-    -4
-   ],
-   "floors": 3,
-   "palette": "stone_grey",
-   "seed": 8478,
-   "roof": {
-    "type": "gable",
-    "ridge": "x"
-   },
-   "front": "e",
-   "doors": [
-    {
-     "side": "e",
-     "at": 2.5,
-     "width": 1.1
-    }
-   ]
-  },
-  {
-   "id": "B17",
-   "type": "stone2",
-   "rect": [
-    10,
-    -8,
-    14,
-    -4
-   ],
-   "floors": 2,
-   "palette": "stone_warm",
-   "seed": 8332,
-   "roof": {
-    "type": "hip",
-    "ridge": "x"
-   },
-   "front": "w",
-   "doors": [
-    {
-     "side": "n",
-     "at": 2.0,
-     "width": 1.1
-    }
-   ]
-  },
-  {
-   "id": "B18",
+   "id": "B21",
    "type": "stone2",
    "rect": [
     24,
-    -9,
+    -14,
     34,
-    -1
+    -7
    ],
    "floors": 3,
-   "palette": "stone_warm",
-   "seed": 2192,
+   "palette": "stone_grey",
+   "seed": 9349,
    "roof": {
     "type": "gable",
     "ridge": "x"
@@ -1024,23 +1028,163 @@
    "doors": [
     {
      "side": "w",
-     "at": 2.5,
+     "at": 3.5,
      "width": 1.1
     }
    ]
   },
   {
-   "id": "B19",
-   "type": "shop",
+   "id": "B22",
+   "type": "stone2",
    "rect": [
-    14,
+    -23,
     -8,
-    18,
-    1
+    -17,
+    -4
    ],
    "floors": 2,
+   "palette": "stone_warm",
+   "seed": 197,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "e",
+     "at": 2.0,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B23",
+   "type": "shop",
+   "rect": [
+    -13,
+    -8,
+    -7,
+    -5
+   ],
+   "floors": 2,
+   "palette": "stone_warm",
+   "seed": 929,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "n",
+   "doors": [
+    {
+     "side": "n",
+     "at": 3.0,
+     "width": 1.6
+    }
+   ],
+   "shopfront": {
+    "side": "n"
+   }
+  },
+  {
+   "id": "B24",
+   "type": "corner",
+   "rect": [
+    -7,
+    -8,
+    -1,
+    -5
+   ],
+   "floors": 3,
    "palette": "plaster_ochre",
-   "seed": 1678,
+   "seed": 3646,
+   "roof": {
+    "type": "hip",
+    "ridge": "x"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "n",
+     "at": 3.0,
+     "width": 1.1
+    }
+   ],
+   "chamfer": {
+    "corner": "se",
+    "size": 2.0
+   }
+  },
+  {
+   "id": "B25",
+   "type": "corner",
+   "rect": [
+    3,
+    -10,
+    7,
+    -5
+   ],
+   "floors": 3,
+   "palette": "plaster_beige",
+   "seed": 1133,
+   "roof": {
+    "type": "hip",
+    "ridge": "z"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "e",
+     "at": 2.5,
+     "width": 1.1
+    }
+   ],
+   "chamfer": {
+    "corner": "se",
+    "size": 2.0
+   }
+  },
+  {
+   "id": "B26",
+   "type": "corner",
+   "rect": [
+    11,
+    -10,
+    20,
+    -5
+   ],
+   "floors": 3,
+   "palette": "plaster_red",
+   "seed": 5907,
+   "roof": {
+    "type": "hip",
+    "ridge": "x"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "n",
+     "at": 6.5,
+     "width": 1.1
+    }
+   ],
+   "chamfer": {
+    "corner": "sw",
+    "size": 2.0
+   }
+  },
+  {
+   "id": "B27",
+   "type": "plaster3",
+   "rect": [
+    -34,
+    -6,
+    -26,
+    3
+   ],
+   "floors": 3,
+   "palette": "plaster_rose",
+   "seed": 7210,
    "roof": {
     "type": "gable",
     "ridge": "z"
@@ -1050,46 +1194,24 @@
     {
      "side": "e",
      "at": 4.5,
-     "width": 1.6
+     "width": 1.1
     }
-   ],
-   "shopfront": {
-    "side": "e"
-   }
+   ]
   },
   {
-   "id": "B20",
-   "type": "backdrop",
+   "id": "B28",
+   "type": "plaster3",
    "rect": [
-    -34,
+    -23,
     -4,
-    -24,
-    4
+    -20,
+    0
    ],
    "floors": 3,
-   "palette": "plaster_red",
-   "seed": 8523,
+   "palette": "plaster_white",
+   "seed": 267,
    "roof": {
-    "type": "gable",
-    "ridge": "x"
-   },
-   "front": "w",
-   "doors": []
-  },
-  {
-   "id": "B21",
-   "type": "narrow_passage",
-   "rect": [
-    -11,
-    -2,
-    -8,
-    6
-   ],
-   "floors": 4,
-   "palette": "stone_grey",
-   "seed": 3110,
-   "roof": {
-    "type": "gable",
+    "type": "hip",
     "ridge": "z"
    },
    "front": "w",
@@ -1099,13 +1221,38 @@
      "at": 2.5,
      "width": 1.1
     }
+   ]
+  },
+  {
+   "id": "B29",
+   "type": "narrow_passage",
+   "rect": [
+    -13,
+    -5,
+    -10,
+    4
+   ],
+   "floors": 4,
+   "palette": "stone_grey",
+   "seed": 4517,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "w",
+     "at": 4.5,
+     "width": 1.1
+    }
    ],
    "passages": [
     {
      "rect": [
-      -11,
-      -2,
-      -8,
+      -13,
+      0,
+      -10,
       3
      ],
      "style": "lintel",
@@ -1114,36 +1261,95 @@
    ]
   },
   {
-   "id": "B22",
-   "type": "archway",
+   "id": "B30",
+   "type": "corner",
    "rect": [
-    10,
-    -4,
-    14,
-    6
+    -10,
+    -5,
+    -7,
+    -2
    ],
    "floors": 3,
-   "palette": "stone_warm",
-   "seed": 9580,
+   "palette": "plaster_beige",
+   "seed": 2672,
+   "roof": {
+    "type": "hip",
+    "ridge": "x"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "e",
+     "at": 1.5,
+     "width": 1.1
+    }
+   ],
+   "chamfer": {
+    "corner": "se",
+    "size": 2.0
+   }
+  },
+  {
+   "id": "B31",
+   "type": "stone2",
+   "rect": [
+    24,
+    -7,
+    34,
+    0
+   ],
+   "floors": 3,
+   "palette": "stone_grey",
+   "seed": 8847,
    "roof": {
     "type": "gable",
-    "ridge": "z"
+    "ridge": "x"
    },
    "front": "w",
    "doors": [
     {
      "side": "w",
-     "at": 5.0,
+     "at": 3.5,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B32",
+   "type": "archway",
+   "rect": [
+    11,
+    -1,
+    20,
+    8
+   ],
+   "floors": 3,
+   "palette": "stone_grey",
+   "seed": 7428,
+   "roof": {
+    "type": "hip",
+    "ridge": "x"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "n",
+     "at": 4.5,
+     "width": 1.1
+    },
+    {
+     "side": "e",
+     "at": 4.5,
      "width": 1.1
     }
    ],
    "passages": [
     {
      "rect": [
-      10,
-      1,
-      14,
-      6
+      12,
+      -1,
+      15,
+      8
      ],
      "style": "arch",
      "clear": 3.2
@@ -1151,36 +1357,17 @@
    ]
   },
   {
-   "id": "B23",
-   "type": "backdrop",
-   "rect": [
-    24,
-    -1,
-    34,
-    8
-   ],
-   "floors": 3,
-   "palette": "plaster_red",
-   "seed": 467,
-   "roof": {
-    "type": "gable",
-    "ridge": "x"
-   },
-   "front": "w",
-   "doors": []
-  },
-  {
-   "id": "B24",
+   "id": "B33",
    "type": "plaster3",
    "rect": [
     -34,
-    4,
-    -24,
-    11
+    3,
+    -20,
+    10
    ],
    "floors": 3,
-   "palette": "plaster_ochre",
-   "seed": 2937,
+   "palette": "plaster_beige",
+   "seed": 7716,
    "roof": {
     "type": "gable",
     "ridge": "x"
@@ -1189,23 +1376,111 @@
    "doors": [
     {
      "side": "e",
-     "at": 5.0,
+     "at": 3.5,
+     "width": 1.1
+    },
+    {
+     "side": "n",
+     "at": 11.0,
      "width": 1.1
     }
    ]
   },
   {
-   "id": "B25",
+   "id": "B34",
+   "type": "corner",
+   "rect": [
+    -17,
+    4,
+    -12,
+    9
+   ],
+   "floors": 3,
+   "palette": "plaster_red",
+   "seed": 5789,
+   "roof": {
+    "type": "hip",
+    "ridge": "x"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "s",
+     "at": 2.5,
+     "width": 1.1
+    }
+   ],
+   "chamfer": {
+    "corner": "nw",
+    "size": 2.0
+   }
+  },
+  {
+   "id": "B35",
+   "type": "corner",
+   "rect": [
+    7,
+    1,
+    11,
+    8
+   ],
+   "floors": 3,
+   "palette": "plaster_worn",
+   "seed": 5120,
+   "roof": {
+    "type": "hip",
+    "ridge": "z"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "w",
+     "at": 5.0,
+     "width": 1.6
+    }
+   ],
+   "chamfer": {
+    "corner": "nw",
+    "size": 2.0
+   }
+  },
+  {
+   "id": "B36",
+   "type": "stone2",
+   "rect": [
+    24,
+    0,
+    34,
+    8
+   ],
+   "floors": 3,
+   "palette": "stone_grey",
+   "seed": 3991,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "w",
+     "at": 4.0,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B37",
    "type": "room",
    "rect": [
-    -11,
-    6,
-    -4,
-    14
+    -12,
+    4,
+    -5,
+    13
    ],
    "floors": 2,
    "palette": "brick_old",
-   "seed": 3886,
+   "seed": 8908,
    "roof": {
     "type": "gable",
     "ridge": "z"
@@ -1214,22 +1489,22 @@
    "doors": [
     {
      "side": "e",
-     "at": 4.0,
+     "at": 4.5,
      "width": 1.1
     },
     {
-     "side": "w",
-     "at": 6.0,
+     "side": "n",
+     "at": 4.0,
      "width": 1.1
     }
    ],
    "rooms": [
     {
      "rect": [
-      -11,
-      11,
-      -4,
-      14
+      -12,
+      9,
+      -5,
+      12
      ],
      "clear": 3.0,
      "doorSides": [
@@ -1242,78 +1517,24 @@
     "style": "town",
     "flipZ": false,
     "exit": "w",
-    "doorV": 6.5,
+    "doorV": 6.8,
     "stairWidth": 7,
     "extraDoors": []
    },
    "purpose": "Garden provisions shop and apartment"
   },
   {
-   "id": "B26",
-   "type": "corner",
+   "id": "B38",
+   "type": "balcony",
    "rect": [
-    0,
-    6,
-    8,
-    12
+    -34,
+    10,
+    -20,
+    16
    ],
    "floors": 3,
    "palette": "plaster_beige",
-   "seed": 4559,
-   "roof": {
-    "type": "hip",
-    "ridge": "x"
-   },
-   "front": "s",
-   "doors": [
-    {
-     "side": "n",
-     "at": 4.0,
-     "width": 1.1
-    }
-   ],
-   "chamfer": {
-    "corner": "nw",
-    "size": 2.0
-   }
-  },
-  {
-   "id": "B27",
-   "type": "plaster3",
-   "rect": [
-    14,
-    6,
-    18,
-    10
-   ],
-   "floors": 3,
-   "palette": "plaster_rose",
-   "seed": 6109,
-   "roof": {
-    "type": "gable",
-    "ridge": "x"
-   },
-   "front": "w",
-   "doors": [
-    {
-     "side": "n",
-     "at": 2.0,
-     "width": 1.1
-    }
-   ]
-  },
-  {
-   "id": "B28",
-   "type": "plaster3",
-   "rect": [
-    -34,
-    11,
-    -24,
-    20
-   ],
-   "floors": 3,
-   "palette": "plaster_white",
-   "seed": 1768,
+   "seed": 6892,
    "roof": {
     "type": "gable",
     "ridge": "x"
@@ -1322,23 +1543,27 @@
    "doors": [
     {
      "side": "e",
-     "at": 4.5,
+     "at": 2.5,
      "width": 1.1
     }
-   ]
+   ],
+   "balcony": {
+    "side": "e",
+    "floor": 1
+   }
   },
   {
-   "id": "B29",
-   "type": "balcony",
+   "id": "B39",
+   "type": "plaster3",
    "rect": [
-    24,
-    8,
-    34,
-    17
+    -12,
+    13,
+    -5,
+    16
    ],
    "floors": 3,
-   "palette": "plaster_worn",
-   "seed": 8180,
+   "palette": "plaster_beige",
+   "seed": 1689,
    "roof": {
     "type": "gable",
     "ridge": "x"
@@ -1346,58 +1571,54 @@
    "front": "w",
    "doors": [
     {
-     "side": "w",
-     "at": 4.5,
+     "side": "e",
+     "at": 1.5,
      "width": 1.1
     }
-   ],
-   "balcony": {
-    "side": "w",
-    "floor": 1
-   }
+   ]
   },
   {
-   "id": "B30",
+   "id": "B40",
    "type": "shop",
    "rect": [
-    -11,
-    14,
-    -4,
-    18
+    2,
+    10,
+    6,
+    16
    ],
-   "floors": 2,
-   "palette": "plaster_beige",
-   "seed": 730,
+   "floors": 3,
+   "palette": "plaster_white",
+   "seed": 245,
    "roof": {
     "type": "gable",
-    "ridge": "x"
+    "ridge": "z"
    },
-   "front": "s",
+   "front": "e",
    "doors": [
     {
-     "side": "s",
-     "at": 3.5,
+     "side": "e",
+     "at": 3.0,
      "width": 1.6
     }
    ],
    "shopfront": {
-    "side": "s"
+    "side": "e"
    }
   },
   {
-   "id": "B31",
-   "type": "corner",
+   "id": "B41",
+   "type": "plaster3",
    "rect": [
+    9,
     13,
-    17,
-    16,
-    20
+    12,
+    16
    ],
    "floors": 3,
-   "palette": "plaster_beige",
-   "seed": 1352,
+   "palette": "plaster_worn",
+   "seed": 2490,
    "roof": {
-    "type": "hip",
+    "type": "gable",
     "ridge": "x"
    },
    "front": "w",
@@ -1407,24 +1628,20 @@
      "at": 1.5,
      "width": 1.1
     }
-   ],
-   "chamfer": {
-    "corner": "nw",
-    "size": 2.0
-   }
+   ]
   },
   {
-   "id": "B32",
-   "type": "stone2",
+   "id": "B42",
+   "type": "corner",
    "rect": [
-    16,
-    16,
-    20,
-    20
+    15,
+    13,
+    22,
+    16
    ],
-   "floors": 2,
-   "palette": "stone_grey",
-   "seed": 2892,
+   "floors": 3,
+   "palette": "plaster_rose",
+   "seed": 6115,
    "roof": {
     "type": "hip",
     "ridge": "x"
@@ -1433,70 +1650,27 @@
    "doors": [
     {
      "side": "n",
-     "at": 2.0,
+     "at": 3.5,
      "width": 1.1
     }
-   ]
-  },
-  {
-   "id": "B33",
-   "type": "stone2",
-   "rect": [
-    -34,
-    20,
-    -24,
-    27
    ],
-   "floors": 3,
-   "palette": "stone_warm",
-   "seed": 9117,
-   "roof": {
-    "type": "gable",
-    "ridge": "x"
-   },
-   "front": "e",
-   "doors": []
-  },
-  {
-   "id": "B34",
-   "type": "shop",
-   "rect": [
-    24,
-    17,
-    34,
-    25
-   ],
-   "floors": 3,
-   "palette": "plaster_beige",
-   "seed": 2812,
-   "roof": {
-    "type": "gable",
-    "ridge": "x"
-   },
-   "front": "w",
-   "doors": [
-    {
-     "side": "w",
-     "at": 3.5,
-     "width": 1.6
-    }
-   ],
-   "shopfront": {
-    "side": "w"
+   "chamfer": {
+    "corner": "nw",
+    "size": 2.0
    }
   },
   {
-   "id": "B35",
-   "type": "narrow_passage",
+   "id": "B43",
+   "type": "balcony",
    "rect": [
-    6,
-    20,
-    10,
-    34
+    25,
+    8,
+    34,
+    18
    ],
-   "floors": 4,
-   "palette": "stone_grey",
-   "seed": 5996,
+   "floors": 3,
+   "palette": "plaster_beige",
+   "seed": 1788,
    "roof": {
     "type": "gable",
     "ridge": "z"
@@ -1504,41 +1678,223 @@
    "front": "w",
    "doors": [
     {
-     "side": "e",
-     "at": 2.0,
-     "width": 1.1
-    },
-    {
      "side": "w",
-     "at": 2.0,
+     "at": 5.0,
+     "width": 1.1
+    }
+   ],
+   "balcony": {
+    "side": "w",
+    "floor": 1
+   }
+  },
+  {
+   "id": "B44",
+   "type": "plaster3",
+   "rect": [
+    -34,
+    16,
+    -21,
+    20
+   ],
+   "floors": 3,
+   "palette": "plaster_white",
+   "seed": 2791,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "s",
+     "at": 11.5,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B45",
+   "type": "balcony",
+   "rect": [
+    -21,
+    16,
+    -16,
+    20
+   ],
+   "floors": 3,
+   "palette": "stone_warm",
+   "seed": 327,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "s",
+     "at": 2.5,
+     "width": 1.1
+    }
+   ],
+   "balcony": {
+    "side": "s",
+    "floor": 1
+   }
+  },
+  {
+   "id": "B46",
+   "type": "archway",
+   "rect": [
+    -16,
+    16,
+    -8,
+    20
+   ],
+   "floors": 3,
+   "palette": "plaster_worn",
+   "seed": 5138,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "s",
+   "doors": [
+    {
+     "side": "s",
+     "at": 4.0,
      "width": 1.1
     }
    ],
    "passages": [
     {
      "rect": [
-      6,
-      20,
-      10,
-      24
+      -16,
+      16,
+      -13,
+      20
      ],
-     "style": "lintel",
+     "style": "arch",
      "clear": 3.2
     }
    ]
   },
   {
-   "id": "B36",
-   "type": "backdrop",
+   "id": "B47",
+   "type": "corner",
+   "rect": [
+    -8,
+    16,
+    -5,
+    20
+   ],
+   "floors": 3,
+   "palette": "plaster_white",
+   "seed": 875,
+   "roof": {
+    "type": "hip",
+    "ridge": "z"
+   },
+   "front": "e",
+   "doors": [
+    {
+     "side": "e",
+     "at": 2.0,
+     "width": 1.6
+    }
+   ],
+   "chamfer": {
+    "corner": "se",
+    "size": 2.0
+   }
+  },
+  {
+   "id": "B48",
+   "type": "plaster3",
+   "rect": [
+    -2,
+    14,
+    2,
+    22
+   ],
+   "floors": 3,
+   "palette": "plaster_beige",
+   "seed": 2291,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "w",
+     "at": 4.0,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B49",
+   "type": "stone2",
    "rect": [
     -34,
-    27,
+    20,
     -24,
-    34
+    24
+   ],
+   "floors": 3,
+   "palette": "stone_warm",
+   "seed": 18,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "e",
+   "doors": [
+    {
+     "side": "e",
+     "at": 2.0,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B50",
+   "type": "plaster3",
+   "rect": [
+    24,
+    18,
+    34,
+    22
+   ],
+   "floors": 3,
+   "palette": "plaster_beige",
+   "seed": 190,
+   "roof": {
+    "type": "gable",
+    "ridge": "x"
+   },
+   "front": "w",
+   "doors": [
+    {
+     "side": "w",
+     "at": 2.0,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B51",
+   "type": "backdrop",
+   "rect": [
+    25,
+    22,
+    34,
+    28
    ],
    "floors": 4,
-   "palette": "plaster_ochre",
-   "seed": 8011,
+   "palette": "plaster_rose",
+   "seed": 9671,
    "roof": {
     "type": "gable",
     "ridge": "x"
@@ -1547,46 +1903,36 @@
    "doors": []
   },
   {
-   "id": "B37",
-   "type": "balcony",
+   "id": "B52",
+   "type": "backdrop",
    "rect": [
-    -24,
-    22,
-    -17,
+    -34,
+    24,
+    -26,
     34
    ],
    "floors": 3,
-   "palette": "plaster_rose",
-   "seed": 6438,
+   "palette": "plaster_red",
+   "seed": 8292,
    "roof": {
     "type": "gable",
     "ridge": "z"
    },
-   "front": "n",
-   "doors": [
-    {
-     "side": "n",
-     "at": 3.5,
-     "width": 1.1
-    }
-   ],
-   "balcony": {
-    "side": "n",
-    "floor": 1
-   }
+   "front": "w",
+   "doors": []
   },
   {
-   "id": "B38",
-   "type": "plaster3",
+   "id": "B53",
+   "type": "stone2",
    "rect": [
-    -17,
-    22,
-    -9,
+    -26,
+    24,
+    -19,
     34
    ],
    "floors": 3,
-   "palette": "plaster_beige",
-   "seed": 9493,
+   "palette": "stone_warm",
+   "seed": 5893,
    "roof": {
     "type": "gable",
     "ridge": "z"
@@ -1595,23 +1941,23 @@
    "doors": [
     {
      "side": "n",
-     "at": 4.0,
+     "at": 4.5,
      "width": 1.1
     }
    ]
   },
   {
-   "id": "B39",
+   "id": "B54",
    "type": "shop",
    "rect": [
-    -9,
-    22,
-    -2,
+    -19,
+    24,
+    -12,
     34
    ],
    "floors": 3,
-   "palette": "plaster_red",
-   "seed": 5481,
+   "palette": "plaster_white",
+   "seed": 1065,
    "roof": {
     "type": "gable",
     "ridge": "z"
@@ -1629,17 +1975,70 @@
    }
   },
   {
-   "id": "B40",
-   "type": "plaster3",
+   "id": "B55",
+   "type": "shop",
+   "rect": [
+    -12,
+    24,
+    -2,
+    34
+   ],
+   "floors": 3,
+   "palette": "stone_warm",
+   "seed": 6904,
+   "roof": {
+    "type": "hip",
+    "ridge": "x"
+   },
+   "front": "n",
+   "doors": [
+    {
+     "side": "n",
+     "at": 3.0,
+     "width": 1.6
+    }
+   ],
+   "shopfront": {
+    "side": "n"
+   }
+  },
+  {
+   "id": "B56",
+   "type": "stone2",
    "rect": [
     -2,
-    24,
+    22,
     6,
     34
    ],
    "floors": 3,
-   "palette": "plaster_ochre",
-   "seed": 4156,
+   "palette": "stone_blocks",
+   "seed": 6367,
+   "roof": {
+    "type": "gable",
+    "ridge": "z"
+   },
+   "front": "n",
+   "doors": [
+    {
+     "side": "n",
+     "at": 6.0,
+     "width": 1.1
+    }
+   ]
+  },
+  {
+   "id": "B57",
+   "type": "stone2",
+   "rect": [
+    6,
+    22,
+    14,
+    34
+   ],
+   "floors": 3,
+   "palette": "stone_warm",
+   "seed": 2509,
    "roof": {
     "type": "gable",
     "ridge": "z"
@@ -1654,17 +2053,17 @@
    ]
   },
   {
-   "id": "B41",
+   "id": "B58",
    "type": "stone2",
    "rect": [
-    10,
-    24,
-    17,
+    14,
+    22,
+    25,
     34
    ],
    "floors": 3,
    "palette": "stone_warm",
-   "seed": 2019,
+   "seed": 2309,
    "roof": {
     "type": "gable",
     "ridge": "z"
@@ -1673,48 +2072,23 @@
    "doors": [
     {
      "side": "n",
-     "at": 3.5,
+     "at": 5.0,
      "width": 1.1
     }
    ]
   },
   {
-   "id": "B42",
-   "type": "plaster3",
-   "rect": [
-    17,
-    24,
-    24,
-    34
-   ],
-   "floors": 3,
-   "palette": "plaster_beige",
-   "seed": 7025,
-   "roof": {
-    "type": "gable",
-    "ridge": "z"
-   },
-   "front": "n",
-   "doors": [
-    {
-     "side": "n",
-     "at": 3.5,
-     "width": 1.1
-    }
-   ]
-  },
-  {
-   "id": "B43",
+   "id": "B59",
    "type": "backdrop",
    "rect": [
-    24,
     25,
+    28,
     34,
     34
    ],
    "floors": 4,
-   "palette": "stone_warm",
-   "seed": 1176,
+   "palette": "plaster_beige",
+   "seed": 8883,
    "roof": {
     "type": "gable",
     "ridge": "x"
@@ -1723,355 +2097,26 @@
    "doors": []
   }
  ],
- "walls": [
-  {
-   "id": "W01",
-   "rect": [
-    -4,
-    -24,
-    4,
-    -22
-   ],
-   "height": 3.6,
-   "style": "stone",
-   "gates": []
-  },
-  {
-   "id": "W02",
-   "rect": [
-    -20,
-    -20,
-    -18,
-    -17
-   ],
-   "height": 3.6,
-   "style": "stone",
-   "gates": []
-  },
-  {
-   "id": "W03",
-   "rect": [
-    -8,
-    -20,
-    -7,
-    -18
-   ],
-   "height": 4.4,
-   "style": "pillar",
-   "gates": []
-  },
-  {
-   "id": "W04",
-   "rect": [
-    4,
-    -18,
-    5,
-    -16
-   ],
-   "height": 4.4,
-   "style": "pillar",
-   "gates": []
-  },
-  {
-   "id": "W05",
-   "rect": [
-    5,
-    -18,
-    19,
-    -16
-   ],
-   "height": 3.6,
-   "style": "stone",
-   "gates": [
-    {
-     "rect": [
-      10,
-      -18,
-      14,
-      -16
-     ]
-    }
-   ]
-  },
-  {
-   "id": "W06",
-   "rect": [
-    19,
-    -18,
-    20,
-    -16
-   ],
-   "height": 4.4,
-   "style": "pillar",
-   "gates": []
-  },
-  {
-   "id": "W07",
-   "rect": [
-    -20,
-    -17,
-    -18,
-    -9
-   ],
-   "height": 3.6,
-   "style": "stone",
-   "gates": [
-    {
-     "rect": [
-      -20,
-      -12,
-      -18,
-      -9
-     ]
-    }
-   ]
-  },
-  {
-   "id": "W08",
-   "rect": [
-    18,
-    -16,
-    20,
-    -12
-   ],
-   "height": 3.6,
-   "style": "stone",
-   "gates": []
-  },
-  {
-   "id": "W09",
-   "rect": [
-    -12,
-    -8,
-    -10,
-    -2
-   ],
-   "height": 3.6,
-   "style": "stone",
-   "gates": []
-  },
-  {
-   "id": "W10",
-   "rect": [
-    -6,
-    -8,
-    0,
-    -6
-   ],
-   "height": 3.6,
-   "style": "stone",
-   "gates": []
-  },
-  {
-   "id": "W11",
-   "rect": [
-    4,
-    -8,
-    6,
-    -6
-   ],
-   "height": 4.4,
-   "style": "pillar",
-   "gates": []
-  },
-  {
-   "id": "W12",
-   "rect": [
-    -24,
-    -7,
-    -22,
-    7
-   ],
-   "height": 3.6,
-   "style": "stone",
-   "gates": []
-  },
-  {
-   "id": "W13",
-   "rect": [
-    22,
-    -4,
-    24,
-    8
-   ],
-   "height": 3.6,
-   "style": "stone",
-   "gates": []
-  },
-  {
-   "id": "W14",
-   "rect": [
-    -18,
-    3,
-    -16,
-    10
-   ],
-   "height": 3.6,
-   "style": "stone",
-   "gates": []
-  },
-  {
-   "id": "W15",
-   "rect": [
-    -12,
-    3,
-    -11,
-    10
-   ],
-   "height": 3.6,
-   "style": "stone",
-   "gates": []
-  },
-  {
-   "id": "W16",
-   "rect": [
-    -8,
-    3,
-    -6,
-    6
-   ],
-   "height": 3.6,
-   "style": "stone",
-   "gates": []
-  },
-  {
-   "id": "W17",
-   "rect": [
-    -20,
-    11,
-    -17.5,
-    12
-   ],
-   "height": 3.6,
-   "style": "stone",
-   "gates": []
-  },
-  {
-   "id": "W18",
-   "rect": [
-    -18,
-    10,
-    -17,
-    11
-   ],
-   "height": 4.4,
-   "style": "pillar",
-   "gates": []
-  },
-  {
-   "id": "W19",
-   "rect": [
-    8,
-    6,
-    10,
-    10
-   ],
-   "height": 3.6,
-   "style": "stone",
-   "gates": []
-  },
-  {
-   "id": "W20",
-   "rect": [
-    16,
-    10,
-    18,
-    12
-   ],
-   "height": 4.4,
-   "style": "pillar",
-   "gates": []
-  },
-  {
-   "id": "W21",
-   "rect": [
-    -20,
-    16,
-    -15,
-    18
-   ],
-   "height": 3.6,
-   "style": "stone",
-   "gates": []
-  },
-  {
-   "id": "W22",
-   "rect": [
-    0,
-    16,
-    8,
-    18
-   ],
-   "height": 3.6,
-   "style": "stone",
-   "gates": []
-  },
-  {
-   "id": "W23",
-   "rect": [
-    4,
-    18,
-    8,
-    20
-   ],
-   "height": 3.6,
-   "style": "stone",
-   "gates": []
-  },
-  {
-   "id": "W24",
-   "rect": [
-    8,
-    17,
-    9,
-    20
-   ],
-   "height": 3.6,
-   "style": "stone",
-   "gates": []
-  }
- ],
+ "walls": [],
  "arches": [
   {
-   "id": "plaza_arch",
+   "id": "via_alta_arch",
    "rect": [
-    0,
-    -15.4,
-    4,
-    -14.6
+    -2,
+    -13.4,
+    2,
+    -12.6
    ],
    "spring": 3.4,
    "axis": "x"
   },
   {
-   "id": "plaza_archr",
+   "id": "east_lane_arch",
    "rect": [
-    -4,
-    14.6,
-    0,
-    15.4
-   ],
-   "spring": 3.4,
-   "axis": "x"
-  },
-  {
-   "id": "east_arch",
-   "rect": [
-    18,
-    7,
-    22,
-    7.8
-   ],
-   "spring": 3.4,
-   "axis": "x"
-  },
-  {
-   "id": "east_archr",
-   "rect": [
-    -22,
-    -7.8,
-    -18,
-    -7
+    20,
+    -6.4,
+    24,
+    -5.6
    ],
    "spring": 3.4,
    "axis": "x"
@@ -2081,108 +2126,360 @@
   {
    "type": "market_stall",
    "pos": [
-    -3.8,
+    -3.5,
     0.0,
-    -4.6
+    -3.4
    ],
    "heading": 180
   },
   {
-   "type": "cart",
+   "type": "bench",
    "pos": [
-    15.5,
+    5.6,
     0.0,
-    -10.5
+    3.9
+   ],
+   "heading": 270
+  },
+  {
+   "type": "bench",
+   "pos": [
+    -5.6,
+    0.0,
+    1.8
    ],
    "heading": 90
   },
   {
-   "type": "flower_box",
+   "type": "stone_bollard",
    "pos": [
-    -16,
+    6.5,
     0.0,
-    14.8
-   ],
-   "heading": 0
-  },
-  {
-   "type": "market_crate",
-   "pos": [
-    14,
-    0.0,
-    -14.5
-   ],
-   "heading": 0
-  },
-  {
-   "type": "market_table",
-   "pos": [
-    16.5,
-    0.0,
-    -15
+    -4.5
    ],
    "heading": 0
   },
   {
    "type": "stone_bollard",
    "pos": [
-    4.9,
+    10.5,
     0.0,
-    -4.8
+    -4.5
+   ],
+   "heading": 0
+  },
+  {
+   "type": "cart",
+   "pos": [
+    9.2,
+    0.0,
+    -1.0
+   ],
+   "heading": 90
+  },
+  {
+   "type": "flower_box",
+   "pos": [
+    -9.2,
+    0.0,
+    -1.6
+   ],
+   "heading": 0
+  },
+  {
+   "type": "bench",
+   "pos": [
+    12.5,
+    1.26,
+    -20.3
+   ],
+   "heading": 180
+  },
+  {
+   "type": "bench",
+   "pos": [
+    16.3,
+    1.26,
+    -19.4
+   ],
+   "heading": 180
+  },
+  {
+   "type": "flower_pot_large",
+   "pos": [
+    10.9,
+    1.26,
+    -20.4
    ],
    "heading": 0
   },
   {
    "type": "flower_pot_large",
    "pos": [
-    -12,
-    0,
-    15.2
+    19.5,
+    1.26,
+    -20.4
+   ],
+   "heading": 0
+  },
+  {
+   "type": "market_table",
+   "pos": [
+    15.2,
+    1.26,
+    -11.4
+   ],
+   "heading": 0
+  },
+  {
+   "type": "cart",
+   "pos": [
+    8.6,
+    1.26,
+    -15.2
+   ],
+   "heading": 0
+  },
+  {
+   "type": "market_stall",
+   "pos": [
+    -15.6,
+    0.0,
+    -12.4
+   ],
+   "heading": 90
+  },
+  {
+   "type": "market_crate",
+   "pos": [
+    -18.4,
+    0.0,
+    -15.2
+   ],
+   "heading": 0
+  },
+  {
+   "type": "barrel_group",
+   "pos": [
+    -17.9,
+    0.0,
+    -8.7
+   ],
+   "heading": 0
+  },
+  {
+   "type": "flower_pot_large",
+   "pos": [
+    -19.4,
+    0.0,
+    -3.4
+   ],
+   "heading": 0
+  },
+  {
+   "type": "bench",
+   "pos": [
+    -19.2,
+    0.0,
+    14.6
+   ],
+   "heading": 90
+  },
+  {
+   "type": "flower_pot_large",
+   "pos": [
+    -12.8,
+    0.0,
+    15.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "flower_pot_large",
+   "pos": [
+    -0.6,
+    0.0,
+    13.3
+   ],
+   "heading": 0
+  },
+  {
+   "type": "barrel",
+   "pos": [
+    1.4,
+    0.0,
+    13.4
+   ],
+   "heading": 0
+  },
+  {
+   "type": "bench",
+   "pos": [
+    16.5,
+    0.0,
+    12.4
+   ],
+   "heading": 180
+  },
+  {
+   "type": "market_table",
+   "pos": [
+    10.5,
+    0.0,
+    8.7
+   ],
+   "heading": 0
+  },
+  {
+   "type": "barrel_group",
+   "pos": [
+    17.2,
+    0.0,
+    8.8
+   ],
+   "heading": 0
+  },
+  {
+   "type": "crate_stack",
+   "pos": [
+    16.5,
+    0.0,
+    -4.4
+   ],
+   "heading": 0
+  },
+  {
+   "type": "bench",
+   "pos": [
+    -6.5,
+    0.0,
+    23.4
+   ],
+   "heading": 180
+  },
+  {
+   "type": "street_lantern",
+   "pos": [
+    -6.3,
+    0.0,
+    3.5
    ],
    "heading": 0
   },
   {
    "type": "street_lantern",
    "pos": [
-    -4.8,
+    6.7,
     0.0,
-    4.8
+    4.4
    ],
    "heading": 0
   },
   {
-   "type": "wall_lantern",
+   "type": "street_lantern",
    "pos": [
-    0.02,
-    3.0,
-    -17.2
+    -6.4,
+    0.0,
+    -4.7
    ],
-   "heading": 90
+   "heading": 0
   },
   {
-   "type": "wall_lantern",
+   "type": "street_lantern",
    "pos": [
-    -4.8,
-    3.0,
-    18.02
+    6.7,
+    1.26,
+    -11.2
    ],
-   "heading": 180
+   "heading": 0
+  },
+  {
+   "type": "street_lantern",
+   "pos": [
+    17.4,
+    1.26,
+    -15.6
+   ],
+   "heading": 0
+  },
+  {
+   "type": "street_lantern",
+   "pos": [
+    -18.7,
+    0.0,
+    -9.8
+   ],
+   "heading": 0
+  },
+  {
+   "type": "street_lantern",
+   "pos": [
+    16.0,
+    0.0,
+    9.3
+   ],
+   "heading": 0
   },
   {
    "type": "wall_lantern",
    "pos": [
     -10.2,
     3.0,
-    18.02
+    -23.98
    ],
    "heading": 180
   },
   {
    "type": "wall_lantern",
    "pos": [
-    16.8,
+    -1.8,
     3.0,
-    15.98
+    -10.98
+   ],
+   "heading": 180
+  },
+  {
+   "type": "wall_lantern",
+   "pos": [
+    -8.2,
+    3.0,
+    -10.98
+   ],
+   "heading": 180
+  },
+  {
+   "type": "wall_lantern",
+   "pos": [
+    6.02,
+    4.26,
+    -16.2
+   ],
+   "heading": 90
+  },
+  {
+   "type": "wall_lantern",
+   "pos": [
+    -17.8,
+    3.0,
+    -3.98
+   ],
+   "heading": 180
+  },
+  {
+   "type": "wall_lantern",
+   "pos": [
+    2.98,
+    3.0,
+    -5.8
+   ],
+   "heading": 270
+  },
+  {
+   "type": "wall_lantern",
+   "pos": [
+    11.8,
+    3.0,
+    -1.02
    ],
    "heading": 0
   },
@@ -2191,7 +2488,7 @@
    "pos": [
     19.2,
     3.0,
-    15.98
+    -1.02
    ],
    "heading": 0
   },
@@ -2200,113 +2497,113 @@
    "pos": [
     19.2,
     3.0,
-    20.02
+    8.02
    ],
    "heading": 180
   },
   {
    "type": "wall_lantern",
    "pos": [
-    10.02,
+    -20.8,
     3.0,
-    20.8
+    2.98
+   ],
+   "heading": 0
+  },
+  {
+   "type": "wall_lantern",
+   "pos": [
+    6.98,
+    3.0,
+    7.2
+   ],
+   "heading": 270
+  },
+  {
+   "type": "wall_lantern",
+   "pos": [
+    6.02,
+    3.0,
+    15.2
    ],
    "heading": 90
   },
   {
    "type": "wall_lantern",
    "pos": [
-    -1.98,
+    9.8,
     3.0,
-    22.8
+    12.98
+   ],
+   "heading": 0
+  },
+  {
+   "type": "wall_lantern",
+   "pos": [
+    11.2,
+    3.0,
+    12.98
+   ],
+   "heading": 0
+  },
+  {
+   "type": "wall_lantern",
+   "pos": [
+    15.8,
+    3.0,
+    16.02
+   ],
+   "heading": 180
+  },
+  {
+   "type": "wall_lantern",
+   "pos": [
+    24.8,
+    3.0,
+    17.98
+   ],
+   "heading": 0
+  },
+  {
+   "type": "drain_grate",
+   "pos": [
+    0.5,
+    0.004,
+    -19.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "drain_grate",
+   "pos": [
+    1.0,
+    0.004,
+    -13.0
    ],
    "heading": 90
   },
   {
    "type": "drain_grate",
    "pos": [
-    -19.0,
+    22.0,
     0.004,
-    -22.0
+    -8.5
    ],
-   "heading": 0
+   "heading": 90
   },
   {
    "type": "drain_grate",
    "pos": [
-    -9.0,
+    22.0,
     0.004,
-    -22.0
+    3.0
    ],
-   "heading": 0
+   "heading": 90
   },
   {
    "type": "drain_grate",
    "pos": [
-    -0.5,
-    0.004,
-    -20.0
-   ],
-   "heading": 0
-  },
-  {
-   "type": "drain_grate",
-   "pos": [
-    13.5,
-    0.004,
-    -20.0
-   ],
-   "heading": 0
-  },
-  {
-   "type": "drain_grate",
-   "pos": [
-    20.5,
-    0.004,
-    -20.0
-   ],
-   "heading": 0
-  },
-  {
-   "type": "drain_grate",
-   "pos": [
-    -3.5,
-    0.004,
-    -20.0
-   ],
-   "heading": 0
-  },
-  {
-   "type": "drain_grate",
-   "pos": [
-    -19.83,
-    0.004,
-    20.0
-   ],
-   "heading": 0
-  },
-  {
-   "type": "drain_grate",
-   "pos": [
-    -11.5,
-    0.004,
-    20.0
-   ],
-   "heading": 0
-  },
-  {
-   "type": "drain_grate",
-   "pos": [
-    -3.17,
-    0.004,
-    20.0
-   ],
-   "heading": 0
-  },
-  {
-   "type": "drain_grate",
-   "pos": [
-    12.5,
+    -20.33,
     0.004,
     22.0
    ],
@@ -2315,180 +2612,27 @@
   {
    "type": "drain_grate",
    "pos": [
-    -22.0,
+    -13.0,
     0.004,
-    -20.0
-   ],
-   "heading": 90
-  },
-  {
-   "type": "drain_grate",
-   "pos": [
-    -22.0,
-    0.004,
-    -12.0
-   ],
-   "heading": 90
-  },
-  {
-   "type": "drain_grate",
-   "pos": [
-    -20.0,
-    0.004,
-    -4.0
-   ],
-   "heading": 90
-  },
-  {
-   "type": "drain_grate",
-   "pos": [
-    -20.0,
-    0.004,
-    4.0
-   ],
-   "heading": 90
-  },
-  {
-   "type": "drain_grate",
-   "pos": [
-    -22.0,
-    0.004,
-    11.5
-   ],
-   "heading": 90
-  },
-  {
-   "type": "drain_grate",
-   "pos": [
-    -22.0,
-    0.004,
-    18.5
-   ],
-   "heading": 90
-  },
-  {
-   "type": "drain_grate",
-   "pos": [
-    22.0,
-    0.004,
-    -11.5
-   ],
-   "heading": 90
-  },
-  {
-   "type": "drain_grate",
-   "pos": [
-    20.0,
-    0.004,
-    -1.25
-   ],
-   "heading": 90
-  },
-  {
-   "type": "drain_grate",
-   "pos": [
-    20.0,
-    0.004,
-    6.25
-   ],
-   "heading": 90
-  },
-  {
-   "type": "drain_grate",
-   "pos": [
-    22.0,
-    0.004,
-    13.5
-   ],
-   "heading": 90
-  },
-  {
-   "type": "drain_grate",
-   "pos": [
-    -16.5,
-    0.004,
-    0.5
+    22.0
    ],
    "heading": 0
   },
   {
    "type": "drain_grate",
    "pos": [
-    16.5,
+    -5.67,
     0.004,
-    3.5
+    22.0
    ],
    "heading": 0
   },
   {
    "type": "drain_grate",
    "pos": [
-    2.0,
+    21.5,
     0.004,
-    -16.5
-   ],
-   "heading": 90
-  },
-  {
-   "type": "drain_grate",
-   "pos": [
-    2.0,
-    0.004,
-    -9.5
-   ],
-   "heading": 90
-  },
-  {
-   "type": "drain_grate",
-   "pos": [
-    -2.0,
-    0.004,
-    9.5
-   ],
-   "heading": 90
-  },
-  {
-   "type": "drain_grate",
-   "pos": [
-    -2.0,
-    0.004,
-    16.5
-   ],
-   "heading": 90
-  },
-  {
-   "type": "drain_grate",
-   "pos": [
-    -15.0,
-    0.004,
-    -1.17
-   ],
-   "heading": 90
-  },
-  {
-   "type": "drain_grate",
-   "pos": [
-    8.0,
-    0.004,
-    -3.5
-   ],
-   "heading": 90
-  },
-  {
-   "type": "drain_grate",
-   "pos": [
-    -14.0,
-    0.004,
-    6.5
-   ],
-   "heading": 90
-  },
-  {
-   "type": "drain_grate",
-   "pos": [
-    4.0,
-    0.004,
-    14.0
+    10.5
    ],
    "heading": 0
   }
@@ -2497,9 +2641,9 @@
   {
    "type": "point",
    "pos": [
-    -7.5,
+    -8.5,
     2.2,
-    13.1
+    12.1
    ],
    "color": [
     1,
@@ -2508,14 +2652,14 @@
    ],
    "intensity": 0.65,
    "range": 4.5,
-   "circulation": "B25"
+   "circulation": "B37"
   },
   {
    "type": "point",
    "pos": [
-    -7.5,
+    -8.5,
     5.3,
-    13.1
+    12.1
    ],
    "color": [
     1,
@@ -2524,153 +2668,153 @@
    ],
    "intensity": 0.65,
    "range": 4.5,
-   "circulation": "B25"
+   "circulation": "B37"
   }
  ],
  "targets": [
   {
    "id": "T01",
    "pos": [
-    10.0,
+    -8.5,
     0.0,
-    -20.0
+    1.0
    ],
-   "heading": 90
+   "heading": 0
   },
   {
    "id": "T02",
    "pos": [
-    -3.5,
+    1.0,
     0.0,
-    -20.0
+    -7.0
    ],
    "heading": 90
   },
   {
    "id": "T03",
    "pos": [
-    -11.5,
-    0.0,
-    20.0
+    13.0,
+    1.26,
+    -15.5
    ],
    "heading": 90
   },
   {
    "id": "T04",
    "pos": [
-    12.5,
+    9.0,
     0.0,
-    22.0
+    -7.5
    ],
-   "heading": 90
+   "heading": 0
   },
   {
    "id": "T05",
    "pos": [
-    1.0,
+    0.5,
     0.0,
-    21.0
+    -19.0
    ],
    "heading": 90
   },
   {
    "id": "T06",
    "pos": [
-    -22.0,
+    1.0,
     0.0,
-    -16.0
+    -13.0
    ],
    "heading": 0
   },
   {
    "id": "T07",
    "pos": [
-    -20.0,
+    -7.5,
     0.0,
-    0.0
+    -22.5
    ],
-   "heading": 0
+   "heading": 90
   },
   {
    "id": "T08",
    "pos": [
-    -22.0,
+    -18.0,
     0.0,
-    15.0
+    -23.5
    ],
-   "heading": 0
+   "heading": 90
   },
   {
    "id": "T09",
    "pos": [
-    -21.0,
+    22.0,
     0.0,
-    9.0
+    -8.5
    ],
-   "heading": 90
+   "heading": 0
   },
   {
    "id": "T10",
    "pos": [
     22.0,
     0.0,
-    -11.5
+    3.0
    ],
    "heading": 0
   },
   {
    "id": "T11",
    "pos": [
-    20.0,
+    -5.0,
     0.0,
-    2.5
+    -9.5
    ],
-   "heading": 0
+   "heading": 90
   },
   {
    "id": "T12",
    "pos": [
-    22.0,
-    0.0,
-    17.0
-   ],
-   "heading": 0
-  },
-  {
-   "id": "T13",
-   "pos": [
-    21.0,
+    -15.0,
     0.0,
     -6.0
    ],
    "heading": 90
   },
   {
+   "id": "T13",
+   "pos": [
+    -24.5,
+    0.0,
+    -9.5
+   ],
+   "heading": 0
+  },
+  {
    "id": "T14",
    "pos": [
-    21.0,
+    -16.5,
     0.0,
-    10.0
+    0.0
    ],
-   "heading": 90
+   "heading": 0
   },
   {
    "id": "T15",
    "pos": [
-    -13.0,
+    -21.5,
     0.0,
-    0.5
+    1.5
    ],
    "heading": 90
   },
   {
    "id": "T16",
    "pos": [
-    2.0,
+    -16.0,
     0.0,
-    -13.0
+    12.5
    ],
-   "heading": 0
+   "heading": 90
   }
  ],
  "obstacles": [
@@ -2686,28 +2830,28 @@
  ],
  "upperRoutes": [
   {
-   "id": "market_gallery",
+   "id": "loggia",
    "rect": [
-    -17,
-    -21,
-    -14,
-    -3
+    6,
+    18.7,
+    22,
+    21.7
    ],
    "height": 2.8,
    "style": "gallery",
    "stairs": [
     {
-     "side": "n",
-     "from": -17,
-     "to": -14,
+     "side": "w",
+     "from": 18.7,
+     "to": 21.7,
      "steps": 16,
      "rise": 0.175,
      "run": 0.32
     },
     {
-     "side": "s",
-     "from": -17,
-     "to": -14,
+     "side": "e",
+     "from": 18.7,
+     "to": 21.7,
      "steps": 16,
      "rise": 0.175,
      "run": 0.32
@@ -2715,398 +2859,490 @@
    ]
   }
  ],
+ "underground": [
+  {
+   "id": "cistern_passage",
+   "style": "cellar",
+   "purpose": "Old cistern and wine cellar beneath the square, between the market and the cistern court",
+   "segments": [
+    [
+     -11.2,
+     -10.58,
+     -8.8,
+     -3.0
+    ],
+    [
+     -11.2,
+     -3.0,
+     -2.7,
+     2.0
+    ],
+    [
+     -5.1,
+     2.0,
+     -2.7,
+     4.0
+    ]
+   ],
+   "piers": [
+    [
+     -8.4,
+     -0.5
+    ],
+    [
+     -5.6,
+     -0.5
+    ]
+   ],
+   "entrances": [
+    {
+     "id": "market",
+     "type": "dogleg",
+     "rect": [
+      -13,
+      -15.98,
+      -9.02,
+      -10.58
+     ],
+     "side": "s",
+     "hand": "left"
+    },
+    {
+     "id": "cistern",
+     "type": "dogleg",
+     "rect": [
+      -4.98,
+      4,
+      -1,
+      9.4
+     ],
+     "side": "n",
+     "hand": "left"
+    }
+   ],
+   "route": [
+    [
+     -10.0,
+     -6.0
+    ],
+    [
+     -10.0,
+     0.8
+    ],
+    [
+     -3.9,
+     0.8
+    ]
+   ],
+   "floor": -2.6,
+   "ceiling": -0.3,
+   "rect": [
+    -13,
+    -15.98,
+    -1,
+    9.4
+   ],
+   "waypoints": [
+    [
+     -11.905,
+     0,
+     -9.38
+    ],
+    [
+     -11.905,
+     0,
+     -11.18
+    ],
+    [
+     -11.905,
+     -1.3,
+     -14.23
+    ],
+    [
+     -10.115,
+     -1.3,
+     -14.23
+    ],
+    [
+     -10.115,
+     -2.6,
+     -11.08
+    ],
+    [
+     -10.115,
+     -2.6,
+     -9.58
+    ],
+    [
+     -10.0,
+     -2.6,
+     -6.0
+    ],
+    [
+     -10.0,
+     -2.6,
+     0.8
+    ],
+    [
+     -3.9,
+     -2.6,
+     0.8
+    ],
+    [
+     -3.885,
+     -2.6,
+     3.0
+    ],
+    [
+     -3.885,
+     -2.6,
+     4.5
+    ],
+    [
+     -3.885,
+     -1.3,
+     7.65
+    ],
+    [
+     -2.095,
+     -1.3,
+     7.65
+    ],
+    [
+     -2.095,
+     0,
+     4.6
+    ],
+    [
+     -2.095,
+     0,
+     2.8
+    ]
+   ]
+  }
+ ],
  "navigation": {
   "version": 1,
   "groundRoutes": [
    {
-    "id": "plaza",
+    "id": "square",
     "kind": "plaza",
     "rect": [
-     -6,
-     -6,
-     6,
-     6
-    ]
-   },
-   {
-    "id": "north_w",
-    "kind": "street",
-    "rect": [
-     -24,
-     -24,
-     -4,
-     -20
-    ]
-   },
-   {
-    "id": "north_e",
-    "kind": "street",
-    "rect": [
-     -4,
-     -22,
-     24,
-     -18
-    ]
-   },
-   {
-    "id": "north_jog",
-    "kind": "street",
-    "rect": [
      -7,
-     -22,
-     0,
-     -18
-    ]
-   },
-   {
-    "id": "south_w",
-    "kind": "street",
-    "rect": [
-     -24,
-     18,
-     1,
-     22
-    ]
-   },
-   {
-    "id": "south_e",
-    "kind": "street",
-    "rect": [
-     1,
-     20,
-     24,
-     24
-    ]
-   },
-   {
-    "id": "south_jog",
-    "kind": "street",
-    "rect": [
-     -2,
-     18,
-     4,
-     24
-    ]
-   },
-   {
-    "id": "west_n",
-    "kind": "street",
-    "rect": [
-     -24,
-     -24,
-     -20,
-     -8
-    ]
-   },
-   {
-    "id": "west_mid",
-    "kind": "street",
-    "rect": [
-     -22,
-     -8,
-     -18,
-     8
-    ]
-   },
-   {
-    "id": "west_s",
-    "kind": "street",
-    "rect": [
-     -24,
-     8,
-     -20,
-     22
-    ]
-   },
-   {
-    "id": "west_jog_n",
-    "kind": "street",
-    "rect": [
-     -24,
-     -11,
-     -18,
-     -7
-    ]
-   },
-   {
-    "id": "west_jog_s",
-    "kind": "street",
-    "rect": [
-     -24,
+     -5,
      7,
-     -18,
-     11
+     4
     ]
    },
    {
-    "id": "east_n",
+    "id": "square_ne",
+    "kind": "plaza",
+    "rect": [
+     7,
+     -5,
+     11,
+     1
+    ]
+   },
+   {
+    "id": "square_west",
+    "kind": "plaza",
+    "rect": [
+     -10,
+     -2,
+     -7,
+     4
+    ]
+   },
+   {
+    "id": "square_north",
     "kind": "street",
     "rect": [
-     20,
-     -18,
-     24,
+     -1,
+     -9,
+     3,
      -5
     ]
    },
    {
-    "id": "east_mid",
-    "kind": "street",
-    "rect": [
-     18,
-     -5,
-     22,
-     10
-    ]
-   },
-   {
-    "id": "east_s",
-    "kind": "street",
-    "rect": [
-     20,
-     10,
-     24,
-     24
-    ]
-   },
-   {
-    "id": "east_jog_n",
-    "kind": "street",
-    "rect": [
-     18,
-     -8,
-     24,
-     -4
-    ]
-   },
-   {
-    "id": "east_jog_s",
-    "kind": "street",
-    "rect": [
-     18,
-     8,
-     24,
-     12
-    ]
-   },
-   {
-    "id": "west_entry",
-    "kind": "street",
-    "rect": [
-     -20,
-     -2,
-     -6,
-     3
-    ]
-   },
-   {
-    "id": "east_entry",
-    "kind": "street",
+    "id": "upper_town",
+    "kind": "terrace",
     "rect": [
      6,
-     1,
+     -21,
      20,
-     6
+     -10
     ]
    },
    {
-    "id": "north_entry",
+    "id": "grand_steps",
     "kind": "street",
     "rect": [
-     0,
-     -20,
-     4,
-     -6
-    ]
-   },
-   {
-    "id": "south_entry",
-    "kind": "street",
-    "rect": [
-     -4,
-     6,
-     0,
-     20
-    ]
-   },
-   {
-    "id": "shop_lane",
-    "kind": "street",
-    "rect": [
-     -18,
-     -22,
-     -12,
-     3
-    ]
-   },
-   {
-    "id": "shop_court",
-    "kind": "court",
-    "rect": [
-     -16,
-     -16,
-     -8,
-     -8
-    ]
-   },
-   {
-    "id": "shop_north",
-    "kind": "street",
-    "rect": [
-     -12,
-     -20,
-     -8,
-     -16
-    ]
-   },
-   {
-    "id": "shop_plaza",
-    "kind": "street",
-    "rect": [
+     7,
      -10,
-     -8,
-     -6,
+     11,
+     -5
+    ]
+   },
+   {
+    "id": "via_alta",
+    "kind": "street",
+    "rect": [
+     -5,
+     -21,
+     6,
+     -17
+    ]
+   },
+   {
+    "id": "via_alta_s",
+    "kind": "street",
+    "rect": [
+     -1,
+     -17,
+     3,
+     -9
+    ]
+   },
+   {
+    "id": "north_lane_e",
+    "kind": "street",
+    "rect": [
+     -14,
+     -24,
+     -1,
+     -21
+    ]
+   },
+   {
+    "id": "north_lane_w",
+    "kind": "street",
+    "rect": [
+     -25,
+     -25,
+     -11,
+     -22
+    ]
+   },
+   {
+    "id": "east_lane",
+    "kind": "street",
+    "rect": [
+     20,
+     -15,
+     24,
      -2
     ]
    },
    {
-    "id": "market_court",
+    "id": "east_lane_m",
+    "kind": "street",
+    "rect": [
+     20,
+     -2,
+     24,
+     8
+    ]
+   },
+   {
+    "id": "market",
     "kind": "court",
     "rect": [
-     9,
+     -19,
      -16,
-     18,
+     -9,
      -8
     ]
    },
    {
-    "id": "market_east",
+    "id": "market_e",
     "kind": "street",
     "rect": [
-     18,
-     -12,
-     20,
+     -9,
+     -11,
+     -1,
      -8
     ]
    },
    {
-    "id": "market_plaza",
+    "id": "market_s",
     "kind": "street",
     "rect": [
-     6,
+     -17,
      -8,
-     10,
-     1
+     -13,
+     -4
+    ]
+   },
+   {
+    "id": "west_lane",
+    "kind": "street",
+    "rect": [
+     -26,
+     -22,
+     -23,
+     3
+    ]
+   },
+   {
+    "id": "west_yard",
+    "kind": "court",
+    "rect": [
+     -20,
+     -4,
+     -13,
+     4
+    ]
+   },
+   {
+    "id": "west_link",
+    "kind": "street",
+    "rect": [
+     -23,
+     0,
+     -20,
+     3
     ]
    },
    {
     "id": "garden",
     "kind": "court",
     "rect": [
-     -17,
-     10,
-     -11,
+     -20,
+     9,
+     -12,
      16
     ]
    },
    {
-    "id": "garden_west",
+    "id": "garden_n",
     "kind": "street",
     "rect": [
      -20,
-     12,
+     4,
      -17,
+     9
+    ]
+   },
+   {
+    "id": "cistern_court",
+    "kind": "court",
+    "rect": [
+     -5,
+     4,
+     2,
+     14
+    ]
+   },
+   {
+    "id": "south_west",
+    "kind": "street",
+    "rect": [
+     -24,
+     20,
+     -2,
+     24
+    ]
+   },
+   {
+    "id": "south_link",
+    "kind": "street",
+    "rect": [
+     -5,
+     14,
+     -2,
+     24
+    ]
+   },
+   {
+    "id": "south_street",
+    "kind": "street",
+    "rect": [
+     2,
+     16,
+     24,
+     22
+    ]
+   },
+   {
+    "id": "south_lane_a",
+    "kind": "street",
+    "rect": [
+     2,
+     4,
+     7,
+     10
+    ]
+   },
+   {
+    "id": "south_lane_b",
+    "kind": "street",
+    "rect": [
+     6,
+     8,
+     9,
      16
     ]
    },
    {
-    "id": "garden_south",
+    "id": "east_street",
     "kind": "street",
     "rect": [
-     -15,
-     16,
-     -11,
-     20
-    ]
-   },
-   {
-    "id": "garden_north",
-    "kind": "street",
-    "rect": [
-     -16,
-     3,
-     -12,
-     10
+     11,
+     -5,
+     20,
+     -1
     ]
    },
    {
     "id": "baker_court",
     "kind": "court",
     "rect": [
-     8,
-     10,
-     16,
-     17
-    ]
-   },
-   {
-    "id": "baker_north",
-    "kind": "street",
-    "rect": [
-     10,
-     6,
-     14,
-     10
-    ]
-   },
-   {
-    "id": "baker_east",
-    "kind": "street",
-    "rect": [
-     16,
-     12,
-     20,
-     16
-    ]
-   },
-   {
-    "id": "baker_south",
-    "kind": "street",
-    "rect": [
      9,
-     17,
-     13,
-     22
+     8,
+     18,
+     13
     ]
    },
    {
-    "id": "baker_plaza",
+    "id": "baker_s",
     "kind": "street",
     "rect": [
-     0,
      12,
-     8,
+     13,
+     15,
      16
+    ]
+   },
+   {
+    "id": "baker_e",
+    "kind": "street",
+    "rect": [
+     18,
+     8,
+     25,
+     13
+    ]
+   },
+   {
+    "id": "east_lane_s",
+    "kind": "street",
+    "rect": [
+     22,
+     13,
+     25,
+     18
     ]
    }
   ],
   "coveredRoutes": [
    {
-    "id": "west_gate",
+    "id": "market_gate",
     "kind": "passage",
     "rect": [
-     -20,
-     -12,
-     -18,
-     -9
-    ]
-   },
-   {
-    "id": "market_north",
-    "kind": "passage",
-    "rect": [
-     10,
-     -18,
-     14,
+     -19,
+     -22,
+     -15,
      -16
     ]
    },
@@ -3114,969 +3350,1049 @@
     "id": "market_room",
     "kind": "room",
     "rect": [
-     4,
-     -15,
-     9,
-     -12
+     -23,
+     -14,
+     -19,
+     -11
     ]
    },
    {
-    "id": "garden_room",
-    "kind": "room",
-    "rect": [
-     -11,
-     11.5,
-     -4,
-     13.5
-    ]
-   },
-   {
-    "id": "east_arcade",
+    "id": "west_arch",
     "kind": "passage",
     "rect": [
-     10,
-     1,
-     14,
-     6
-    ]
-   },
-   {
-    "id": "west_arcade",
-    "kind": "passage",
-    "rect": [
-     -11,
-     -2,
-     -8,
+     -13,
+     0,
+     -10,
      3
     ]
    },
    {
-    "id": "north_arcade",
+    "id": "garden_gate",
     "kind": "passage",
     "rect": [
-     4,
-     -22,
-     8,
-     -18
+     -16,
+     16,
+     -13,
+     20
     ]
    },
    {
-    "id": "south_arcade",
+    "id": "provisions_room",
+    "kind": "room",
+    "rect": [
+     -12,
+     9.8,
+     -5,
+     11.8
+    ]
+   },
+   {
+    "id": "baker_arch",
     "kind": "passage",
     "rect": [
-     6,
-     20,
-     10,
-     24
+     12,
+     -1,
+     15,
+     8
     ]
    }
   ],
   "upperRoutes": [
    {
-    "id": "market_gallery",
+    "id": "loggia",
     "waypoints": [
      [
-      -15.5,
+      5.35,
       0,
-      -21.65
+      20.2
      ],
      [
-      -15.5,
+      11.620000000000001,
       2.8,
-      -15.379999999999999
+      20.2
      ],
      [
-      -15.5,
+      16.38,
       2.8,
-      -8.620000000000001
+      20.2
      ],
      [
-      -15.5,
+      22.65,
       0,
-      -2.35
+      20.2
      ]
     ]
    }
   ],
   "groundObstacles": [
    {
-    "id": "market_gallery:step",
+    "id": "underground:cistern_passage:entrance-divider",
     "rect": [
-     -17,
-     -20.36,
-     -14,
-     -20.04
+     -11.11,
+     -13.879999999999999,
+     -10.91,
+     -10.88
     ]
    },
    {
-    "id": "market_gallery:step",
+    "id": "underground:cistern_passage:entrance-wall",
     "rect": [
-     -17,
-     -20.04,
-     -14,
-     -19.72
+     -11.11,
+     -10.88,
+     -10.91,
+     -10.58
     ]
    },
    {
-    "id": "market_gallery:step",
+    "id": "underground:cistern_passage:entrance-wall",
     "rect": [
-     -17,
-     -19.72,
-     -14,
-     -19.4
+     -10.91,
+     -10.88,
+     -9.32,
+     -10.58
     ]
    },
    {
-    "id": "market_gallery:step",
+    "id": "underground:cistern_passage:entrance-wall",
     "rect": [
-     -17,
-     -19.4,
-     -14,
-     -19.08
+     -13,
+     -15.98,
+     -12.7,
+     -10.58
     ]
    },
    {
-    "id": "market_gallery:step",
+    "id": "underground:cistern_passage:entrance-wall",
     "rect": [
-     -17,
-     -19.08,
-     -14,
-     -18.759999999999998
+     -9.32,
+     -15.98,
+     -9.02,
+     -10.58
     ]
    },
    {
-    "id": "market_gallery:step",
+    "id": "underground:cistern_passage:entrance-wall",
     "rect": [
-     -17,
-     -18.759999999999998,
-     -14,
-     -18.44
+     -12.7,
+     -15.98,
+     -9.32,
+     -15.68
     ]
    },
    {
-    "id": "market_gallery:step",
+    "id": "underground:cistern_passage:entrance-divider",
     "rect": [
-     -17,
-     -18.44,
-     -14,
-     -18.12
+     -3.0900000000000003,
+     4.3,
+     -2.89,
+     7.3
     ]
    },
    {
-    "id": "market_gallery:step",
+    "id": "underground:cistern_passage:entrance-wall",
     "rect": [
-     -17,
-     -18.12,
-     -14,
-     -17.8
+     -3.0900000000000003,
+     4,
+     -2.89,
+     4.3
     ]
    },
    {
-    "id": "market_gallery:step",
+    "id": "underground:cistern_passage:entrance-wall",
     "rect": [
-     -17,
-     -17.8,
-     -14,
-     -17.48
+     -4.680000000000001,
+     4,
+     -3.0900000000000003,
+     4.3
     ]
    },
    {
-    "id": "market_gallery:step",
+    "id": "underground:cistern_passage:entrance-wall",
     "rect": [
-     -17,
-     -17.48,
-     -14,
-     -17.16
+     -1.3,
+     4,
+     -1,
+     9.4
     ]
    },
    {
-    "id": "market_gallery:step",
+    "id": "underground:cistern_passage:entrance-wall",
     "rect": [
-     -17,
-     -17.16,
-     -14,
-     -16.84
+     -4.98,
+     4,
+     -4.680000000000001,
+     9.4
     ]
    },
    {
-    "id": "market_gallery:step",
+    "id": "underground:cistern_passage:entrance-wall",
     "rect": [
-     -17,
-     -16.84,
-     -14,
-     -16.52
+     -4.680000000000001,
+     9.100000000000001,
+     -1.3,
+     9.4
     ]
    },
    {
-    "id": "market_gallery:step",
+    "id": "loggia:step",
     "rect": [
-     -17,
-     -16.52,
-     -14,
-     -16.2
+     6.64,
+     18.7,
+     6.96,
+     21.7
     ]
    },
    {
-    "id": "market_gallery:step",
+    "id": "loggia:step",
     "rect": [
-     -17,
-     -16.2,
-     -14,
-     -15.879999999999999
+     6.96,
+     18.7,
+     7.28,
+     21.7
     ]
    },
    {
-    "id": "market_gallery:step",
+    "id": "loggia:step",
     "rect": [
-     -17,
-     -3.96,
-     -14,
-     -3.64
+     7.28,
+     18.7,
+     7.6,
+     21.7
     ]
    },
    {
-    "id": "market_gallery:step",
+    "id": "loggia:step",
     "rect": [
-     -17,
-     -4.28,
-     -14,
-     -3.96
+     7.6,
+     18.7,
+     7.92,
+     21.7
     ]
    },
    {
-    "id": "market_gallery:step",
+    "id": "loggia:step",
     "rect": [
-     -17,
-     -4.6,
-     -14,
-     -4.28
+     7.92,
+     18.7,
+     8.24,
+     21.7
     ]
    },
    {
-    "id": "market_gallery:step",
+    "id": "loggia:step",
     "rect": [
-     -17,
-     -4.92,
-     -14,
-     -4.6
+     8.24,
+     18.7,
+     8.56,
+     21.7
     ]
    },
    {
-    "id": "market_gallery:step",
+    "id": "loggia:step",
     "rect": [
-     -17,
-     -5.24,
-     -14,
-     -4.92
+     8.56,
+     18.7,
+     8.879999999999999,
+     21.7
     ]
    },
    {
-    "id": "market_gallery:step",
+    "id": "loggia:step",
     "rect": [
-     -17,
-     -5.5600000000000005,
-     -14,
-     -5.24
+     8.879999999999999,
+     18.7,
+     9.2,
+     21.7
     ]
    },
    {
-    "id": "market_gallery:step",
+    "id": "loggia:step",
     "rect": [
-     -17,
-     -5.88,
-     -14,
-     -5.5600000000000005
+     9.2,
+     18.7,
+     9.52,
+     21.7
     ]
    },
    {
-    "id": "market_gallery:step",
+    "id": "loggia:step",
     "rect": [
-     -17,
-     -6.2,
-     -14,
-     -5.88
+     9.52,
+     18.7,
+     9.84,
+     21.7
     ]
    },
    {
-    "id": "market_gallery:step",
+    "id": "loggia:step",
     "rect": [
-     -17,
-     -6.52,
-     -14,
-     -6.2
+     9.84,
+     18.7,
+     10.16,
+     21.7
     ]
    },
    {
-    "id": "market_gallery:step",
+    "id": "loggia:step",
     "rect": [
-     -17,
-     -6.84,
-     -14,
-     -6.52
+     10.16,
+     18.7,
+     10.48,
+     21.7
     ]
    },
    {
-    "id": "market_gallery:step",
+    "id": "loggia:step",
     "rect": [
-     -17,
-     -7.16,
-     -14,
-     -6.84
-    ]
-   },
-   {
-    "id": "market_gallery:step",
-    "rect": [
-     -17,
-     -7.48,
-     -14,
-     -7.16
-    ]
-   },
-   {
-    "id": "market_gallery:step",
-    "rect": [
-     -17,
-     -7.8,
-     -14,
-     -7.48
-    ]
-   },
-   {
-    "id": "market_gallery:step",
-    "rect": [
-     -17,
-     -8.120000000000001,
-     -14,
-     -7.8
-    ]
-   },
-   {
-    "id": "market_gallery:post",
-    "rect": [
-     -17.005000000000003,
-     -15.864999999999998,
-     -16.825000000000003,
-     -15.745
-    ]
-   },
-   {
-    "id": "market_gallery:post",
-    "rect": [
-     -17.005000000000003,
-     -13.328333333333333,
-     -16.825000000000003,
-     -13.208333333333334
-    ]
-   },
-   {
-    "id": "market_gallery:post",
-    "rect": [
-     -17.005000000000003,
-     -10.791666666666668,
-     -16.825000000000003,
-     -10.671666666666669
-    ]
-   },
-   {
-    "id": "market_gallery:post",
-    "rect": [
-     -17.005000000000003,
-     -8.255000000000003,
-     -16.825000000000003,
-     -8.135000000000003
-    ]
-   },
-   {
-    "id": "market_gallery:post",
-    "rect": [
-     -14.174999999999999,
-     -15.864999999999998,
-     -13.995,
-     -15.745
-    ]
-   },
-   {
-    "id": "market_gallery:post",
-    "rect": [
-     -14.174999999999999,
-     -13.328333333333333,
-     -13.995,
-     -13.208333333333334
-    ]
-   },
-   {
-    "id": "market_gallery:post",
-    "rect": [
-     -14.174999999999999,
-     -10.791666666666668,
-     -13.995,
-     -10.671666666666669
-    ]
-   },
-   {
-    "id": "market_gallery:post",
-    "rect": [
-     -14.174999999999999,
-     -8.255000000000003,
-     -13.995,
-     -8.135000000000003
-    ]
-   },
-   {
-    "id": "circulation:B25:wall",
-    "rect": [
-     -11,
-     6,
-     -8.5,
-     6.3
-    ]
-   },
-   {
-    "id": "circulation:B25:wall",
-    "rect": [
-     -6.5,
-     6,
-     -4,
-     6.3
-    ]
-   },
-   {
-    "id": "circulation:B25:wall",
-    "rect": [
-     -8.5,
-     6,
-     -6.5,
-     6.3
-    ]
-   },
-   {
-    "id": "circulation:B25:wall",
-    "rect": [
-     -11,
-     13.7,
-     -4,
-     14
-    ]
-   },
-   {
-    "id": "circulation:B25:wall",
-    "rect": [
-     -11,
-     6.3,
-     -10.7,
-     11.45
-    ]
-   },
-   {
-    "id": "circulation:B25:wall",
-    "rect": [
-     -11,
-     13.55,
-     -10.7,
-     13.7
-    ]
-   },
-   {
-    "id": "circulation:B25:wall",
-    "rect": [
-     -4.3,
-     6.3,
-     -4,
-     11.45
-    ]
-   },
-   {
-    "id": "circulation:B25:wall",
-    "rect": [
-     -4.3,
-     13.55,
-     -4,
-     13.7
-    ]
-   },
-   {
-    "id": "circulation:B25:turn-landing",
-    "rect": [
-     -10.7,
-     6.3,
-     -4.3,
-     9.0
-    ]
-   },
-   {
-    "id": "circulation:B25:stair-b",
-    "rect": [
-     -10.7,
-     9.0,
-     -8.4,
-     9.3
-    ]
-   },
-   {
-    "id": "circulation:B25:stair-b",
-    "rect": [
-     -10.7,
-     9.3,
-     -8.4,
-     9.6
-    ]
-   },
-   {
-    "id": "circulation:B25:stair-a",
-    "rect": [
-     -6.6,
-     10.5,
-     -4.3,
-     10.8
-    ]
-   },
-   {
-    "id": "circulation:B25:stair-b",
-    "rect": [
-     -10.7,
-     9.6,
-     -8.4,
-     9.9
-    ]
-   },
-   {
-    "id": "circulation:B25:stair-a",
-    "rect": [
-     -6.6,
-     10.2,
-     -4.3,
-     10.5
-    ]
-   },
-   {
-    "id": "circulation:B25:stair-b",
-    "rect": [
-     -10.7,
-     9.9,
-     -8.4,
-     10.2
-    ]
-   },
-   {
-    "id": "circulation:B25:stair-a",
-    "rect": [
-     -6.6,
-     9.9,
-     -4.3,
-     10.2
-    ]
-   },
-   {
-    "id": "circulation:B25:stair-b",
-    "rect": [
-     -10.7,
-     10.2,
-     -8.4,
-     10.5
-    ]
-   },
-   {
-    "id": "circulation:B25:stair-a",
-    "rect": [
-     -6.6,
-     9.600000000000001,
-     -4.3,
-     9.9
-    ]
-   },
-   {
-    "id": "circulation:B25:stair-b",
-    "rect": [
-     -10.7,
-     10.5,
-     -8.4,
-     10.8
-    ]
-   },
-   {
-    "id": "circulation:B25:stair-a",
-    "rect": [
-     -6.6,
-     9.3,
-     -4.3,
-     9.6
-    ]
-   },
-   {
-    "id": "circulation:B25:stair-b",
-    "rect": [
-     -10.7,
+     10.48,
+     18.7,
      10.8,
-     -8.4,
-     11.1
+     21.7
     ]
    },
    {
-    "id": "circulation:B25:stair-a",
+    "id": "loggia:step",
     "rect": [
-     -6.6,
-     9.0,
-     -4.3,
-     9.3
+     10.8,
+     18.7,
+     11.120000000000001,
+     21.7
     ]
    },
    {
-    "id": "circulation:B25:stair-b",
+    "id": "loggia:step",
     "rect": [
-     -10.7,
-     11.1,
-     -8.4,
-     11.399999999999999
+     21.04,
+     18.7,
+     21.36,
+     21.7
     ]
    },
    {
-    "id": "circulation:B25:cabinet",
+    "id": "loggia:step",
     "rect": [
-     -6.4,
-     13.219999999999999,
-     -5.2,
-     13.7
+     20.72,
+     18.7,
+     21.04,
+     21.7
     ]
    },
    {
-    "id": "circulation:B25:counter",
+    "id": "loggia:step",
     "rect": [
-     -6.4399999999999995,
-     13.2,
-     -5.16,
-     13.719999999999999
+     20.4,
+     18.7,
+     20.72,
+     21.7
     ]
    },
    {
-    "id": "circulation:B25:exit-stair",
+    "id": "loggia:step",
     "rect": [
-     -12.88,
-     11.4,
-     -12.6,
-     13.6
+     20.08,
+     18.7,
+     20.4,
+     21.7
     ]
    },
    {
-    "id": "circulation:B25:exit-stair",
+    "id": "loggia:step",
     "rect": [
-     -13.16,
-     11.4,
-     -12.88,
-     13.6
+     19.759999999999998,
+     18.7,
+     20.08,
+     21.7
     ]
    },
    {
-    "id": "circulation:B25:exit-stair",
+    "id": "loggia:step",
     "rect": [
-     -13.440000000000001,
-     11.4,
-     -13.16,
-     13.6
+     19.44,
+     18.7,
+     19.759999999999998,
+     21.7
     ]
    },
    {
-    "id": "circulation:B25:exit-stair",
+    "id": "loggia:step",
     "rect": [
-     -13.72,
-     11.4,
-     -13.440000000000001,
-     13.6
+     19.12,
+     18.7,
+     19.44,
+     21.7
     ]
    },
    {
-    "id": "circulation:B25:exit-stair",
+    "id": "loggia:step",
     "rect": [
-     -14.0,
-     11.4,
-     -13.72,
-     13.6
+     18.8,
+     18.7,
+     19.12,
+     21.7
     ]
    },
    {
-    "id": "circulation:B25:exit-stair",
+    "id": "loggia:step",
     "rect": [
-     -14.280000000000001,
-     11.4,
-     -14.0,
-     13.6
+     18.48,
+     18.7,
+     18.8,
+     21.7
     ]
    },
    {
-    "id": "circulation:B25:exit-stair",
+    "id": "loggia:step",
     "rect": [
-     -14.56,
-     11.4,
-     -14.280000000000001,
-     13.6
+     18.16,
+     18.7,
+     18.48,
+     21.7
     ]
    },
    {
-    "id": "circulation:B25:exit-stair",
+    "id": "loggia:step",
     "rect": [
-     -14.84,
-     11.4,
-     -14.56,
-     13.6
+     17.84,
+     18.7,
+     18.16,
+     21.7
     ]
    },
    {
-    "id": "circulation:B25:exit-stair",
+    "id": "loggia:step",
     "rect": [
-     -15.120000000000001,
-     11.4,
-     -14.84,
-     13.6
+     17.52,
+     18.7,
+     17.84,
+     21.7
     ]
    },
    {
-    "id": "circulation:B25:exit-post",
+    "id": "loggia:step",
     "rect": [
-     -15.010000000000002,
-     11.4,
-     -14.950000000000001,
-     11.46
+     17.2,
+     18.7,
+     17.52,
+     21.7
     ]
    },
    {
-    "id": "circulation:B25:exit-post",
+    "id": "loggia:step",
     "rect": [
-     -15.010000000000002,
-     13.54,
-     -14.950000000000001,
-     13.6
+     16.88,
+     18.7,
+     17.2,
+     21.7
     ]
    },
    {
-    "id": "circulation:B25:exit-stair",
+    "id": "loggia:post",
     "rect": [
-     -15.4,
-     11.4,
-     -15.120000000000001,
-     13.6
+     11.135000000000002,
+     18.694999999999997,
+     11.255,
+     18.874999999999996
     ]
    },
    {
-    "id": "circulation:B25:exit-stair",
+    "id": "loggia:post",
     "rect": [
-     -15.68,
-     11.4,
-     -15.4,
-     13.6
+     13.940000000000001,
+     18.694999999999997,
+     14.06,
+     18.874999999999996
     ]
    },
    {
-    "id": "circulation:B25:exit-stair",
+    "id": "loggia:post",
     "rect": [
-     -15.96,
-     11.4,
-     -15.68,
-     13.6
+     16.744999999999997,
+     18.694999999999997,
+     16.865,
+     18.874999999999996
     ]
    },
    {
-    "id": "circulation:B25:exit-slope-envelope",
+    "id": "loggia:post",
     "rect": [
-     -15.96,
-     11.4,
-     -15.68,
-     11.46
+     11.135000000000002,
+     21.525,
+     11.255,
+     21.705
     ]
    },
    {
-    "id": "circulation:B25:exit-slope-envelope",
+    "id": "loggia:post",
     "rect": [
-     -15.96,
-     13.54,
-     -15.68,
-     13.6
+     13.940000000000001,
+     21.525,
+     14.06,
+     21.705
     ]
    },
    {
-    "id": "circulation:B25:exit-stair",
+    "id": "loggia:post",
     "rect": [
-     -16.240000000000002,
-     11.4,
-     -15.96,
-     13.6
+     16.744999999999997,
+     21.525,
+     16.865,
+     21.705
     ]
    },
    {
-    "id": "circulation:B25:exit-slope-envelope",
+    "id": "circulation:B37:wall",
     "rect": [
-     -16.240000000000002,
-     11.4,
-     -15.96,
-     11.46
+     -12,
+     4,
+     -9.5,
+     4.3
     ]
    },
    {
-    "id": "circulation:B25:exit-post",
+    "id": "circulation:B37:wall",
     "rect": [
-     -16.130000000000003,
-     11.4,
-     -16.07,
-     11.46
+     -7.5,
+     4,
+     -5,
+     4.3
     ]
    },
    {
-    "id": "circulation:B25:exit-slope-envelope",
+    "id": "circulation:B37:wall",
     "rect": [
-     -16.240000000000002,
-     13.54,
-     -15.96,
-     13.6
+     -9.5,
+     4,
+     -7.5,
+     4.3
     ]
    },
    {
-    "id": "circulation:B25:exit-post",
+    "id": "circulation:B37:wall",
     "rect": [
-     -16.130000000000003,
-     13.54,
-     -16.07,
-     13.6
+     -12,
+     12.7,
+     -5,
+     13
     ]
    },
    {
-    "id": "circulation:B25:exit-stair",
+    "id": "circulation:B37:wall",
     "rect": [
-     -16.52,
-     11.4,
-     -16.240000000000002,
-     13.6
+     -12,
+     4.3,
+     -11.7,
+     9.75
     ]
    },
    {
-    "id": "circulation:B25:exit-slope-envelope",
+    "id": "circulation:B37:wall",
     "rect": [
-     -16.52,
-     11.4,
-     -16.240000000000002,
-     11.46
+     -12,
+     11.85,
+     -11.7,
+     12.7
     ]
    },
    {
-    "id": "circulation:B25:exit-slope-envelope",
+    "id": "circulation:B37:wall",
     "rect": [
-     -16.52,
-     13.54,
-     -16.240000000000002,
-     13.6
+     -5.3,
+     4.3,
+     -5,
+     9.75
     ]
    },
    {
-    "id": "circulation:B25:exit-slope-envelope",
+    "id": "circulation:B37:wall",
     "rect": [
-     -16.8,
-     11.4,
-     -16.52,
-     11.46
+     -5.3,
+     11.85,
+     -5,
+     12.7
     ]
    },
    {
-    "id": "circulation:B25:exit-slope-envelope",
+    "id": "circulation:B37:turn-landing",
     "rect": [
-     -16.8,
-     13.54,
-     -16.52,
-     13.6
+     -11.7,
+     4.3,
+     -5.3,
+     7.0
     ]
    },
    {
-    "id": "circulation:B25:exit-slope-envelope",
+    "id": "circulation:B37:stair-b",
     "rect": [
-     -17.08,
-     11.4,
-     -16.8,
-     11.46
+     -11.7,
+     7.0,
+     -9.4,
+     7.3
     ]
    },
    {
-    "id": "circulation:B25:exit-post",
+    "id": "circulation:B37:stair-b",
     "rect": [
-     -16.970000000000002,
-     11.4,
-     -16.91,
-     11.46
+     -11.7,
+     7.3,
+     -9.4,
+     7.6
     ]
    },
    {
-    "id": "circulation:B25:exit-slope-envelope",
+    "id": "circulation:B37:stair-a",
     "rect": [
-     -17.08,
-     13.54,
-     -16.8,
-     13.6
+     -7.6,
+     8.5,
+     -5.3,
+     8.8
     ]
    },
    {
-    "id": "circulation:B25:exit-post",
+    "id": "circulation:B37:stair-b",
     "rect": [
-     -16.970000000000002,
-     13.54,
-     -16.91,
-     13.6
+     -11.7,
+     7.6,
+     -9.4,
+     7.9
     ]
    },
    {
-    "id": "circulation:B25:exit-support",
+    "id": "circulation:B37:stair-a",
     "rect": [
-     -12.51,
-     11.4,
-     -12.39,
-     11.52
+     -7.6,
+     8.2,
+     -5.3,
+     8.5
     ]
    },
    {
-    "id": "circulation:B25:exit-support",
+    "id": "circulation:B37:stair-b",
     "rect": [
-     -12.51,
-     13.48,
-     -12.39,
-     13.600000000000001
+     -11.7,
+     7.9,
+     -9.4,
+     8.2
+    ]
+   },
+   {
+    "id": "circulation:B37:stair-a",
+    "rect": [
+     -7.6,
+     7.9,
+     -5.3,
+     8.2
+    ]
+   },
+   {
+    "id": "circulation:B37:stair-b",
+    "rect": [
+     -11.7,
+     8.2,
+     -9.4,
+     8.5
+    ]
+   },
+   {
+    "id": "circulation:B37:stair-a",
+    "rect": [
+     -7.6,
+     7.6000000000000005,
+     -5.3,
+     7.9
+    ]
+   },
+   {
+    "id": "circulation:B37:stair-b",
+    "rect": [
+     -11.7,
+     8.5,
+     -9.4,
+     8.8
+    ]
+   },
+   {
+    "id": "circulation:B37:stair-a",
+    "rect": [
+     -7.6,
+     7.300000000000001,
+     -5.3,
+     7.6
+    ]
+   },
+   {
+    "id": "circulation:B37:stair-b",
+    "rect": [
+     -11.7,
+     8.8,
+     -9.4,
+     9.1
+    ]
+   },
+   {
+    "id": "circulation:B37:stair-a",
+    "rect": [
+     -7.6,
+     7.0,
+     -5.3,
+     7.300000000000001
+    ]
+   },
+   {
+    "id": "circulation:B37:stair-b",
+    "rect": [
+     -11.7,
+     9.1,
+     -9.4,
+     9.399999999999999
+    ]
+   },
+   {
+    "id": "circulation:B37:cabinet",
+    "rect": [
+     -7.4,
+     12.22,
+     -6.2,
+     12.7
+    ]
+   },
+   {
+    "id": "circulation:B37:counter",
+    "rect": [
+     -7.4399999999999995,
+     12.2,
+     -6.16,
+     12.72
+    ]
+   },
+   {
+    "id": "circulation:B37:exit-stair",
+    "rect": [
+     -13.88,
+     9.7,
+     -13.6,
+     11.9
+    ]
+   },
+   {
+    "id": "circulation:B37:exit-stair",
+    "rect": [
+     -14.16,
+     9.7,
+     -13.88,
+     11.9
+    ]
+   },
+   {
+    "id": "circulation:B37:exit-stair",
+    "rect": [
+     -14.440000000000001,
+     9.7,
+     -14.16,
+     11.9
+    ]
+   },
+   {
+    "id": "circulation:B37:exit-stair",
+    "rect": [
+     -14.72,
+     9.7,
+     -14.440000000000001,
+     11.9
+    ]
+   },
+   {
+    "id": "circulation:B37:exit-stair",
+    "rect": [
+     -15.0,
+     9.7,
+     -14.72,
+     11.9
+    ]
+   },
+   {
+    "id": "circulation:B37:exit-stair",
+    "rect": [
+     -15.280000000000001,
+     9.7,
+     -15.0,
+     11.9
+    ]
+   },
+   {
+    "id": "circulation:B37:exit-stair",
+    "rect": [
+     -15.56,
+     9.7,
+     -15.280000000000001,
+     11.9
+    ]
+   },
+   {
+    "id": "circulation:B37:exit-stair",
+    "rect": [
+     -15.84,
+     9.7,
+     -15.56,
+     11.9
+    ]
+   },
+   {
+    "id": "circulation:B37:exit-stair",
+    "rect": [
+     -16.12,
+     9.7,
+     -15.84,
+     11.9
+    ]
+   },
+   {
+    "id": "circulation:B37:exit-post",
+    "rect": [
+     -16.01,
+     9.7,
+     -15.950000000000001,
+     9.759999999999998
+    ]
+   },
+   {
+    "id": "circulation:B37:exit-post",
+    "rect": [
+     -16.01,
+     11.84,
+     -15.950000000000001,
+     11.899999999999999
+    ]
+   },
+   {
+    "id": "circulation:B37:exit-stair",
+    "rect": [
+     -16.4,
+     9.7,
+     -16.12,
+     11.9
+    ]
+   },
+   {
+    "id": "circulation:B37:exit-stair",
+    "rect": [
+     -16.68,
+     9.7,
+     -16.4,
+     11.9
+    ]
+   },
+   {
+    "id": "circulation:B37:exit-stair",
+    "rect": [
+     -16.96,
+     9.7,
+     -16.68,
+     11.9
+    ]
+   },
+   {
+    "id": "circulation:B37:exit-slope-envelope",
+    "rect": [
+     -16.96,
+     9.7,
+     -16.68,
+     9.759999999999998
+    ]
+   },
+   {
+    "id": "circulation:B37:exit-slope-envelope",
+    "rect": [
+     -16.96,
+     11.84,
+     -16.68,
+     11.899999999999999
+    ]
+   },
+   {
+    "id": "circulation:B37:exit-stair",
+    "rect": [
+     -17.240000000000002,
+     9.7,
+     -16.96,
+     11.9
+    ]
+   },
+   {
+    "id": "circulation:B37:exit-slope-envelope",
+    "rect": [
+     -17.240000000000002,
+     9.7,
+     -16.96,
+     9.759999999999998
+    ]
+   },
+   {
+    "id": "circulation:B37:exit-post",
+    "rect": [
+     -17.130000000000003,
+     9.7,
+     -17.07,
+     9.759999999999998
+    ]
+   },
+   {
+    "id": "circulation:B37:exit-slope-envelope",
+    "rect": [
+     -17.240000000000002,
+     11.84,
+     -16.96,
+     11.899999999999999
+    ]
+   },
+   {
+    "id": "circulation:B37:exit-post",
+    "rect": [
+     -17.130000000000003,
+     11.84,
+     -17.07,
+     11.899999999999999
+    ]
+   },
+   {
+    "id": "circulation:B37:exit-stair",
+    "rect": [
+     -17.52,
+     9.7,
+     -17.240000000000002,
+     11.9
+    ]
+   },
+   {
+    "id": "circulation:B37:exit-slope-envelope",
+    "rect": [
+     -17.52,
+     9.7,
+     -17.240000000000002,
+     9.759999999999998
+    ]
+   },
+   {
+    "id": "circulation:B37:exit-slope-envelope",
+    "rect": [
+     -17.52,
+     11.84,
+     -17.240000000000002,
+     11.899999999999999
+    ]
+   },
+   {
+    "id": "circulation:B37:exit-slope-envelope",
+    "rect": [
+     -17.8,
+     9.7,
+     -17.52,
+     9.759999999999998
+    ]
+   },
+   {
+    "id": "circulation:B37:exit-slope-envelope",
+    "rect": [
+     -17.8,
+     11.84,
+     -17.52,
+     11.899999999999999
+    ]
+   },
+   {
+    "id": "circulation:B37:exit-slope-envelope",
+    "rect": [
+     -18.08,
+     9.7,
+     -17.8,
+     9.759999999999998
+    ]
+   },
+   {
+    "id": "circulation:B37:exit-post",
+    "rect": [
+     -17.970000000000002,
+     9.7,
+     -17.91,
+     9.759999999999998
+    ]
+   },
+   {
+    "id": "circulation:B37:exit-slope-envelope",
+    "rect": [
+     -18.08,
+     11.84,
+     -17.8,
+     11.899999999999999
+    ]
+   },
+   {
+    "id": "circulation:B37:exit-post",
+    "rect": [
+     -17.970000000000002,
+     11.84,
+     -17.91,
+     11.899999999999999
+    ]
+   },
+   {
+    "id": "circulation:B37:exit-support",
+    "rect": [
+     -13.51,
+     9.7,
+     -13.39,
+     9.82
+    ]
+   },
+   {
+    "id": "circulation:B37:exit-support",
+    "rect": [
+     -13.51,
+     11.78,
+     -13.39,
+     11.899999999999999
     ]
    }
   ]
  },
  "circulationRoutes": [
   {
-   "id": "B25",
+   "id": "B37",
    "height": 3.22,
    "waypoints": [
     [
-     -3,
+     -4,
      0.02,
-     12.5
+     10.8
     ],
     [
-     -5.65,
+     -6.65,
      0.02,
-     12.5
+     10.8
     ],
     [
-     -5.65,
+     -6.65,
      1.62,
-     8.5
+     6.5
     ],
     [
-     -8.9,
+     -9.9,
      1.62,
-     8.5
+     6.5
     ],
     [
-     -8.9,
+     -9.9,
      3.22,
-     12.5
+     10.8
     ],
     [
-     -11.9,
+     -12.9,
      3.22,
-     12.5
+     10.8
     ],
     [
-     -17.65,
+     -18.65,
      0,
-     12.5
+     10.8
     ]
    ]
   }
@@ -4085,27 +4401,27 @@
   {
    "id": "S01",
    "pos": [
-    -21.0,
+    -24.0,
     0.0,
-    -2.5
+    0.0
    ],
-   "heading": 105
+   "heading": 0
   },
   {
    "id": "S02",
    "pos": [
-    23.0,
+    24.0,
     0.0,
-    23.0
+    17.0
    ],
-   "heading": 270
+   "heading": 0
   },
   {
    "id": "S03",
    "pos": [
-    21.0,
-    0.0,
-    -21.0
+    9.5,
+    1.26,
+    -20.0
    ],
    "heading": 180
   },
@@ -4114,115 +4430,115 @@
    "pos": [
     -4.5,
     0.0,
-    20.0
-   ],
-   "heading": 90
-  },
-  {
-   "id": "S05",
-   "pos": [
-    -5.0,
-    0.0,
-    -23.0
-   ],
-   "heading": 225
-  },
-  {
-   "id": "S06",
-   "pos": [
-    6.5,
-    0.0,
-    -1.5
-   ],
-   "heading": 270
-  },
-  {
-   "id": "S07",
-   "pos": [
-    -23.0,
-    0.0,
-    17.5
+    23.0
    ],
    "heading": 15
   },
   {
+   "id": "S05",
+   "pos": [
+    -15.5,
+    0.0,
+    -23.5
+   ],
+   "heading": 90
+  },
+  {
+   "id": "S06",
+   "pos": [
+    4.0,
+    0.0,
+    2.0
+   ],
+   "heading": 30
+  },
+  {
+   "id": "S07",
+   "pos": [
+    23.0,
+    0.0,
+    -5.0
+   ],
+   "heading": 270
+  },
+  {
    "id": "S08",
    "pos": [
-    -23.0,
+    -22.0,
     0.0,
-    -23.0
+    22.0
    ],
-   "heading": 165
+   "heading": 90
   },
   {
    "id": "S09",
    "pos": [
-    21.0,
+    -8.0,
     0.0,
-    6.5
+    -9.0
    ],
-   "heading": 0
+   "heading": 75
   },
   {
    "id": "S10",
    "pos": [
-    9.5,
+    9.0,
     0.0,
-    15.5
+    17.0
    ],
-   "heading": 285
+   "heading": 90
   },
   {
    "id": "S11",
    "pos": [
-    -7.0,
+    -25.0,
     0.0,
-    -7.0
-   ],
-   "heading": 165
-  },
-  {
-   "id": "S12",
-   "pos": [
-    19.0,
-    0.0,
-    -7.5
+    -13.5
    ],
    "heading": 180
   },
   {
-   "id": "S13",
+   "id": "S12",
    "pos": [
     -13.0,
     0.0,
-    8.5
+    13.0
    ],
-   "heading": 0
+   "heading": 195
+  },
+  {
+   "id": "S13",
+   "pos": [
+    -3.0,
+    0.0,
+    -22.0
+   ],
+   "heading": 150
   },
   {
    "id": "S14",
    "pos": [
-    -1.0,
+    -1.5,
     0.0,
-    8.0
+    12.0
    ],
-   "heading": 330
+   "heading": 30
   },
   {
    "id": "S15",
    "pos": [
-    10.5,
+    21.0,
     0.0,
-    -14.5
+    6.0
    ],
-   "heading": 255
+   "heading": 0
   },
   {
    "id": "S16",
    "pos": [
-    -13.0,
+    12.5,
     0.0,
-    -16.0
+    -4.0
    ],
    "heading": 180
   }

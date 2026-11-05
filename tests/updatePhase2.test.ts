@@ -67,31 +67,57 @@ it('does not climb above an intervening solid ceiling or outside authored shafts
 });
 
 it('connects the low roofs with continuous supported routes and collidable plant', () => {
-  const p=new PlayerController(world);p.teleport({x:4,y:4.5,z:9.6},90);
-  tick(p,1.5,1);expect(p.grounded).toBe(true);expect(p.position.y).toBeCloseTo(4.5,4);
-  p.yaw=PlayerController.headingToYaw(180);tick(p,.6,1);
-  expect(p.grounded).toBe(true);expect(p.position.y).toBeCloseTo(4.5,4);
+  // Walk between the centres of every pair of adjoining service roofs: one continuous deck.
+  const roofs=layout.buildings.filter(b=>(b as {serviceRoof?:boolean}).serviceRoof);
+  expect(roofs.length).toBeGreaterThan(0);
+  // A single workshop roof is crossed edge to edge.
+  if(roofs.length===1){
+    // Along the north side, clear of the HVAC plant (which is deliberately collidable cover).
+    const [x0,z0,x1]=roofs[0].rect,z=z0+1,end=Math.min(x1,layout.playArea[2])-1;
+    const p=new PlayerController(world);p.teleport({x:x0+1,y:4.5,z},90);
+    for(let i=0;i<120*6&&p.position.x<end;i++){p.fixedUpdate(FIXED_DT,{...NO_INTENT,z:1});expect(p.position.y).toBeGreaterThan(4.4);}
+    expect(p.position.x).toBeGreaterThan(end-.3);
+  }
+  const centreX=(b:typeof roofs[number])=>(b.rect[0]+Math.min(b.rect[2],layout.playArea[2]-1))/2;
+  let pairs=0;
+  for(const a of roofs)for(const b of roofs){
+    if(a===b||!(a.rect[2]===b.rect[0]&&a.rect[1]<b.rect[3]&&b.rect[1]<a.rect[3]))continue;
+    pairs++;
+    const ax=centreX(a),bx=centreX(b),z=(Math.max(a.rect[1],b.rect[1])+Math.min(a.rect[3],b.rect[3]))/2;
+    const p=new PlayerController(world);p.teleport({x:ax,y:4.5,z},90);
+    for(let i=0;i<120*4&&p.position.x<bx-.2;i++){p.fixedUpdate(FIXED_DT,{...NO_INTENT,z:1});expect(p.position.y,`${a.id}->${b.id}`).toBeGreaterThan(4.4);}
+    expect(p.position.x,`${a.id}->${b.id} roof route blocked`).toBeGreaterThan(bx-.3);
+  }
+  expect(pairs+(roofs.length===1?1:0)).toBeGreaterThan(0);
   expect([...world.all()].filter(c=>c.tag.startsWith('roof:equipment:'))).toHaveLength(5);
-  expect(world.pointInside(12.7,5.1,9.9)?.tag).toBe('roof:equipment:hvac_duct');
+  expect([...world.all()].some(c=>c.tag==='roof:equipment:hvac_duct')).toBe(true);
 });
 
 it('preserves the Town arch crown opening while retaining masonry and both passage directions', () => {
   const l=JSON.parse(readFileSync('src/maps/european-town/layout.json','utf8')) as MapLayout;
   const c=JSON.parse(readFileSync('public/assets/models/european-town/collision.json','utf8')) as CollisionFile;
   const w=createMapWorld(c,l,catalog);
-  // B22 is the actual curved arcade. Its old full-width 2.6 m slab
-  // interrupted jumps in the visible 3.2 m crown opening.
-  expect(w.ceilingHeight(12,3.5,.2,.5)).toBeGreaterThan(3.16);
-  for(const reverse of [false,true]) {
-    const p=new PlayerController(w);p.weaponClearance='rifle';
-    p.teleport({x:reverse?14.8:9.2,y:0,z:3.5},reverse?270:90);
-    let peak=0;
-    for(let i=0;i<210;i++) {
-      p.fixedUpdate(FIXED_DT,{...NO_INTENT,z:1,jumpPressed:i===26});
-      peak=Math.max(peak,p.position.y);
+  // Every curved arcade keeps its visible 3.2 m crown opening: an old full-width 2.6 m slab
+  // interrupted jumps through it. Walk and jump through each one in both directions.
+  const arcades=l.buildings.flatMap(b=>(b.passages??[]).filter(p=>p.style==='arch'));
+  expect(arcades.length).toBeGreaterThan(1);
+  for(const passage of arcades) {
+    const [x0,z0,x1,z1]=passage.rect,cx=(x0+x1)/2,cz=(z0+z1)/2,alongX=x1-x0>=z1-z0;
+    expect(w.ceilingHeight(cx,cz,.2,.5),`${passage.rect} crown`).toBeGreaterThan(passage.clear-.04);
+    for(const reverse of [false,true]) {
+      const p=new PlayerController(w);p.weaponClearance='rifle';
+      const start=alongX?{x:reverse?x1+.9:x0-.9,y:0,z:cz}:{x:cx,y:0,z:reverse?z1+.9:z0-.9};
+      p.teleport(start,alongX?(reverse?270:90):(reverse?0:180));
+      let peak=0;
+      const length=(alongX?x1-x0:z1-z0)+2;
+      for(let i=0;i<120*length/4;i++) {
+        p.fixedUpdate(FIXED_DT,{...NO_INTENT,z:1,jumpPressed:i===26});
+        peak=Math.max(peak,p.position.y);
+      }
+      expect(peak,`${passage.rect} jump strikes an invisible crown barrier`).toBeGreaterThan(1.02);
+      const end=alongX?p.position.x:p.position.z;
+      expect(reverse?end<(alongX?x0:z0)+.3:end>(alongX?x1:z1)-.3,`${passage.rect} reverse=${reverse}`).toBe(true);
     }
-    expect(peak,'B22 jump strikes an invisible crown barrier').toBeGreaterThan(1.02);
-    expect(reverse?p.position.x<9.5:p.position.x>14.5).toBe(true);
   }
   for(const a of l.arches) {
     const [x0,z0,x1,z1]=a.rect, x=(x0+x1)/2,z=(z0+z1)/2;

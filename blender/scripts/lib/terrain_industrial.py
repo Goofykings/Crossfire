@@ -44,8 +44,7 @@ class IndustrialTerrain(TerrainBuilder):
         self.markings(md)
         self.team_strips(md)
         self.details(md)
-        L = self.lim + 20
-        md.face([(-L, -0.06, -L), (-L, -0.06, L), (L, -0.06, L), (L, -0.06, -L)], self.base_mat, col=(0.5, 0.5, 0.5, 1.0))
+        self.base_plane(md, self.base_mat)
         return md
 
     # --- ground ------------------------------------------------------------------------------------
@@ -97,12 +96,17 @@ class IndustrialTerrain(TerrainBuilder):
                     if any(_in(xc, zc, r) for r in self.stair_cells):
                         continue
                     for dx, dz, side in ((-1, 0, "w"), (1, 0, "e"), (0, -1, "n"), (0, 1, "s")):
+                        X0, Z0 = xi - lim, zi - lim
+                        if any(_in(xc + dx, zc + dz, r) for r in self.stair_cells):
+                            # Beside a partial stair run the raised deck still needs its side face
+                            # above the steps, or the hollow deck shows through (map audit).
+                            a, b = {"w": ((X0, Z0 + 1), (X0, Z0)), "e": ((X0 + 1, Z0), (X0 + 1, Z0 + 1)),
+                                    "n": ((X0, Z0), (X0 + 1, Z0)), "s": ((X0 + 1, Z0 + 1), (X0, Z0 + 1))}[side]
+                            md.face_toward([(a[0], 0.0, a[1]), (b[0], 0.0, b[1]), (b[0], h, b[1]), (a[0], h, a[1])], face_mat, (dx, 0, dz))
+                            continue
                         nh = self._height_of_cell(xi + dx, zi + dz)
                         if nh is None or nh >= h - 1e-3:
                             continue
-                        if any(_in(xc + dx, zc + dz, r) for r in self.stair_cells):
-                            continue
-                        X0, Z0 = xi - lim, zi - lim
                         a, b = {"w": ((X0, Z0 + 1), (X0, Z0)), "e": ((X0 + 1, Z0), (X0 + 1, Z0 + 1)),
                                 "n": ((X0, Z0), (X0 + 1, Z0)), "s": ((X0 + 1, Z0 + 1), (X0, Z0 + 1))}[side]
                         out = (dx, 0, dz)
@@ -404,6 +408,13 @@ class IndustrialTerrain(TerrainBuilder):
     def details(self, md: MeshData):
         """Oil stains and asphalt repairs (decals), manhole covers (raised 12 mm)."""
         rnd = self.rnd
+        from underground import footprints
+        stairwells = footprints(self.L)
+
+        def open_ground(cx, cz, hw, hd):
+            # Never over an underground stairwell: a decal there floats above the steps.
+            return not any(cx + hw > r[0] - .3 and cx - hw < r[2] + .3 and cz + hd > r[1] - .3 and cz - hd < r[3] + .3
+                           for r in stairwells)
         for zn in self.L["ground"]["zones"]:
             if zn["kind"] in ("spawn",) or zn["height"] > 0.05:
                 continue
@@ -415,6 +426,9 @@ class IndustrialTerrain(TerrainBuilder):
                     rnd.uniform(z0 + d / 2, z1 - d / 2) if z1 - z0 > d else (z0 + z1) / 2
                 # decal layers stay 3 mm apart: patches 3 mm, road paint 6 mm, stains 9 mm above the ground
                 y = zn["height"] + 0.009
+                # Oil drips where vehicles stand: never on pedestrian plazas, courts or sidewalks.
+                if zn["kind"] in ("plaza", "court", "sidewalk") or not open_ground(cx, cz, w / 2, d / 2):
+                    continue
                 md.face_toward([(cx - w / 2, y, cz - d / 2), (cx + w / 2, y, cz - d / 2), (cx + w / 2, y, cz + d / 2), (cx - w / 2, y, cz + d / 2)],
                                # UVs are metres (the material repeats every 3 m): one whole stain sheet per patch
                                "oil_stain", (0, 1, 0), uv=[(0, 0), (3, 0), (3, 3), (0, 3)])
@@ -423,12 +437,14 @@ class IndustrialTerrain(TerrainBuilder):
                 if x1 - x0 > w + 1 and z1 - z0 > d + 1:
                     cx, cz = rnd.uniform(x0 + w / 2 + 0.5, x1 - w / 2 - 0.5), rnd.uniform(z0 + d / 2 + 0.5, z1 - d / 2 - 0.5)
                     y = zn["height"] + 0.003
+                    # draw the offset either way so a skipped patch leaves later placements unchanged
                     md.uv_offset = (rnd.uniform(0, 4), rnd.uniform(0, 4))
-                    md.face_toward([(cx - w / 2, y, cz - d / 2), (cx + w / 2, y, cz - d / 2), (cx + w / 2, y, cz + d / 2),
-                                    (cx - w / 2, y, cz + d / 2)], "asphalt_inlay", (0, 1, 0), col=(0.78, 0.78, 0.8, 1.0))
+                    if open_ground(cx, cz, w / 2, d / 2):
+                        md.face_toward([(cx - w / 2, y, cz - d / 2), (cx + w / 2, y, cz - d / 2), (cx + w / 2, y, cz + d / 2),
+                                        (cx - w / 2, y, cz + d / 2)], "asphalt_inlay", (0, 1, 0), col=(0.78, 0.78, 0.8, 1.0))
                     md.uv_offset = (0.0, 0.0)
             if area > 60 and rnd.random() < 0.6:
                 cx, cz = (x0 + x1) / 2 + rnd.uniform(-1, 1), (z0 + z1) / 2 + rnd.uniform(-1, 1)
-                if _in(cx, cz, zn["rect"]):
+                if _in(cx, cz, zn["rect"]) and open_ground(cx, cz, .4, .4):
                     y = zn["height"]
                     md.cylinder((cx, y - 0.02, cz), 0.36, 0.032, "metal_plate", segments=14)

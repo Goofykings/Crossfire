@@ -11,7 +11,7 @@ const catalog = JSON.parse(readFileSync('public/assets/models/shared/props/props
 type Door = { side: 'n' | 's' | 'w' | 'e'; rect: Rect };
 type InteriorBuilding = MapLayout['buildings'][number] & { interiors?: { doors: Door[] }[] };
 const additions: Record<string, string> = {
-  'european-town': 'market_room', 'industrial-complex': 'goods_office', 'modern-city': 'diner_service',
+  'european-town': 'market_room', 'industrial-complex': 'goods_office', 'modern-city': 'west_arcade',
 };
 
 describe.each(MAP_IDS)('%s Phase 2 physical passages', (id) => {

@@ -520,6 +520,32 @@ def choose_type(world, r, inside, exp, open_len, corners, h):
     return btype
 
 
+def relocate_doors(world, buildings):
+    """Slide facade doors along their open run so authored benches, stalls and lamps stay
+    against the wall beside a door instead of being dropped by the clearance pass."""
+    import building_spec as bspec
+    avoid = [(pos[0], pos[2], max(PROPS[t]["size"][0], PROPS[t]["size"][2]) * .5) for t, pos, _ in MANUAL_PROPS]
+    avoid += [(pos[0], pos[2], .2) for pos in STREET_LANTERNS]
+
+    def clear(b, side, at, width):
+        x, z = bspec.side_point(b, side, at, .7)
+        if world.classify(*bspec.side_point(b, side, at, .6))[0] != "open":
+            return False
+        return all(math.hypot(x - ax, z - az) >= width / 2 + ar + .55 for ax, az, ar in avoid)
+
+    for b in buildings:
+        x0, z0, x1, z1 = b["rect"]
+        for d in b["doors"]:
+            if clear(b, d["side"], d["at"], d["width"]):
+                continue
+            length = (x1 - x0) if d["side"] in ("n", "s") else (z1 - z0)
+            for delta in sorted({k * .5 * sgn for k in range(1, 9) for sgn in (1, -1)}, key=abs):
+                at = d["at"] + delta
+                if 1.2 <= at <= length - 1.2 and clear(b, d["side"], at, d["width"]):
+                    d["at"] = at
+                    break
+
+
 def emit_layout(areas, rects):
     world = World(areas, rects)
     covered = [a for a in areas if a.kind in ("passage", "room")]
@@ -647,6 +673,7 @@ def emit_layout(areas, rects):
              for a in areas if a.kind not in ("passage", "room")]
     covered_floor = [{"id": a.id, "kind": a.kind, "rect": [a.x0, a.z0, a.x1, a.z1]} for a in covered]
 
+    relocate_doors(world, buildings)
     dressing = dress(world, areas, buildings, terraces)
     if problems:
         print("LAYOUT PROBLEMS:\n  " + "\n  ".join(problems))
@@ -667,7 +694,16 @@ def emit_layout(areas, rects):
     # free-for-all spawn points over the whole map (they keep clear of the props and targets placed above)
     from upper_routes import make_route
     from compact_dressing import finish_layout
-    layout['upperRoutes'] = [make_route('market_gallery', [-17,-21,-14,-3], 'gallery')]
+    from compact_layouts import town_underground
+    import underground
+    # A tiled loggia along the south street: an elevated route over the bakers' lane mouth.
+    layout['upperRoutes'] = [make_route('loggia', [6, 18.7, 22, 21.7], 'gallery')]
+    layout['underground'] = []
+    for p in town_underground():
+        xs = [v for r in p['segments'] + [e['rect'] for e in p['entrances']] for v in (r[0], r[2])]
+        zs = [v for r in p['segments'] + [e['rect'] for e in p['entrances']] for v in (r[1], r[3])]
+        layout['underground'].append({**p, 'floor': underground.FLOOR, 'ceiling': underground.CEIL,
+                                      'rect': [min(xs), min(zs), max(xs), max(zs)], 'waypoints': underground.waypoints(p)})
     finish_layout(layout, PROPS)
     from realism_layout import author
     author(layout)
@@ -685,26 +721,49 @@ from spawn_points import ffa_spawns  # noqa: E402
 
 SIDE_HEADING = {"n": 0, "e": 90, "s": 180, "w": 270}
 
-# (x0, z0, x1, z1) span across a lane, plus springing height; rotated copies are added.
+# (x0, z0, x1, z1) span across a lane between two houses, at 3.4 m springing height.
+# The overhauled town is asymmetric: no rotated copies are added.
 ARCHES = [
-    ("plaza_arch", (0,-15.4,4,-14.6)),
-    ("east_arch", (18,7,22,7.8)),
+    ("via_alta_arch", (-2,-13.4,2,-12.6)),
+    ("east_lane_arch", (20,-6.4,24,-5.6)),
 ]
 
+# Hand-placed dressing; heights are re-derived from the ground they stand on.
 MANUAL_PROPS = [
-    ("market_stall", (-3.8,0,-4.6),180),
-    ("bench", (4.5,0,3.6),270),
-    ("cart", (15.5,0,-10.5),90),
-    ("barrel_group", (10.5,0,-14),0),
-    ("flower_box", (-16,0,14.8),0),
-    ("market_crate", (14,0,-14.5),0),
-    ("market_table", (16.5,0,-15),0),
-    ("stone_bollard", (4.9,0,-4.8),0),
-    ("bench", (14.3,0,15.7),180),
-    ("flower_pot_large", (-13,0,11.2),0),
+    # Piazza del Pozzo
+    ("market_stall", (-3.5,0,-3.4),180),
+    ("bench", (5.6,0,3.9),270),
+    ("bench", (-5.6,0,1.8),90),  # north of the cistern stair and its landing
+    ("stone_bollard", (6.5,0,-4.5),0),
+    ("stone_bollard", (10.5,0,-4.5),0),
+    ("cart", (9.2,0,-1.0),90),
+    ("flower_box", (-9.2,0,-1.6),0),
+    # Borgo Alto
+    ("bench", (12.5,1.26,-20.3),180),
+    ("bench", (16.3,1.26,-19.4),180),
+    ("flower_pot_large", (10.9,1.26,-20.4),0),  # clear of the west stair head
+    ("flower_pot_large", (19.5,1.26,-20.4),0),
+    ("market_table", (15.2,1.26,-11.4),0),
+    ("cart", (8.6,1.26,-15.2),0),
+    # Market court
+    ("market_stall", (-15.6,0,-12.4),90),
+    ("market_crate", (-18.4,0,-15.2),0),
+    ("barrel_group", (-17.9,0,-8.7),0),
+    # Courts and lanes
+    ("flower_pot_large", (-19.4,0,-3.4),0),
+    ("bench", (-19.2,0,14.6),90),
+    ("flower_pot_large", (-12.8,0,15.0),0),
+    ("flower_pot_large", (-0.6,0,13.3),0),
+    ("barrel", (1.4,0,13.4),0),
+    ("bench", (16.5,0,12.4),180),
+    ("market_table", (10.5,0,8.7),0),
+    ("barrel_group", (17.2,0,8.8),0),
+    ("crate_stack", (16.5,0,-4.4),0),
+    ("bench", (-6.5,0,23.4),180),
 ]
 
-STREET_LANTERNS = [(-4.8,0,4.8),(4.8,0,-4.8),(-15,0,15),(16.5,0,-15)]
+# Each clears the facade doors, stair landings and furniture around it (compact_dressing drops any that do not).
+STREET_LANTERNS = [(-6.3,0,3.5),(6.7,0,4.4),(-6.4,0,-4.7),(6.7,1.26,-11.2),(17.4,1.26,-15.6),(-18.7,0,-9.8),(16.0,0,9.3)]
 
 
 
@@ -912,11 +971,8 @@ def dress(world, areas, buildings, terraces):
 
     targets = []
 
-    arches = []
-    for aid, (x0, z0, x1, z1) in ARCHES:
-        for suffix, rr in (("", (x0, z0, x1, z1)), ("r", (-x1, -z1, -x0, -z0))):
-            arches.append({"id": aid + suffix, "rect": list(rr), "spring": 3.4,
-                           "axis": "x" if (rr[2] - rr[0]) > (rr[3] - rr[1]) else "z"})
+    arches = [{"id": aid, "rect": list(rr), "spring": 3.4, "axis": "x" if (rr[2] - rr[0]) > (rr[3] - rr[1]) else "z"}
+              for aid, rr in ARCHES]
 
     print(f"dressing: {len(props)} props, {len(targets)} targets, {len(arches)} arches, {len(lights)} lights")
     return {"arches": arches, "props": props, "lights": lights, "targets": targets,

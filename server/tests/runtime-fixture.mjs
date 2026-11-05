@@ -127,16 +127,21 @@ export class PublicRoom extends ProductionRoom {
   }
   async directionalArenaForTest() {
     const w = this.activeMap.world;
-    const clear = ([x, y, z]) => Number.isFinite(y) && !w.overlapsCylinder(x, z, .34, y + .42, y + 1.8);
+    // Every participant stands on level ground at the victim's height (not over a stairwell,
+    // terrace edge or step), so placed players neither fall nor aim from the wrong eye height.
+    const clear = ([x, y, z]) => Number.isFinite(y) && Math.abs(w.groundHeight(x, z, .34, y + .3) - y) < .02
+      && !w.overlapsCylinder(x, z, .34, y + .42, y + 1.8);
     for (let x = -12; x <= 12; x += 2) for (let z = -12; z <= 12; z += 2) {
       const y = w.groundHeight(x, z, .24, 3), center = [x, y, z];
       const sources = { front: [x, y, z - 2.2], left: [x - 2.2, y, z], right: [x + 2.2, y, z], behind: [x, y, z + 2.2] };
       const observer = [x + 1.8, y, z + 1.8];
       if (![center, observer, ...Object.values(sources)].every(clear)) continue;
-      if ([observer, ...Object.values(sources)].some((p) => {
-        const delta = [x - p[0], -.5, z - p[2]], length = Math.hypot(...delta);
-        return w.raycast(p[0], y + 1.64, p[2], ...delta.map((v) => v / length), length - .4);
-      })) continue;
+      // The tests aim from the eye at the victim's chest and head: check those exact rays, so a
+      // low well ring, bench or stall counter between them cannot absorb a shot.
+      if ([observer, ...Object.values(sources)].some((p) => [.9, 1.4].some((h) => {
+        const delta = [x - p[0], y + h - p[1] - 1.64, z - p[2]], length = Math.hypot(...delta);
+        return w.raycast(p[0], p[1] + 1.64, p[2], ...delta.map((v) => v / length), length - .3);
+      }))) continue;
       return { center, sources, observer };
     }
     throw new Error('No clear four-direction sightline in actual map geometry');
@@ -161,18 +166,29 @@ export class PublicRoom extends ProductionRoom {
     const hit = this.activeMap.world.raycast(o.x, o.y, o.z, d.x, d.y, d.z, e.gun.stats.range);
     return hit ? { tag: hit.collider.tag, distance: hit.distance, origin: o, lean: p.lean } : null;
   }
+  /** Real architecture that blocks players and bullets: freestanding wall lots first, then
+   * interior/underground walls, then building masses (the overhauled Town and City have no
+   * freestanding wall lots). */
+  architectureForTest(world) {
+    const rank = (c) => c.tag.startsWith('wall:') ? 0 : /^(circulation|underground):.*:wall$/.test(c.tag) ? 1 : c.tag.startsWith('building:') ? 2 : 3;
+    return [...world.colliders.values()].filter((c) => rank(c) < 3 && c.hy >= 1).sort((a, b) => rank(a) - rank(b));
+  }
+  /** True when collider `c` stands across a player's whole height on ground at `y` (a passage
+   * wall below the street, or a lintel above it, does not separate two players). */
+  coversStandingForTest(c, y) {
+    return c.minY <= y + .3 && c.maxY >= y + 1.9;
+  }
   async leanWallForTest() {
     const w = this.activeMap.world;
-    for (const c of w.colliders.values()) {
-      if (!c.tag.startsWith('wall:') || c.hy < 1) continue;
+    for (const c of this.architectureForTest(w)) {
       const shortX = c.hx < c.hz, nx = shortX ? c.cos : c.sin, nz = shortX ? -c.sin : c.cos;
       const gap = (shortX ? c.hx : c.hz) + .37;
       for (const side of [-1, 1]) {
         const x = c.cx + nx * gap * side, z = c.cz + nz * gap * side;
         const y = w.groundHeight(x, z, .24, 2);
-        if (!Number.isFinite(y) || w.overlapsCylinder(x, z, .34, y + .42, y + 1.8)) continue;
+        if (!Number.isFinite(y) || !this.coversStandingForTest(c, y) || w.overlapsCylinder(x, z, .34, y + .42, y + 1.8)) continue;
         const dx = -nx * side, dz = -nz * side;
-        if (!w.raycast(x, y + 1.64, z, dx, 0, dz, .5)) continue;
+        if (w.raycast(x, y + 1.64, z, dx, 0, dz, .5)?.collider !== c) continue;
         const heading = Math.atan2(dx, -dz) * 180 / Math.PI;
         return { position: [x, y, z], heading, wall: c.tag };
       }
@@ -204,8 +220,7 @@ export class PublicRoom extends ProductionRoom {
   async wallArenaForTest() {
     const world = this.activeMap.world;
     let fallback = null;
-    for (const c of world.colliders.values()) {
-      if (!c.tag.startsWith('wall:') || c.hy < 1) continue;
+    for (const c of this.architectureForTest(world)) {
       const alongX = c.hx < c.hz;
       const nx = alongX ? c.cos : c.sin, nz = alongX ? -c.sin : c.cos;
       const gap = (alongX ? c.hx : c.hz) + 1.2;
@@ -213,7 +228,11 @@ export class PublicRoom extends ProductionRoom {
         const x = c.cx + nx * gap * s, z = c.cz + nz * gap * s;
         return [x, world.groundHeight(x, z, .24, 3), z];
       });
-      if (pair.every(([x, y, z]) => Number.isFinite(y) && !world.overlapsCylinder(x, z, .34, y + .42, y + 1.8))) {
+      const eyeRay = () => {
+        const [a, b] = pair, d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], length = Math.hypot(...d);
+        return world.raycast(a[0], a[1] + 1.64, a[2], ...d.map((v) => v / length), length)?.collider === c;
+      };
+      if (pair.every(([x, y, z]) => Number.isFinite(y) && this.coversStandingForTest(c, y) && !world.overlapsCylinder(x, z, .34, y + .42, y + 1.8)) && eyeRay()) {
         const tangent = alongX ? [c.sin, c.cos] : [c.cos, -c.sin];
         const shift = (alongX ? c.hz : c.hx) - .08;
         const edgePair = pair.map(([x, , z]) => {

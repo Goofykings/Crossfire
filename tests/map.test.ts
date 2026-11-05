@@ -119,6 +119,8 @@ describe.each(MAP_IDS)('map %s: collision', (id) => {
         for (let z = first(z0); z < z1; z += step) {
           // Probe the authored floor, then test the real world including props.
           // Furniture tops are not additional ground-route cells.
+          // Underground stairwells are traversed by tests/mapOverhaul.test.ts, not this street grid.
+          if ((layout.underground ?? []).some((p) => p.entrances.some((e) => x >= e.rect[0] - .5 && x <= e.rect[2] + .5 && z >= e.rect[1] - .5 && z <= e.rect[3] + .5))) continue;
           const y = terrain.groundHeight(x, z, r * 0.7, 2.0);
           if (y === -Infinity) continue;
           if (world.overlapsCylinder(x, z, r, y + MOVEMENT.stepHeight, y + height)) continue;

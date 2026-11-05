@@ -12,6 +12,7 @@ import math
 from collision_gen import stair_rects
 from meshkit import MeshData
 from terrain_industrial import IndustrialTerrain
+from underground import footprints
 
 ROAD_MATS = ("asphalt_fine", "asphalt")
 
@@ -199,7 +200,8 @@ class ModernTerrain(IndustrialTerrain):
                 s = (x0 if long_x else z0) + 7 + k * 14 + rnd.uniform(-1, 1)
                 for edge, sgn in (((z0, -1), (z1, 1)) if long_x else ((x0, -1), (x1, 1))):
                     px, pz = (s, edge + sgn * 0.35) if long_x else (edge + sgn * 0.35, s)
-                    if not self._road(int(math.floor(px)), int(math.floor(pz))):
+                    if not self._road(int(math.floor(px)), int(math.floor(pz))) or any(
+                            r[0] - .5 < px < r[2] + .5 and r[1] - .5 < pz < r[3] + .5 for r in footprints(self.L)):
                         continue
                     if long_x:
                         md.box(px - 0.45, 0.0, pz - 0.2, px + 0.45, 0.02, pz + 0.2, "steel_dark", skip=("ny",))

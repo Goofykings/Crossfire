@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # python -I does not add the script's folder
-from layoutkit import SIDE_HEADING, SIDE_OUT, SIDES, Area, LayoutKit, covered_floor, ground_zones, inside  # noqa: E402
+from layoutkit import SIDE_HEADING, SIDE_OUT, SIDES, Area, LayoutKit, covered_floor, ground_zones, inside, relocate_doors  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 LAYOUT_JSON = ROOT / "src" / "maps" / "industrial-complex" / "layout.json"
@@ -39,47 +39,69 @@ from compact_layouts import industrial as authored_routes
 
 AREAS = authored_routes(Area)
 
-# overhead covered walkways and pipe bridges: (id, rect, spring height, style); rotated copies are added
+# Overhead canopies and pipe bridges between two buildings: (id, rect, spring height, style).
+# The overhauled complex is asymmetric: no rotated copies are added.
 ARCHES = [
-    ("hall_canopy", (5,-15,9,-14),3.6,"canopy"),
-    ("cross_pipe", (11.5,2,12.5,7),5.2,"pipes"),
+    ("stores_canopy", (-11,-20.5,-8,-19.5),3.6,"canopy"),
+    ("machine_pipes", (19.5,-17,20.5,-14),5.4,"pipes"),
+    ("south_pipes", (4,21,5,25),5.0,"pipes"),
+    ("container_pipes", (9,14.5,13,15.5),5.2,"pipes"),
 ]
 
-# Hand-placed landmark dressing: (type, (x, y, z), heading), without mirroring.
+# Hand-placed working dressing: (type, (x, y, z), heading), without mirroring. Interiors also get
+# wall racking from dress(); these add aisles, machinery and yard cover with purpose.
 MANUAL_PROPS = [
-    ("container_stack_a", (0,0,0),0),
-    ("container_blue", (16.5,0,19),0),
-    ("pallet_goods", (13,0,12.5),0),
-    ("pallet_wrapped", (19.7,0,12.3),0),
-    ("pump_skid", (18.5,0,-14.5),0),
-    ("valve_manifold", (14,0,-12.5),0),
-    ("transformer", (18.5,0,-9.5),0),
-    ("electrical_cabinet", (20.5,0,-12),90),
-    ("cable_reel", (11,0,-14.5),90),
-    ("gas_cage", (-10.5,0,5.4),0),
-    ("drum_group", (-11,0,9),0),
-    ("forklift", (-8.8,0,7.5),90),
-    ("pipe_bundle", (-3,0,-17),0),
+    # Loading yard: a container stack and goods staged for the dock, forklift at work.
+    ("container_stack_a", (1.5,0,-4.0),90),
+    ("forklift", (7.0,0,-7.5),0),
+    ("pallet_goods", (8.6,0,-1.8),0),
+    ("pallet_wrapped", (8.6,0,0.6),0),
+    ("jersey_barrier", (-3.0,0,1.6),90),
+    ("pallet_stack", (-5.6,0,-9.6),0),
+    # Utility yard: fenced electrical compound (west) and cable/pump storage (east).
+    ("transformer", (-4.2,0,-21.2),0),
+    ("electrical_cabinet", (-6.2,0,-18.3),0),
+    ("electrical_cabinet", (-3.2,0,-18.0),0),
+    ("pump_skid", (3.0,0,-21.2),0),
+    ("valve_manifold", (4.7,0,-19.5),90),
+    ("cable_reel", (1.2,0,-18.6),90),
+    # Machinery hall: pumps, manifold, transformer and benches along the walls (doors S and W).
+    ("pump_skid", (12.5,0,-22.6),0),
+    ("valve_manifold", (17.0,0,-24.2),0),
+    ("workbench", (21.5,0,-24.3),0),
+    ("ibc_tank", (19.5,0,-18.4),0),
+    ("transformer", (21.8,0,-20.4),90),
+    ("electrical_cabinet", (23.2,0,-23.0),270),
+    ("gas_cage", (10.4,0,-24.2),0),
+    # Stores hall: two rows of racking with a clear centre aisle from the south door.
+    ("shelving_rack", (-21.6,0,-24.25),0),
+    ("shelving_rack", (-18.4,0,-24.25),0),
+    ("shelving_rack", (-15.2,0,-24.25),0),
+    ("shelving_rack", (-22.0,0,-20.6),0),
+    ("shelving_rack", (-13.2,0,-20.6),0),
+    ("pallet_wrapped", (-23.0,0,-18.2),0),
+    ("pallet_stack", (-12.2,0,-18.2),0),
+    # Warehouse B: a central rack row with a gap for the aisle.
+    ("shelving_rack", (-1.6,0,15.0),0),
+    ("shelving_rack", (4.6,0,15.0),0),
+    ("pallet_stack", (-4.6,0,19.8),0),
+    ("ibc_tank", (7.8,0,19.8),0),
+    # Storage yard: outdoor racks, drums and a gas cage.
+    ("pallet_stack", (-22.4,0,12.6),0),
+    ("crate_large", (-22.0,0,10.4),0),
+    ("drum_group", (-24.8,0,19.6),0),
+    ("pallet_wrapped", (-18.5,0,15.0),90),
+    ("cable_reel", (-20.0,0,19.8),0),
+    # Container yard: stacks forming lanes.
+    ("container_stack_b", (19.5,0,15.0),0),
+    # (a second container cannot clear the doors ringing this yard; drums and pallets wait by the east fence)
+    ("drum_group", (24.9,0,11.0),0),
+    ("pallet_stack", (24.9,0,13.2),0),
+    # Workshop yard and lanes.
+    ("forklift", (14.2,0,2.0),0),
+    ("drum_group", (-25.8,0,-9.5),0),
+    ("skip_bin", (-25.8,0,1.3),90),  # south of the dispatch exit stair landing
 ]
-
-MANUAL_PROPS += [
-    ('pallet_stack', (-5.4,0,-18.6),0),
-    ('shelving_rack', (2,0,-18.7),0),
-    ('oil_drum_red', (-5.5,0,-11.1),0),
-    ('ibc_tank', (3.7,0,-11.1),0),
-    ('workbench', (-14.5,0,-16.7),0),
-    ('pallet_wrapped', (-16.6,0,-10.2),0),
-    ('pallet_goods', (-4.6,0,19),0),
-    ('crate_large', (4.5,0,19.2),0),
-    ('shelving_rack', (1.5,0,12.5),0),
-    ('oil_drum', (11.5,0,-8),0),
-    ('pallet_stack', (11,0,-16),0),
-    ('jersey_barrier', (2.5,0,-23),0),
-    ('drum_group', (-23.4,0,-20.3),0),
-    ('tire_stack', (23.4,0,10),0),
-]
-
-
 
 
 def material_of(a: Area) -> str:
@@ -400,11 +422,8 @@ def dress(kit: LayoutKit, areas, buildings, terraces):
 
     targets = []
     lights = []  # free-for-all: no team lights at the old spawn yards
-    arches = []
-    for aid, (x0, z0, x1, z1), spring, style in ARCHES:
-        for suffix, rr in (("", (x0, z0, x1, z1)), ("r", (-x1, -z1, -x0, -z0))):
-            arches.append({"id": aid + suffix, "rect": list(rr), "spring": spring, "style": style,
-                           "axis": "x" if (rr[2] - rr[0]) > (rr[3] - rr[1]) else "z"})
+    arches = [{"id": aid, "rect": list(rr), "spring": spring, "style": style,
+               "axis": "x" if (rr[2] - rr[0]) > (rr[3] - rr[1]) else "z"} for aid, rr, spring, style in ARCHES]
     return {"props": props, "targets": targets, "lights": lights, "arches": arches, "obstacles": []}
 
 
@@ -423,6 +442,7 @@ def build():
         else:
             entry["id"] = f"I{len(buildings) + 1:02d}"
             buildings.append(entry)
+    relocate_doors(kit, buildings, MANUAL_PROPS, PROPS)
     terraces = kit.terraces(rise=0.2, run=0.3, style_of=lambda a: {"dock": "dock", "platform": "platform"}.get(a.kind))
     covered = []
     for b in buildings:
@@ -442,12 +462,13 @@ def build():
     # free-for-all spawn points over the whole map (clear of the props and targets placed above)
     from upper_routes import make_route
     from compact_dressing import finish_layout
-    layout['upperRoutes'] = [make_route('warehouse_catwalk', [-18,-3,-15,14], 'catwalk')]
+    # A steel catwalk spans the south lane between the loading yard and warehouse B.
+    layout['upperRoutes'] = [make_route('loading_catwalk', [-6,6,10,9], 'catwalk')]
+    # Chain-link divides the utility yard's electrical compound from its pump and cable store,
+    # with a 3.5 m opening at the yard's south side.
     layout['walls'] += [
-        {'id':'utility_divider_n','rect':[15.92,-15.5,16.08,-12], 'height':2.2,
-         'style':'fence','gates':[], 'purpose':'utility equipment / storage yard divider'},
-        {'id':'utility_divider_s','rect':[15.92,-9,16.08,-7.8], 'height':2.2,
-         'style':'fence','gates':[], 'purpose':'utility equipment / storage yard divider'},
+        {'id':'utility_divider','rect':[-1.08,-25,-0.92,-20.5], 'height':2.2,
+         'style':'fence','gates':[], 'purpose':'electrical compound / pump and cable store divider'},
     ]
     from industrial_roofs import author
     author(layout)

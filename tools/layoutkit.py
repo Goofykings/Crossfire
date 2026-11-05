@@ -330,7 +330,21 @@ class LayoutKit:
         greedy decomposition cannot cut a passage or an interior in two."""
         n, O, P = self.n, self.OUTER, self.PLAY
         lots = []
-        for a in sorted((a for a in self.areas if a.kind in ("interior", "passage", "room")), key=lambda a: a.kind != "interior"):
+        # Authored lots (extra["lot"]) are claimed first and exactly: a building whose interior
+        # circulation depends on its footprint (stairs, exits) must not be re-cut by growth.
+        covered = [a for a in self.areas if a.kind in ("interior", "passage", "room")]
+        for a in covered:
+            lot = (a.extra or {}).get("lot")
+            if not lot:
+                continue
+            for zi in range(lot[1], lot[3]):
+                for xi in range(lot[0], lot[2]):
+                    assert self.cell_area[zi + O][xi + O] in (None, a), f"{a.id}: authored lot overlaps walkable ground"
+                    mass[zi + O][xi + O] = False
+            lots.append(tuple(lot))
+        for a in sorted(covered, key=lambda a: a.kind != "interior"):
+            if (a.extra or {}).get("lot"):
+                continue
             r = [int(a.x0), int(a.z0), int(a.x1), int(a.z1)]
             if any(not mass[zi + O][xi + O] for zi in range(r[1], r[3]) for xi in range(r[0], r[2])):
                 continue  # already claimed by another covered area's lot
@@ -608,3 +622,37 @@ def ground_zones(areas, material_of):
         out.append({"id": a.id, "kind": kind, "rect": [a.x0, a.z0, a.x1, a.z1], "height": a.height,
                     "material": a.material or material_of(a)})
     return out
+
+
+def relocate_doors(kit: "LayoutKit", buildings, manual_props, catalog):
+    """Slide facade doors along their open frontage so the authored machinery, racks and
+    containers keep their places beside a door instead of being dropped by the clearance pass."""
+    avoid = [(pos[0], pos[2], max(catalog[t]["size"][0], catalog[t]["size"][2]) * .5) for t, pos, _ in manual_props]
+    out = {"n": (0, -1), "s": (0, 1), "w": (-1, 0), "e": (1, 0)}
+
+    def point(b, side, at, off):
+        x0, z0, x1, z1 = b["rect"]
+        ox, oz = out[side]
+        return ((x0 + at, z0 - off) if side == "n" else (x0 + at, z1 + off) if side == "s"
+                else (x0 - off, z0 + at) if side == "w" else (x1 + off, z0 + at))
+
+    def clear(b, d, at):
+        x, z = point(b, d["side"], at, .7)
+        if kit.classify(*point(b, d["side"], at, .6))[0] != "open":
+            return False
+        others = [o for o in b["doors"] if o is not d and o["side"] == d["side"]]
+        if any(abs(o["at"] - at) < (o["width"] + d["width"]) / 2 + .6 for o in others):
+            return False
+        return all(math.hypot(x - ax, z - az) >= d["width"] / 2 + ar + .55 for ax, az, ar in avoid)
+
+    for b in buildings:
+        x0, z0, x1, z1 = b["rect"]
+        for d in b.get("doors", []):
+            if clear(b, d, d["at"]):
+                continue
+            length = (x1 - x0) if d["side"] in ("n", "s") else (z1 - z0)
+            for delta in sorted({k * .5 * sgn for k in range(1, 13) for sgn in (1, -1)}, key=abs):
+                at = d["at"] + delta
+                if d["width"] / 2 + .3 <= at <= length - d["width"] / 2 - .3 and clear(b, d, at):
+                    d["at"] = at
+                    break

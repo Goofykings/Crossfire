@@ -44,6 +44,9 @@ class TerrainBuilder:
         for t in layout["terraces"]:
             for st, k, r, top in stair_rects(t):
                 self.stair_cells.append(r)
+        # Underground stairwells: no street surface over the opening (the stair owns it).
+        from underground import ground_openings
+        self.stair_cells += [tuple(r) for r in ground_openings(layout)]
         self._grid()
 
     # --- classification ---------------------------------------------------------------------------
@@ -68,7 +71,8 @@ class TerrainBuilder:
                 if cov is not None:
                     self.cell[(xi, zi)] = ("covered", cov)
                     continue
-                if any(_in(x, z, w["rect"]) for w in self.L["walls"]):
+                # Railing lots are paved ground with a thin railing on their centre line.
+                if any(_in(x, z, w["rect"]) for w in self.L["walls"] if w.get("style") != "railing"):
                     self.solid[zi][xi] = True
                     continue
                 if any(_point_in_poly(x, z, p) for p in self.polys):
@@ -109,10 +113,33 @@ class TerrainBuilder:
         self.gutters(md)
         self.team_strips(md)
         self.plaza_ring(md)
-        # base plane far below so no gap can ever show the void
-        L = self.lim + 20
-        md.face([(-L, -0.06, -L), (-L, -0.06, L), (L, -0.06, L), (L, -0.06, -L)], "cobble", col=(0.5, 0.5, 0.5, 1.0))
+        self.base_plane(md, "cobble")
         return md
+
+    def base_plane(self, md: MeshData, mat: str):
+        """Base plane just under the street so no ground gap shows the void; it stays open over
+        underground stairwells, which descend through it."""
+        from underground import ground_openings
+        L = self.lim + 20
+        rects = [(-L, -L, L, L)]
+        for o in ground_openings(self.L):
+            nxt = []
+            for r in rects:
+                if o[0] >= r[2] or o[2] <= r[0] or o[1] >= r[3] or o[3] <= r[1]:
+                    nxt.append(r)
+                    continue
+                if o[0] > r[0]:
+                    nxt.append((r[0], r[1], o[0], r[3]))
+                if o[2] < r[2]:
+                    nxt.append((o[2], r[1], r[2], r[3]))
+                cx0, cx1 = max(r[0], o[0]), min(r[2], o[2])
+                if o[1] > r[1]:
+                    nxt.append((cx0, r[1], cx1, o[1]))
+                if o[3] < r[3]:
+                    nxt.append((cx0, o[3], cx1, r[3]))
+            rects = nxt
+        for x0, z0, x1, z1 in rects:
+            md.face([(x0, -0.06, z0), (x0, -0.06, z1), (x1, -0.06, z1), (x1, -0.06, z0)], mat, col=(0.5, 0.5, 0.5, 1.0))
 
     def upper_routes(self, md):
         from upper_routes import route_parts
@@ -181,19 +208,28 @@ class TerrainBuilder:
         for t in self.L["terraces"]:
             x0, z0, x1, z1 = (int(v) for v in t["rect"])
             h = t["height"]
+            t_stairs = [r for st, k, r, top in stair_rects(t)]
             for xi in range(x0 + lim, x1 + lim):
                 for zi in range(z0 + lim, z1 + lim):
                     xc, zc = xi - lim + 0.5, zi - lim + 0.5
                     if any(_in(xc, zc, r) for r in self.stair_cells):
                         continue
                     for dx, dz, side in ((-1, 0, "w"), (1, 0, "e"), (0, -1, "n"), (0, 1, "s")):
+                        nxc, nzc = xc + dx, zc + dz
+                        X0, Z0 = xi - lim, zi - lim
+                        if any(_in(nxc, nzc, r) for r in t_stairs):
+                            # Side face of the terrace beside a stair run that ends inside it: without
+                            # it the raised terrace is hollow when seen from the steps (map audit).
+                            a, b = {"w": ((X0, Z0 + 1), (X0, Z0)), "e": ((X0 + 1, Z0), (X0 + 1, Z0 + 1)),
+                                    "n": ((X0, Z0), (X0 + 1, Z0)), "s": ((X0 + 1, Z0 + 1), (X0, Z0 + 1))}[side]
+                            md.face_toward([(a[0], -0.05, a[1]), (b[0], -0.05, b[1]), (b[0], h, b[1]), (a[0], h, a[1])],
+                                           "stone_blocks", (dx, 0, dz))
+                            continue
                         nh = self._height_of_cell(xi + dx, zi + dz)
                         if nh is None or nh >= h - 1e-3:
                             continue
-                        nxc, nzc = xc + dx, zc + dz
                         if any(_in(nxc, nzc, r) for r in self.stair_cells):
                             continue
-                        X0, Z0 = xi - lim, zi - lim
                         if side == "w":
                             a, b = (X0, Z0 + 1), (X0, Z0)
                         elif side == "e":
@@ -202,8 +238,10 @@ class TerrainBuilder:
                             a, b = (X0, Z0), (X0 + 1, Z0)
                         else:
                             a, b = (X0 + 1, Z0 + 1), (X0, Z0 + 1)
-                        md.face([(a[0], nh - 0.05, a[1]), (b[0], nh - 0.05, b[1]), (b[0], h, b[1]), (a[0], h, a[1])],
-                                "stone_blocks")
+                        # Face the lower ground (the edge points were wound inward: the old map
+                        # audit saw these retaining walls from behind).
+                        md.face_toward([(a[0], nh - 0.05, a[1]), (b[0], nh - 0.05, b[1]), (b[0], h, b[1]), (a[0], h, a[1])],
+                                       "stone_blocks", (dx, 0, dz))
                         # coping stone along the edge
                         ox, oz = dx * 0.06, dz * 0.06
                         ix, iz = -dx * 0.3, -dz * 0.3
@@ -448,12 +486,12 @@ class TerrainBuilder:
                             md.face([(xx - 0.05, y, zi), (xx - 0.05, y, zi + 1), (xx + 0.05, y, zi + 1), (xx + 0.05, y, zi)], mat)
 
     def plaza_ring(self, md: MeshData):
-        """Decorative ring of darker paving around the well in the plaza."""
-        for zn in self.L["ground"]["zones"]:
-            if zn["kind"] != "plaza":
+        """Decorative ring of darker paving around the well (not every plaza rectangle: an
+        irregular square is several zones)."""
+        for well in self.L.get("obstacles", []):
+            if well["type"] != "well":
                 continue
-            cx = (zn["rect"][0] + zn["rect"][2]) / 2
-            cz = (zn["rect"][1] + zn["rect"][3]) / 2
+            cx, cz = well["pos"][0], well["pos"][2]
             r0, r1 = 1.6, 2.1
             N = 28
             for i in range(N):

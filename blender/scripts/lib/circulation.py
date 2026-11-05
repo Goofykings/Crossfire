@@ -28,6 +28,8 @@ def local_parts(b):
     wall={'town':'brick','industrial':'concrete_panel','city':'concrete_smooth_light'}[style]
     floor={'town':'interior_floor','industrial':'concrete_floor','city':'pavers'}[style]
     trim='wood_dark' if style=='town' else 'steel_grey' if style=='industrial' else 'aluminium'
+    # A town's external stair is solid masonry, like a scala esterna; the others keep their floor.
+    outside='stone_blocks' if style=='town' else floor
     # The upper slab deliberately leaves a full-height open stairwell.
     yield [T,-.12,T,w-T,BASE,d-T],floor,'floor'
     yield [T,LEVEL-.22,5.4,w-T,LEVEL,d-T],floor,'upper-floor'
@@ -78,11 +80,11 @@ def local_parts(b):
     # Independent, usable upper exit with a supported landing and straight egress stair.
     sign=-1 if c['exit']=='w' else 1;edge=0 if sign<0 else w
     lo,hi=sorted((edge,edge+sign*1.6))
-    yield [lo,LEVEL-.2,door-1.1,hi,LEVEL,door+1.1],floor,'exit-landing'
+    yield [lo,LEVEL-.2,door-1.1,hi,LEVEL,door+1.1],outside,'exit-landing'
     for k in range(16):
         a,bb=sorted((edge+sign*(1.6+k*.28),edge+sign*(1.6+(k+1)*.28)))
         h=LEVEL*(16-k)/16
-        yield [a,-.08,door-1.1,bb,h,door+1.1],floor,'exit-stair'
+        yield [a,-.08,door-1.1,bb,h,door+1.1],outside,'exit-stair'
         for z in (door-1.1,door+1.04):
             yield [a,h+.84-LEVEL/16,z,bb,h+.92,z+.06],trim,'exit-slope-envelope'
             if k%4==0 or k==15:

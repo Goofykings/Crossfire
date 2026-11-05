@@ -55,7 +55,10 @@ def ffa_spawns(layout: dict, props: dict, count: int = 16) -> list[dict]:
     for b in layout["buildings"]:
         for d in b.get("doors", []):
             doors.append(bs.side_point(b, d["side"], d["at"], 0.5))
-    stairs = [r for r, _ in idx.steps] + [r['rect'] for r in layout.get('upperRoutes', [])]
+    from underground import footprints
+    stairs = [r for r, _ in idx.steps] + [r['rect'] for r in layout.get('upperRoutes', [])] + footprints(layout)
+    # Exterior stairs, posts and portals of authored circulation (navigation obstacles).
+    stairs += [o['rect'] for o in layout.get('navigation', {}).get('groundObstacles', [])]
     ring = [(math.cos(a) * r, math.sin(a) * r) for r in (0.5, CLEAR) for a in (k * math.pi / 4 for k in range(8))]
 
     cands = []
@@ -93,21 +96,26 @@ def ffa_spawns(layout: dict, props: dict, count: int = 16) -> list[dict]:
             for k, d in enumerate(cands):
                 dist[k] = min(dist[k], math.hypot(d[0] - q[0], d[2] - q[2]))
 
+    # Facing searches stop at authored structures standing on open ground too (exterior stairs,
+    # stairwell walls, posts): the ground classification alone sees straight through them.
+    blockers = footprints(layout) + [o['rect'] for o in layout.get('navigation', {}).get('groundObstacles', [])]
     spawns = []
     for n, (x, g, z) in enumerate(chosen[:count]):
-        spawns.append({"id": f"S{n + 1:02d}", "pos": [x, g, z], "heading": _open_heading(idx, boxes, x, z)})
+        spawns.append({"id": f"S{n + 1:02d}", "pos": [x, g, z], "heading": _open_heading(idx, boxes, x, z, blockers)})
     return spawns
 
 
-def _open_heading(idx: LayoutIndex, boxes, x: float, z: float) -> int:
-    """Compass heading (multiple of 15 degrees) with the longest clear run of open ground (props block it too)."""
+def _open_heading(idx: LayoutIndex, boxes, x: float, z: float, blockers=()) -> int:
+    """Compass heading (multiple of 15 degrees) with the longest clear run of open ground (props and
+    authored structures block it too)."""
     best, best_len = 0, -1.0
     for h in range(0, 360, 15):
         a = math.radians(h)
         dx, dz = math.sin(a), -math.cos(a)  # heading 0 looks north (-z)
         t = 0.0
         while t < VIEW_RANGE and idx.classify(x + dx * t, z + dz * t)[0] in ("open", "covered") and \
-                not any(_near_box(x + dx * t, z + dz * t, b, 0.0) for b in boxes):
+                not any(_near_box(x + dx * t, z + dz * t, b, 0.0) for b in boxes) and \
+                not any(r[0] <= x + dx * t <= r[2] and r[1] <= z + dz * t <= r[3] for r in blockers):
             t += 0.25
         if t > best_len + 1e-6:
             best, best_len = h, t

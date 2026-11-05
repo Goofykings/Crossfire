@@ -19,7 +19,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # python -I does not add the script's folder
-from layoutkit import SIDE_OUT, SIDES, Area, LayoutKit, covered_floor, ground_zones, inside  # noqa: E402
+from layoutkit import SIDE_OUT, SIDES, Area, LayoutKit, covered_floor, ground_zones, inside, relocate_doors  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 LAYOUT_JSON = ROOT / "src" / "maps" / "modern-city" / "layout.json"
@@ -41,32 +41,44 @@ from compact_layouts import city as authored_routes
 
 AREAS = authored_routes(Area)
 
-# overhead canopies across alleys: (id, rect, spring height, style); rotated copies are added
+# Overhead canopies across alleys between two buildings: (id, rect, spring height, style).
+# The overhauled district is asymmetric: no rotated copies are added.
 ARCHES = [
-    ("court_canopy", (16,-11,19,-10),3.6,"canopy"),
+    ("ne_alley_canopy", (15,-11,16,-7),3.6,"canopy"),
+    ("back_alley_canopy", (10,13,11,17),3.6,"canopy"),
 ]
 
-# (type, (x, y, z), heading) at authored landmarks, without mirroring.
+# (type, (x, y, z), heading) at authored places, without mirroring.
 MANUAL_PROPS = [
-    ("planter_long", (0,0,-4.7),0),
-    ("bench_modern", (0,0,-3.65),180),
-    ("cafe_set", (-4.5,0,3.5),0),
-    ("bench_modern", (4.8,0,3.6),270),
-    ("cafe_board", (14.4,0,-7.8),0),
-    ("utility_box", (8.1,0,-13.3),0),
-    ("dumpster_blue", (15,0,-13.6),0),
-    ("trash_bags", (15,0,-11.5),0),
-    # The old courtyard location crowded the walk-through shop entrance.
-    ("bike_rack", (14,0,24),0),
-    ("planter", (-7.5,0,10.5),90),
-    ("trash_bin_grey", (-4,0,14),0),
-    ("dumpster", (-20.1,0,-6),90),
-    ("utility_box", (17.4,0,13.5),90),
-    ("bench_modern", (7.4,0,16.4),90),
-    ("planter", (12,0,16.6),0),
+    # Civic plaza: planters and benches framing the metro stair, cafe tables by the shops.
+    ("planter_long", (0.9,0,-9.6),90),
+    ("planter_long", (7.7,0,-9.6),90),
+    # (benches on the open west/east sides: the north frontage is two wide shop doors)
+    ("bench_modern", (-1.2,0,-11.5),90),
+    ("bench_modern", (9.5,0,-11.8),270),
+    ("cafe_set", (0.4,0,-5.4),0),
+    ("cafe_set", (8.6,0,-6.2),0),
+    ("cafe_board", (7.2,0,-4.0),0),
+    ("bollard_steel", (-1.4,0,-3.4),0),
+    ("bollard_steel", (9.4,0,-3.4),0),
+    # South plaza: planter and bench beside the second stair.
+    # Avenue and Main Street furniture.
+    ("traffic_light", (-1.8,0,-3.6),0),
+    ("traffic_light", (-8.6,0,3.6),180),
+    ("streetlight", (9.5,0,3.6),180),
+    ("streetlight", (12.0,0,-2.6),0),
+    ("fire_hydrant", (-2.6,0,-21.0),270),
+    # Courts, alleys and the parking lot.
+    ("trash_bags", (16.8,0,-8.2),0),
+    ("bike_rack", (19.0,0,15.2),0),
+    ("planter", (17.2,0,5.2),0),
+    ("car_silver", (-22.3,0,13.2),0),
+    ("car_blue", (-17.5,0,18.5),90),
+    ("bollard_yellow", (-12.4,0,10.4),0),
+    ("bench_modern", (-13.6,0,1.5),270),
+    ("trash_bin", (-25.4,0,-16.4),0),
+    ("utility_box", (-13.6,0,-20.4),90),
 ]
-
-
 
 
 def material_of(a: Area) -> str:
@@ -426,11 +438,15 @@ def dress(kit: LayoutKit, areas, buildings, terraces):
         line = []
         n = max(1, int(L // 8) + (1 if L >= 8 else 0))
         for i in range(n):
-            s = (i + 0.5) * L / n
-            pos = (a.x0 + s, 0.0, a.z0 + 0.25) if along_x else (a.x0 + 0.25, 0.0, a.z0 + s)
-            if free(pos[0], pos[2], 0.5):
-                add("utility_pole", pos, 0 if along_x else 90, mirror=False)
-                line.append(pos)
+            # Slide a pole along the alley rather than run it up through a canopy or arch.
+            for ds in (0, 1.5, -1.5, 2.5, -2.5):
+                s = (i + 0.5) * L / n + ds
+                pos = (a.x0 + s, 0.0, a.z0 + 0.25) if along_x else (a.x0 + 0.25, 0.0, a.z0 + s)
+                if 0.5 <= s <= L - 0.5 and free(pos[0], pos[2], 0.5) and not any(
+                        r[0] - .5 < pos[0] < r[2] + .5 and r[1] - .5 < pos[2] < r[3] + .5 for _, r, _, _ in ARCHES):
+                    add("utility_pole", pos, 0 if along_x else 90, mirror=False)
+                    line.append(pos)
+                    break
         for p, q in zip(line, line[1:]):
             poles.append({"a": [p[0], 8.4, p[2]], "b": [q[0], 8.4, q[2]], "sag": 0.5})
         if width >= 3.5:
@@ -464,7 +480,7 @@ def dress(kit: LayoutKit, areas, buildings, terraces):
     lights = []  # free-for-all: no team lights at the old spawn yards
     arches = []
     for aid, (x0, z0, x1, z1), spring, style in ARCHES:
-        for suffix, rr in (("", (x0, z0, x1, z1)), ("r", (-x1, -z1, -x0, -z0))):
+        for suffix, rr in (("", (x0, z0, x1, z1)),):
             arches.append({"id": aid + suffix, "rect": list(rr), "spring": spring, "style": style,
                            "axis": "x" if (rr[2] - rr[0]) > (rr[3] - rr[1]) else "z"})
     return {"props": props, "targets": targets, "lights": lights, "arches": arches, "obstacles": [], "wires": poles}
@@ -485,6 +501,7 @@ def build():
         else:
             entry["id"] = f"C{len(buildings) + 1:02d}"
             buildings.append(entry)
+    relocate_doors(kit, buildings, MANUAL_PROPS, PROPS)
     all_areas = areas + extra_zones
     kit.areas = all_areas
     terraces = kit.terraces(rise=0.18, run=0.3, style_of=lambda a: "sidewalk" if a.kind == "sidewalk" else None)
@@ -506,7 +523,18 @@ def build():
     # free-for-all spawn points over the whole map (clear of the props and targets placed above)
     from upper_routes import make_route
     from compact_dressing import finish_layout
-    layout['upperRoutes'] = [make_route('second_floor_passage', [-14,5,-11,22], 'sky_passage')]
+    from compact_layouts import city_underground
+    import underground
+    # A glazed skywalk crosses the avenue between the north-east and east courts.
+    # Its south stair ends north of the commerce building's exterior stair, so a player sliding
+    # down that stair keeps running into the court.
+    layout['upperRoutes'] = [make_route('avenue_skywalk', [23,-13.5,26,8.6], 'sky_passage')]
+    layout['underground'] = []
+    for p in city_underground():
+        xs = [v for r in p['segments'] + [e['rect'] for e in p['entrances']] for v in (r[0], r[2])]
+        zs = [v for r in p['segments'] + [e['rect'] for e in p['entrances']] for v in (r[1], r[3])]
+        layout['underground'].append({**p, 'floor': underground.FLOOR, 'ceiling': underground.CEIL,
+                                      'rect': [min(xs), min(zs), max(xs), max(zs)], 'waypoints': underground.waypoints(p)})
     finish_layout(layout, PROPS)
     from realism_layout import author
     author(layout)

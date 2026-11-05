@@ -9,7 +9,11 @@ export function createMapWorld(collision: CollisionFile, layout: MapLayout, cata
   world.addMany(collision.boxes);
   for (const [index,p] of [...layout.props, ...layout.obstacles].entries()) {
     const replacement=environment?.replaceProps.find(r=>r.index===index);
-    if(replacement){world.addMany(replacement.boxes);continue;}
+    if(replacement){
+      // Canopy cloth is shootable cover, never a walkable surface.
+      for(const box of replacement.boxes)world.add(box,{solid:!box.tag?.endsWith('-canopy')});
+      continue;
+    }
     const size = catalog.props[p.type]?.collider;
     if (!size) continue;
     const [w, h, d] = size;

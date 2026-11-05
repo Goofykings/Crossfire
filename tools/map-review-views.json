@@ -1,0 +1,44 @@
+{
+  "european-town": [
+    ["provisions-east-door", -1.5, 1.64, 10.8, 270, 0],
+    ["cistern-court-portal", 1.2, 1.64, 12.5, 315, -5],
+    ["market-portal", -15.5, 1.64, -9.0, 60, -6],
+    ["upper-town-chapel", 13, 2.9, -12.5, 0, 0],
+    ["grand-steps", 9, 1.64, -2, 0, 6],
+    ["west-arch", -17, 1.64, 1.5, 90, 0],
+    ["garden-exit-stair", -16, 1.64, 14.5, 45, 8],
+    ["baker-court", 10, 1.64, 12.5, 45, 0],
+    ["market-gate", -17, 1.64, -24, 180, 0],
+    ["baker-arch", 13.5, 1.64, -3.5, 180, 0]
+  ],
+  "industrial-complex": [
+    ["loading-yard", -5.5, 1.64, -9.5, 125, -4],
+    ["loading-dock", 4, 1.64, 1.5, 60, -6],
+    ["dock-lane", 15, 1.64, -13, 180, -2],
+    ["utility-fence", 4.5, 1.64, -18.5, 270, -8],
+    ["warehouse-b-aisle", -5, 1.64, 11, 120, -6],
+    ["stores-hall", -12, 1.64, -18, 245, -6],
+    ["machine-hall", 10, 1.64, -18, 100, -6],
+    ["container-yard", 14, 1.64, 10, 135, -2],
+    ["workshop-yard", 18, 1.64, 2, 70, 2],
+    ["roof-cluster", 18.5, 6.14, -12.5, 120, -12],
+    ["goods-office", -18, 1.64, 12, 90, -4],
+    ["loading-gate", 1, 1.64, -22, 180, 0],
+    ["west-yard", -26, 1.64, -10, 150, -2]
+  ],
+  "modern-city": [
+    ["civic-plaza", -1.5, 1.64, -14.5, 145, -6],
+    ["metro-stair-civic", 4.3, 1.64, -14.0, 180, -25],
+    ["south-plaza", -1.5, 1.64, 11.5, 45, -4],
+    ["avenue-east", -8, 1.79, 0.5, 90, 0],
+    ["main-street", -5.5, 1.79, -26, 180, 0],
+    ["skywalk-from-court", 20, 1.64, -15, 150, 8],
+    ["east-court", 17, 1.64, 16, 30, 2],
+    ["commerce-hall-front", 11.0, 1.64, 0.5, 140, 2],
+    ["parking", -23, 1.64, 21, 45, -4],
+    ["west-square", -23, 1.64, -6, 120, -2],
+    ["west-arcade", -10, 1.64, -5.5, 270, 0],
+    ["nw-court", -20, 1.64, -20, 135, -2],
+    ["back-alley", 9, 1.64, 15, 90, 0]
+  ]
+}
