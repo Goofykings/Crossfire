@@ -53,7 +53,7 @@ export class ExplosionBurst {
     if (now - event.at >= 550) return;
     this.slots[this.cursor++ % this.slots.length] = structuredClone(event);
   }
-  update(now: number, reduced: boolean): void {
+  update(now: number, reduced: boolean, lighting=true): void {
     const illumination: { id: string; position: Vector3; intensity: number }[] = [];
     this.slots.forEach((event, slot) => {
       const e = burstEnvelope(event ? now - event.at : 1000);
@@ -82,7 +82,7 @@ export class ExplosionBurst {
       const ring = this.rings[slot];
       ring.position.copyFrom(position); ring.position.y = (event?.position.y ?? 0) + .06; ring.scaling.setAll(.3 + e.expansion * 6.2);
       ring.visibility = e.ring * (reduced ? .15 : .3);
-      if (event && e.light > 0) illumination.push({ id: event.id, position, intensity: e.light * (reduced ? 1.3 : 3) });
+      if (lighting && event && e.light > 0) illumination.push({ id: event.id, position, intensity: e.light * (reduced ? 1.3 : 3) });
     });
     illumination.sort((a, b) => b.intensity - a.intensity);
     this.lights.forEach((light, i) => {

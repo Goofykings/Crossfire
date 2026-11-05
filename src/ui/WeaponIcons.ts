@@ -9,7 +9,6 @@ const profiles = {
 } as const;
 
 export function weaponIcon(weapon: unknown): string {
-  if (weapon === 'burn') return '<span class="burn-icon" aria-label="Fire">&#9832;</span>';
   if (weapon === 'grenade') return '<svg class="weapon-icon grenade-icon" data-weapon="grenade" viewBox="0 0 34 40" role="img" aria-label="Grenade"><path fill="currentColor" d="M12 8V4h10v5l5 6v6h-3l-3-8h-9zm-1 5h10l5 7-1 13-6 5h-7l-6-5-1-13z"/><circle cx="27" cy="8" r="5" fill="none" stroke="currentColor" stroke-width="2"/></svg>';
   if (!validWeapon(weapon)) return '<span class="weapon-unknown" aria-label="Weapon unavailable">—</span>';
   const names = { rifle: 'Assault Rifle', shotgun: 'Shotgun', sniper: 'Sniper Rifle', smg: 'SMG' };

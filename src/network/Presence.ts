@@ -1,3 +1,4 @@
+import { ROOM_LIMITS } from '../../shared/rooms';
 import { PUBLIC_ROOM } from '../../shared/protocol';
 import { presenceEndpoint } from './endpoint';
 
@@ -24,7 +25,7 @@ export class Presence {
       const response = await fetch(presenceEndpoint(this.endpoint), { signal: controller.signal, cache: 'no-store', credentials: 'omit' });
       if (!response.ok) throw new Error('Presence unavailable');
       const data = await response.json();
-      if (data.room !== PUBLIC_ROOM || !Number.isSafeInteger(data.online) || data.online < 0 || data.online > 16) throw new Error('Invalid presence');
+      if (data.room !== PUBLIC_ROOM || !Number.isSafeInteger(data.online) || data.online < 0 || data.online > (ROOM_LIMITS.active+1)*ROOM_LIMITS.playersMax) throw new Error('Invalid presence');
       this.update(data.online);
     } catch { this.update(null); }
     finally { window.clearTimeout(timeout); this.request = null; }

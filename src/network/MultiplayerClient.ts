@@ -1,4 +1,3 @@
-import type { PowerupEvent } from '../../shared/powerups';
 import type { CareerView } from '../../shared/challenges';
 import type { EnvironmentFrame } from '../../shared/environment';
 import { FIXED_DT } from '../config/constants';
@@ -29,9 +28,9 @@ export class MultiplayerClient {
     this.environment={...f,full:true,states};this.onEnvironment(f);
   }
   clockOffset = 0;
+  onRoomExit:(message:string)=>void=()=>{};
   onCareer: (profile: CareerView) => void = () => {};
   onSnapshot: (snapshot: Snapshot) => void = () => {};
-  onPowerup: (event: PowerupEvent) => void = () => {};
   onShot: (shot: ShotResult) => void = () => {};
   onElimination: (event: Elimination) => void = () => {};
   onGrenade: (event: GrenadeEvent) => void = () => {};
@@ -97,7 +96,7 @@ export class MultiplayerClient {
   private readonly url: string;
   private spawning: { id: string; resolve: (s: Snapshot) => void; reject: (e: Error) => void; timeout: number } | null = null;
 
-  constructor(url: string, private readonly name: string | (() => string) = 'Player', private readonly options: { debug?: boolean; profileToken?: () => string | undefined; profileScope?: () => string | undefined } = {}) {
+  constructor(url: string, private readonly name: string | (() => string) = 'Player', private readonly options: { debug?: boolean; profileToken?: () => string | undefined; profileScope?: () => string | undefined; roomTicket?:string } = {}) {
     const parsed = multiplayerEndpoint(url);
     this.url = parsed.href;
     try {
@@ -172,7 +171,7 @@ export class MultiplayerClient {
     socket.onopen = () => {
       if (this.socket !== socket) return;
       this.opens++; this.trace('open');
-      this.send({ v: PROTOCOL_VERSION, type: 'join', ...(this.options.profileToken?.() ? { profileToken: this.options.profileToken() } : {}), name: typeof this.name === 'function' ? this.name() : this.name, ...(this.token ? { resumeToken: this.token } : {}) });
+      this.send({ v: PROTOCOL_VERSION, type: 'join', ...(this.options.roomTicket?{roomTicket:this.options.roomTicket}:{}), ...(this.options.profileToken?.() ? { profileToken: this.options.profileToken() } : {}), name: typeof this.name === 'function' ? this.name() : this.name, ...(this.token ? { resumeToken: this.token } : {}) });
     };
     socket.onmessage = (event) => {
       if (this.socket !== socket || typeof event.data !== 'string') return;
@@ -187,6 +186,7 @@ export class MultiplayerClient {
         socket.close(4002, 'protocol_error'); return;
       }
       this.lastMessage = Date.now();
+      if(m.type==='room_exit'){this.stopped=true;this.stopTimers();this.cancelSpawn(m.message);this.setState('closed');this.onRoomExit(m.message);return;}
       if (m.type === 'error') {
         this.trace('server_error', { code: m.code, fatal: m.fatal });
         if (m.code === 'chat_rate') { this.onChatError(m.message); return; }
@@ -259,8 +259,6 @@ export class MultiplayerClient {
       } else if (m.type === 'grenade') {
         const round = m.event.kind === 'throw' ? m.event.projectile.roundId : m.event.roundId;
         if (round === this.latest?.roundId && this.firstCombatEvent(m.event.id)) this.onGrenade(m.event);
-      } else if (m.type === 'powerup') {
-        if(m.event.roundId===this.latest?.roundId && this.firstCombatEvent(m.event.id))this.onPowerup(m.event);
       } else if (m.type === 'system') {
         if (!this.systemEvents.has(m.id)) {
           this.systemEvents.add(m.id);
@@ -276,7 +274,7 @@ export class MultiplayerClient {
           || this.latest.players.find((p) => p.id === m.elimination.victimId)?.life !== m.elimination.victimLife) return;
         // Presentation must retain the existing living instance before the dead snapshot removes it.
         this.onElimination(m.elimination);
-        this.latest = { ...this.latest, players: this.latest.players.map((p) => p.id === m.elimination.victimId ? { ...p, health: 0, alive: false, powerup: null, burn: null, motion: {...p.motion, scale:1, doubleJump:false}, death: m.elimination } : p) };
+        this.latest = { ...this.latest, players: this.latest.players.map((p) => p.id === m.elimination.victimId ? { ...p, health: 0, alive: false, death: m.elimination } : p) };
         this.onSnapshot(this.latest);
       } else if (m.type === 'left' && this.latest) {
         this.latest = { ...this.latest, players: this.latest.players.filter((p) => p.id !== m.id) };
@@ -435,6 +433,12 @@ export class MultiplayerClient {
     this.socket.close(4000, 'reconnect');
   }
 
+  async leaveRoom():Promise<void>{
+    const socket=this.socket;if(!socket){this.disconnect();return;}
+    this.stopped=true;this.stopTimers();
+    await new Promise<void>(resolve=>{const done=()=>{clearTimeout(timeout);socket.removeEventListener('close',done);resolve();};const timeout=setTimeout(done,2500);socket.addEventListener('close',done);this.send({v:PROTOCOL_VERSION,type:'leave'});});
+    this.disconnect();
+  }
   /** Navigation may resume the server session; an explicit Leave always forgets it. */
   disconnect(forget = true): void {
     this.cancelSpawn('Left match');

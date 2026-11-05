@@ -1,3 +1,4 @@
+import { RemoteMuzzleFlash } from '../weapons/RemoteMuzzleFlash';
 import { meshesReady } from '../core/assetReadiness';
 import { Matrix, Mesh, Quaternion, Space, TransformNode, Vector3, VertexBuffer, type AssetContainer, type Bone, type InstantiatedEntries, type Scene } from '@babylonjs/core';
 import { assetUrl } from '../core/assets';
@@ -366,6 +367,7 @@ export class CharacterWeapon {
   private readonly neck: TransformNode | null;
   private readonly head: TransformNode | null;
   private readonly eyeLocal: Vector3 | null;
+  private readonly flash: RemoteMuzzleFlash;
   private readonly grips: TransformNode[];
   private readonly anchors: Record<'grip_r' | 'grip_l' | 'sight' | 'butt' | 'muzzle' | ActionAnchor, Vector3>;
   private readonly parts: { mag: TransformNode | null; pump: TransformNode | null; bolt: TransformNode | null; shell: TransformNode | null };
@@ -430,6 +432,7 @@ export class CharacterWeapon {
     const local = (name: string) => node(name)?.position.clone() ?? Vector3.Zero();
     this.anchors = { grip_r: local('grip_r'), grip_l: local('grip_l'), sight: local('sight'), butt, muzzle: local('muzzle'),
       mag_grip: local('mag_grip'), port: local('port'), bolt_grip: local('bolt_grip') };
+    this.flash=new RemoteMuzzleFlash(scene,this.root,this.anchors.muzzle);
     // The bolt turns about the bore axis, as in the first-person view.
     this.parts.bolt?.setPivotPoint(new Vector3(0, this.anchors.muzzle.y, 0));
     const bones = character.entries.skeletons[0].bones;
@@ -465,13 +468,14 @@ export class CharacterWeapon {
   setPose(pitch: number, ads: number): void { this.setState({ pitch, ads: Math.max(0, Math.min(1, ads)) }); }
   /** One cosmetic recoil impulse at the actual firing cadence. */
   fire(): void {
-    this.shots++;
+    this.shots++; this.flash.fire();
     this.sinceShot = 0; this.pull = 1;
     // Unit-peak impulse for a single shot; rapid fire accumulates up to a cap below.
     this.recoil.velocity += this.hold.recoil.frequency * Math.E * .55;
   }
   /** Advance time-based smoothing (seconds). */
   advance(dt: number): void {
+    this.flash.update();
     dt = this.dt = Math.max(0, Math.min(.1, dt));
     // Sub-steps keep the discrete cascade close to its continuous S-curve at any frame rate.
     const target = Math.max(0, Math.min(1, this.state.ads)), steps = Math.ceil(dt / .004);
@@ -768,6 +772,7 @@ export class CharacterWeapon {
       recoil: this.recoil.value, meshes: this.meshes.length, posing: this.posing, solves: this.solves, solveEvery: this.solveEvery,
       instances: this.character.root.getChildTransformNodes(true).filter((n) => /^held:(rifle|smg|shotgun|sniper)$/.test(n.name)).length,
       grips: this.grips.map((g) => g.getAbsolutePosition().asArray()), hands,
+      flash: this.flash.inspect(),
       muzzle: Vector3.TransformCoordinates(this.anchors.muzzle, weaponWorld).asArray(),
       // Butt pad, head joint, right eye and sight in character-root space.
       butt: this.local(butt), head: this.head ? this.local(this.head.getAbsolutePosition()) : null,
@@ -782,5 +787,7 @@ export class CharacterWeapon {
   private local(point: Vector3): number[] {
     return Vector3.TransformCoordinates(point, Matrix.Invert(this.character.root.getWorldMatrix())).asArray().map((v) => +v.toFixed(3));
   }
-  dispose(): void { this.restore(); this.entries.dispose(); this.root.dispose(); }
+  stopFiring():void{this.flash.update(Infinity);}
+  muzzleWorld(): Vector3 { return Vector3.TransformCoordinates(this.anchors.muzzle,this.root.computeWorldMatrix(true)); }
+  dispose(): void { this.flash.dispose(); this.restore(); this.entries.dispose(); this.root.dispose(); }
 }

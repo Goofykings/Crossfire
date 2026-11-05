@@ -1,3 +1,10 @@
+> Phase 1 update (2026-11-04): statistics HTTP schema is now v2 and includes
+> lifetime assists. A confirmed assist adds 50 to lifetime/daily/weekly points and
+> increments assists, without incrementing kills. Existing records migrate assists
+> to zero while preserving all prior totals and projection revisions. Gameplay is
+> protocol v18; release matching frontend/Worker through backend-first CI.
+> Earlier version/release descriptions below are historical.
+
 # Global rankings and lifetime statistics
 
 ## Identity and storage

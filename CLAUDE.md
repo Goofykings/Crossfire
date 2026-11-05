@@ -1,3 +1,49 @@
+## Logical multiplayer rooms Phase 2 (2026-11-04)
+
+Current gameplay protocol is v19; statistics HTTP schema remains v2. See
+`docs/MULTIPLAYER_ROOMS.md` and the latest PROGRESS.md. Normal Play opens Mode
+Select, never a game map/socket. Keep the original Worker URL, ROOM/PublicRoom
+binding and canonical public-main object. That object remains the authority for
+profiles/wallets/statistics/rankings and the metadata directory; separate
+`room:<UUID>` Durable Objects reuse the existing authoritative game implementation.
+Do not reset/delete canonical state or add a parallel/fake game implementation.
+Custom map/mode stay fixed across their 600-second rounds; public-main rotates.
+
+Private joins require server-issued room/profile-bound tickets on the actual
+WebSocket path; IDs or six-digit codes alone are not session authentication.
+Serialize capacity/admission changes but catch expected errors inside gates:
+rejecting blockConcurrencyWhile resets the object and drops other players.
+Game state and reward outbox save atomically; canonical cursor/wallet/statistics
+commit atomically. Preserve durable acknowledgment dedup, source-qualified round
+identifiers, global round serials and existing conservative participation rules.
+Never overwrite the global profile with a room-local copy. AFK derives from
+validated meaningful activity (30s warning,45s kick); identical packets/held keys
+cannot keep a player active. Loading/dead/unspawned use separate lobby deadlines.
+Keep 60/90s solo-room closure, permanent cancellation after another profile joins,
+15s empty grace and deterministic host transfer. No automatic retry after Leave
+or room_exit. Existing CI releases matching Worker/Pages only when authorized.
+
+## Gameplay polish Phase 1 (2026-11-04)
+
+Current protocol is v18, statistics HTTP schema v2. This supersedes the historical
+Powerups instructions below: FFA/Teams only; do not reintroduce ability fields,
+burn, Giant dimensions or extra jumps. See docs/GAMEPLAY_POLISH_PHASE1.md.
+Keep legacy normalization in server/src/legacyState.ts until old stored sessions
+and results have migrated. Never reset/delete public-main, wallets or statistics.
+Assist history is server-owned, keyed by victim life/round and contributor life,
+persisted in the same KV batch as authoritative scoring. Only actual valid damage
+qualifies; ASSIST_WINDOW_MS defaults to 10000, each distinct assister receives 50.
+Keep kill/combo/team-kill totals unchanged. Assists contribute points to global
+rankings and point challenges, never kill counts. Retain event/revision dedup.
+Spatial audio uses world coordinates and the real camera listener. Existing
+combat IDs suppress duplicates. Never replay already-seen or expired grenade audio from snapshots/history.
+Muzzle flashes use the existing interpolated CharacterWeapon firing timeline;
+trails consume authoritative bounded rays, never client damage claims.
+Chromebook mode derives overrides without replacing saved quality preferences.
+Keep essential geometry, collision, player visibility and full smoke boundaries.
+Both frontend and Worker must be released together through the existing CI when
+authorized; the subsequent Phase 2 room update is documented above.
+
 ## Global statistics and rankings (2026-11-03)
 
 See docs/GLOBAL_STATISTICS.md and latest PROGRESS.md. Gameplay remains protocol
@@ -13,7 +59,7 @@ Clearing the guest capability loses access. No account recovery or Node game-ser
 migration was added. Existing backend-first CI publishes the new HTTP endpoints
 before the matching frontend when authorized; no deployment was performed here.
 
-## Powerups mode (2026-11-03)
+## Historical Powerups mode (retired 2026-11-04; do not implement)
 
 Current shared protocol is v17; see docs/POWERUPS.md and latest PROGRESS.md.
 Powerups joins FFA/Teams rotation and uses FFA results/relationships. Keep current

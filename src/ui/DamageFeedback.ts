@@ -1,5 +1,5 @@
 import type { Vec3 } from '../player/PlayerController';
-import { damageHaze, damageTurn } from '../game/CombatPresentation';
+import { damageHaze, damageAngle } from '../game/CombatPresentation';
 import { HealthFeedback, type ConfirmedHealth } from './HealthFeedback';
 
 /** Cosmetic only: hits and health gains come from authoritative messages, never a regen prediction. */
@@ -53,14 +53,16 @@ export class DamageFeedback {
   update(yaw: number, pitch = 0): void {
     const now = performance.now(), t = (now - this.hitAt) / 1000;
     const fade = t < .075 ? Math.max(0, t / .075) : Math.max(0, 1 - (t - .075) / .55) ** 2;
-    const side = this.incoming ? damageTurn(this.incoming, yaw) : 0;
+    const angle = this.incoming ? damageAngle(this.incoming, yaw) : null;
     const haze = this.incoming ? damageHaze(this.incoming, yaw, pitch) : { left: .7, right: .7, top: .7, bottom: .7 };
     for (const [edge, weight] of Object.entries(haze)) this.edges.style.setProperty(`--edge-${edge}`, String(weight));
     this.edges.style.opacity = String(t < .075 ? this.attackFrom + (this.strength - this.attackFrom) * fade : fade * this.strength);
-    this.arrow.style.opacity = String(side ? fade : 0);
-    this.arrow.dataset.direction = side < 0 ? 'left' : 'right';
-    this.arrow.style.setProperty('--side', String(side));
-    this.arrow.textContent = side < 0 ? '\u2039' : '\u203a';
+    this.arrow.style.opacity = String(angle === null ? 0 : fade);
+    this.arrow.dataset.direction = angle === null ? '' : Math.abs(angle) < Math.PI/4 ? 'right' : Math.abs(angle) > Math.PI*.75 ? 'left' : angle < 0 ? 'front' : 'behind';
+    this.arrow.style.setProperty('--arrow-x', String(Math.cos(angle ?? 0)));
+    this.arrow.style.setProperty('--arrow-y', String(Math.sin(angle ?? 0)));
+    this.arrow.style.transform = `translate(-50%, -50%) rotate(${angle ?? 0}rad)`;
+    this.arrow.textContent = '\u203a';
     const healingAge = now - this.healAt;
     this.healing.style.opacity = String(.34 * Math.max(0, Math.min(1, (now - this.healStarted) / 90, (350 - healingAge) / 150)));
     if (healingAge < 250 && now >= this.nextSymbol) {

@@ -370,10 +370,7 @@ export class WeaponView {
     if (hidden) this.current?.flash.setEnabled(false);
   }
 
-  setPlayerScale(scale: number, dt: number): void {
-    const next=this.root.scaling.x+Math.max(-dt*2,Math.min(dt*2,scale-this.root.scaling.x));
-    this.root.scaling.setAll(next);
-  }
+
 
   update(
     dt: number,

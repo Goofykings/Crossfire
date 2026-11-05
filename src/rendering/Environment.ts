@@ -4,6 +4,7 @@ import {
   DirectionalLight,
   EquiRectangularCubeTexture,
   HDRCubeTexture,
+  HemisphericLight,
   InstancedMesh,
   ImageProcessingConfiguration,
   Mesh,
@@ -50,6 +51,7 @@ export class Environment {
   private ultraSettled = false;
   private ultraReady = false;
   private wantsUltra = false;
+  private ambient: HemisphericLight | null=null;
 
   constructor(
     private readonly scene: Scene,
@@ -124,7 +126,21 @@ export class Environment {
    * Keep the original environment until the new cube has finished prefiltering. */
   applyGraphicsPreset(p: GraphicsPreset): void {
     this.setFog(p.fog);
-    this.wantsUltra = p.reflectionSize === 512;
+    this.wantsUltra = !p.noReflections && p.reflectionSize === 512;
+    if(p.noReflections){
+      // Disable the IBL shader path entirely. A cheap hemisphere preserves ambient
+      // readability alongside the existing sun and authored interior fixtures.
+      this.scene.environmentTexture=null;
+      if(!this.ambient){this.ambient=new HemisphericLight('chromebook-ambient',Vector3.Up(),this.scene);
+        this.ambient.diffuse=new Color3(.78,.84,1);this.ambient.groundColor=new Color3(.28,.3,.34);
+        this.ambient.specular=Color3.Black();this.ambient.intensity=this.cfg.environmentIntensity*.65;this.ambient.renderPriority=2;}
+      this.ambient.setEnabled(true);
+      // Babylon reorders scene.lights on a priority change, but existing meshes
+      // retain their old light list. Refresh once so ambient survives the 4-light cap.
+      for(const mesh of this.scene.meshes)mesh._resyncLightSources();
+      return;
+    }
+    this.ambient?.setEnabled(false);
     if (!this.wantsUltra) { this.scene.environmentTexture = this.hdr; return; }
     if (this.ultraReady) { this.scene.environmentTexture = this.ultraHdr; return; }
     if (this.ultraHdr) return;
@@ -224,6 +240,7 @@ export class Environment {
     this.disposed = true;
     this.shadows?.dispose();
     this.sun.dispose();
+    this.ambient?.dispose();
     this.sky.material?.dispose(true, true);
     this.sky.dispose();
     // Babylon's native async prefilter cannot be interrupted safely. Detach now,

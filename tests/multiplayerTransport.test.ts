@@ -282,3 +282,9 @@ it('deduplicates explosion packets, snapshot recovery and reconnect history with
   next.receive({v: PROTOCOL_VERSION,type:'grenade',event:{kind:'explode',...explosion,id:'blast:old',grenadeId:'old',roundId:1}});
   expect(events).toHaveLength(2);
 });
+
+it('server room removal closes transport state and never retries the kicked session',async()=>{
+ const {socket,client}=await connect(),exit=vi.fn();client.onRoomExit=exit;
+ socket.receive({v:PROTOCOL_VERSION,type:'room_exit',reason:'afk',message:'You may rejoin.'});
+ expect(client.state).toBe('closed');expect(exit).toHaveBeenCalledWith('You may rejoin.');socket.close(4003,'afk');vi.advanceTimersByTime(60000);expect(SocketFixture.instances).toHaveLength(1);
+});

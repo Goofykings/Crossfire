@@ -48,6 +48,8 @@ export class Effects {
   private readonly casingSources = new Map<CasingType, Mesh>();
   private casingContainer: AssetContainer | null = null;
   private casingCursor = 0;
+  private reduced=false;
+  setReduced(value:boolean):void{this.reduced=value;}
   /** Called when a case first hits the ground (the game plays the bounce sound). */
   onCasingLand: ((type: CasingType, position: Vector3) => void) | null = null;
 
@@ -165,6 +167,7 @@ export class Effects {
    * shooter's velocity, `ground` the floor height under the shooter.
    */
   ejectCasing(type: CasingType, at: Vector3, right: Vector3, up: Vector3, back: Vector3, carry: Vector3, ground: number): void {
+    if(this.reduced)return;
     const src = this.casingSources.get(type);
     if (!src || !this.casings.length) return;
     const c = this.casings[this.casingCursor];
@@ -213,13 +216,13 @@ export class Effects {
     const spread = 0.8;
     ps.direction1 = normal.add(new Vector3(-spread, -spread * 0.3, -spread));
     ps.direction2 = normal.add(new Vector3(spread, spread, spread));
-    ps.manualEmitCount = count;
+    ps.manualEmitCount = this.reduced ? Math.min(3,count) : count;
     if (dust) {
       const d = this.dust[i];
       (d.emitter as Vector3).copyFrom(pos);
       d.direction1 = normal.add(new Vector3(-0.4, -0.1, -0.4));
       d.direction2 = normal.add(new Vector3(0.4, 0.5, 0.4));
-      d.manualEmitCount = 7;
+      d.manualEmitCount = this.reduced ? 2 : 7;
     }
   }
 

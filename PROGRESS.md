@@ -1,3 +1,247 @@
+# Phase 2: multiplayer room browser and custom matches
+
+Completed and verified locally 2026-11-04. See `docs/MULTIPLAYER_ROOMS.md` for
+architecture, security, local PowerShell commands, operation and deployment.
+No commit, push, Cloudflare deployment or Pages deployment was performed.
+Existing uncommitted Phase 1 work was preserved.
+
+Completed:
+
+- Home Play -> Mode Select -> actual public room or private code/create -> existing
+  Loading -> weapon selection -> authoritative spawn. Play alone loads no map and
+  opens no gameplay socket. Back cancels HTTP/loading work and releases membership.
+  Public discovery has explicit Refresh, loading/None/error states and real counts.
+  Setup uses the active name, public/private, existing three map thumbnails,
+  FFA/Teams, capacity 2-10 (default 6), and private Copy Code/host room details.
+  Responsive gray panels, gradient divider, small Refresh/Back buttons and scrolling
+  preserve the existing background, home character, settings and weapon previews.
+- Original Worker URL, ROOM/PublicRoom binding and canonical `public-main` remain.
+  Each custom game is an independent `room:<UUID>` Durable Object using the same
+  authoritative simulation, combat, health, collision, physics, teams, scoring,
+  grenades, chat, timers, results and respawn implementation. Custom rounds keep
+  the selected map/mode; original public-main retains its 600-second rotation.
+  No additional hardware, namespace, account database or deployment secret.
+- Canonical room directory validates creation, privacy, names, maps/modes/capacity,
+  origin/body limits, profile capabilities, creation limits and code-lookup rates.
+  Secure random six-digit string codes preserve zeros, retry collisions, stay
+  unique while active, expire on close and have a 24-hour reuse quarantine.
+  Private codes never appear in public listing responses. A 120-second, one-use,
+  room/profile-bound 256-bit ticket is checked on the actual WebSocket join.
+  UUID knowledge or another profile's ticket cannot bypass authorization.
+  Concurrent joins serialize capacity enforcement; one profile cannot occupy two
+  rooms. Briefly disconnected sessions reserve capacity during existing grace.
+- Creator retains initial host authority even if a guest connects first. Departure
+  transfers host deterministically to the earliest remaining connection, UUID tie
+  break. Server alarms warn at 60 seconds and close at 90 if no other profile has
+  joined; any guest permanently cancels that deadline. Later empty rooms close
+  after 15 seconds, invalidate codes and leave discovery. Cleanup flushes rewards,
+  releases leases, stops timers and returns clients to Mode Select with explanation.
+  Expired reconstructed sessions release their cross-room memberships.
+- Gameplay inactivity warns at 30 seconds and removes at 45. Only validated useful
+  look/input changes, actual jumps/fire/reload/grenade actions or accepted chat
+  refresh activity. Constant held movement, no-op input, full-mag reload and pings
+  cannot keep a session alive forever. Loading, selection, mandatory death delay,
+  results/unspawned lobbies use a separate five-minute idle limit. Kicks permit a
+  fresh join and never retry the kicked socket. Transport state explicitly closes
+  on room_exit. Switching waits for the old connection to close before opening one.
+- Profiles, wallets, challenges, global statistics and rankings remain canonical.
+  Custom room rewards persist in an ordered game-state transaction/outbox; the
+  canonical authority commits reward cursors, challenge wallets, stats and immutable
+  projection journals together. Pure staged copies prevent double challenge credit
+  after failed commits; durable cursors deduplicate lost acknowledgments/restarts.
+  Global completion serials plus source-qualified IDs handle independent room
+  counters. Existing participation eligibility is preserved, including abandoned
+  rounds after disconnect. Canonical profile views synchronize on join and reward
+  acknowledgment. No HTTP/client score claims or replacement local reward system.
+- Home presence aggregates connected players across logical rooms without exposing
+  private metadata; custom totals cache for at most five seconds. Directory tickets,
+  rate buckets and code tombstones receive bounded incremental housekeeping.
+- Shared gameplay protocol is v19; statistics HTTP schema remains v2. Strict protocol
+  validation and existing backend-first CI/health/SHA gates remain active. Validation
+  failures are caught inside Cloudflare concurrency gates so a rejected malicious
+  join cannot reset a populated game or the canonical authority.
+
+Executed validation on the final implementation:
+
+- Frontend: `npm.cmd test` passes **568** tests; one existing opt-in benchmark skipped.
+  The default suite passed with other diagnostics idle. Parallel Chrome/backend
+  diagnostics had exceeded the existing 5-second character-pose test budget; no
+  assertion or timeout was weakened to obtain the final pass.
+- Worker: `npm.cmd test --prefix server` passes **68** tests, including four broad
+  new room integrations. Focused rooms + grenade + environment run: **7/7** pass.
+  Existing FFA/Teams damage, assists, ammo, regeneration, movement, leaning, stairs,
+  ladders, collision, challenges, persistence and rankings regressions pass.
+- New real Worker/TCP tests cover simultaneous creation/capacity races, private
+  tickets/codes/expiry/rates/secrecy, all three map settings, isolated chat/grenade
+  events/timers, actual lethal shots, wallet/global points/challenges, lost reward
+  ACK followed by complete runtime restart, authenticated resume without duplicate
+  players, replay dedup, room switching, independent completion counters, host
+  transfer, alarm-based solo/empty cleanup and AFK/no-op resistance/rejoining.
+  Actual 2-, 6- and 10-client movement checks pass, including simultaneous six- and
+  ten-player game instances plus a real canonical observer (17 total connections).
+- Two Chrome contexts against the production `/crossfire/` build: **21/21** checks
+  pass. All three selected maps reach loading readiness/weapon selection; actual
+  public/private joins, no early spawn, real movement, host details/transfer,
+  cancellation, AFK warning/removal and zero overlapping sockets were observed.
+  No page exceptions or missing assets. AFK QA establishes a confirmed ADS press/
+  release baseline because idle input is intentionally coalesced, and focuses the
+  gameplay tab rather than assuming background render/input behavior.
+- Additional real-browser menu checks: **6/6** pass. Ten actual canonical clients
+  fill the room; discovery displays None without creating a menu player. After one
+  actual Leave, Refresh displays 9/10. Compact header controls and scrolling to
+  capacity/Create work at 640x480. Captured and inspected menu/setup/host screenshots.
+- Real frontend/Worker protocol gate **1/1**, deployment gate **7/7**, future Node
+  scaffold checks **7/7**, generated assets verification, frontend/Worker TypeScript
+  and production/dry-run builds pass. Existing Vite large-chunk warning remains.
+- Stabilized two existing integration setups without changing gameplay/assertions:
+  grenade charge waits for its acknowledged held-frame budget as well as elapsed
+  time; tiny environmental prop shots wait for settled ADS instead of random hip
+  spread. Their original damage/charge/impulse assertions remain and pass.
+
+Files created in this phase:
+
+- `shared/rooms.ts`, `server/src/roomDirectory.ts`, `src/network/RoomClient.ts`,
+  `src/ui/RoomMenus.ts`, `tests/rooms.test.ts`, `server/tests/rooms.mjs`,
+  `server/tests/room-harness.mjs`, `tools/rooms-browser-test.mjs`,
+  `tools/rooms-menu-browser-test.mjs`, `docs/MULTIPLAYER_ROOMS.md`.
+
+Files updated in this phase:
+
+- `shared/protocol.ts`, `server/src/index.ts`, `server/src/statistics.ts`,
+  `server/package.json`, `server/tests/runtime-fixture.mjs`,
+  `server/tests/grenades.mjs`, `server/tests/environment.mjs`, `src/game/Game.ts`,
+  `src/network/MultiplayerClient.ts`, `src/network/Presence.ts`, `src/ui/UI.ts`,
+  `src/styles.css`, `tests/multiplayerTransport.test.ts`, `server/README.md`,
+  `docs/MULTIPLAYER_ARCHITECTURE.md`, `CLAUDE.md`, `PROGRESS.md`.
+
+Limitations and release:
+
+- This is local real multiplayer validation, not a live Cloudflare or WAN claim.
+  Ten-player load checks are brief TCP simulations, not ten simultaneously rendered
+  browser/Chromebook performance tests. Maximum registry load, prolonged authority
+  outages and production CPU/billing/latency require separate monitoring/load tests.
+  Deadline boundaries use aged authoritative timestamps plus real alarm execution,
+  rather than sleeping through every 60/90 or 30/45-second window in CI.
+- The canonical directory/reward service is intentionally a shared serialization
+  point. Existing future Node scaffold remains explicitly incomplete.
+- Both Worker and frontend require a matching authorized protocol-v19 release.
+  Existing CI already deploys Worker first, verifies protocol/Git SHA, then Pages;
+  no workflow, Worker URL, origin allowlist, binding or secret change is required.
+  Never reset public-main/wallet/statistics storage to upgrade. Two services cannot
+  release atomically; old tabs need to refresh across the protocol change.
+- Phase 2 is complete. Stop here; no later development phase was started.
+
+---
+
+# Gameplay polish Phase 1: audio, assists and Chromebook Mode
+
+Completed and verified locally 2026-11-04. See `docs/GAMEPLAY_POLISH_PHASE1.md` for
+rules, configuration, local commands, limitations and release requirements.
+No commit, push, Cloudflare deployment or Pages deployment was performed.
+
+Changes:
+
+- Removed Powerups from rotation, shared movement/health/damage rules, protocol,
+  server simulation/alarms, remote rendering, HUD, standings and weapon icons.
+  Deleted its procedural rendering/rules/test modules and browser diagnostic.
+  No shared normal effects, texture/audio/model assets or ordinary abilities were
+  deleted. Preserved wide-ground map diagnostics in `shared/navigation.ts`.
+- Shared gameplay protocol is v18. Old ability fields/messages are rejected;
+  health is capped at 100. FFA/Teams, 10-minute schedule, player physics, combat,
+  map revisions, hosting configuration and deployment gates remain in place.
+  Old stored Powerups rounds become FFA; Giant HP returns proportionally to normal,
+  retired dimensions/extra jumps/burn disappear. Live identities, life, scores,
+  challenge wallets and statistics are preserved; no Durable Object reset.
+- Fixed remote shot presentation's live-snapshot dependency. World-space panners
+  use actual visible muzzle positions with authoritative ray fallbacks and track
+  the real camera, including spectating. Weapon WAVs, master/SFX controls and
+  one-playback-per-combat-event semantics remain. Increased remote audibility,
+  smooth inverse attenuation, bounded/faded voice tails and an SFX compressor.
+  Chrome caught and regression-covered a Vector3 getter-copy bug in the new
+  listener handling before completion.
+- Grenade sweeps now emit throttled, validated bounce cues, without changing
+  their physics, fuse or damage. Existing clink/explosion assets play spatially;
+  history/snapshots cannot replay old sounds. Actual grenade self-damage and
+  normal respawning were exercised by the browser test, rather than suppressed.
+- All confirmed pellet rays produce subtle pooled 220ms air trails: one draw call,
+  narrow gray/white geometry, bounded alpha/count, actual occlusion/range endpoints.
+  Existing interpolated remote firing animations trigger 55ms muzzle flashes at
+  authored muzzle anchors, inheriting weapon transforms. No added shadow lights.
+- Actual server damage records victim life/round and contributor life. Eligible
+  distinct assisters get exactly 50 points, one assist per death, using configurable
+  ASSIST_WINDOW_MS=10000. Zero/friendly-blocked/invalid damage never qualifies;
+  respawn/round/expired-session cleanup and elimination deduplication prevent stale
+  awards. Authenticated resume/reconstruction retains eligible contributions.
+  Live standings, frozen results and +50 ASSIST HUD distinguish assists from kills.
+  Point challenges/global points include assists; kill/headshot/combo/team-kill
+  rules stay unchanged. Statistics HTTP schema v2 adds lifetime assists and migrates
+  old totals without clearing recorded kills/points/wins/games/gems.
+- Chromebook Mode defaults off in Graphics, uses Apply/Back and existing storage.
+  Derived overrides preserve the saved preset, shadows, resolution and effects;
+  incompatible controls are disabled with an explanation. Half resolution,
+  disabled shadows/IBL/FXAA/MSAA expansion/bloom/SSAO/sharpen, 256px non-atlas
+  base copies, no normal/ORM/coat effects, reduced particles/debris/cases/lights,
+  32 trail slots and reduced distant arm solves. Geometry/collision/interactive
+  props/players/weapons/HUD/smoke bounds/networking are retained. A cheap ambient
+  hemisphere replaces IBL. Existing mesh light lists are refreshed once so the
+  weapon is lit within Babylon's four-light budget; screenshot inspection verified
+  its surface shading rather than accepting a black silhouette. Disabling restores
+  prior preferences and source textures. Originals remain cached, so this is not
+  an initial-download or texture-memory reduction claim.
+- Damage chevron is about 3x larger (responsive clamp), points front/up, rear/down,
+  left/right and rotates continuously with current yaw. Existing vignette/healing
+  envelope remains. Play is muted translucent blue with a darker 180ms hover;
+  optional UI.onModeSelect prepares Phase 2 without replacing real Play/join.
+
+Executed validation:
+
+- Frontend: 559 unit tests pass; one existing opt-in performance test skipped.
+- Frontend and Worker typechecks pass. Production Vite build passes (existing
+  large-chunk warning); Worker dry-run build passes.
+- 23 production-build Chrome checks pass with two actual browser players plus a
+  real Worker socket victim, under /crossfire/. Actual damage/assist rewards,
+  scoreboard, remote audio starts, bounce/explosion audio, muzzle-to-model alignment,
+  trail expiry, all four damage directions/yaw/fade, settings draft/Apply/restore,
+  disabled overrides, visible players, low-cost weapon lighting, Play/join and no
+  runtime/missing-asset errors. Inspected screenshots in
+  `test-results/gameplay-polish/`; complete recorded checks/report alongside them.
+- Representative same-view workload: 311 draw calls at medium/low shadows/0.75
+  scale versus 306 with Chromebook/0.5 scale; active reflection cube 256 -> 0,
+  non-atlas base textures capped at 256px. Desktop/headless timing and cold shader
+  compilation are not representative Chromebook FPS measurements. No claimed FPS
+  gain. Actual Chromebook hardware remains untested.
+- Local real-Worker focused combat passed in FFA and Teams, including all four
+  weapons, lethal shotgun scoring, unchanged headshot/combo rules, two distinct
+  50-point assisters, authenticated assist resume, duplicate death protection and
+  frozen results. Separate real-Worker test passed configurable eligibility expiry,
+  victim respawn cleanup and a complete restart with retired stored Giant/burn state.
+- Dedicated scaffold typecheck/build and 7 test checks pass; deployment gate tests
+  pass; generated asset verification passes. Scaffold remains an incomplete future
+  host, not a migrated game server.
+
+- Full backend suite: **64 passed**, zero failures, including real FFA/Teams
+  assists, grenade/crouch scoring, all four weapons, regeneration, map rotation,
+  wall/lean/stair/ladder synchronization, reconnection and complete runtime restarts.
+  Legacy statistics-schema migration preserves prior totals and repairs the index.
+- Real frontend transport / production Worker protocol compatibility: **1 passed**.
+  Shared parsers validate both directions; mismatched versions/forged fields fail.
+- Deployment gates: **7 passed**. Future dedicated scaffold: **7 passed** plus
+  typecheck/build. All generated map/weapon/texture assets verified. Existing
+  Miniflare environmental-fixture RPC-disposal warning and Vite large-chunk warning
+  are non-failing; no checks/assertions were disabled to pass this phase.
+
+Deployment, only when authorized: matching Worker and frontend are both required
+for protocol v18/statistics v2. Use the existing backend-first GitHub Actions flow
+and current credentials. ALLOWED_ORIGINS, Worker name/URL, public-main, durable
+bindings/state and .env.local were preserved. No new secret/database/migration.
+Two-service release is not atomic; existing v17 browser tabs must refresh.
+Public Cloudflare/GitHub Pages behavior was not validated or changed here.
+
+Next unfinished stage: Phase 2 Mode Select, when requested. Stop after Phase 1.
+All older progress sections below are historical; Powerups is retired.
+
+---
+
 # Global leaderboards, lifetime statistics and home navigation
 
 Completed and verified locally 2026-11-03. See `docs/GLOBAL_STATISTICS.md`.

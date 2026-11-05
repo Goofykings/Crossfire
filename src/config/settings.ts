@@ -19,6 +19,7 @@ export interface Settings {
   resolutionScale: number;
   showFps: boolean;
   reducedEffects: boolean;
+  chromebookMode: boolean;
   keyBindings: KeyBindings;
 }
 
@@ -33,6 +34,7 @@ export const DEFAULT_SETTINGS: Settings = {
   resolutionScale: 1,
   showFps: true,
   reducedEffects: false,
+  chromebookMode: false,
   keyBindings: defaultBindings(),
 };
 
@@ -69,6 +71,7 @@ export function sanitizeSettings(raw: unknown): Settings {
   num('sfxVolume');
   num('resolutionScale');
   if (typeof r.invertY === 'boolean') s.invertY = r.invertY;
+  if (typeof r.chromebookMode === 'boolean') s.chromebookMode = r.chromebookMode;
   if (typeof r.reducedEffects === 'boolean') s.reducedEffects = r.reducedEffects;
   if (typeof r.showFps === 'boolean') s.showFps = r.showFps;
   s.keyBindings = sanitizeBindings(r.keyBindings);
@@ -139,4 +142,9 @@ export class SettingsStore {
 
 export function sameSetting(key: keyof Settings, a: Settings[keyof Settings], b: Settings[keyof Settings]): boolean {
   return key === 'keyBindings' ? JSON.stringify(a) === JSON.stringify(b) : a === b;
+}
+
+/** Overrides are derived: disabling Chromebook mode restores the saved preferences exactly. */
+export function effectiveSettings(s: Readonly<Settings>): Readonly<Settings> {
+  return s.chromebookMode ? {...s,graphicsQuality:'low',shadowQuality:'off',resolutionScale:.5,reducedEffects:true}:s;
 }

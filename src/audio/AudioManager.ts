@@ -82,7 +82,7 @@ export class AudioManager {
   private readonly spatialVoices = new Map<AudioBufferSourceNode, GainNode>();
   private spatialStarted = 0;
   /** World units; shared by every remote weapon and adjustable without network changes. */
-  readonly spatialFalloff = { reference: 3, maximum: 70 };
+  readonly spatialFalloff = { reference: 5, maximum: 180 };
   readonly recentSpatial: { name: SoundName; distance: number; x: number; z: number }[] = [];
   inspectSpatial() { return { started: this.spatialStarted, active: this.spatialVoices.size,
     context: this.ctx?.state ?? 'unavailable', loaded: this.buffers.size, recent: [...this.recentSpatial] }; }
@@ -103,7 +103,10 @@ export class AudioManager {
         this.master.connect(this.ctx.destination);
         this.sfx = this.ctx.createGain();
         this.sfx.gain.value = this.effectsVolume;
-        this.sfx.connect(this.master);
+        const limiter = this.ctx.createDynamicsCompressor();
+        limiter.threshold.value = -12; limiter.knee.value = 8; limiter.ratio.value = 4;
+        limiter.attack.value = .004; limiter.release.value = .12;
+        this.sfx.connect(limiter); limiter.connect(this.master);
         this.loading = this.loadAll();
       } catch {
         this.ctx = null;
@@ -146,9 +149,18 @@ export class AudioManager {
   /** The last sounds asked for (whether or not audio is unlocked), newest last: lets tests check cues. */
   readonly recent: SoundName[] = [];
 
-  /** Position is camera-relative, with right +X, up +Y and forward -Z. */
-  playSpatial(name: SoundName, position: { x: number; y: number; z: number }, volume = .18): void {
-    const distance = Math.hypot(position.x, position.y, position.z);
+  private listenerPosition = { x: 0, y: 0, z: 0 };
+  /** Web Audio uses the same right-handed world coordinates as Babylon. */
+  setListener(position: {x:number;y:number;z:number}, forward: {x:number;y:number;z:number}, up: {x:number;y:number;z:number}): void {
+    this.listenerPosition = { x:position.x, y:position.y, z:position.z };
+    const l = this.ctx?.listener; if (!l) return;
+    l.positionX.value = position.x; l.positionY.value = position.y; l.positionZ.value = position.z;
+    l.forwardX.value = forward.x; l.forwardY.value = forward.y; l.forwardZ.value = forward.z;
+    l.upX.value = up.x; l.upY.value = up.y; l.upZ.value = up.z;
+  }
+  /** World-space point: retained panners follow the listener while it moves or spectates. */
+  playSpatial(name: SoundName, position: { x: number; y: number; z: number }, volume = .48): void {
+    const distance = Math.hypot(position.x-this.listenerPosition.x, position.y-this.listenerPosition.y, position.z-this.listenerPosition.z);
     if (!Number.isFinite(distance) || distance >= this.spatialFalloff.maximum) return;
     if (this.debugSpatial) {
       this.recentSpatial.push({ name, distance, x: position.x, z: position.z });
@@ -156,7 +168,7 @@ export class AudioManager {
     }
     const ctx = this.ctx, buf = this.buffers.get(name);
     if (!ctx || !this.master || !buf) return;
-    if (this.spatialVoices.size >= 4) {
+    if (this.spatialVoices.size >= 12) {
       // Keep rapid legitimate shots audible: fade the oldest tail before replacing it.
       const [oldSource, oldGain] = this.spatialVoices.entries().next().value!;
       this.spatialVoices.delete(oldSource);
@@ -167,8 +179,8 @@ export class AudioManager {
     const src = ctx.createBufferSource(), gain = ctx.createGain(), panner = ctx.createPanner();
     src.buffer = buf;
     src.playbackRate.value = 1 + (Math.random() * 2 - 1) * .04;
-    gain.gain.value = Math.max(0, Math.min(.2, volume));
-    panner.panningModel = 'equalpower'; panner.distanceModel = 'linear';
+    gain.gain.value = Math.max(0, Math.min(.9, volume));
+    panner.panningModel = 'equalpower'; panner.distanceModel = 'inverse';
     panner.refDistance = this.spatialFalloff.reference; panner.maxDistance = this.spatialFalloff.maximum; panner.rolloffFactor = 1;
     panner.positionX.value = position.x; panner.positionY.value = position.y; panner.positionZ.value = position.z;
     src.connect(gain); gain.connect(panner); panner.connect(this.sfx!);

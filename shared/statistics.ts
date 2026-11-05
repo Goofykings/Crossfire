@@ -1,31 +1,31 @@
 import { challengePeriod } from './challenges';
-export const STATISTICS_API_VERSION = 1;
+export const STATISTICS_API_VERSION = 2;
 export const PERIODS = ['daily', 'weekly', 'all'] as const;
 export const METRICS = ['kills', 'points', 'wins'] as const;
 export type StatsPeriod = typeof PERIODS[number];
 export type StatsMetric = typeof METRICS[number];
-export interface Totals { kills: number; deaths: number; points: number; wins: number; games: number; gems: number }
+export interface Totals { kills: number; assists: number; deaths: number; points: number; wins: number; games: number; gems: number }
 export interface PeriodTotals { start: number; kills: number; points: number; wins: number }
 export interface StatisticsRecord { id: string; name: string; revision: number; totals: Totals; daily: PeriodTotals; weekly: PeriodTotals; recent: string[]; lastRound: number }
 export interface RankingRow { id: string; name: string; rank: number; value: number; local: boolean }
 export interface LeaderboardView { version: number; period: StatsPeriod; metric: StatsMetric; start: number; serverTime: number; rows: RankingRow[]; own: RankingRow | null }
 export interface PersonalStats { version: number; serverTime: number; totals: Totals }
-export const emptyTotals = (): Totals => ({ kills:0, deaths:0, points:0, wins:0, games:0, gems:0 });
+export const emptyTotals = (): Totals => ({ kills:0, assists:0, deaths:0, points:0, wins:0, games:0, gems:0 });
 export const periodStart = (period: StatsPeriod, at: number): number => period === 'all' ? 0 : challengePeriod(period, at).start;
 export function createStatistics(id: string, name: string, at: number, existingGems = 0): StatisticsRecord {
   return { id, name, revision:0, totals:{...emptyTotals(),gems:existingGems}, daily:{start:periodStart('daily',at),kills:0,points:0,wins:0},
     weekly:{start:periodStart('weekly',at),kills:0,points:0,wins:0}, recent:[], lastRound:-1 };
 }
 export type StatisticsEvent = { id: string; at: number; gems?: number } & (
-  { kind:'kill'; points:number } | {kind:'death'} | {kind:'round'; round:number; complete:boolean; won:boolean});
+  { kind:'kill'; points:number } | {kind:'assist'; points:50} | {kind:'death'} | {kind:'round'; round:number; complete:boolean; won:boolean});
 /** No client claims. Called with authoritative elimination IDs / finalized round IDs. */
 export function advanceStatistics(p: StatisticsRecord, event: StatisticsEvent): boolean {
   if (p.recent.includes(event.id) || (event.kind==='round' && event.round<=p.lastRound)) return false;
   p.recent.push(event.id); if(p.recent.length>64)p.recent.shift();
   if(event.kind==='round')p.lastRound=event.round;
-  const kills=Number(event.kind==='kill'), points=event.kind==='kill'?event.points:0;
+  const kills=Number(event.kind==='kill'), points=event.kind==='kill'||event.kind==='assist'?event.points:0;
   const wins=Number(event.kind==='round'&&event.complete&&event.won);
-  p.totals.kills+=kills; p.totals.points+=points; p.totals.wins+=wins;
+  p.totals.assists+=Number(event.kind==='assist');p.totals.kills+=kills; p.totals.points+=points; p.totals.wins+=wins;
   p.totals.deaths+=Number(event.kind==='death');p.totals.games+=Number(event.kind==='round'&&event.complete);
   p.totals.gems+=event.gems??0;
   for(const period of ['daily','weekly'] as const){

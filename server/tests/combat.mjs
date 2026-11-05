@@ -40,7 +40,7 @@ for (const mode of (process.env.CROSSFIRE_SCORING_ONLY ? ['ffa'] : ['ffa', 'team
     }
     throw new Error(`Timed out; ${JSON.stringify(c.messages.slice(-4).map((m) => ({ type: m.type, code: m.code })))}`);
   }
-  async function open(weapon = 'rifle', resumeToken, spawnWhenNeeded = true) {
+  async function open(weapon = 'rifle', resumeToken, spawnWhenNeeded = true, profileToken) {
     const ws = new WebSocket(new URL('/ws', base).href.replace('http:', 'ws:'), { origin });
     const c = { ws, messages: [], snapshot: null, id: '', token: '', seq: 0 };
     clients.push(c);
@@ -56,7 +56,7 @@ for (const mode of (process.env.CROSSFIRE_SCORING_ONLY ? ['ffa'] : ['ffa', 'team
     ws.on('error', () => {});
     await new Promise((resolve, reject) => { ws.once('open', resolve); ws.once('error', reject); });
     c.send = (m) => ws.send(JSON.stringify({ v: PROTOCOL_VERSION, ...m }));
-    c.send({ type: 'join', name: `Combat ${clients.length}`, ...(resumeToken ? { resumeToken } : {}) });
+    c.send({ type: 'join', name: `Combat ${clients.length}`, ...(resumeToken ? { resumeToken } : {}), ...(profileToken?{profileToken}:{}) });
     const welcome = await wait(c, (m) => m.type === 'welcome');
     c.id = welcome.selfId; c.token = welcome.resumeToken;
     c.seq = c.snapshot.players.find((p) => p.id === c.id).ack;
@@ -150,6 +150,36 @@ for (const mode of (process.env.CROSSFIRE_SCORING_ONLY ? ['ffa'] : ['ffa', 'team
       let next = finished; while (next.mapId !== 'european-town') next = await stub.advanceMapForTest();
     });
     if (process.env.CROSSFIRE_SCORING_ONLY) return;
+    await t.test('two real damage contributors receive exactly 50 assist points through resume and frozen results', async () => {
+      const profile=await(await fetch(new URL('/profile',base),{method:'POST',headers:{Origin:origin}})).json();
+      const a=await open('rifle',undefined,true,profile.credential), b=await open();
+      const c=await open('rifle'), filler=mode==='teams'?await open():null, killer=await open('sniper');
+      if(mode==='teams'){assert.equal(me(a).team,me(c).team);assert.equal(me(a).team,me(killer).team);assert.notEqual(me(a).team,me(b).team);await leave(filler);}
+      const arena=await stub.directionalArenaForTest();
+      for(const [client,position]of [[a,arena.sources.front],[b,arena.center],[c,arena.sources.left],[killer,arena.sources.right]]){
+        await stub.placeForCombatTest(client.id,position);client.position=position;
+      }
+      await aim(a,b);assert.equal((await shot(a,b)).hits[0].amount,25);
+      await aim(c,b);assert.equal((await shot(c,b)).hits[0].amount,25);
+      // Resume retains the same authoritative life and contribution, not a new player.
+      c.ws.close();await new Promise(resolve=>c.ws.once('close',resolve));const resumed=await open('rifle',c.token,false);assert.equal(resumed.id,c.id);
+      await aim(killer,b);const mark=killer.messages.length;
+      assert.equal((await shot(killer,b)).hits[0].health,0);
+      const e=(await wait(killer,m=>m.type==='elimination'&&m.elimination.victimId===b.id,mark)).elimination;
+      assert.equal(e.award.total,100);assert.equal(e.head,false);assert.deepEqual(e.assists.map(s=>[s.id,s.points]).sort(),[[a.id,50],[c.id,50]].sort());
+      const state=await stub.snapshotForTest();
+      for(const id of [a.id,c.id]){const p=state.players.find(p=>p.id===id);assert.equal(p.assists,1);assert.equal(p.kills,0);assert.equal(p.score,50);assert.equal(p.comboCount,0);}
+      assert.equal(state.players.find(p=>p.id===killer.id).score,100);
+      const replay=await stub.replayDeadTransitionForTest(b.id,killer.id);
+      assert.equal(replay.players.find(p=>p.id===a.id).score,50);assert.equal(replay.players.find(p=>p.id===a.id).assists,1);
+      const stats=await(await fetch(new URL('/stats',base),{headers:{Origin:origin,Authorization:`Bearer ${profile.credential}`}})).json();
+      assert.equal(stats.totals.assists,1);assert.equal(stats.totals.kills,0);assert.equal(stats.totals.points,50);
+      const finished=await stub.advanceMapForTest();const result=finished.result;
+      assert.equal(result.players.find(p=>p.id===a.id).assists,1);assert.equal(result.players.find(p=>p.id===a.id).score,50);
+      assert.ok(finished.players.every(p=>p.assists===0));
+      for(const client of [a,b,resumed,killer])await leave(client);
+      let next=finished;while(next.mapId!=='european-town')next=await stub.advanceMapForTest();
+    });
     for (const [weapon, expected] of [['rifle', 25], ['smg', 11], ['sniper', 75], ['shotgun', 100]]) {
       await t.test(`${weapon}: actual opponents lose weapon-specific health on both clients`, async () => {
         const a = await open(weapon), b = await open();

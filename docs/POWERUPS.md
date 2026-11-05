@@ -1,3 +1,7 @@
+> Historical documentation. This feature was removed on 2026-11-04 by the Phase 1
+> gameplay-polish request. The code, HUD and feature tests described below no longer
+> exist. Do not use these old commands. See [current rules](GAMEPLAY_POLISH_PHASE1.md).
+
 # Powerups mode
 
 Implemented with the existing canonical Cloudflare room and shared authoritative

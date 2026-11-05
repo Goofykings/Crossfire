@@ -26,7 +26,8 @@ export interface ChallengeProgress { id: string; progress: number; completedAt: 
 export interface ChallengePeriod { start: number; endsAt: number; challenges: ChallengeProgress[] }
 export interface CareerProfile { revision: number; gems: number; daily: ChallengePeriod; weekly: ChallengePeriod; lastMatchRound: number; abandonedRound: number }
 export interface CareerView { revision: number; gems: number; daily: ChallengePeriod; weekly: ChallengePeriod; serverTime: number }
-export type ChallengeEvent = { kind: 'kill'; weapon: WeaponId | 'grenade' | 'burn'; head: boolean; points: number }
+export type ChallengeEvent = { kind: 'kill'; weapon: WeaponId | 'grenade'; head: boolean; points: number }
+  | { kind: 'points'; points:number }
   | { kind: 'round'; won: boolean; mvp: boolean; complete: boolean };
 const DAY = 86400000;
 export function challengePeriod(category: ChallengeCategory, now: number): { start: number; endsAt: number } {
@@ -63,8 +64,8 @@ export function refreshCareer(profile: CareerProfile, identity: string, now: num
 export function advanceChallenges(profile: CareerProfile, identity: string, event: ChallengeEvent, at: number): void {
   refreshCareer(profile, identity, at);
   const amounts: Partial<Record<ChallengeMetric, number>> = event.kind === 'kill'
-    ? { eliminations: 1, headshots: event.head ? 1 : 0, points: event.points, ...(event.weapon !== 'grenade' && event.weapon !== 'burn' ? { [event.weapon]: 1 } : {}) }
-    : { wins: Number(event.won), mvp: Number(event.mvp), matches: Number(event.complete) };
+    ? { eliminations: 1, headshots: event.head ? 1 : 0, points: event.points, ...(event.weapon !== 'grenade' ? { [event.weapon]: 1 } : {}) }
+    : event.kind==='points'?{points:event.points}:{ wins: Number(event.won), mvp: Number(event.mvp), matches: Number(event.complete) };
   let changed = false;
   for (const category of ['daily', 'weekly'] as const) for (const card of profile[category].challenges) {
     if (at < profile[category].start || at >= profile[category].endsAt) continue;

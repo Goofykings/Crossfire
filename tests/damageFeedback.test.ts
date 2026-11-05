@@ -21,14 +21,14 @@ it('attacks quickly, clears after 625ms and refreshes repeated hits with bounded
   expect(elements[0].style['--edge-right']).toBe('1'); expect(elements[0].style['--edge-left']).toBe('0');
   feedback.update(-Math.PI / 2);
   expect(Number(elements[0].style['--edge-top'])).toBeCloseTo(.55);
-  expect(feedback.inspect().arrow).toBe(0);
+  expect(feedback.inspect().arrow).toBe(1);expect(feedback.inspect().direction).toBe('front');
   now += 300; feedback.update(0); expect(feedback.inspect().edges).toBeLessThan(.2);
   const before = feedback.inspect().edges;
   feedback.hit({ x: 0, y: 0, z: 1 }, 100); feedback.update(0);
   expect(feedback.inspect().edges).toBeCloseTo(before);
   now += 80; feedback.update(0);
   expect(feedback.inspect().edges).toBeLessThanOrEqual(.9);
-  expect(feedback.inspect().arrow).toBe(0);
+  expect(feedback.inspect().arrow).toBeGreaterThan(.9);expect(feedback.inspect().direction).toBe('front');
   now += 550; feedback.update(0); expect(feedback.inspect().edges).toBe(0);
   expect(feedback.inspect().arrow).toBe(0);
   feedback.hit({ x: 1, y: 0, z: 0 }, 30); feedback.clear();

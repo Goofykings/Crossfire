@@ -3,7 +3,7 @@ import type { ControllerState, Vec3 } from '../src/player/PlayerController';
 import type { HitZone } from '../src/game/Damage';
 import { leanOffset } from './lean';
 
-export type MatchMode = 'ffa' | 'teams' | 'powerups';
+export type MatchMode = 'ffa' | 'teams';
 export type PlayerTeam = 'blue' | 'red' | null;
 export interface CombatIntent { trigger: boolean; reload: boolean; grenade?: boolean; grenadeCancel?: boolean; aimYaw?: number; aimPitch?: number }
 export const NO_COMBAT: CombatIntent = { trigger: false, reload: false };
@@ -16,11 +16,11 @@ export const teammates = (mode: MatchMode | null, a: PlayerTeam, b: PlayerTeam):
 export function roundMode(seed: number, roundId: number): MatchMode {
   let h = (seed ^ Math.imul(roundId + 1, 0x9e3779b1)) >>> 0;
   h = Math.imul(h ^ (h >>> 16), 0x85ebca6b) >>> 0;
-  return (['ffa', 'teams', 'powerups'] as const)[((h ^ (h >>> 13)) >>> 0) % 3];
+  return (['ffa', 'teams'] as const)[((h ^ (h >>> 13)) >>> 0) % 2];
 }
 
 export function playerHeight(m: ControllerState): number {
-  return (MOVEMENT.standHeight + (MOVEMENT.crouchHeight - MOVEMENT.standHeight) * m.crouch) * Math.max(m.scale ?? 1,m.eyeScale ?? 1);
+  return (MOVEMENT.standHeight + (MOVEMENT.crouchHeight - MOVEMENT.standHeight) * m.crouch);
 }
 
 function sphere(origin: Vec3, dir: Vec3, c: Vec3, r: number): number | null {
@@ -34,10 +34,10 @@ function sphere(origin: Vec3, dir: Vec3, c: Vec3, r: number): number | null {
 
 /** Lower body stays planted; upper body and head follow the server-computed lean. */
 export function rayPlayer(origin: Vec3, dir: Vec3, m: ControllerState): { distance: number; zone: HitZone } | null {
-  const h = playerHeight(m), p = m.position, scale = Math.max(m.scale ?? 1,m.eyeScale ?? 1);
-  const offset = leanOffset(m.yaw, m.lean ?? 0, scale);
-  const head = sphere(origin, dir, { x: p.x + offset.x, y: p.y + h - .2 * scale, z: p.z + offset.z }, .2 * scale);
-  const r = MOVEMENT.radius * scale;
+  const h = playerHeight(m), p = m.position;
+  const offset = leanOffset(m.yaw, m.lean ?? 0);
+  const head = sphere(origin, dir, { x: p.x + offset.x, y: p.y + h - .2, z: p.z + offset.z }, .2);
+  const r = MOVEMENT.radius;
   const a = dir.x * dir.x + dir.z * dir.z;
   const hits: number[] = [];
   const cylinder = (cx: number, cz: number, y0: number, y1: number) => {
@@ -55,8 +55,8 @@ export function rayPlayer(origin: Vec3, dir: Vec3, m: ControllerState): { distan
       if (t >= 0 && (x + dir.x * t) ** 2 + (z + dir.z * t) ** 2 <= r * r) hits.push(t);
     }
   };
-  cylinder(p.x, p.z, p.y + .05 * scale, p.y + h * .56);
-  cylinder(p.x + offset.x * .5, p.z + offset.z * .5, p.y + h * .50, p.y + h - .4 * scale);
+  cylinder(p.x, p.z, p.y + .05, p.y + h * .56);
+  cylinder(p.x + offset.x * .5, p.z + offset.z * .5, p.y + h * .50, p.y + h - .4);
   const body = hits.length ? Math.min(...hits) : Infinity;
   if (head !== null && head <= body) return { distance: head, zone: 'head' };
   return body < Infinity ? { distance: body, zone: 'body' } : null;

@@ -42,6 +42,9 @@ test('authoritative environmental hits, bounded deltas, sleep, resume and round 
     await until(()=>self(a).alive,'spawn');await delay(350);
     const def=JSON.parse(JSON.stringify((await room.environmentForTest()).definition)),apple=def.bodies[0],before=structuredClone(b.states.get(apple.id));
     const aim=await room.environmentTargetForTest(apple.id);await room.placeForCombatTest(a.id,aim.position);
+    // Tiny fruit must be targeted with a settled sight. Setting aim and firing
+    // in the same first frame used random hip spread, so this assertion flaked.
+    await input(a,aim,false);await until(()=>self(a).combat.gun.ads===1,'settled ADS before tiny prop');
     const mark=b.messages.length;await input(a,aim,true);await input(a,aim,false);
     await until(()=>b.messages.slice(mark).some(m=>m.type==='environment'&&m.frame.states.some(s=>s.id===apple.id&&!s.asleep)),'shot moves apple');
     await until(()=>b.states.get(apple.id).asleep,'apple settles');

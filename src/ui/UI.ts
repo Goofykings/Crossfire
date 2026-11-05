@@ -1,5 +1,6 @@
+import { ROOM_LIMITS } from '../../shared/rooms';
+import { RoomMenus } from './RoomMenus';
 import { LeaderboardPage } from './LeaderboardPage';
-import { PowerupHud } from './PowerupHud';
 import { readinessDeadline } from '../core/assetReadiness';
 import { ChallengesPanel } from './ChallengesPanel';
 import { assetUrl } from '../core/assets';
@@ -23,7 +24,7 @@ import type { RoundResult } from '../../shared/scoring';
 import { createRoundResults } from './RoundResults';
 import type { PlayerTeam } from '../../shared/combat';
 
-export type Screen = 'menu' | 'leaderboard' | 'loading' | 'start' | 'spectate' | 'results' | 'weapons' | 'hud' | 'pause' | 'settings' | 'error';
+export type Screen = 'modes' | 'create-room' | 'menu' | 'leaderboard' | 'loading' | 'start' | 'spectate' | 'results' | 'weapons' | 'hud' | 'pause' | 'settings' | 'error';
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, html?: string): HTMLElementTagNameMap[K] {
   const e = document.createElement(tag);
@@ -80,6 +81,8 @@ export class UI {
   // callbacks set by the game
   onGrenade: (held: boolean, cancel?: boolean) => void = () => {};
   private chargeRing!: HTMLElement;
+  /** Phase 2 can attach mode navigation; until then Play retains the real join flow. */
+  onModeSelect: (() => void) | null = null;
   onPlay: () => void = () => {};
   onStart: () => void = () => {};
   onResume: () => void = () => {};
@@ -98,7 +101,6 @@ export class UI {
   // HUD elements
   private crosshair!: HTMLElement;
   private hitmarker!: HTMLElement;
-  powerupHud!: PowerupHud;
   private healthValue!: HTMLElement;
   private healthBar!: HTMLElement;
   private slideLines!: HTMLElement;
@@ -152,6 +154,7 @@ export class UI {
   readonly matchHud: MatchHud;
   readonly challenges: ChallengesPanel;
   readonly leaderboard: LeaderboardPage;
+  readonly rooms:RoomMenus;
   private resultBody!: HTMLElement;
 
   constructor(
@@ -163,6 +166,7 @@ export class UI {
     this.draft = new SettingsDraft(settings);
     this.usernameDraft = profile.value.username;
     this.buildMenu();
+    this.rooms=new RoomMenus(name=>this.screen(name),name=>this.show(name),()=>this.profile.value.username,this.root);
     this.challenges = new ChallengesPanel(this.screens.get('menu')!);
     this.root.appendChild(this.challenges.account);
     this.leaderboard = new LeaderboardPage(this.screen('leaderboard'), () => this.show('menu'));
@@ -290,7 +294,7 @@ export class UI {
     nav.append(...this.homeTabs);
     header.appendChild(nav);
     const actions = el('div', 'home-actions');
-    actions.appendChild(this.button('Play', '', 'primary', () => this.onPlay()));
+    actions.appendChild(this.button('Play', '', 'primary', () => this.onModeSelect ? this.onModeSelect() : this.onPlay()));
     this.onlineCount = el('div', 'online-count', '0 Players Online');
     this.onlineCount.dataset.available = 'false';
     actions.appendChild(this.onlineCount);
@@ -438,7 +442,7 @@ export class UI {
   }
 
   setOnline(count: number | null): void {
-    const available = count !== null && Number.isSafeInteger(count) && count >= 0 && count <= 16;
+    const available = count !== null && Number.isSafeInteger(count) && count >= 0 && count <= (ROOM_LIMITS.active+1)*ROOM_LIMITS.playersMax;
     this.onlineCount.dataset.available = String(available);
     const display = available ? count : 0;
     this.onlineCount.textContent = `${display} ${display === 1 ? 'Player' : 'Players'} Online`;
@@ -477,7 +481,6 @@ export class UI {
     tr.appendChild(this.statsBox);
     s.appendChild(tr);
     const bl = el('div', 'hud-bl');
-    this.powerupHud=new PowerupHud(bl);
     const health = el('div', 'health');
     health.appendChild(el('div', 'cross'));
     const hcol = el('div');
@@ -683,6 +686,7 @@ export class UI {
         key: 'graphics',
         title: 'Graphics',
         rows: [
+          ['chromebookMode', this.toggleRow('chromebookMode', 'CHROMEBOOK MODE')],
           [
             'graphicsQuality',
             this.selectRow('graphicsQuality', 'Graphics quality', [
@@ -857,6 +861,15 @@ export class UI {
   /** Push the draft into every control and refresh the "unapplied" markers. */
   private syncSettings(): void {
     for (const f of this.settingSyncs) f();
+    const overridden=this.draft.value.chromebookMode;
+    for(const key of ['graphicsQuality','shadowQuality','resolutionScale','reducedEffects'] as const){
+      const row=this.settingRows.get(key);if(!row)continue;
+      row.inert=overridden;row.setAttribute('aria-disabled',String(overridden));row.classList.toggle('overridden',overridden);
+      row.title=overridden?'Overridden by Chromebook Mode. Turn it off to restore your preferences.':'';
+      row.querySelectorAll<HTMLButtonElement|HTMLInputElement>('button,input').forEach(c=>c.disabled=overridden);
+    }
+    const mode=this.settingRows.get('chromebookMode');
+    if(mode&&!mode.querySelector('.chromebook-hint')){const hint=el('small','chromebook-hint','Overrides resolution, shadows, textures and effects; previous preferences are kept.');mode.append(hint);}
     const dirty = new Set(this.draft.dirtyKeys);
     const rename = this.usernameDraft !== this.profile.value.username;
     if (this.usernameInput.value !== this.usernameDraft) this.usernameInput.value = this.usernameDraft;
@@ -904,7 +917,7 @@ export class UI {
     return row;
   }
 
-  private toggleRow(key: 'invertY' | 'showFps' | 'reducedEffects', label: string): HTMLElement {
+  private toggleRow(key: 'invertY' | 'showFps' | 'reducedEffects' | 'chromebookMode', label: string): HTMLElement {
     const id = `set-${key}`;
     const { row, lab } = this.settingRow(label, id);
     const input = el('input', 'switch');
@@ -960,7 +973,9 @@ export class UI {
     document.body.dataset.screen = screen;
     const homeSettings = screen === 'settings' && this.settingsReturn === 'menu';
     const ranking = screen === 'leaderboard';
+    if(!['modes','create-room'].includes(screen))this.rooms.cancel();
     const home = screen === 'menu' || homeSettings;
+    document.body.dataset.roomPage=String(['modes','create-room'].includes(screen));
     document.body.dataset.homePage = ranking ? 'leaderboard' : homeSettings ? 'settings' : home ? 'play' : '';
     this.homeHeader.hidden = !home;
     this.challenges.account.hidden = screen !== 'menu';

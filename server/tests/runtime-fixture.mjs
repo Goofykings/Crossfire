@@ -4,6 +4,28 @@
 import { PublicRoom as ProductionRoom } from '../dist/index.js';
 export { default } from '../dist/index.js';
 export class PublicRoom extends ProductionRoom {
+  async qualifyRoomRoundForTest(id){const e=this.players.get(id);if(!e?.session.participation||e.session.participation.abandoned)throw Error('Requires unabandoned spawned player');e.session.participation.firstSpawn=Date.now()-599000;await this.persist();}
+  async expireRoomTicketForTest(ticket){const record=await this.ctx.storage.get('room-ticket:'+ticket);if(!record)throw Error('Requires issued ticket');record.until=0;await this.ctx.storage.put('room-ticket:'+ticket,record);}
+  async ageRoomForTest(ms){if(!this.config)throw Error('Requires custom room');this.config.createdAt=Date.now()-ms;await this.persist();await this.scheduleCleanup();return this.roomStatus();}
+  async ageEmptyRoomForTest(ms){if(!this.config||this.connected().length)throw Error('Requires empty room');this.config.emptySince=Date.now()-ms;await this.persist();await this.scheduleCleanup();}
+  async ageActivityForTest(id,ms){const e=this.players.get(id);if(!e)throw Error('Requires joined session');e.session.activityAt=Date.now()-ms;await this.persist();await this.scheduleCleanup();return this.snapshot();}
+  async loseRewardAckForTest(){this.loseRewardAck=true;}
+  async applyRoomRewards(id,events){const result=await super.applyRoomRewards(id,events);if(this.loseRewardAck){this.loseRewardAck=false;throw Error('Test: acknowledgment lost after durable commit');}return result;}
+  async flushRoomRewardsForTest(){await this.persist();await this.flushRewards();return this.ctx.storage.get('room-reward-ack');}
+  async replayRoomRewardsForTest(){const state=await this.ctx.storage.get('room-rewards');return state?.events.length?this.authority.applyRoomRewards(this.roomId,state.events):null;}
+  async prepareRoomChallengesForTest(credential){
+    const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(credential)),id=[...new Uint8Array(bytes)].map(n=>n.toString(16).padStart(2,'0')).join('');
+    const p=await this.careers.load(id);if(!p)throw Error('Requires real profile');
+    p.daily.challenges=[{id:'daily:sniper:5',progress:4,completedAt:null},{id:'daily:headshots:3',progress:0,completedAt:null},{id:'daily:points:1000',progress:0,completedAt:null}];p.weekly.challenges=[{id:'weekly:sniper:40',progress:39,completedAt:null},{id:'weekly:headshots:20',progress:0,completedAt:null},{id:'weekly:points:10000',progress:0,completedAt:null}];p.revision++;this.careers.mark(id);await this.persist();return p.gems;
+  }
+
+  async legacyStatisticsSchemaForTest(credential) {
+    await this.persist();await this.statistics.project();
+    const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(credential));
+    const id=[...new Uint8Array(digest)].map(n=>n.toString(16).padStart(2,'0')).join('');
+    const p=await this.ctx.storage.get('statistics:'+id);if(!p)throw new Error('Requires persisted real profile');
+    delete p.totals.assists;await this.ctx.storage.put('statistics:'+id,p);
+  }
   async legacyWalletForStatisticsTest(credential,gems) {
     const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(credential));
     const id=[...new Uint8Array(digest)].map(n=>n.toString(16).padStart(2,'0')).join('');
@@ -27,38 +49,6 @@ export class PublicRoom extends ProductionRoom {
     // Emulate interruption after the authoritative KV save, before projection.
     if(remove)this.ctx.storage.sql.exec('DELETE FROM statistics_rankings WHERE id=?',record.id);
     await this.ctx.storage.put(`statistics-index:${identity}:${String(record.revision).padStart(16,'0')}`,record);
-  }
-  async powerupArenaForTest() {
-    const world=this.activeMap.world;
-    for(const target of this.powerups.pool) for(const source of this.powerups.pool) {
-      const delta={x:target.x-source.x,y:0,z:target.z-source.z},distance=Math.hypot(delta.x,delta.z);
-      if(distance<5||distance>9)continue;
-      if(Math.abs(target.y-source.y)>.05)continue;
-      if(world.raycast(source.x,source.y+1.2,source.z,delta.x/distance,0,delta.z/distance,distance))continue;
-      if(world.raycast(source.x,source.y+2.46,source.z,delta.x/distance,0,delta.z/distance,distance))continue;
-      const parking=this.powerups.pool.find(p=>Math.hypot(p.x-source.x,p.z-source.z)>15&&Math.hypot(p.x-target.x,p.z-target.z)>15);
-      if(!parking)continue;
-      return {parking:[parking.x,parking.y,parking.z],target:[target.x,target.y,target.z],source:[source.x,source.y,source.z],yaw:Math.atan2(-delta.x,-delta.z),distance};
-    }
-    throw new Error('No open pickup arena on actual navigation');
-  }
-  async pickupForTest(type,position) {
-    if(!['giant','doubleJump','fire','shield'].includes(type))throw new Error('Unknown powerup');
-    const p=this.powerups.pool.find(p=>p.x===position[0]&&p.y===position[1]&&p.z===position[2]);
-    if(!p)throw new Error('Fixture must use a validated navigable pickup location');
-    const pickup={id:crypto.randomUUID(),type,position:{...p}};
-    // Controlled visual/combat cases replace the field, rather than inserting a
-    // third cube into a two-player room and correctly losing it to the cap.
-    this.powerups.state.pickups.splice(0,this.powerups.state.pickups.length,pickup);this.updatePickups(Date.now());
-    await this.persist();for(const e of this.players.values())this.attach(e);
-    this.broadcast();this.start();return pickup;
-  }
-  async powerupClockForTest() { return {state:this.powerups.state,pool:this.powerups.pool.length}; }
-  async duePowerupForTest() { this.powerups.state.nextSpawn=Date.now()+100;await this.scheduleCleanup(); }
-  async clearPickupsForTest() { this.powerups.state.pickups.length=0;this.powerups.state.nextSpawn=Date.now()+20000;await this.persist();this.broadcast(); }
-  async soonExpirePowerupForTest(id) {
-    const e=this.players.get(id);if(!e?.session.powerup)throw new Error('Requires a real collected ability');
-    e.session.powerup.expiresAt=Date.now()+100;this.attach(e);this.start();return this.snapshot();
   }
   async seedCareerForTest(id, mode='kills', eligibility='eligible') {
     const e=this.players.get(id),p=e?.session.profileId?this.careers.profiles.get(e.session.profileId):null;
@@ -98,6 +88,16 @@ export class PublicRoom extends ProductionRoom {
     }
     throw new Error('No clear real-player firing position for '+id);
   }
+  async seedRetiredStateForTest(id) {
+    await this.persist();
+    const sessions=await this.ctx.storage.get('sessions'),s=sessions.find(s=>s.id===id);
+    if(!s)throw new Error('Requires a real session');
+    s.powerup={type:'giant',expiresAt:Date.now()+15000,shield:0};s.burn={ownerId:id,expiresAt:Date.now()+5000,updatedAt:Date.now()};
+    s.health=120;s.motion.scale=s.motion.eyeScale=1.5;s.motion.doubleJump=true;s.motion.extraJumpUsed=false;s.motion.extraJumpCount=0;
+    const ledger=await this.ctx.storage.get('round-ledger');ledger.mode='powerups';
+    await this.ctx.storage.put({sessions,'round-ledger':ledger,powerups:{retired:true}});
+  }
+  async retiredStorageForTest(){return {pickups:await this.ctx.storage.get('powerups'),sessions:await this.ctx.storage.get('sessions')};}
   async snapshotForTest() { return this.snapshot(); }
   async setRemainingForTest(ms) {
     if (!Number.isFinite(ms) || ms < 1 || ms > 600000) throw new Error('Invalid test deadline');
@@ -185,7 +185,7 @@ export class PublicRoom extends ProductionRoom {
     const [x, y, z] = pos;
     if (this.activeMap.world.overlapsCylinder(x, z, .34, y + .42, y + 1.8)) throw new Error('Arena position intersects map solids');
     e.controller.teleport({ x, y, z }, heading);
-    this.updatePickups(Date.now());this.start();
+    this.start();
     await this.persist();for(const p of this.players.values())this.attach(p);
     this.attach(e);
     this.broadcast();

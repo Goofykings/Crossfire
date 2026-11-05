@@ -1,5 +1,13 @@
 # Crossfire multiplayer backend
 
+Latest Phase 2 (2026-11-04): protocol **v19**, statistics HTTP **v2**. See
+[logical rooms](../docs/MULTIPLAYER_ROOMS.md) for current local PowerShell commands,
+public/private discovery and creation, per-room Durable Objects, admission
+capabilities, persistent reward routing, AFK/lifecycle rules and validation.
+The original Worker URL, public-main state, class/binding and coordinated CI
+remain. Custom rooms require no new binding or secret. Earlier stage notes
+below are historical; no public deployment was performed for this update.
+
 Deployment is now coordinated with GitHub Pages. See
 [deployment setup, secrets, verification and rollback](../docs/DEPLOYMENT.md).
 The official Wrangler action deploys this existing Worker before Pages and

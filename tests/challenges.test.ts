@@ -82,3 +82,9 @@ describe('strict shared protocol and display timing',()=>{
     expect(resetCountdown(86400000,0)).toBe('1d 00:00:00');
   });
 });
+
+it('assist points advance only point objectives and grant completion gems once',()=>{
+ const p=createCareer(id,now);p.daily.challenges=['daily:points:1000','daily:eliminations:10','daily:headshots:3'].map(id=>({id,progress:id.includes(':points:')?950:0,completedAt:null}));
+ advanceChallenges(p,id,{kind:'points',points:50},now);expect(p.daily.challenges.map(c=>c.progress)).toEqual([1000,0,0]);expect(p.gems).toBe(100);
+ advanceChallenges(p,id,{kind:'points',points:50},now+1);expect(p.gems).toBe(100);
+});

@@ -50,6 +50,12 @@ describe('continuous shared grenade physics', () => {
     expect(GRENADE.damage).toBe(100);expect(GRENADE.damageRadius).toBe(4.2);expect(GRENADE.fuseMs).toBe(2000);
   });
 });
+it('emits bounce cues only at confirmed swept impacts, without changing the trajectory',()=>{
+ const a=projectile({velocity:{x:1,y:-70,z:0}}),b=structuredClone(a),events:{position:{y:number};speed:number}[]=[];
+ advanceGrenade(a,1100,floor(),(position,speed)=>events.push({position,speed}));advanceGrenade(b,1100,floor());
+ expect(a).toEqual(b);expect(events.length).toBeGreaterThan(0);expect(events[0].speed).toBeGreaterThan(1.2);expect(events[0].position.y).toBeGreaterThanOrEqual(GRENADE.radius);
+});
+
 describe('authoritative radial damage', () => {
   it('has a lethal center, smooth falloff and zero damage at the main cloud boundary', () => {
     const w=floor(),motion=new PlayerController(w).capture(),at={x:0,y:.065,z:0};

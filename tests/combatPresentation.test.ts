@@ -1,6 +1,6 @@
 import { PROTOCOL_VERSION } from '../shared/protocol';
 import { expect, it } from 'vitest';
-import { damageHaze, damageTurn, deathPose } from '../src/game/CombatPresentation';
+import { damageHaze, deathPose } from '../src/game/CombatPresentation';
 import { parseClientMessage, parseServerMessage } from '../shared/protocol';
 import { combatRelationship } from '../src/ui/CombatFeed';
 
@@ -29,17 +29,6 @@ it('weights the actual incoming ray against current camera yaw/pitch for directi
   }
 });
 
-it('indicates the shortest turn toward the attacker for all sides and yaw wraparound', () => {
-  expect(damageTurn({ x: 0, y: 0, z: 1 }, 0)).toBe(0);
-  expect(damageTurn({ x: -1, y: 0, z: 0 }, 0)).toBe(1);
-  expect(damageTurn({ x: 1, y: 0, z: 0 }, 0)).toBe(-1);
-  expect(damageTurn({ x: -.1, y: 0, z: -1 }, 0)).toBe(1);
-  expect(damageTurn({ x: .1, y: 0, z: -1 }, 0)).toBe(-1);
-  expect(damageTurn({ x: 0, y: 0, z: -1 }, 0)).toBe(1);
-  expect(damageTurn({ x: 1, y: 0, z: 0 }, Math.PI / 2)).toBe(0);
-  expect(damageTurn({ x: .01, y: 0, z: -1 }, -Math.PI + .02)).toBe(0);
-  expect(damageTurn({ x: 0, y: -1, z: 0 }, 1)).toBe(0);
-});
 it('falls along the world-space incoming ray and fades completely in half a second', () => {
   for (const dir of [{ x: 1, y: -.2, z: 0 }, { x: -1, y: 0, z: 0 }, { x: 0, y: 0, z: 1 }, { x: 0, y: 0, z: -1 }]) {
     const start = deathPose(0, dir), mid = deathPose(.25, dir), end = deathPose(.5, dir);

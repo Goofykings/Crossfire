@@ -78,7 +78,7 @@ for(const mode of ['kills','eligible','late','abandoned'])test(`durable guest ch
     if(mode==='kills'){
       await until(()=>a.profile?.gems===1050,'all six rewards');
       assert.equal(me(a).kills,1);assert.equal(a.profile.gems,1050);
-      assert.deepEqual(await statistics(created.credential),{kills:1,deaths:0,points:150,wins:0,games:0,gems:1050},'actual kill and rewards update lifetime statistics before round end');
+      assert.deepEqual(await statistics(created.credential),{kills:1,assists:0,deaths:0,points:150,wins:0,games:0,gems:1050},'actual kill and rewards update lifetime statistics before round end');
       assert.equal((await statistics(other.credential)).deaths,1,'confirmed death records on the victim');
       assert.ok(a.profile.daily.challenges.every(c=>c.completedAt!==null));
       assert.ok(a.profile.weekly.challenges.every(c=>c.completedAt!==null));

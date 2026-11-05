@@ -1,4 +1,4 @@
-import type { GraphicsQuality, ShadowQuality } from '../config/settings';
+import type { Settings, GraphicsQuality, ShadowQuality } from '../config/settings';
 
 export interface GraphicsPreset {
   msaa: number;
@@ -13,6 +13,7 @@ export interface GraphicsPreset {
   /** Opt-in material refinements; other presets retain their original appearance. */
   ultraMaterials?: boolean;
   reflectionSize?: 256 | 512;
+  noReflections?:boolean;
   bloomWeight?: number;
   aoSamples?: number;
   aoStrength?: number;
@@ -46,3 +47,8 @@ export const SHADOW_PRESETS: Record<ShadowQuality, ShadowPreset> = {
   medium: { enabled: true, mode: 'static', mapSize: 4096, cascades: 1, filtering: 'medium', maxZ: 80 },
   high: { enabled: true, mode: 'cascaded', mapSize: 2048, cascades: 3, filtering: 'high', maxZ: 90 },
 };
+
+export const CHROMEBOOK_PRESET: GraphicsPreset = {...GRAPHICS_PRESETS.low, fxaa:false, anisotropy:1, noReflections:true};
+export function graphicsPreset(s:Readonly<Settings>):GraphicsPreset {
+  return s.chromebookMode?CHROMEBOOK_PRESET:GRAPHICS_PRESETS[s.graphicsQuality];
+}

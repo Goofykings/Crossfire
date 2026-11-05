@@ -18,6 +18,7 @@ export interface GrenadeExplosion {
   id: string; grenadeId: string; ownerId: string; ownerLife: number; roundId: number; at: number; position: Vec3; hits: BlastHit[];
 }
 export type GrenadeEvent = { kind: 'throw'; id: string; projectile: GrenadeState }
+  | { kind: 'bounce'; id: string; grenadeId: string; roundId: number; at: number; position: Vec3; strength: number }
   | ({ kind: 'explode' } & GrenadeExplosion);
 
 /** Swept sphere against the existing OBB grid. Expanded slabs conservatively
@@ -66,7 +67,7 @@ export function throwGrenade(world: CollisionWorld, eye: Vec3, bodyEye: Vec3, di
 }
 
 /** Catch up by elapsed server time, including eviction. At most one fuse (240 steps). */
-export function advanceGrenade(g: GrenadeState, now: number, world: CollisionWorld): void {
+export function advanceGrenade(g: GrenadeState, now: number, world: CollisionWorld, onBounce?: (position: Vec3, speed: number) => void): void {
   const end=Math.min(now,g.explodeAt);
   let remaining=Math.max(0,(end-g.updatedAt)/1000);
   while(remaining>1e-9) {
@@ -83,6 +84,7 @@ export function advanceGrenade(g: GrenadeState, now: number, world: CollisionWor
       g.position.x+=n.x*.0001;g.position.y+=n.y*.0001;g.position.z+=n.z*.0001;
       const into=g.velocity.x*n.x+g.velocity.y*n.y+g.velocity.z*n.z;
       if(into<0) {
+        if (-into > 1.2) onBounce?.({ ...g.position }, -into);
         const bounce=Math.abs(into)<.65?0:GRENADE.restitution;
         const tangent= n.y>.5 ? GRENADE.friction : .88;
         g.velocity.x=(g.velocity.x-n.x*into)*tangent-n.x*into*bounce;
@@ -97,7 +99,7 @@ export function advanceGrenade(g: GrenadeState, now: number, world: CollisionWor
 }
 
 export function blastDamage(world: CollisionWorld, origin: Vec3, motion: ControllerState): number {
-  const p=motion.position,height=(MOVEMENT.standHeight+(MOVEMENT.crouchHeight-MOVEMENT.standHeight)*motion.crouch)*Math.max(motion.scale??1,motion.eyeScale??1);
+  const p=motion.position,height=(MOVEMENT.standHeight+(MOVEMENT.crouchHeight-MOVEMENT.standHeight)*motion.crouch);
   const dy=Math.max(p.y-origin.y,origin.y-(p.y+height),0);
   const distance=Math.hypot(p.x-origin.x,dy,p.z-origin.z);
   if(distance>=GRENADE.damageRadius)return 0;

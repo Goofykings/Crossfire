@@ -4,7 +4,7 @@ import { PlayerController, NO_INTENT } from '../src/player/PlayerController';
 import { FIXED_DT } from '../src/config/constants';
 import { WORLDS } from '../server/src/world';
 import { MAP_IDS } from '../shared/maps';
-import { pickupLocations } from '../shared/powerups';
+import { groundLocations } from '../shared/navigation';
 import { unsafeMovement } from '../shared/movementSafety';
 
 it('sweeps thin rotated walls without tunneling and preserves tangential movement', () => {
@@ -28,24 +28,11 @@ it('does not propel an initially embedded cylinder toward another exit face', ()
   const move = w.moveCylinder(-.1, 0, .05, .1, .34, 0, 1.8);
   expect(move.x).toBeCloseTo(-.1); expect(move.z).toBeCloseTo(.1);
 });
-it('prevents the Industrial W11 falling-edge correction with the actual Giant body', () => {
-  const w = WORLDS['industrial-complex'].world;
-  const p = new PlayerController(w); p.scale = 1.5;
-  p.teleport({ x: -22.640758481372092, y: 2.6183849122331773, z: 20.41734760667338 });
-  p.position.y = 2.6183849122331773; p.grounded = false; p.yaw = 1.7394822545335913;
-  p.velocity.x = -6.763; p.velocity.z = -1.99; p.velocity.y = -4.5;
-  const before = { ...p.position };
-  p.fixedUpdate(FIXED_DT, { ...NO_INTENT, z: 1 });
-  // Full-radius support catches this edge before the old narrow probe loses wall top.
-  expect(p.position.y).toBe(3);
-  expect(Math.hypot(p.position.x - before.x, p.position.z - before.z)).toBeLessThan(.1);
-  expect(w.overlapsCylinder(p.position.x, p.position.z, p.cfg.radius - 1e-5, p.position.y + .001, p.position.y + p.height)).toBe(false);
-});
-it.each([1, 1.5] as const)('repeated diagonal slides/jump cancellation cannot cross a thin corner, scale %s', scale => {
+it('repeated diagonal slides/jump cancellation cannot cross a thin corner', () => {
   const w = new CollisionWorld(); w.add({ c: [0, -1, 0], h: [20, 1, 20] });
   w.add({ c: [0, 3, 0], h: [.01, 3, 12] }); w.add({ c: [-6, 3, -3], h: [6, 3, .01] });
   for (const weapon of ['rifle', 'smg', 'shotgun', 'sniper'] as const) {
-    const p = new PlayerController(w); p.scale = scale; p.doubleJump = true; p.weaponClearance = weapon;
+    const p = new PlayerController(w); p.weaponClearance = weapon;
     p.teleport({ x: -3, y: 0, z: 1 }); p.yaw = -Math.PI / 4;
     p.velocity.x = 60; p.velocity.z = -60;
     for (let n = 0; n < 2400; n++) {
@@ -77,11 +64,11 @@ describe.each(MAP_IDS)('%s actual map safety', id => {
       }
     }
   });
-  it('stress replays normal/Giant, double jumps and slide spam without escape or correction teleports', () => {
-    const { world, layout } = WORLDS[id], pool = pickupLocations(layout,world);
+  it('stress replays normal bodies, jumps and slide spam without escape or correction teleports', () => {
+    const { world, layout } = WORLDS[id], pool = groundLocations(layout,world);
     let seed = 713; const random = () => ((seed = (Math.imul(seed,1664525)+1013904223) >>> 0) / 4294967296);
     for (let trial = 0; trial < 20; trial++) {
-      const p = new PlayerController(world); p.scale = trial % 2 ? 1.5 : 1; p.doubleJump = true;
+      const p = new PlayerController(world);
       p.weaponClearance = (['rifle','smg','shotgun','sniper'] as const)[trial % 4];
       p.teleport(pool[Math.floor(random()*pool.length)]); let yaw = random()*Math.PI*2;
       for (let n = 0; n < 900; n++) {
@@ -94,7 +81,7 @@ describe.each(MAP_IDS)('%s actual map safety', id => {
     }
   });
 });
-it('secondary safety tolerates legal edge contact and tall double jumps, identifies real invalid states', () => {
+it('secondary safety tolerates legal edge contact and airborne movement, identifies real invalid states', () => {
   const layout = WORLDS['industrial-complex'].layout;
   expect(unsafeMovement({x:27.2,y:0,z:0},layout)).toBeNull();
   expect(unsafeMovement({x:0,y:50,z:0},layout)).toBeNull();
@@ -105,8 +92,8 @@ it('secondary safety tolerates legal edge contact and tall double jumps, identif
 
 it.each(MAP_IDS)('%s collision is identical at 30/60/144 render Hz and after delayed snapshot replay', id => {
   const world = WORLDS[id].world;
-  const start = pickupLocations(WORLDS[id].layout,world)[0];
-  const make = () => { const p = new PlayerController(world); p.scale=1.5; p.doubleJump=true; p.weaponClearance='sniper'; p.teleport(start); return p; };
+  const start = groundLocations(WORLDS[id].layout,world)[0];
+  const make = () => { const p = new PlayerController(world); p.weaponClearance='sniper'; p.teleport(start); return p; };
   const frames = Array.from({length:720},(_,i)=>({ yaw:Math.sin(i/90)*2,
     intent:{...NO_INTENT,z:1,x:Math.sin(i/30),slide:i%240<120,jumpPressed:i%170===15||i%170===45} }));
   const authority = make(); let checkpoint = authority.capture();

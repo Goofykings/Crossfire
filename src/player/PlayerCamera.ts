@@ -117,13 +117,13 @@ export class PlayerCamera {
 
     const cam = this.ctx.camera;
     const heightBlend = p.prevCrouch + (p.crouch - p.prevCrouch) * alpha;
-    const desiredEye = (p.cfg.standEye + (p.cfg.crouchEye - p.cfg.standEye) * heightBlend)*(p.prevEyeScale+(p.eyeScale-p.prevEyeScale)*alpha)/p.bodyScale
+    const desiredEye = (p.cfg.standEye + (p.cfg.crouchEye - p.cfg.standEye) * heightBlend)
       + this.groundY - pos.y + this.bobY + this.dip.value * .1 * cosmetic;
     const eye = p.safeViewEye(pos, desiredEye);
     const lean = p.prevLean + (p.lean - p.prevLean) * alpha;
     // Include bob in the sweep so visual motion cannot nudge the camera through a wall.
     const safe = p.safeViewLean(pos, lean + this.bobX / LEAN_OFFSET, eye);
-    const offset = leanOffset(p.yaw, safe, p.bodyScale);
+    const offset = leanOffset(p.yaw, safe);
     cam.position.set(pos.x + offset.x, pos.y + eye, pos.z + offset.z);
     const roll = this.bobX * 0.35 - lean * LEAN_ANGLE + this.blastRoll.update(dt) * cosmetic;
     cam.rotationQuaternion ??= Quaternion.Identity();

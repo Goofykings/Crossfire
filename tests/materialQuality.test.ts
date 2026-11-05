@@ -76,3 +76,9 @@ describe('Ultra material quality', () => {
     expect((a.material as PBRMaterial).clearCoat.isEnabled).toBe(false);
   });
 });
+
+it('Chromebook materials remove specular IBL/normal/ORM/coat costs and restore the same skins and maps',()=>{
+ library.setUltra(true);const m=material('galvanized'),base=m.albedoTexture,normal=m.bumpTexture,orm=m.metallicTexture;
+ library.setChromebook(true);expect(m.reflectionColor.asArray()).toEqual([0,0,0]);expect(m.bumpTexture).toBeNull();expect(m.metallicTexture).toBeNull();expect(m.metallic).toBe(0);expect(m.clearCoat.isEnabled).toBe(false);expect(m.albedoTexture).toBe(base);
+ library.setChromebook(false);expect(m.albedoTexture).toBe(base);expect(m.bumpTexture).toBe(normal);expect(m.metallicTexture).toBe(orm);expect(m.metallic).toBe(.9);expect(m.reflectionColor.asArray()).toEqual([1,1,1]);
+});

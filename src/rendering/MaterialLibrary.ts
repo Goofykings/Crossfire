@@ -1,3 +1,4 @@
+import { CreateResizedCopy } from '@babylonjs/core/Misc/textureTools';
 import { texturesReady } from '../core/assetReadiness';
 import { Color3, Material, PBRMaterial, Texture, type Scene } from '@babylonjs/core';
 import { assetUrl, fetchJson } from '../core/assets';
@@ -40,6 +41,29 @@ export class MaterialLibrary {
   private readonly textures = new Map<string, Texture>();
   private anisotropy = 4;
   private ultra = false;
+  private chromebook=false;
+  private readonly smallTextures=new Map<Texture,Texture>();
+  setChromebook(enabled:boolean):void {
+    if(this.chromebook===enabled)return;this.chromebook=enabled;
+    for(const [name,m] of this.materials)this.applyQuality(name,this.defs[name],m);
+  }
+  private compactTexture(source:Texture,m:PBRMaterial):void {
+    const assign=()=>{
+      if(!this.chromebook||!this.scene.materials.includes(m)||this.scene.isDisposed)return;
+      const size=source.getSize();if(Math.max(size.width,size.height)<=256)return;
+      let copy=this.smallTextures.get(source);
+      if(!copy){
+        const ratio=256/Math.max(size.width,size.height),u=source.wrapU,v=source.wrapV;
+        copy=CreateResizedCopy(source,Math.max(1,Math.round(size.width*ratio)),Math.max(1,Math.round(size.height*ratio)));
+        source.wrapU=u;source.wrapV=v;
+        copy.wrapU=u;copy.wrapV=v;copy.gammaSpace=source.gammaSpace;copy.hasAlpha=source.hasAlpha;copy.anisotropicFilteringLevel=1;
+        this.smallTextures.set(source,copy);
+      }
+      const ready=copy;
+      void texturesReady([ready]).then(()=>{if(this.chromebook&&this.scene.materials.includes(m))m.albedoTexture=ready;}).catch(()=>{});
+    };
+    if(source.isReady())assign();else source.onLoadObservable.addOnce(assign);
+  }
   private fallback: PBRMaterial | null = null;
   readonly missing = new Set<string>();
 
@@ -74,6 +98,12 @@ export class MaterialLibrary {
   }
 
   private applyQuality(name: string, def: MaterialDef, m: PBRMaterial): void {
+    // Preserve source maps for a lossless return from the derived low-cost mode.
+    if(def.albedo){const source=this.texture(def.albedo,def.tile||1,false,!def.atlas);m.albedoTexture=source;
+      if(this.chromebook&&!def.atlas)this.compactTexture(source,m);}
+    m.bumpTexture=def.normal?this.texture(def.normal,def.tile||1,true):null;
+    m.roughness=def.roughness??(def.orm?1:.8);
+    m.reflectionColor=this.chromebook?Color3.Black():Color3.White();
     m.enableSpecularAntiAliasing = this.ultra;
     // Alpha defaults to true in Babylon and takes precedence over green. Our
     // authored ORM images store roughness in green, with an opaque alpha channel.
@@ -95,6 +125,8 @@ export class MaterialLibrary {
     m.clearCoat.isEnabled = coat > 0;
     m.clearCoat.intensity = coat;
     m.clearCoat.roughness = /^carpaint_/.test(name) ? .22 : .45;
+    if(this.chromebook){m.bumpTexture=null;m.metallicTexture=null;m.clearCoat.isEnabled=false;m.enableSpecularAntiAliasing=false;m.metallic=0;m.roughness=1;}
+
   }
 
   private texture(path: string, tile: number, linear: boolean, invertY = true): Texture {
@@ -255,8 +287,12 @@ export class MaterialLibrary {
       for (const t of [m.albedoTexture, m.bumpTexture, m.metallicTexture, m.emissiveTexture]) if (t) keep.add(t as Texture);
     }
     let textures = 0;
+    for(const [name] of this.materials){const d=this.defs[name];
+      for(const t of this.textures.values())if([d.albedo,d.normal,d.orm].some(path=>path&&t.url===assetUrl(path)))keep.add(t);
+    }
     for (const [key, t] of this.textures) {
       if (keep.has(t)) continue;
+      this.smallTextures.get(t)?.dispose();this.smallTextures.delete(t);
       t.dispose();
       this.textures.delete(key);
       textures++;
@@ -274,6 +310,7 @@ export class MaterialLibrary {
   dispose(): void {
     for (const m of this.materials.values()) m.dispose();
     for (const t of this.textures.values()) t.dispose();
+    for(const t of this.smallTextures.values())t.dispose();this.smallTextures.clear();
     this.materials.clear();
     this.textures.clear();
   }

@@ -18,9 +18,11 @@ export class Statistics {
   async load(identity:string,name?:string,gems=0):Promise<StatisticsRecord|undefined>{
     let p=this.records.get(identity)??await this.storage.get<StatisticsRecord>('statistics:'+identity);
     if(!p&&name!==undefined)p=createStatistics(crypto.randomUUID(),name,Date.now(),gems);
-    if(p){this.records.set(identity,p);if(name&&p.name!==name){p.name=name;p.revision++;this.mark(identity);}else if(name!==undefined&&p.revision===0)this.mark(identity);}
+    if(p){if(p.totals.assists===undefined){p.totals.assists=0;p.revision++;this.mark(identity);}this.records.set(identity,p);if(name&&p.name!==name){p.name=name;p.revision++;this.mark(identity);}else if(name!==undefined&&p.revision===0)this.mark(identity);}
     return p;
   }
+  nextRound(identity:string):number{return (this.records.get(identity)?.lastRound??-1)+1;}
+  accept(identity:string,record:StatisticsRecord):void{this.records.set(identity,record);}
   get hasPending():boolean{return this.dirty.size>0;}
   private mark(id:string):void{this.dirty.set(id,++this.generation);}
   event(identity:string|undefined,event:StatisticsEvent):void{

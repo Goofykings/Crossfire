@@ -19,7 +19,7 @@ export function createRoundResults(result: RoundResult, selfId: string, team: Pl
   const outcome = resultOutcome(result, selfId, team);
   const panel = node('div', 'round-results'); panel.dataset.outcome = outcome.toLowerCase();
   const banner = node('header', 'result-banner');
-  banner.append(node('small', 'result-mode', result.mode === 'teams' ? 'TEAMS · MATCH COMPLETE' : result.mode==='powerups' ? 'POWERUPS · MATCH COMPLETE' : 'FREE FOR ALL · MATCH COMPLETE'), node('h1', 'result-title', outcome));
+  banner.append(node('small', 'result-mode', result.mode === 'teams' ? 'TEAMS · MATCH COMPLETE' : 'FREE FOR ALL · MATCH COMPLETE'), node('h1', 'result-title', outcome));
   const winner = node('p', 'result-winner', result.draw ? 'Match drawn' : result.mode === 'teams'
     ? `${displayTeam(result.winningTeam, team)?.toUpperCase()} TEAM WINS` : `${result.winner?.name} wins`);
   banner.append(winner); panel.append(banner);
@@ -32,7 +32,7 @@ export function createRoundResults(result: RoundResult, selfId: string, team: Pl
     section.append(heading);
     const scroll = node('div', 'result-table-scroll'); scroll.tabIndex = 0; scroll.setAttribute('aria-label', `${group.team ?? 'FFA'} match results`);
     const table = node('table'); const head = table.createTHead().insertRow();
-    for (const label of ['PLAYER', 'WEAPON', 'SCORE', 'K', 'D']) { const th = node('th', '', label); th.scope = 'col'; if (label === 'K') th.title = 'Kills'; if (label === 'D') th.title = 'Deaths'; head.append(th); }
+    for (const label of ['PLAYER', 'WEAPON', 'SCORE', 'K', 'D', 'A']) { const th = node('th', '', label); th.scope = 'col'; if (label === 'K') th.title = 'Kills'; if (label === 'D') th.title = 'Deaths'; if(label==='A')th.title='Assists'; head.append(th); }
     const body = table.createTBody();
     for (const [i, p] of group.players.entries()) {
       const row = body.insertRow(); row.dataset.playerId = p.id; row.classList.toggle('local', p.id === selfId);
@@ -42,7 +42,7 @@ export function createRoundResults(result: RoundResult, selfId: string, team: Pl
       if (p.id === result.winner?.id) name.append(node('small', 'result-player-winner', 'WINNER'));
       row.insertCell().innerHTML = weaponIcon(p.weapon);
       const score = row.insertCell(); score.textContent = formatScore(p.score); score.title = `${p.score} points`; score.dataset.score = String(p.score);
-      for (const value of [p.kills, p.deaths]) row.insertCell().textContent = String(value);
+      for (const value of [p.kills, p.deaths, p.assists??0]) row.insertCell().textContent = String(value);
     }
     scroll.append(table); section.append(scroll);
     if (!group.players.length) section.append(node('p', 'result-empty', 'No participants'));

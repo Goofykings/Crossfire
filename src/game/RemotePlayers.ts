@@ -119,11 +119,10 @@ export class RemotePlayers {
     if (!a || a.death || !a.samples.length) return null;
     const player = a.samples.at(-1)!.player;
     if (!player.weapon || !player.combat.gun) return null;
-    const scale=a.root.scaling.x;
-    const crouch = Math.max(0, Math.min(1, (1.8 - a.height/scale) / .65));
-    const offset = leanOffset(a.root.rotation.y, a.lean, scale);
+    const crouch = Math.max(0, Math.min(1, (1.8 - a.height) / .65));
+    const offset = leanOffset(a.root.rotation.y, a.lean);
     return { position: new Vector3(a.root.position.x + offset.x,
-      a.root.position.y + (MOVEMENT.standEye + (MOVEMENT.crouchEye - MOVEMENT.standEye) * crouch)*scale,
+      a.root.position.y + (MOVEMENT.standEye + (MOVEMENT.crouchEye - MOVEMENT.standEye) * crouch),
       a.root.position.z + offset.z),
       rotation: Quaternion.RotationYawPitchRoll(a.root.rotation.y, a.look.rotation.x, -a.lean * LEAN_ANGLE),
       weapon: player.weapon, gun: { ...player.combat.gun, ads: a.weaponAds },
@@ -135,6 +134,7 @@ export class RemotePlayers {
   setAnimationDetail(detail: number): void { this.animationDetail = detail; }
   /** A server-confirmed shot by this player; its cosmetic recoil plays when the delayed
    * (interpolated) pose reaches it. `serverNow` is the estimated current server time. */
+  muzzle(id:string):Vector3|null { return this.avatars.get(id)?.weapon?.muzzleWorld()??null; }
   fire(id: string, weapon: WeaponId, serverNow: number): void {
     this.avatars.get(id)?.shots.receive(serverNow, shotInterval(weapon));
   }
@@ -145,6 +145,7 @@ export class RemotePlayers {
     for (const texture of a.death?.textures ?? []) texture.dispose();
   }
   eliminate(event: Elimination): void {
+    this.avatars.get(event.victimId)?.weapon?.stopFiring();
     const a = this.avatars.get(event.victimId);
     if (!a || a.life !== event.victimLife || a.death) return;
     const materials = new Map<Material, Material>();
@@ -253,10 +254,9 @@ export class RemotePlayers {
         body.position.x = a.lean * .06;
         a.look.position.x = a.lean * .28;
       }
-      const targetScale=n.scale??1;
-      const size=a.root.scaling.x+Math.max(-dt*2,Math.min(dt*2,targetScale-a.root.scaling.x));
-      a.height = (1.8 - crouch * .65)*size;
-      a.root.scaling.set(size, a.character ? size : a.height/1.8, size);
+
+      a.height = 1.8 - crouch * .65;
+      a.root.scaling.set(1, a.character ? 1 : a.height/1.8, 1);
       a.character?.update({ crouch, grounded: k < .5 ? m.grounded : n.grounded,
         slideRemaining: m.slideRemaining + (n.slideRemaining - m.slideRemaining) * k,
         velocity: animationVelocity(m, n, (newer.at - older.at) / 1000, k) }, dt);

@@ -131,9 +131,13 @@ for (const mode of ['ffa','teams']) test(`grenades and held crouch: inventory, r
     await spawn(b);await room.placeForCombatTest(b.id,arena.center);
     const start=Date.now();
     // Feed actual 120 Hz held frames in 20 Hz batches; elapsed server time caps charge.
-    while(Date.now()-start<1750){
+    // Credit requires simulated held frames as well as elapsed time. A busy CI
+    // runner may schedule fewer than 35 batches in 1750ms; wait for the real
+    // acknowledged input budget instead of assuming the wall clock proves a hold.
+    let heldBatches=0;
+    while(Date.now()-start<1750||heldBatches<35){
       const frames=Array.from({length:6},()=>({seq:++b.seq,yaw:0,pitch:-1.4,intent:{x:0,z:0,slide:false,aim:false,jumpPressed:false},combat:{trigger:false,reload:false,grenade:true}}));
-      b.send({type:'input',roundId:b.snapshot.roundId,mapVersion:b.snapshot.mapVersion,frames});await delay(50);
+      b.send({type:'input',roundId:b.snapshot.roundId,mapVersion:b.snapshot.mapVersion,frames});heldBatches++;await until(()=>self(b).ack>=b.seq);await delay(50);
     }
     assert.equal(self(b).grenades,1,'holding never throws or consumes inventory');
     const chargeMark=b.messages.length;await input(b);

@@ -73,6 +73,8 @@ export class GrenadeView {
     this.scene.fogMode = this.fog.mode; this.scene.fogDensity = this.fog.density;
     this.scene.fogColor = this.fog.color; this.fog = null;
   }
+  private chromebook=false;
+  setChromebook(value:boolean):void{this.chromebook=value;}
   setReduced(value: boolean): void { this.reduced = value; }
   async load(materials: MaterialLibrary, signal?: AbortSignal): Promise<void> {
     await this.burst.ready(signal);
@@ -149,7 +151,7 @@ export class GrenadeView {
       p.color!.a = (data.flash ? .8 : .24) * (1 - t) ** 2;
     }
     this.particles.setParticles();
-    this.burst.update(serverTime, this.reduced);
+    this.burst.update(serverTime, this.reduced, !this.chromebook);
     this.ground.update(serverTime, world);
     this.serverTime = serverTime;
     this.inside = 0;

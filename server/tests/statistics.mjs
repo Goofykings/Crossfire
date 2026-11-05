@@ -64,9 +64,12 @@ test('persistent indexed rankings: all nine combinations, top ten, ties, auth, U
   await room.statisticsProjectionRecoveryForTest(credentials[0],false);
   assert.equal((await board('all','kills',credentials[0])).own.value,2,'replaying an already-committed SQL journal does not increment totals');
   await room.statisticsProjectionRecoveryForTest(credentials[0]);
+  await room.legacyStatisticsSchemaForTest(credentials[0]);
   room[Symbol.dispose]?.();room=null;await mf.dispose();mf=new Miniflare(options);base=(await mf.ready).href;
   const restored=await board('all','kills',credentials[0]);assert.equal(restored.own.value,2);assert.equal(restored.rows.length,10);
-  assert.deepEqual((await (await request('/stats',credentials[0])).json()).totals,stats.totals);
+  const migrated=await (await request('/stats',credentials[0])).json();
+  assert.equal(migrated.version,stats.version);assert.equal(migrated.totals.assists,0,'legacy statistics gain an honest zero assist count');
+  assert.deepEqual(migrated.totals,stats.totals,'schema migration preserves all prior kills/points/wins/gems');
   assert.equal((await (await request('/stats',legacy.credential)).json()).totals.gems,500,'migrated earned gems persist independently after restart');
  }finally{room?.[Symbol.dispose]?.();await mf.dispose();}
 });

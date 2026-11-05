@@ -1,12 +1,20 @@
 # Multiplayer architecture and migration plan
 
-Current local update (2026-11-03): **protocol v17** adds the authoritative
-POWERUPS FFA variant, shared ability/field rules, elapsed burn damage, shield,
-Giant dimensions and extra-jump state. Idle spawning/expiry use room alarms.
-The canonical Cloudflare room, coordinated CI and future Node transport boundary
-are preserved. See [Powerups rules and validation](POWERUPS.md) and latest
-PROGRESS.md. No public deployment was performed. Protocol/stage claims in the
-older entries below describe their historical updates.
+Current Phase 2 (2026-11-04): **protocol v19**, statistics HTTP **v2**.
+[Logical rooms](MULTIPLAYER_ROOMS.md) documents the implemented browser/create/
+private join flow, separate game Durable Objects, canonical directory/careers/
+statistics, durable reward outbox, AFK and lifecycle/security tests. Existing
+public-main and Worker URL remain; normal Play now opens Mode Select. No public
+deployment was performed. Notes below describe earlier stages.
+
+Current local Phase 1 update (2026-11-04): **protocol v18**, statistics HTTP
+schema **v2**. FFA and Teams only; Powerups and all ability modifiers are retired.
+Old room/session records are normalized in place without resetting identities,
+scores, challenges or wallets. Shared damage contributions supply authoritative
+50-point assists. Shot rays and bounded grenade bounce events drive presentation.
+Hosting, public-main, movement authority and backend-first CI remain intact.
+See [gameplay polish](GAMEPLAY_POLISH_PHASE1.md) and latest PROGRESS.md.
+No public deployment was performed. Older protocol/stage entries are historical.
 
 Deployment update (2026-11-02): [coordinated CI/CD](DEPLOYMENT.md) builds and tests
 both packages, checks actual frontend/Worker message compatibility, deploys the
