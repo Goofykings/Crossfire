@@ -93,7 +93,8 @@ def build():
     orange = material('crate_orange', (255, 138, 28), .05, .38)
     white = material('crate_white', (236, 240, 246), 0, .32)
     ice = material('crate_ice', (152, 214, 255), .05, .25)
-    glow = material('crate_glow', (255, 255, 255), 0, .5, emit=(255, 255, 255))
+    # Idle seam glow (cool ice blue) matches the runtime closed state; the reveal tints it.
+    glow = material('crate_glow', (120, 196, 255), 0, .5, emit=(120, 196, 255))
     objects = []
 
     # Body: chunky rounded block with a flared foot and a trim band under the lid.
@@ -138,6 +139,9 @@ def build():
             cut = bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:], plane_co=co, plane_no=no, clear_inner=False, clear_outer=True)
             edges = [e for e in cut['geom_cut'] if isinstance(e, bmesh.types.BMEdge)]
             bmesh.ops.holes_fill(bm, edges=edges, sides=0)
+            # Split the cut so the flat cap does not share smooth normals with the dome;
+            # shared normals rounded every cut edge and the closed lid read as four cushions.
+            bmesh.ops.split_edges(bm, edges=[e for e in edges if e.is_valid])
         bm.normal_update()
         bm.to_mesh(shell.data)
         bm.free()
@@ -155,8 +159,8 @@ def build():
 
     # Seam glow: thin strips hidden inside the gaps and under the lid edge.
     seam = [
-        rbox(col, 's_x', (0, BODY + LID * .46, 0), (W / 2 - .02, LID * .44, GAP * .3), glow, .002, 1),
-        rbox(col, 's_z', (0, BODY + LID * .46, 0), (GAP * .3, LID * .44, D / 2 - .02), glow, .002, 1),
+        rbox(col, 's_x', (0, BODY + LID * .5, 0), (W / 2 - .02, LID * .485, GAP * .3), glow, .002, 1),
+        rbox(col, 's_z', (0, BODY + LID * .5, 0), (GAP * .3, LID * .485, D / 2 - .02), glow, .002, 1),
         rbox(col, 's_rim', (0, BODY + .012, 0), (W / 2 + .004, .008, D / 2 + .004), glow, .006, 2),
     ]
     seam_obj = join(seam, 'seam_glow')

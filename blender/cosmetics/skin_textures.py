@@ -94,20 +94,37 @@ def camo() -> None:
 
 
 # --- Marble -----------------------------------------------------------------
+def vein(field: np.ndarray, width: float) -> np.ndarray:
+    """Ridged noise: thin, branching lines along the field's median crossing."""
+    c = field - np.median(field)
+    return np.exp(-np.abs(c) / (width * c.std()))
+
+
+def soften(field: np.ndarray, radius: float) -> np.ndarray:
+    """Periodic Gaussian blur (radius in pixels)."""
+    n = field.shape[0]
+    f = np.sqrt(np.fft.fftfreq(n)[:, None] ** 2 + np.fft.fftfreq(n)[None, :] ** 2) * n
+    return np.real(np.fft.ifft2(np.fft.fft2(field) * np.exp(-(f * radius / n * np.pi) ** 2)))
+
+
 def marble() -> None:
+    # The previous sine bands read as map contour lines. Real marble is a few bold veins
+    # running roughly one way, finer branching cracks and soft grey clouding. Stretched
+    # (anisotropic) noise keeps the ridged veins long instead of closing into loops.
     n = 512
-    y, x = np.mgrid[0:n, 0:n] / n
-    warp = noise(n, 4, 31) * 5.5 + noise(n, 14, 32) * 1.2
-    phase = 2 * np.pi * (2 * x + y) + warp  # Integer coefficients keep it periodic.
-    vein = np.exp(-np.abs(np.sin(phase)) * 9) * .85  # soft main veins
-    fine = np.exp(-np.abs(np.sin(2 * np.pi * (x - 3 * y) + noise(n, 10, 33) * 7)) * 30) * .4
-    v = np.clip(vein + fine, 0, 1)[..., None]
-    cloud = (noise(n, 6, 34) - .5)[..., None] * .12
-    white = rgb(238, 235, 230) + cloud - v * (rgb(238, 235, 230) - rgb(58, 58, 64))
-    black = rgb(20, 20, 24) + cloud * .5 + v * (rgb(214, 206, 192) - rgb(20, 20, 24))
+    iy, ix = np.mgrid[0:n, 0:n]
+    shear = lambda f: f[iy, (ix + iy) % n]  # periodic shear: long veins run diagonally
+    main = shear(vein(noise(n, 1.8, 31, aspect=1.7) + noise(n, 8, 35) * .22, .085))
+    fine = vein(noise(n, 7, 33, aspect=1.3) + noise(n, 20, 37) * .2, .04)
+    halo = soften(main, 9)
+    v = np.clip(soften(main, 1.2) * .9 + halo * .5 + soften(fine, .8) * .45 * noise(n, 3, 36), 0, 1)[..., None]
+    cloud = (noise(n, 4, 34) - .5)[..., None]
+    paper = rgb(226, 224, 220) + cloud * .16 - (noise(n, 12, 38) - .5)[..., None] * .04
+    white = paper - v * (paper - rgb(78, 80, 90))
+    black = rgb(22, 22, 26) + cloud * .06 + v * (rgb(222, 212, 196) - rgb(22, 22, 26))
     save('marble/white-albedo.jpg', white)
     save('marble/black-albedo.jpg', black)
-    save('marble/orm.png', orm(.16 + v[..., 0] * .22))
+    save('marble/orm.png', orm(.12 + v[..., 0] * .2 + (cloud[..., 0] + .5) * .06))
 
 
 # --- Rainbow glow -----------------------------------------------------------
@@ -157,47 +174,49 @@ def distance(px: np.ndarray, py: np.ndarray, pts: np.ndarray) -> np.ndarray:
 
 
 def rich() -> None:
+    # Engraved gold: two coin medallions per repeat with polished rims, and fine guilloche
+    # engraving between them. Four large coins per repeat read as wallpaper in first person.
     n = 1024
     y, x = np.mgrid[0:n, 0:n] / n
-    height = np.ones((n, n), np.float32)
-    # Brick-offset coin medallions: milled rim, inner ring and an engraved dollar sign.
+    height = np.full((n, n), .8, np.float32)
+    # Guilloche: two interlaced sets of wavy lines (integer frequencies keep it periodic).
+    g1 = np.abs((y * 18 + .22 * np.sin(2 * np.pi * 3 * x)) % 1 - .5) < .045
+    g2 = np.abs((y * 18 + .5 - .22 * np.sin(2 * np.pi * 3 * x)) % 1 - .5) < .045
+    height[g1 | g2] = .66
     coin = np.zeros((n, n), bool)
     s_pts = s_curve()
-    for cx0, cy0 in [(.25, .25), (.75, .75), (.75, .25), (.25, .75)]:
+    for cx0, cy0 in [(.25, .25), (.75, .75)]:
         dx = (x - cx0 + .5) % 1 - .5
         dy = (y - cy0 + .5) % 1 - .5
         r = np.hypot(dx, dy)
-        inside = r < .2
+        inside = r < .19
         coin |= inside
-        ridge = (r > .175) & (r < .2) & (np.cos(np.arctan2(dy, dx) * 72) > 0)
-        ring = np.abs(r - .155) < .006
-        local = r < .135
+        rim = (r > .165) & (r < .19)
+        ridge = (r > .145) & (r < .165) & (np.cos(np.arctan2(dy, dx) * 64) > 0)
+        ring = np.abs(r - .128) < .005
+        local = r < .112
         sign = np.zeros((n, n), bool)
         m = local
-        d = distance(dx[m] / .085, -dy[m] / .085, s_pts)
+        d = distance(dx[m] / .07, -dy[m] / .07, s_pts)
         sx = np.zeros_like(r)
         sx[m] = d
         sign[m] = sx[m] < .12
-        bar = (np.abs(dx) < .008) & (np.abs(dy) < .118)
-        height[inside] = .82
-        height[ridge | ring] = .35
-        height[local] = .9
+        bar = (np.abs(dx) < .0065) & (np.abs(dy) < .098)
+        height[inside] = .86
+        height[rim] = 1.0
+        height[ridge | ring] = .4
+        height[local & ~(sign | bar)] = .74
         height[(sign | bar) & local] = 1.0
-        height[local & ~(sign | bar)] = .72
-    # Filigree lattice between coins: diagonal double lines.
-    diag1 = np.abs(((x + y) * 4) % 1 - .5) < .012
-    diag2 = np.abs(((x - y) * 4) % 1 - .5) < .012
-    scroll = np.abs(np.sin(2 * np.pi * (x * 8)) * .03 + (y * 8) % 1 - .5) < .01
-    lattice = (diag1 | diag2 | scroll) & ~coin
-    height[lattice] = .45
-    blur = np.real(np.fft.ifft2(np.fft.fft2(height) * np.exp(-(np.sqrt(np.fft.fftfreq(n)[:, None] ** 2 + np.fft.fftfreq(n)[None, :] ** 2) * n / 260) ** 2)))
-    recess = np.clip(1 - blur, 0, 1)
-    gold = rgb(250, 198, 98)
-    deep = rgb(122, 74, 20)
-    brushed = (noise(n, 200, 51, aspect=8) - .5)[..., None] * .08
-    albedo = gold + brushed - recess[..., None] * 1.25 * (gold - deep)
+    blur = np.real(np.fft.ifft2(np.fft.fft2(height) * np.exp(-(np.sqrt(np.fft.fftfreq(n)[:, None] ** 2 + np.fft.fftfreq(n)[None, :] ** 2) * n / 300) ** 2)))
+    recess = np.clip((1 - blur) * 1.6, 0, 1)
+    gold = rgb(255, 200, 92)
+    deep = rgb(118, 70, 18)
+    brushed = (noise(n, 200, 51, aspect=8) - .5)[..., None] * .06
+    albedo = gold + brushed - recess[..., None] * .9 * (gold - deep)
     save('rich/gold-albedo.jpg', np.clip(albedo, 0, 1), 92)
-    save('rich/gold-orm.png', orm(.3 + recess * .4, 1.0, 1 - recess * .45))
+    # Polished raised gold with gentle large-scale variation; engraving stays satin.
+    polish = (noise(n, 3, 53) - .5) * .08
+    save('rich/gold-orm.png', orm(np.clip(.15 + polish + recess * .42, .08, .7), 1.0, 1 - recess * .4))
     gy, gx = np.gradient(blur * 6)
     nz = np.ones_like(gx)
     nrm = np.stack([-gx, gy, nz], -1)
@@ -263,9 +282,9 @@ def studio() -> None:
 
 
 if __name__ == '__main__':
-    camo()
-    marble()
-    rainbow()
-    rich()
-    banknote()
-    studio()
+    import sys
+    # Optional subset: blender ... -P skin_textures.py -- marble rich
+    picked = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
+    for stage in (camo, marble, rainbow, rich, banknote, studio):
+        if not picked or stage.__name__ in picked:
+            stage()

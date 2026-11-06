@@ -4,6 +4,8 @@
 export const REVEAL = {
   /** Shake starts the sequence; the lid pops at `pop`; everything bursts at `burst`. */
   pop:.46, burst:1.38,
+  /** Final crouch before the burst (seconds). */
+  windup:.16,
   /** Reward rises from the crate for `rise` seconds after the burst. */
   rise:.95,
   /** Name/rarity show at `title`, buttons at `controls` (both after the burst). */
@@ -44,13 +46,18 @@ export function cratePose(t:number,motion=1):CratePose {
     tiltZ=Math.sin(t*61)*amp; tiltX=Math.sin(t*53+2)*amp*.7;
     lidLift=k<.12?.12*ease.outCubic(k/.12):.035+.085*Math.max(0,ease.wobble(k-.12,18,9));
     rattle=.006*charge*motion;
+    // Wind-up: the last beat before the burst crouches the body and sucks the lid down,
+    // so the explosion reads as released pressure rather than a cut.
+    const wind=ease.inCubic(span(t,burst-REVEAL.windup,burst));
+    squashY*=1-.11*wind; squashXZ*=1+.06*wind; lidLift*=1-.85*wind; rattle*=1+2*wind;
   }else{// Burst: big squash, springy recovery, then the body sinks out of the rising shot.
     const k=t-burst;squashY=1-.2*ease.wobble(k,13,5.5);squashXZ=1+.1*ease.wobble(k,13,5.5);
-    crateY=-.22*ease.inOutCubic(span(k,.25,1.3));lidLift=.035;
+    crateY=-.6*ease.inOutCubic(span(k,.2,1.2));lidLift=.035;
   }
   const charge=span(t,pop,burst);
-  const seam=t<pop-.04?0:t<burst?1.2+2.6*charge*charge+Math.sin(t*24)*.35*charge:Math.max(1.4,6*Math.exp(-(t-burst)*2.2));
-  const core=t<burst?seam*.6:Math.max(1.6,7*Math.exp(-(t-burst)*1.5));
+  // After the flash the open crate cools quickly so it never competes with the rising reward.
+  const seam=t<pop-.04?0:t<burst?1.2+2.6*charge*charge+Math.sin(t*24)*.35*charge:6*Math.exp(-(t-burst)*6);
+  const core=t<burst?seam*.6:Math.max(.3,6*Math.exp(-(t-burst)*3.5));
   const leak=t<pop?0:t<burst?ease.outCubic(span(t,pop,pop+.3))*(.55+.45*charge):1-span(t,burst,burst+.35);
   const column=t<burst?0:Math.sin(Math.PI*span(t,burst,burst+1.25))**.6;
   return { squashY, squashXZ, tiltX, tiltZ, crateY, lidLift, rattle, seam, core, leak, column };

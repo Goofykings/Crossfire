@@ -44,7 +44,7 @@ export const COLLECTIONS: readonly CosmeticCollection[] = [
   {id:'blue-camo',name:'Blue Camo',rarity:'uncommon',finish:camo('blue-camo')},
   {id:'red-camo',name:'Red Camo',rarity:'uncommon',finish:camo('red-camo')},
   {id:'marble',name:'Marble',rarity:'rare',finish:(()=>{
-    const white:CosmeticMaterial={color:'#ffffff',albedo:skin('marble','white-albedo.jpg'),orm:skin('marble','orm.png'),tile:.42,metallic:1,roughness:1,clearcoat:.6};
+    const white:CosmeticMaterial={color:'#ffffff',albedo:skin('marble','white-albedo.jpg'),orm:skin('marble','orm.png'),tile:.3,metallic:1,roughness:1,clearcoat:.6};
     return {gun_black:white,gun_fde:white,gun_wood:white,gun_polymer:{...white,albedo:skin('marble','black-albedo.jpg')},gun_steel:{color:'#e6dfd2',metallic:1,roughness:.24}};
   })()},
   {id:'rainbow-glow',name:'Rainbow Glow',rarity:'rare',finish:(()=>{
@@ -52,8 +52,8 @@ export const COLLECTIONS: readonly CosmeticCollection[] = [
     return {gun_black:glow,gun_fde:glow,gun_wood:glow,gun_polymer:{color:'#15131d',metallic:.2,roughness:.3}};
   })()},
   {id:'rich',name:'Rich',rarity:'legendary',killEffect:'money',finish:(()=>{
-    const gold:CosmeticMaterial={color:'#ffffff',albedo:skin('rich','gold-albedo.jpg'),normal:skin('rich','gold-normal.png'),orm:skin('rich','gold-orm.png'),tile:.13,metallic:1,roughness:1,clearcoat:.35};
-    return {gun_black:gold,gun_fde:gold,gun_wood:gold,gun_polymer:{color:'#ffffff',albedo:skin('rich','lacquer-albedo.jpg'),orm:skin('rich','lacquer-orm.png'),tile:.13,metallic:1,roughness:1,clearcoat:.8},gun_steel:{color:'#ffe0a0',metallic:1,roughness:.18}};
+    const gold:CosmeticMaterial={color:'#ffffff',albedo:skin('rich','gold-albedo.jpg'),normal:skin('rich','gold-normal.png'),orm:skin('rich','gold-orm.png'),tile:.12,metallic:1,roughness:1,clearcoat:.35};
+    return {gun_black:gold,gun_fde:gold,gun_wood:gold,gun_polymer:{color:'#ffffff',albedo:skin('rich','lacquer-albedo.jpg'),orm:skin('rich','lacquer-orm.png'),tile:.12,metallic:1,roughness:1,clearcoat:.8},gun_steel:{color:'#f5b040',metallic:1,roughness:.3}};
   })()},
 ];
 /** Material names each original GLB actually uses (tools/verify-cosmetics.mjs checks them). */

@@ -13,7 +13,7 @@ export class CosmeticsPages {
   private readonly status=node('p','cosmetic-status');private readonly balance=node('strong','shop-balance','— GEMS');
   private readonly previewHost=node('div','cosmetic-model');private readonly previewTitle=node('h1');private readonly previewCategory=node('p');
   private readonly equipButton=node('button','btn primary','EQUIP');private readonly previewStatus=node('p','cosmetic-status');
-  private readonly preview=new CosmeticPreview();private request:AbortController|null=null;private thumbnails:AbortController|null=null;
+  private readonly preview=new CosmeticPreview();private request:AbortController|null=null;private thumbnails:AbortController|null=null;private thumbnailIds=new Set<string>();
   private category:WeaponId|'all'='all';private inventory:InventoryView|null=null;private item:CosmeticDefinition|null=null;
   private images=new Map<string,string>();private selected='';private pending=false;private buttons:HTMLButtonElement[]=[];
   private previewScreen:HTMLElement;
@@ -83,8 +83,12 @@ export class CosmeticsPages {
       if(this.inventory.equipped[item.weapon]===item.id)card.append(node('small','cosmetic-is-equipped','EQUIPPED'));this.grid.append(card);
     }
     for(const weapon of WEAPON_CATEGORIES){const item=cosmetic(this.inventory.equipped[weapon])!;const row=this.button('',()=>void this.open(item));row.classList.add('equipped-item');row.dataset.weapon=weapon;row.append(this.thumbnail(item),node('span','',`${CATEGORY_NAMES[weapon]} — ${item.name}`));this.equipped.append(row);}
-    if(this.thumbnails&&!this.thumbnails.signal.aborted)return;const request=new AbortController();this.thumbnails=request;
-    void cosmeticThumbnails(owned.filter(c=>!c.preview),async(item,url)=>{
+    // A running job keeps going unless the inventory gained items it does not cover (for
+    // example a grant from another tab); cached snapshots make a restart cheap.
+    const wanted=owned.filter(c=>!c.preview);
+    if(this.thumbnails&&!this.thumbnails.signal.aborted&&wanted.every(c=>this.thumbnailIds.has(c.id)))return;
+    this.thumbnails?.abort();const request=new AbortController();this.thumbnails=request;this.thumbnailIds=new Set(wanted.map(c=>c.id));
+    void cosmeticThumbnails(wanted,async(item,url)=>{
       this.images.set(item.id,url);if(request.signal.aborted)return;
       for(const root of [this.grid,this.equipped])for(const img of root.querySelectorAll<HTMLImageElement>('img'))if(img.dataset.cosmetic===item.id){img.src=url;img.hidden=false;}
     },request.signal).catch(error=>{if(!request.signal.aborted)this.status.textContent='Weapon thumbnails unavailable. Open an item to retry its model. '+(error as Error).message;}).finally(()=>{if(this.thumbnails===request)this.thumbnails=null;});

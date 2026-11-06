@@ -46,7 +46,12 @@ export async function cosmeticThumbnails(items:readonly CosmeticDefinition[],onP
       camera.radius = Math.max(size.y, size.z / engine.getAspectRatio(camera), size.x / engine.getAspectRatio(camera)) / (2 * Math.tan(camera.fov / 2)) * 1.3;
       await materials.ready(signal);
       await meshesReady(container.meshes, signal);
+      // Per-mesh precompilation does not cover the first frame's scene state: the first capture
+      // of a fresh engine came out empty (Default AR in the Locker). Let the scene confirm
+      // readiness and render a warm-up frame before capturing.
+      await abortable(scene.whenReadyAsync(), signal);
       signal?.throwIfAborted();
+      scene.render();
       scene.render();
       const url=canvas.toDataURL('image/png');cached.set(item.id,url);await abortable(onPreview(item,url),signal);
       container.dispose();

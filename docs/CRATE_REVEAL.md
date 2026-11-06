@@ -33,9 +33,9 @@ committed, pushed or deployed.
 | Green Camo | Uncommon | Woodland blobs: olive, brown, forest green, black |
 | Blue Camo | Uncommon | Digital/urban pixels: navy, steel blue, light blue, slate |
 | Red Camo | Uncommon | Tiger strokes: crimson, dark red, coral, black |
-| Marble | Rare | White marble body, black marble grips, polished trim, clear coat |
+| Marble | Rare | White marble with bold diagonal veins and fine cracks, black marble grips, polished trim, clear coat |
 | Rainbow Glow | Rare | Rainbow body with glowing circuit traces that scroll slowly; dark gloss grips |
-| Rich | Legendary | Engraved gold with coin medallions, black lacquer and gold pinstripe grips, polished gold steel, clear coat; **money kill effect** |
+| Rich | Legendary | Polished gold with fine guilloche engraving and two coin medallions per repeat, black lacquer and gold pinstripe grips, polished gold steel parts, clear coat; **money kill effect** |
 
 Items are material overrides on the original default GLBs (`binding:'shared'`), so
 anchors, moving parts, rigs, first person, characters and previews all work without
@@ -71,7 +71,7 @@ a white domed lid. Outputs: `public/assets/cosmetics/crate/reward-crate/model.gl
 |---|---|---|
 | `crate_body` | floor centre | squash/stretch about the base |
 | `lid_nw`, `lid_ne`, `lid_sw`, `lid_se` | each quarter's centre | one domed lid cut into quarters (bisected, so the closed lid reads as one shape) |
-| `seam_glow` | lid base | emissive strips in the seams; tinted to the rarity at runtime |
+| `seam_glow` | lid base | emissive strips in the seams; idles dim ice blue when closed, tinted to the rarity at runtime |
 | `core_glow` | body top | emissive panel revealed after the burst |
 
 The loot-box screenshot and opening GIF mentioned in the brief were not in
@@ -85,10 +85,13 @@ The loot-box screenshot and opening GIF mentioned in the brief were not in
 3. 0.46 s: stretch up, lid pops 12 cm with overshoot and hovers; seams light in the
    rarity colour, light shafts leak upward, sparks start; the background begins to
    pick up the rarity colour.
-4. To 1.38 s: charge (seam glow and tremble grow).
+4. To 1.38 s: charge (seam glow and tremble grow, light shafts widen). The last 0.16 s
+   is a wind-up: the body crouches and the lid is sucked back down.
 5. 1.38 s: burst. The four lid quarters fly outward and up, tumble and fall out of
    frame. Body squash with a springy recovery, flash, 380-spark burst, rising light
-   column, rarity background wipes out from the crate.
+   column (a soft Y-billboard), rarity background wipes out from the crate. The open
+   crate then cools quickly and sinks out of the shot, and the bloom eases off once the
+   reward is up, so nothing competes with it.
 6. The reward shoots up with overshoot, spins once into the hero angle (side view,
    muzzle right and slightly toward the viewer); the camera tilts from looking down
    at the crate to looking slightly up at the reward. Rotating rays, floating motes
@@ -103,6 +106,11 @@ Reveal colours: Uncommon `#39e57a`, Rare `#4d8dff`, Legendary `#ffc22e` (the
 shared rarity names/colours are unchanged). Reduced motion keeps the beats but
 removes shake and jitter and shortens the anticipation. One engine and scene, all
 disposed on close or navigation. Test hook: `__crossfire.crateReveal(paused, seek)`.
+
+Polish pass (2026-11-06): the closed lid's bisect caps now have split normals (smooth
+shading had rounded every cut, so the lid read as four cushions); the closed seams idle
+in a dim neutral blue instead of rendering black; the title, kicker and weapon labels
+carry a dark shadow so they stay readable on the gold Legendary background.
 
 ## Rich kill effect (`src/weapons/MoneyBurst.ts`)
 

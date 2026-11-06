@@ -14,6 +14,7 @@ import { REVEAL, cameraPose, cratePose, heroPose, lidPose, stepSpring, wrapAngle
 export const REVEAL_COLORS:Record<Rarity,string> = { common:'#d6dde8', uncommon:'#39e57a', rare:'#4d8dff', epic:'#ff5a6e', legendary:'#ffc22e' };
 const CRATE_MODEL='assets/cosmetics/crate/reward-crate/model.glb';
 const LIDS=['lid_nw','lid_ne','lid_sw','lid_se'] as const;
+const IDLE_SEAM=new Color3(.09,.24,.42);
 type Phase='closed'|'loading'|'waiting'|'opening'|'hero'|'error';
 export interface RevealActions {
   /** Server draw; resolves with the granted item. Rejections show in the overlay. */
@@ -51,7 +52,7 @@ export class CrateReveal {
   private seam:StandardMaterial|null=null;private core:StandardMaterial|null=null;
   private tilt:TransformNode|null=null;private spin:TransformNode|null=null;private holder:TransformNode|null=null;
   private weaponContainer:AssetContainer|null=null;private heroRadius=2.2;
-  private camera:ArcRotateCamera|null=null;private rim:PointLight|null=null;private glowLight:PointLight|null=null;
+  private camera:ArcRotateCamera|null=null;private glow:GlowLayer|null=null;private rim:PointLight|null=null;private glowLight:PointLight|null=null;
   private leaks:Mesh[]=[];private column:Mesh|null=null;private rays:Mesh|null=null;
   private sparks:ParticleSystem|null=null;private burst:ParticleSystem|null=null;private motes:ParticleSystem|null=null;
   private money:MoneyBurst|null=null;private burstFired=false;private moneyAt=0;
@@ -108,7 +109,7 @@ export class CrateReveal {
   private reset():void{
     this.abort?.abort();this.abort=null;window.removeEventListener('resize',this.resize);this.engine?.stopRenderLoop();
     this.money?.dispose();this.money=null;this.weaponContainer=null;this.scene?.dispose();this.scene=null;this.engine?.dispose();this.engine=null;
-    this.crate=this.tilt=this.spin=this.holder=null;this.lids=[];this.leaks=[];this.column=this.rays=null;this.sparks=this.burst=this.motes=null;this.camera=null;
+    this.crate=this.tilt=this.spin=this.holder=null;this.lids=[];this.leaks=[];this.column=this.rays=null;this.sparks=this.burst=this.motes=null;this.camera=null;this.glow=null;
     this.item=null;this.t=this.intro=this.time=0;this.burstFired=false;this.moneyAt=0;this.yaw={x:0,v:0};this.pitch={x:0,v:0};this.drag.active=false;
   }
   private setControls(show:boolean):void{
@@ -132,7 +133,7 @@ export class CrateReveal {
     const key=new DirectionalLight('reveal-key',new Vector3(-.55,-.85,.65),scene);key.intensity=2.4;
     this.rim=new PointLight('reveal-rim',new Vector3(0,2.3,1.5),scene);this.rim.intensity=0;
     this.glowLight=new PointLight('reveal-core',new Vector3(0,.75,0),scene);this.glowLight.intensity=0;this.glowLight.range=4;
-    const glow=new GlowLayer('reveal-glow',scene,{mainTextureSamples:2,blurKernelSize:56});glow.intensity=1.05;
+    const glow=new GlowLayer('reveal-glow',scene,{mainTextureSamples:2,blurKernelSize:56});glow.intensity=1.05;this.glow=glow;
     const [crate]=await Promise.all([loadContainer(assetUrl(CRATE_MODEL),scene,signal),studioEnvironment(scene,.9,signal)]);
     crate.addAllToScene();const root=new TransformNode('reveal-crate',scene);this.crate=root;for(const n of crate.rootNodes)n.parent=root;
     root.rotation.y=-.42;
@@ -147,7 +148,9 @@ export class CrateReveal {
     const leakMat=additive(scene,'reveal-leak',beam);
     for(let i=0;i<7;i++){const shaft=MeshBuilder.CreatePlane('reveal-leak-'+i,{width:.16+.1*(i%3),height:1.6},scene);shaft.material=leakMat;shaft.parent=root;
       shaft.setPivotPoint(new Vector3(0,-.8,0));shaft.position.set((i/6-.5)*.8,.78+.8,((i*37)%7/7-.5)*.5);shaft.rotation.set(0,i*.9,(i/6-.5)*.9);shaft.isPickable=false;this.leaks.push(shaft);}
-    this.column=MeshBuilder.CreateCylinder('reveal-column',{height:6,diameterTop:1.25,diameterBottom:.55,tessellation:28,cap:Mesh.NO_CAP},scene);
+    // A Y-billboard plane, not a cylinder: the beam texture's side fade then softens both
+    // silhouette edges (on a cylinder the fade ran around it and the edges stayed hard).
+    this.column=MeshBuilder.CreatePlane('reveal-column',{width:1.15,height:6},scene);this.column.billboardMode=Mesh.BILLBOARDMODE_Y;
     this.column.material=additive(scene,'reveal-column',beam);this.column.setPivotPoint(new Vector3(0,-3,0));this.column.position.y=.6+3;this.column.isPickable=false;
     const rays=spriteTexture(scene,'reveal-rays',(g,w)=>{const c=w/2;for(let i=0;i<18;i++){const a=i/18*Math.PI*2,d=.07+.05*(i%2);g.beginPath();g.moveTo(c,c);g.arc(c,c,c,a-d,a+d);g.closePath();
       const grad=g.createRadialGradient(c,c,0,c,c,c);grad.addColorStop(0,'rgba(255,255,255,.9)');grad.addColorStop(.25,'rgba(255,255,255,.45)');grad.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=grad;g.fill();}},512,512);
@@ -186,7 +189,13 @@ export class CrateReveal {
     const aspect=engine.getAspectRatio(camera),half=Math.tan(camera.fov/2);
     this.heroRadius=Math.max(1/(.56*2*half*aspect),1/(.84*2*half),1.6);
   }
-  private paint(seam:number,core=seam*.6):void{const c=this.color;this.seam?.emissiveColor.copyFrom(c.scale(Math.min(seam,1)).add(new Color3(1,1,1).scale(Math.max(0,Math.min(seam-1,1))*.35)));this.core?.emissiveColor.copyFrom(c.scale(Math.min(core,1.4)));}
+  private paint(seam:number,core=seam*.6):void{
+    // Closed, the seams idle in a dim neutral ice blue (black read as a hole under the lid);
+    // charging crossfades them to the rarity colour, so nothing is spoiled before the pop.
+    const c=this.color,k=Math.min(Math.max(seam,0),1),idle=this.burstFired?0:1-k;
+    this.seam?.emissiveColor.copyFrom(IDLE_SEAM.scale(idle).add(c.scale(k)).add(new Color3(1,1,1).scale(Math.max(0,Math.min(seam-1,1))*.35)));
+    this.core?.emissiveColor.copyFrom(c.scale(Math.min(core,1.4)));
+  }
 
   private frame(dt:number):void{
     const e=this.element,camera=this.camera!,crate=this.crate!;this.time+=dt;
@@ -202,11 +211,15 @@ export class CrateReveal {
     if(this.paused)dt=0;this.t+=dt*(this.t<REVEAL.burst?this.timeScale:1);const t=this.t;
     const pose=cratePose(t,this.motion);
     crate.position.y=pose.crateY;crate.scaling.set(pose.squashXZ,pose.squashY,pose.squashXZ);crate.rotation.set(pose.tiltX,-.42+(t<REVEAL.burst?Math.sin(this.time*.8)*.1*this.motion:0),pose.tiltZ);
-    this.paint(pose.seam,pose.core);this.glowLight!.diffuse=this.color;this.glowLight!.intensity=pose.core*1.6;
+    this.paint(pose.seam,pose.core);
+    // Full bloom sells the flash; ease it off once the reward is up so the hero stays crisp.
+    this.glow!.intensity=1.05-.45*Math.min(1,Math.max(0,(t-REVEAL.burst-.3)/.8));this.glowLight!.diffuse=this.color;this.glowLight!.intensity=pose.core*1.6;
     for(const l of this.lids){const p=lidPose(t,l.rest.x,l.rest.z,l.seed,this.motion);l.mesh.position.set(l.rest.x+p.x,l.rest.y+p.y,l.rest.z+p.z);
       // Tip outward about the horizontal axis perpendicular to its flight, plus a little twist.
       const len=Math.hypot(l.rest.x,l.rest.z)||1;l.mesh.rotationQuaternion=null;l.mesh.rotation.set(l.rest.z/len*p.angle,p.spin,-l.rest.x/len*p.angle);l.mesh.setEnabled(p.visible);}
-    for(const [i,s] of this.leaks.entries()){s.visibility=pose.leak*(.55+.45*Math.sin(this.time*9+i*1.7));s.scaling.y=.6+pose.leak*.7;s.setEnabled(pose.leak>.01);
+    // Shafts widen as pressure builds, so the light visibly forces its way out of the seams.
+    const pressure=Math.min(1,Math.max(0,(t-REVEAL.pop)/(REVEAL.burst-REVEAL.pop)));
+    for(const [i,s] of this.leaks.entries()){s.visibility=pose.leak*(.6+.4*Math.sin(this.time*9+i*1.7));s.scaling.y=.6+pose.leak*.75;s.scaling.x=.75+1.1*pressure*pressure;s.setEnabled(pose.leak>.01);
       (s.material as StandardMaterial).emissiveColor=this.color;}
     this.column!.visibility=pose.column;this.column!.setEnabled(pose.column>.01);this.column!.scaling.set(1-.55*Math.max(0,t-REVEAL.burst),pose.column,1-.55*Math.max(0,t-REVEAL.burst));(this.column!.material as StandardMaterial).emissiveColor=this.color.scale(.75);
     this.sparks!.emitRate=t>REVEAL.pop&&t<REVEAL.burst?60+260*((t-REVEAL.pop)/(REVEAL.burst-REVEAL.pop))**2:0;

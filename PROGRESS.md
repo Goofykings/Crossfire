@@ -1,3 +1,80 @@
+# Crate and cosmetics polish pass
+
+Polished and verified locally 2026-11-06, on top of the committed crate work ("Gun
+textures"). Not committed, pushed or deployed. No server, protocol, inventory schema,
+odds, prices or weapon statistics changed. Details: `docs/CRATE_REVEAL.md`.
+
+## Fixed (found by inspecting the previous screenshots)
+- **Missing Locker thumbnail:** the first thumbnail a fresh engine rendered (always
+  Default AR) was an empty transparent PNG. `WeaponPreviews` now waits for
+  `scene.whenReadyAsync()` and renders a warm-up frame before capturing. The home
+  loadout cards share this code.
+- **Thumbnails missing for newly owned items:** if the inventory gained items while a
+  thumbnail job was running (for example a grant from another tab), `render()` returned
+  early and the new cards stayed blank. The Locker now tracks which items the running
+  job covers and restarts it (cached snapshots make that cheap).
+- **Closed crate:**
+  - The bisect caps shared smooth normals with the dome, so every cut was rounded and
+    the lid read as four cushions. The cut edges are now split.
+  - At rest the seam/core materials had zero emission and showed as a black band under
+    the lid. They now idle in a dim neutral ice blue that crossfades to the rarity
+    colour as the crate charges, so the rarity is not spoiled. The Blender thumbnail
+    uses the same idle colour.
+  - The seam strips now reach the dome's crown.
+- **Rich:**
+  - The `gun_steel` parts (SMG magazine, receivers, barrels) rendered pale cream. They
+    are now gold (`#f5b040`, roughness .3), which survives the reveal's key/rim lights
+    and tone mapping.
+  - Four large coins per repeat read as wallpaper in first person. The gold is now two
+    medallions per repeat with polished rims, on fine guilloche engraving.
+  - Raised gold is more polished (roughness about .15), with gentle large-scale variation.
+- **Marble:** the sine-band veins read as map contour lines and the finish blew out to
+  plain white. It now has:
+  - Ridged-noise veins: bold, diagonal, with soft halos and fine cracks.
+  - A slightly darker base and a tighter repeat (.3 m), so veins show in previews and
+    in-game.
+- **Light column:** it was a cylinder, so the texture's side fade wrapped around it and
+  its silhouette edges stayed hard. It is now a Y-billboard plane with soft edges.
+- **Open crate after the burst:** its full-width seam rim stayed bright (a glowing slab
+  under the rising reward). Seam and core now cool quickly, the crate sinks out of the
+  shot, and the glow layer eases from 1.05 to 0.6 once the reward is up.
+
+## Polish
+- **Wind-up:** the last 0.16 s before the burst crouches the body and sucks the lid
+  down (new `REVEAL.windup`; unit tested).
+- **Light shafts:** they widen as pressure builds between the pop and the burst.
+- **Readability:** kicker, title and weapon labels have dark shadows; the weapon label
+  is larger and bold, so it reads on the gold Legendary background.
+- **Test fix:** `tools/crate-browser-test.mjs` now waits for the loaded GLB character
+  and its visibility before the third-person screenshot. Previously it could capture
+  only the name label during a load stall.
+
+## Tested (this pass)
+- Frontend `npm test`: 641 passed, 1 skipped. Typecheck (both packages) and build pass.
+- Worker `npm test`: 71/71 (shared catalog value changes only; no server code changed).
+- `assets:verify`: 28 items, crate parts and textures pass. Manifest check: current.
+- `tools/crate-browser-test.mjs` (production `/crossfire/` build, real local Worker):
+  68/68, no console errors or missing assets. All 28 Locker thumbnails, including
+  Default AR, render. The match section (39 checks) was rerun three times after the
+  test fix.
+- Kill effect frame times (median vs baseline, headless, two browsers): 21.7 vs 20.8,
+  22.8 vs 23.6 and 17.2 vs 18.2 ms. One run had a single 578 ms frame during the effect
+  window that did not reproduce in the next two runs (max 45 and 22 ms).
+- `tools/cosmetics-browser-test.mjs`: pass (live Shop, equip flow, server ammunition and inventory preserved, no browser exceptions or missing assets).
+- Screenshots inspected: closed/charge/burst/rise/hero for all three rarities, Locker
+  AR page, Marble/Rich previews, first person, third person and the kill effect
+  (`test-results/crate-browser/`).
+
+## Remaining / limits
+- Rendering in headless Chrome shows a long frame (about 0.4-0.8 s) when a remote
+  player's character and cosmetic first load. It was present before this pass and was
+  not investigated.
+- Thin dark lines remain where the closed lid quarters meet, viewed from above; they
+  read as panel gaps.
+- The limits listed in the entry below still apply (no reference images, texture-only
+  finishes, 7,200 gems for the full set, spectated scoped view has no money effect, no
+  live validation; Worker and frontend ship together).
+
 # Reward crate, crate reveal, six skin collections and the Rich kill effect
 
 Implemented and verified locally 2026-11-05. Not committed, pushed or deployed.

@@ -128,11 +128,14 @@ try{
     const room=h.room(net.snapshot.room),peer=await h.open(await h.admission(peerToken,{roomId:net.snapshot.room}),peerToken);await h.spawn(peer,'sniper');
     const arena=await room.directionalArenaForTest();const me=arena.sources.front,them=arena.center;
     await room.placeForCombatTest(net.selfId,me);await room.placeForCombatTest(peer.id,them);peer.position=them;
-    await page.waitForFunction(id=>window.__crossfire.network().rendered.some(p=>p.id===id&&p.weapon?.cosmeticId==='rich-sniper'),{timeout:120000},peer.id);
+    // Wait for the loaded GLB character itself, not only the snapshot's cosmetic ID.
+    await page.waitForFunction(id=>window.__crossfire.network().rendered.some(p=>p.id===id&&p.weapon?.cosmeticId==='rich-sniper'&&p.source==='glb'),{timeout:120000},peer.id);
     const placed=()=>page.waitForFunction(([x,z])=>{const n=window.__crossfire.network(),s=n.snapshot.players.find(p=>p.id===n.selfId);const q=s?.motion?.position;const v=Array.isArray(q)?q:q?[q.x,q.y,q.z]:null;return v&&Math.hypot(v[0]-x,v[2]-z)<.3;},{timeout:20000},[me[0],me[2]]);
     await placed();await delay(800);
     check(true,'remote character renders the peer Rich sniper (third person)');
-    await page.evaluate(([x,y,z])=>window.__crossfire.aimAt(x,y+1.25,z),them);await delay(1200);await shot('third-person-rich-sniper');
+    await page.evaluate(([x,y,z])=>window.__crossfire.aimAt(x,y+1.25,z),them);await delay(1200);
+    await page.waitForFunction(id=>window.__crossfire.network().rendered.some(p=>p.id===id&&p.visible),{timeout:30000},peer.id);
+    await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));await shot('third-person-rich-sniper');
     await page.evaluate(([x,y,z])=>window.__crossfire.aimAt(x+2.5,y+1.4,z),them);await delay(500);await shot('first-person-rich-rifle');
     await page.evaluate(()=>window.__crossfire.hold('aim',true));await delay(700);await shot('first-person-rich-rifle-ads');await page.evaluate(()=>window.__crossfire.hold('aim',false));
     // Page (Rich rifle) eliminates the peer: the killer sees coins/bills around the gun.

@@ -1719,12 +1719,13 @@ body[data-home-page='shop'] #game,body[data-home-page='locker'] #game,body[data-
 @keyframes reveal-flash {0%{opacity:0;}12%{opacity:.9;}100%{opacity:0;}}
 .reveal-title {position:relative;z-index:1;text-align:center;padding:clamp(20px,6vh,64px) 16px 0;opacity:0;transform:translateY(-14px) scale(1.15);pointer-events:none;}
 .crate-reveal[data-phase='hero'] .reveal-title {opacity:1;transform:none;transition:opacity .35s ease,transform .5s cubic-bezier(.2,1.6,.4,1);}
-.reveal-kicker {margin:0 0 6px;font-size:12px;letter-spacing:.32em;color:#ffffffcc;}
+.reveal-kicker {margin:0 0 6px;font-size:12px;letter-spacing:.32em;color:#ffffffd9;text-shadow:0 1px 4px #000a;}
 .reveal-title h1 {margin:0;font-size:clamp(34px,6.5vw,76px);line-height:1;letter-spacing:.06em;text-transform:uppercase;
-  text-shadow:0 0 28px color-mix(in srgb,var(--reveal) 85%,transparent),0 4px 0 #0006;}
+  text-shadow:0 0 28px color-mix(in srgb,var(--reveal) 85%,transparent),0 4px 0 #0006,0 2px 10px #0007;}
 .reveal-rarity {display:inline-block;margin:12px 0 0;padding:5px 16px;border-radius:99px;font-size:13px;font-weight:700;letter-spacing:.24em;
   color:#06080d;background:var(--rarity);box-shadow:0 0 22px color-mix(in srgb,var(--reveal) 70%,transparent);}
-.reveal-weapon {margin:8px 0 0;font-size:12px;letter-spacing:.2em;color:#ffffffbb;}
+/* Readable on the bright gold Legendary background too. */
+.reveal-weapon {margin:10px 0 0;font-size:14px;font-weight:700;letter-spacing:.22em;color:#fff;text-shadow:0 1px 4px #000b;}
 .reveal-status {position:relative;z-index:1;align-self:end;margin:0 16px 12px;text-align:center;font-size:13px;color:#ffd2d2;}
 .reveal-hint {position:absolute;bottom:92px;left:0;right:0;margin:0;text-align:center;font-size:11px;letter-spacing:.24em;color:#ffffff99;opacity:0;pointer-events:none;transition:opacity .4s ease .8s;}
 .crate-reveal[data-phase='hero'] .reveal-hint {opacity:1;}

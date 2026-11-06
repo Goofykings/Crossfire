@@ -418,7 +418,7 @@
             "color": "#ffffff",
             "albedo": "assets/cosmetics/skins/marble/white-albedo.jpg",
             "orm": "assets/cosmetics/skins/marble/orm.png",
-            "tile": 0.42,
+            "tile": 0.3,
             "metallic": 1,
             "roughness": 1,
             "clearcoat": 0.6
@@ -427,7 +427,7 @@
             "color": "#ffffff",
             "albedo": "assets/cosmetics/skins/marble/white-albedo.jpg",
             "orm": "assets/cosmetics/skins/marble/orm.png",
-            "tile": 0.42,
+            "tile": 0.3,
             "metallic": 1,
             "roughness": 1,
             "clearcoat": 0.6
@@ -436,7 +436,7 @@
             "color": "#ffffff",
             "albedo": "assets/cosmetics/skins/marble/black-albedo.jpg",
             "orm": "assets/cosmetics/skins/marble/orm.png",
-            "tile": 0.42,
+            "tile": 0.3,
             "metallic": 1,
             "roughness": 1,
             "clearcoat": 0.6
@@ -467,7 +467,7 @@
             "color": "#ffffff",
             "albedo": "assets/cosmetics/skins/marble/white-albedo.jpg",
             "orm": "assets/cosmetics/skins/marble/orm.png",
-            "tile": 0.42,
+            "tile": 0.3,
             "metallic": 1,
             "roughness": 1,
             "clearcoat": 0.6
@@ -476,7 +476,7 @@
             "color": "#ffffff",
             "albedo": "assets/cosmetics/skins/marble/black-albedo.jpg",
             "orm": "assets/cosmetics/skins/marble/orm.png",
-            "tile": 0.42,
+            "tile": 0.3,
             "metallic": 1,
             "roughness": 1,
             "clearcoat": 0.6
@@ -507,7 +507,7 @@
             "color": "#ffffff",
             "albedo": "assets/cosmetics/skins/marble/white-albedo.jpg",
             "orm": "assets/cosmetics/skins/marble/orm.png",
-            "tile": 0.42,
+            "tile": 0.3,
             "metallic": 1,
             "roughness": 1,
             "clearcoat": 0.6
@@ -516,7 +516,7 @@
             "color": "#ffffff",
             "albedo": "assets/cosmetics/skins/marble/black-albedo.jpg",
             "orm": "assets/cosmetics/skins/marble/orm.png",
-            "tile": 0.42,
+            "tile": 0.3,
             "metallic": 1,
             "roughness": 1,
             "clearcoat": 0.6
@@ -547,7 +547,7 @@
             "color": "#ffffff",
             "albedo": "assets/cosmetics/skins/marble/white-albedo.jpg",
             "orm": "assets/cosmetics/skins/marble/orm.png",
-            "tile": 0.42,
+            "tile": 0.3,
             "metallic": 1,
             "roughness": 1,
             "clearcoat": 0.6
@@ -556,7 +556,7 @@
             "color": "#ffffff",
             "albedo": "assets/cosmetics/skins/marble/white-albedo.jpg",
             "orm": "assets/cosmetics/skins/marble/orm.png",
-            "tile": 0.42,
+            "tile": 0.3,
             "metallic": 1,
             "roughness": 1,
             "clearcoat": 0.6
@@ -565,7 +565,7 @@
             "color": "#ffffff",
             "albedo": "assets/cosmetics/skins/marble/black-albedo.jpg",
             "orm": "assets/cosmetics/skins/marble/orm.png",
-            "tile": 0.42,
+            "tile": 0.3,
             "metallic": 1,
             "roughness": 1,
             "clearcoat": 0.6
@@ -769,7 +769,7 @@
             "albedo": "assets/cosmetics/skins/rich/gold-albedo.jpg",
             "normal": "assets/cosmetics/skins/rich/gold-normal.png",
             "orm": "assets/cosmetics/skins/rich/gold-orm.png",
-            "tile": 0.13,
+            "tile": 0.12,
             "metallic": 1,
             "roughness": 1,
             "clearcoat": 0.35
@@ -779,7 +779,7 @@
             "albedo": "assets/cosmetics/skins/rich/gold-albedo.jpg",
             "normal": "assets/cosmetics/skins/rich/gold-normal.png",
             "orm": "assets/cosmetics/skins/rich/gold-orm.png",
-            "tile": 0.13,
+            "tile": 0.12,
             "metallic": 1,
             "roughness": 1,
             "clearcoat": 0.35
@@ -788,15 +788,15 @@
             "color": "#ffffff",
             "albedo": "assets/cosmetics/skins/rich/lacquer-albedo.jpg",
             "orm": "assets/cosmetics/skins/rich/lacquer-orm.png",
-            "tile": 0.13,
+            "tile": 0.12,
             "metallic": 1,
             "roughness": 1,
             "clearcoat": 0.8
           },
           "gun_steel": {
-            "color": "#ffe0a0",
+            "color": "#f5b040",
             "metallic": 1,
-            "roughness": 0.18
+            "roughness": 0.3
           }
         }
       },
@@ -820,7 +820,7 @@
             "albedo": "assets/cosmetics/skins/rich/gold-albedo.jpg",
             "normal": "assets/cosmetics/skins/rich/gold-normal.png",
             "orm": "assets/cosmetics/skins/rich/gold-orm.png",
-            "tile": 0.13,
+            "tile": 0.12,
             "metallic": 1,
             "roughness": 1,
             "clearcoat": 0.35
@@ -829,15 +829,15 @@
             "color": "#ffffff",
             "albedo": "assets/cosmetics/skins/rich/lacquer-albedo.jpg",
             "orm": "assets/cosmetics/skins/rich/lacquer-orm.png",
-            "tile": 0.13,
+            "tile": 0.12,
             "metallic": 1,
             "roughness": 1,
             "clearcoat": 0.8
           },
           "gun_steel": {
-            "color": "#ffe0a0",
+            "color": "#f5b040",
             "metallic": 1,
-            "roughness": 0.18
+            "roughness": 0.3
           }
         }
       },
@@ -861,7 +861,7 @@
             "albedo": "assets/cosmetics/skins/rich/gold-albedo.jpg",
             "normal": "assets/cosmetics/skins/rich/gold-normal.png",
             "orm": "assets/cosmetics/skins/rich/gold-orm.png",
-            "tile": 0.13,
+            "tile": 0.12,
             "metallic": 1,
             "roughness": 1,
             "clearcoat": 0.35
@@ -870,15 +870,15 @@
             "color": "#ffffff",
             "albedo": "assets/cosmetics/skins/rich/lacquer-albedo.jpg",
             "orm": "assets/cosmetics/skins/rich/lacquer-orm.png",
-            "tile": 0.13,
+            "tile": 0.12,
             "metallic": 1,
             "roughness": 1,
             "clearcoat": 0.8
           },
           "gun_steel": {
-            "color": "#ffe0a0",
+            "color": "#f5b040",
             "metallic": 1,
-            "roughness": 0.18
+            "roughness": 0.3
           }
         }
       },
@@ -902,7 +902,7 @@
             "albedo": "assets/cosmetics/skins/rich/gold-albedo.jpg",
             "normal": "assets/cosmetics/skins/rich/gold-normal.png",
             "orm": "assets/cosmetics/skins/rich/gold-orm.png",
-            "tile": 0.13,
+            "tile": 0.12,
             "metallic": 1,
             "roughness": 1,
             "clearcoat": 0.35
@@ -912,7 +912,7 @@
             "albedo": "assets/cosmetics/skins/rich/gold-albedo.jpg",
             "normal": "assets/cosmetics/skins/rich/gold-normal.png",
             "orm": "assets/cosmetics/skins/rich/gold-orm.png",
-            "tile": 0.13,
+            "tile": 0.12,
             "metallic": 1,
             "roughness": 1,
             "clearcoat": 0.35
@@ -921,15 +921,15 @@
             "color": "#ffffff",
             "albedo": "assets/cosmetics/skins/rich/lacquer-albedo.jpg",
             "orm": "assets/cosmetics/skins/rich/lacquer-orm.png",
-            "tile": 0.13,
+            "tile": 0.12,
             "metallic": 1,
             "roughness": 1,
             "clearcoat": 0.8
           },
           "gun_steel": {
-            "color": "#ffe0a0",
+            "color": "#f5b040",
             "metallic": 1,
-            "roughness": 0.18
+            "roughness": 0.3
           }
         }
       },

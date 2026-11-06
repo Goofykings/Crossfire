@@ -67,6 +67,12 @@ describe('reveal timeline', () => {
     expect(cratePose(REVEAL.burst + .02).column).toBeGreaterThan(0);
     expect(REVEAL.burst).toBeGreaterThan(1); expect(REVEAL.burst).toBeLessThan(1.6);
   });
+  it('winds up just before the burst: the body crouches and the lid is sucked down', () => {
+    const before = cratePose(REVEAL.burst - REVEAL.windup - .02), last = cratePose(REVEAL.burst - .005);
+    expect(last.squashY).toBeLessThan(before.squashY - .05);
+    expect(last.lidLift).toBeLessThan(before.lidLift * .4);
+    expect(last.seam).toBeGreaterThan(before.seam);
+  });
   it('keeps all beats without shake under reduced motion', () => {
     expect(cratePose(.3, 0).tiltZ).toBe(0);
     expect(cratePose(REVEAL.pop + .1, 0).lidLift).toBeGreaterThan(.08);
