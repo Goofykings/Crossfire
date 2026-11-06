@@ -97,7 +97,11 @@ asset: {
 ```
 
 All override properties are optional. Hex RGB color, metallic/roughness finite
-0..1. Albedo is sRGB; normal and ORM are linear. ORM channels: occlusion R,
+0..1. `tile` sets metres per texture repeat (weapon UVs are in metres); `emissive`,
+`emissiveColor` and `scroll` add a (scrolling) emissive map; `clearcoat` 0..1 adds a
+glossy top coat. A supplied ORM is read from green even outside Ultra (the library
+otherwise reads roughness from alpha). Crate collections share textures under
+`skins/<collection>/`; see docs/CRATE_REVEAL.md. Albedo is sRGB; normal and ORM are linear. ORM channels: occlusion R,
 roughness G, metallic B. Match the GLB UV orientation (loader invertY=false).
 Material overrides clone only affected materials; never modify a shared material
 in place. Preserve non-overridden base-color/skin textures. Optional texture files

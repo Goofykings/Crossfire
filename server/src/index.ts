@@ -1,6 +1,6 @@
 import { traceWeaponShot } from '../../shared/hitscan';
 import { Inventory } from './inventory';
-import { defaultEquipment, defaultCosmetic, compatibleCosmetic, validInventory, type Equipment, type InventoryView } from '../../shared/cosmetics';
+import { defaultEquipment, defaultCosmetic, compatibleCosmetic, validInventory, drawCrate, CRATE, COSMETICS_API_VERSION, type Equipment, type InventoryView } from '../../shared/cosmetics';
 import { RoomDirectory, DirectoryError, type RoomConfig } from './roomDirectory';
 import { ROOM_LIMITS, roomId, type RoomView } from '../../shared/rooms';
 import { advanceStatistics, type StatisticsRecord, type StatisticsEvent } from '../../shared/statistics';
@@ -11,7 +11,7 @@ import { migrateSession, migrateResult } from './legacyState';
 import { Statistics } from './statistics';
 import { unsafeMovement } from '../../shared/movementSafety';
 import { GrenadeCharge } from '../../shared/grenadeCharge';
-import { Careers, careerIdentity } from './careers';
+import { Careers, careerIdentity, validCareerCredential } from './careers';
 import { advanceChallenges, careerView, type ChallengeEvent, type CareerView } from '../../shared/challenges';
 import { GRENADE_SMOKE_MS } from '../../shared/grenades';
 import { EnvironmentSimulation, ENVIRONMENT, validPropState, type PropState, type EnvironmentFrame } from '../../shared/environment';
@@ -142,17 +142,17 @@ export default {
       const response=await env.ROOM.getByName(PUBLIC_ROOM).fetch(request);
       return new Response(response.body,{status:response.status,headers:{...headers,'Content-Type':'application/json'}});
     }
-    if(url.pathname==='/cosmetics'||url.pathname==='/cosmetics/equip'){
+    if(url.pathname==='/cosmetics'||url.pathname==='/cosmetics/equip'||url.pathname==='/cosmetics/open'){
       const origin=request.headers.get('Origin');if(!origin||!env.ALLOWED_ORIGINS.split(',').map(s=>s.trim()).includes(origin))return new Response('Origin denied',{status:403});
       const headers={'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Methods':'GET, POST, OPTIONS','Access-Control-Allow-Headers':'Authorization, Content-Type','Cache-Control':'no-store','Vary':'Origin'};
       if(request.method==='OPTIONS')return new Response(null,{status:204,headers});
-      if(url.search||(url.pathname==='/cosmetics'?request.method!=='GET':request.method!=='POST'))return Response.json({error:'Use GET /cosmetics or POST /cosmetics/equip.'},{status:405,headers});
+      if(url.search||(url.pathname==='/cosmetics'?request.method!=='GET':request.method!=='POST'))return Response.json({error:'Use GET /cosmetics, POST /cosmetics/equip or POST /cosmetics/open.'},{status:405,headers});
       if(request.method==='POST'){
         const reader=request.body?.getReader();let timer:ReturnType<typeof setTimeout>|undefined;
         try{
           if(!reader)throw Error('Missing body');
           const body=await Promise.race([(async()=>{const chunks:Uint8Array[]=[];let size=0;for(;;){const r=await reader.read();if(r.done)break;size+=r.value.length;if(size>1024)throw Error('Too large');chunks.push(r.value);}const bytes=new Uint8Array(size);let at=0;for(const c of chunks){bytes.set(c,at);at+=c.length;}return JSON.parse(new TextDecoder().decode(bytes));})(),new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(Error('Timed out')),1000);})]);
-          if(!body||Array.isArray(body)||Object.keys(body).some(k=>!['version','id'].includes(k)))throw Error('Invalid equipment');
+          if(!body||Array.isArray(body)||Object.keys(body).some(k=>!(url.pathname==='/cosmetics/open'?['version']:['version','id']).includes(k)))throw Error('Invalid equipment');
           const cleanHeaders=new Headers(request.headers);cleanHeaders.delete('Content-Length');request=new Request(request.url,{method:'POST',headers:cleanHeaders,body:JSON.stringify(body)});
         }catch{return Response.json({error:'Invalid equipment request.'},{status:400,headers});}
         finally{if(timer!==undefined)clearTimeout(timer);void reader?.cancel().catch(()=>{});}
@@ -345,6 +345,28 @@ export class PublicRoom extends DurableObject<Bindings> {
   private readonly statistics = new Statistics(this.ctx.storage);
   private readonly inventory=new Inventory(this.ctx.storage,id=>this.careers.load(id));
   async inventoryForRoom(identity:string):Promise<InventoryView>{return this.exclusive(()=>this.inventory.get(identity));}
+  /** Canonical only. Spends gems and grants a crypto-drawn unowned item in ONE storage batch;
+   * the client merely animates the returned result. Expected failures resolve as responses. */
+  private async openCrate(request:Request):Promise<Response>{
+    const token=request.headers.get('Authorization')?.replace(/^Bearer /,'')??'';
+    if(this.config||!validCareerCredential(token))return Response.json({error:'A valid guest credential is required.'},{status:401});
+    const body=await request.json().catch(()=>null) as Record<string,unknown>|null;
+    if(!body||Array.isArray(body)||Object.keys(body).some(k=>k!=='version')||body.version!==COSMETICS_API_VERSION)return Response.json({error:'Invalid crate request.'},{status:400});
+    const identity=await careerIdentity(token),profile=await this.careers.load(identity);
+    if(!profile)return Response.json({error:'Guest profile not found.'},{status:401});
+    const view=await this.inventory.get(identity);
+    if(profile.gems<CRATE.price)return Response.json({error:`Not enough gems. A crate costs ${CRATE.price}.`},{status:409});
+    const item=drawCrate(view.owned,()=>crypto.getRandomValues(new Uint32Array(1))[0]/2**32);
+    if(!item)return Response.json({error:'You already own every crate item.'},{status:409});
+    // Mutate the cached profile before the write so an overlapping persist() cannot
+    // capture the pre-purchase balance after this batch; roll back if the write fails.
+    const before=structuredClone(profile);profile.gems-=CRATE.price;profile.revision++;
+    const inventory={revision:view.revision+1,owned:[...view.owned,item.id],equipped:view.equipped},career=this.careers.capture();
+    try{await this.ctx.storage.put({...career.records,['career:'+identity]:structuredClone(profile),['inventory:'+identity]:inventory});}
+    catch(error){Object.assign(profile,before);throw error;}
+    this.careers.committed(career.versions);this.sendCareerViews(new Map([[identity,careerView(profile,Date.now())]]));
+    return Response.json({version:COSMETICS_API_VERSION,item:item.id,gems:profile.gems,inventory:{...inventory,version:COSMETICS_API_VERSION,serverTime:Date.now()}});
+  }
   async refreshEquipment(identity:string,view:InventoryView):Promise<void>{
     return this.exclusive(async()=>{
     if(!validInventory(view))return;let changed=false;for(const e of this.players.values())if(e.session.profileId===identity&&(e.session.cosmeticsRevision??-1)<=view.revision){e.session.equipment=structuredClone(view.equipped);e.session.cosmeticsRevision=view.revision;this.attach(e);changed=true;}
@@ -515,6 +537,7 @@ export class PublicRoom extends DurableObject<Bindings> {
       if(this.statistics.hasPending)await this.persist(); const response=await this.statistics.http(request);
       if(this.statistics.hasPending)await this.persist(); return response;
     });
+    if(new URL(request.url).pathname==='/cosmetics/open')return this.exclusive(()=>this.openCrate(request));
     if(new URL(request.url).pathname.startsWith('/cosmetics')){
       const result=await this.exclusive(()=>this.inventory.http(request));
       if(result.identity&&result.view){await this.refreshEquipment(result.identity,result.view);const lease=await this.ctx.storage.get<string>('room-member:'+result.identity);if(lease&&await this.directory.active(lease))this.ctx.waitUntil(this.env.ROOM.getByName('room:'+lease).refreshEquipment(result.identity,result.view));}

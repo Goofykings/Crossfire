@@ -4,6 +4,7 @@ import { ArcRotateCamera, Color3, Color4, DirectionalLight, Engine, HemisphericL
 import { MaterialLibrary } from '../rendering/MaterialLibrary';
 import { COSMETICS, type CosmeticDefinition } from '../../shared/cosmetics';
 import { loadCosmeticAsset } from '../rendering/CosmeticAssets';
+import { studioEnvironment } from '../rendering/StudioEnvironment';
 import type { WeaponId } from '../weapons/Weapon';
 
 const cached=new Map<string,string>();
@@ -32,7 +33,7 @@ export async function cosmeticThumbnails(items:readonly CosmeticDefinition[],onP
   key.intensity = 2;
   const materials = new MaterialLibrary(scene);
   try {
-    await materials.load(undefined, signal);
+    await Promise.all([materials.load(undefined, signal), studioEnvironment(scene, .9, signal)]);
     for (const item of missing) {
       const container = await loadCosmeticAsset(item,scene,materials,signal);
       container.addAllToScene();

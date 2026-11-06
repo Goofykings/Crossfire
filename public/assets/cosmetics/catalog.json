@@ -56,29 +56,941 @@
       "compatibleWith": [
         "shotgun"
       ]
+    },
+    {
+      "id": "green-camo-rifle",
+      "name": "Green Camo",
+      "weapon": "rifle",
+      "rarity": "uncommon",
+      "asset": {
+        "model": "assets/models/shared/weapons/rifle.glb",
+        "binding": "shared",
+        "materials": {
+          "gun_black": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/green-camo/albedo.jpg",
+            "orm": "assets/cosmetics/skins/green-camo/orm.png",
+            "tile": 0.34,
+            "metallic": 1,
+            "roughness": 1
+          },
+          "gun_fde": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/green-camo/albedo.jpg",
+            "orm": "assets/cosmetics/skins/green-camo/orm.png",
+            "tile": 0.34,
+            "metallic": 1,
+            "roughness": 1
+          }
+        }
+      },
+      "ownership": "grant",
+      "compatibleWith": [
+        "rifle"
+      ],
+      "collection": "green-camo"
+    },
+    {
+      "id": "green-camo-smg",
+      "name": "Green Camo",
+      "weapon": "smg",
+      "rarity": "uncommon",
+      "asset": {
+        "model": "assets/models/shared/weapons/smg.glb",
+        "binding": "shared",
+        "materials": {
+          "gun_black": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/green-camo/albedo.jpg",
+            "orm": "assets/cosmetics/skins/green-camo/orm.png",
+            "tile": 0.34,
+            "metallic": 1,
+            "roughness": 1
+          }
+        }
+      },
+      "ownership": "grant",
+      "compatibleWith": [
+        "smg"
+      ],
+      "collection": "green-camo"
+    },
+    {
+      "id": "green-camo-sniper",
+      "name": "Green Camo",
+      "weapon": "sniper",
+      "rarity": "uncommon",
+      "asset": {
+        "model": "assets/models/shared/weapons/sniper.glb",
+        "binding": "shared",
+        "materials": {
+          "gun_black": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/green-camo/albedo.jpg",
+            "orm": "assets/cosmetics/skins/green-camo/orm.png",
+            "tile": 0.34,
+            "metallic": 1,
+            "roughness": 1
+          }
+        }
+      },
+      "ownership": "grant",
+      "compatibleWith": [
+        "sniper"
+      ],
+      "collection": "green-camo"
+    },
+    {
+      "id": "green-camo-shotgun",
+      "name": "Green Camo",
+      "weapon": "shotgun",
+      "rarity": "uncommon",
+      "asset": {
+        "model": "assets/models/shared/weapons/shotgun.glb",
+        "binding": "shared",
+        "materials": {
+          "gun_black": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/green-camo/albedo.jpg",
+            "orm": "assets/cosmetics/skins/green-camo/orm.png",
+            "tile": 0.34,
+            "metallic": 1,
+            "roughness": 1
+          },
+          "gun_wood": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/green-camo/albedo.jpg",
+            "orm": "assets/cosmetics/skins/green-camo/orm.png",
+            "tile": 0.34,
+            "metallic": 1,
+            "roughness": 1
+          }
+        }
+      },
+      "ownership": "grant",
+      "compatibleWith": [
+        "shotgun"
+      ],
+      "collection": "green-camo"
+    },
+    {
+      "id": "blue-camo-rifle",
+      "name": "Blue Camo",
+      "weapon": "rifle",
+      "rarity": "uncommon",
+      "asset": {
+        "model": "assets/models/shared/weapons/rifle.glb",
+        "binding": "shared",
+        "materials": {
+          "gun_black": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/blue-camo/albedo.jpg",
+            "orm": "assets/cosmetics/skins/blue-camo/orm.png",
+            "tile": 0.34,
+            "metallic": 1,
+            "roughness": 1
+          },
+          "gun_fde": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/blue-camo/albedo.jpg",
+            "orm": "assets/cosmetics/skins/blue-camo/orm.png",
+            "tile": 0.34,
+            "metallic": 1,
+            "roughness": 1
+          }
+        }
+      },
+      "ownership": "grant",
+      "compatibleWith": [
+        "rifle"
+      ],
+      "collection": "blue-camo"
+    },
+    {
+      "id": "blue-camo-smg",
+      "name": "Blue Camo",
+      "weapon": "smg",
+      "rarity": "uncommon",
+      "asset": {
+        "model": "assets/models/shared/weapons/smg.glb",
+        "binding": "shared",
+        "materials": {
+          "gun_black": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/blue-camo/albedo.jpg",
+            "orm": "assets/cosmetics/skins/blue-camo/orm.png",
+            "tile": 0.34,
+            "metallic": 1,
+            "roughness": 1
+          }
+        }
+      },
+      "ownership": "grant",
+      "compatibleWith": [
+        "smg"
+      ],
+      "collection": "blue-camo"
+    },
+    {
+      "id": "blue-camo-sniper",
+      "name": "Blue Camo",
+      "weapon": "sniper",
+      "rarity": "uncommon",
+      "asset": {
+        "model": "assets/models/shared/weapons/sniper.glb",
+        "binding": "shared",
+        "materials": {
+          "gun_black": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/blue-camo/albedo.jpg",
+            "orm": "assets/cosmetics/skins/blue-camo/orm.png",
+            "tile": 0.34,
+            "metallic": 1,
+            "roughness": 1
+          }
+        }
+      },
+      "ownership": "grant",
+      "compatibleWith": [
+        "sniper"
+      ],
+      "collection": "blue-camo"
+    },
+    {
+      "id": "blue-camo-shotgun",
+      "name": "Blue Camo",
+      "weapon": "shotgun",
+      "rarity": "uncommon",
+      "asset": {
+        "model": "assets/models/shared/weapons/shotgun.glb",
+        "binding": "shared",
+        "materials": {
+          "gun_black": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/blue-camo/albedo.jpg",
+            "orm": "assets/cosmetics/skins/blue-camo/orm.png",
+            "tile": 0.34,
+            "metallic": 1,
+            "roughness": 1
+          },
+          "gun_wood": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/blue-camo/albedo.jpg",
+            "orm": "assets/cosmetics/skins/blue-camo/orm.png",
+            "tile": 0.34,
+            "metallic": 1,
+            "roughness": 1
+          }
+        }
+      },
+      "ownership": "grant",
+      "compatibleWith": [
+        "shotgun"
+      ],
+      "collection": "blue-camo"
+    },
+    {
+      "id": "red-camo-rifle",
+      "name": "Red Camo",
+      "weapon": "rifle",
+      "rarity": "uncommon",
+      "asset": {
+        "model": "assets/models/shared/weapons/rifle.glb",
+        "binding": "shared",
+        "materials": {
+          "gun_black": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/red-camo/albedo.jpg",
+            "orm": "assets/cosmetics/skins/red-camo/orm.png",
+            "tile": 0.34,
+            "metallic": 1,
+            "roughness": 1
+          },
+          "gun_fde": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/red-camo/albedo.jpg",
+            "orm": "assets/cosmetics/skins/red-camo/orm.png",
+            "tile": 0.34,
+            "metallic": 1,
+            "roughness": 1
+          }
+        }
+      },
+      "ownership": "grant",
+      "compatibleWith": [
+        "rifle"
+      ],
+      "collection": "red-camo"
+    },
+    {
+      "id": "red-camo-smg",
+      "name": "Red Camo",
+      "weapon": "smg",
+      "rarity": "uncommon",
+      "asset": {
+        "model": "assets/models/shared/weapons/smg.glb",
+        "binding": "shared",
+        "materials": {
+          "gun_black": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/red-camo/albedo.jpg",
+            "orm": "assets/cosmetics/skins/red-camo/orm.png",
+            "tile": 0.34,
+            "metallic": 1,
+            "roughness": 1
+          }
+        }
+      },
+      "ownership": "grant",
+      "compatibleWith": [
+        "smg"
+      ],
+      "collection": "red-camo"
+    },
+    {
+      "id": "red-camo-sniper",
+      "name": "Red Camo",
+      "weapon": "sniper",
+      "rarity": "uncommon",
+      "asset": {
+        "model": "assets/models/shared/weapons/sniper.glb",
+        "binding": "shared",
+        "materials": {
+          "gun_black": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/red-camo/albedo.jpg",
+            "orm": "assets/cosmetics/skins/red-camo/orm.png",
+            "tile": 0.34,
+            "metallic": 1,
+            "roughness": 1
+          }
+        }
+      },
+      "ownership": "grant",
+      "compatibleWith": [
+        "sniper"
+      ],
+      "collection": "red-camo"
+    },
+    {
+      "id": "red-camo-shotgun",
+      "name": "Red Camo",
+      "weapon": "shotgun",
+      "rarity": "uncommon",
+      "asset": {
+        "model": "assets/models/shared/weapons/shotgun.glb",
+        "binding": "shared",
+        "materials": {
+          "gun_black": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/red-camo/albedo.jpg",
+            "orm": "assets/cosmetics/skins/red-camo/orm.png",
+            "tile": 0.34,
+            "metallic": 1,
+            "roughness": 1
+          },
+          "gun_wood": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/red-camo/albedo.jpg",
+            "orm": "assets/cosmetics/skins/red-camo/orm.png",
+            "tile": 0.34,
+            "metallic": 1,
+            "roughness": 1
+          }
+        }
+      },
+      "ownership": "grant",
+      "compatibleWith": [
+        "shotgun"
+      ],
+      "collection": "red-camo"
+    },
+    {
+      "id": "marble-rifle",
+      "name": "Marble",
+      "weapon": "rifle",
+      "rarity": "rare",
+      "asset": {
+        "model": "assets/models/shared/weapons/rifle.glb",
+        "binding": "shared",
+        "materials": {
+          "gun_black": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/marble/white-albedo.jpg",
+            "orm": "assets/cosmetics/skins/marble/orm.png",
+            "tile": 0.42,
+            "metallic": 1,
+            "roughness": 1,
+            "clearcoat": 0.6
+          },
+          "gun_fde": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/marble/white-albedo.jpg",
+            "orm": "assets/cosmetics/skins/marble/orm.png",
+            "tile": 0.42,
+            "metallic": 1,
+            "roughness": 1,
+            "clearcoat": 0.6
+          },
+          "gun_polymer": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/marble/black-albedo.jpg",
+            "orm": "assets/cosmetics/skins/marble/orm.png",
+            "tile": 0.42,
+            "metallic": 1,
+            "roughness": 1,
+            "clearcoat": 0.6
+          },
+          "gun_steel": {
+            "color": "#e6dfd2",
+            "metallic": 1,
+            "roughness": 0.24
+          }
+        }
+      },
+      "ownership": "grant",
+      "compatibleWith": [
+        "rifle"
+      ],
+      "collection": "marble"
+    },
+    {
+      "id": "marble-smg",
+      "name": "Marble",
+      "weapon": "smg",
+      "rarity": "rare",
+      "asset": {
+        "model": "assets/models/shared/weapons/smg.glb",
+        "binding": "shared",
+        "materials": {
+          "gun_black": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/marble/white-albedo.jpg",
+            "orm": "assets/cosmetics/skins/marble/orm.png",
+            "tile": 0.42,
+            "metallic": 1,
+            "roughness": 1,
+            "clearcoat": 0.6
+          },
+          "gun_polymer": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/marble/black-albedo.jpg",
+            "orm": "assets/cosmetics/skins/marble/orm.png",
+            "tile": 0.42,
+            "metallic": 1,
+            "roughness": 1,
+            "clearcoat": 0.6
+          },
+          "gun_steel": {
+            "color": "#e6dfd2",
+            "metallic": 1,
+            "roughness": 0.24
+          }
+        }
+      },
+      "ownership": "grant",
+      "compatibleWith": [
+        "smg"
+      ],
+      "collection": "marble"
+    },
+    {
+      "id": "marble-sniper",
+      "name": "Marble",
+      "weapon": "sniper",
+      "rarity": "rare",
+      "asset": {
+        "model": "assets/models/shared/weapons/sniper.glb",
+        "binding": "shared",
+        "materials": {
+          "gun_black": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/marble/white-albedo.jpg",
+            "orm": "assets/cosmetics/skins/marble/orm.png",
+            "tile": 0.42,
+            "metallic": 1,
+            "roughness": 1,
+            "clearcoat": 0.6
+          },
+          "gun_polymer": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/marble/black-albedo.jpg",
+            "orm": "assets/cosmetics/skins/marble/orm.png",
+            "tile": 0.42,
+            "metallic": 1,
+            "roughness": 1,
+            "clearcoat": 0.6
+          },
+          "gun_steel": {
+            "color": "#e6dfd2",
+            "metallic": 1,
+            "roughness": 0.24
+          }
+        }
+      },
+      "ownership": "grant",
+      "compatibleWith": [
+        "sniper"
+      ],
+      "collection": "marble"
+    },
+    {
+      "id": "marble-shotgun",
+      "name": "Marble",
+      "weapon": "shotgun",
+      "rarity": "rare",
+      "asset": {
+        "model": "assets/models/shared/weapons/shotgun.glb",
+        "binding": "shared",
+        "materials": {
+          "gun_black": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/marble/white-albedo.jpg",
+            "orm": "assets/cosmetics/skins/marble/orm.png",
+            "tile": 0.42,
+            "metallic": 1,
+            "roughness": 1,
+            "clearcoat": 0.6
+          },
+          "gun_wood": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/marble/white-albedo.jpg",
+            "orm": "assets/cosmetics/skins/marble/orm.png",
+            "tile": 0.42,
+            "metallic": 1,
+            "roughness": 1,
+            "clearcoat": 0.6
+          },
+          "gun_polymer": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/marble/black-albedo.jpg",
+            "orm": "assets/cosmetics/skins/marble/orm.png",
+            "tile": 0.42,
+            "metallic": 1,
+            "roughness": 1,
+            "clearcoat": 0.6
+          },
+          "gun_steel": {
+            "color": "#e6dfd2",
+            "metallic": 1,
+            "roughness": 0.24
+          }
+        }
+      },
+      "ownership": "grant",
+      "compatibleWith": [
+        "shotgun"
+      ],
+      "collection": "marble"
+    },
+    {
+      "id": "rainbow-glow-rifle",
+      "name": "Rainbow Glow",
+      "weapon": "rifle",
+      "rarity": "rare",
+      "asset": {
+        "model": "assets/models/shared/weapons/rifle.glb",
+        "binding": "shared",
+        "materials": {
+          "gun_black": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/rainbow-glow/albedo.jpg",
+            "orm": "assets/cosmetics/skins/rainbow-glow/orm.png",
+            "emissive": "assets/cosmetics/skins/rainbow-glow/emissive.jpg",
+            "emissiveColor": "#ffffff",
+            "scroll": [
+              0.16,
+              0
+            ],
+            "tile": 0.5,
+            "metallic": 1,
+            "roughness": 1
+          },
+          "gun_fde": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/rainbow-glow/albedo.jpg",
+            "orm": "assets/cosmetics/skins/rainbow-glow/orm.png",
+            "emissive": "assets/cosmetics/skins/rainbow-glow/emissive.jpg",
+            "emissiveColor": "#ffffff",
+            "scroll": [
+              0.16,
+              0
+            ],
+            "tile": 0.5,
+            "metallic": 1,
+            "roughness": 1
+          },
+          "gun_polymer": {
+            "color": "#15131d",
+            "metallic": 0.2,
+            "roughness": 0.3
+          }
+        }
+      },
+      "ownership": "grant",
+      "compatibleWith": [
+        "rifle"
+      ],
+      "collection": "rainbow-glow"
+    },
+    {
+      "id": "rainbow-glow-smg",
+      "name": "Rainbow Glow",
+      "weapon": "smg",
+      "rarity": "rare",
+      "asset": {
+        "model": "assets/models/shared/weapons/smg.glb",
+        "binding": "shared",
+        "materials": {
+          "gun_black": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/rainbow-glow/albedo.jpg",
+            "orm": "assets/cosmetics/skins/rainbow-glow/orm.png",
+            "emissive": "assets/cosmetics/skins/rainbow-glow/emissive.jpg",
+            "emissiveColor": "#ffffff",
+            "scroll": [
+              0.16,
+              0
+            ],
+            "tile": 0.5,
+            "metallic": 1,
+            "roughness": 1
+          },
+          "gun_polymer": {
+            "color": "#15131d",
+            "metallic": 0.2,
+            "roughness": 0.3
+          }
+        }
+      },
+      "ownership": "grant",
+      "compatibleWith": [
+        "smg"
+      ],
+      "collection": "rainbow-glow"
+    },
+    {
+      "id": "rainbow-glow-sniper",
+      "name": "Rainbow Glow",
+      "weapon": "sniper",
+      "rarity": "rare",
+      "asset": {
+        "model": "assets/models/shared/weapons/sniper.glb",
+        "binding": "shared",
+        "materials": {
+          "gun_black": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/rainbow-glow/albedo.jpg",
+            "orm": "assets/cosmetics/skins/rainbow-glow/orm.png",
+            "emissive": "assets/cosmetics/skins/rainbow-glow/emissive.jpg",
+            "emissiveColor": "#ffffff",
+            "scroll": [
+              0.16,
+              0
+            ],
+            "tile": 0.5,
+            "metallic": 1,
+            "roughness": 1
+          },
+          "gun_polymer": {
+            "color": "#15131d",
+            "metallic": 0.2,
+            "roughness": 0.3
+          }
+        }
+      },
+      "ownership": "grant",
+      "compatibleWith": [
+        "sniper"
+      ],
+      "collection": "rainbow-glow"
+    },
+    {
+      "id": "rainbow-glow-shotgun",
+      "name": "Rainbow Glow",
+      "weapon": "shotgun",
+      "rarity": "rare",
+      "asset": {
+        "model": "assets/models/shared/weapons/shotgun.glb",
+        "binding": "shared",
+        "materials": {
+          "gun_black": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/rainbow-glow/albedo.jpg",
+            "orm": "assets/cosmetics/skins/rainbow-glow/orm.png",
+            "emissive": "assets/cosmetics/skins/rainbow-glow/emissive.jpg",
+            "emissiveColor": "#ffffff",
+            "scroll": [
+              0.16,
+              0
+            ],
+            "tile": 0.5,
+            "metallic": 1,
+            "roughness": 1
+          },
+          "gun_wood": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/rainbow-glow/albedo.jpg",
+            "orm": "assets/cosmetics/skins/rainbow-glow/orm.png",
+            "emissive": "assets/cosmetics/skins/rainbow-glow/emissive.jpg",
+            "emissiveColor": "#ffffff",
+            "scroll": [
+              0.16,
+              0
+            ],
+            "tile": 0.5,
+            "metallic": 1,
+            "roughness": 1
+          },
+          "gun_polymer": {
+            "color": "#15131d",
+            "metallic": 0.2,
+            "roughness": 0.3
+          }
+        }
+      },
+      "ownership": "grant",
+      "compatibleWith": [
+        "shotgun"
+      ],
+      "collection": "rainbow-glow"
+    },
+    {
+      "id": "rich-rifle",
+      "name": "Rich",
+      "weapon": "rifle",
+      "rarity": "legendary",
+      "asset": {
+        "model": "assets/models/shared/weapons/rifle.glb",
+        "binding": "shared",
+        "materials": {
+          "gun_black": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/rich/gold-albedo.jpg",
+            "normal": "assets/cosmetics/skins/rich/gold-normal.png",
+            "orm": "assets/cosmetics/skins/rich/gold-orm.png",
+            "tile": 0.13,
+            "metallic": 1,
+            "roughness": 1,
+            "clearcoat": 0.35
+          },
+          "gun_fde": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/rich/gold-albedo.jpg",
+            "normal": "assets/cosmetics/skins/rich/gold-normal.png",
+            "orm": "assets/cosmetics/skins/rich/gold-orm.png",
+            "tile": 0.13,
+            "metallic": 1,
+            "roughness": 1,
+            "clearcoat": 0.35
+          },
+          "gun_polymer": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/rich/lacquer-albedo.jpg",
+            "orm": "assets/cosmetics/skins/rich/lacquer-orm.png",
+            "tile": 0.13,
+            "metallic": 1,
+            "roughness": 1,
+            "clearcoat": 0.8
+          },
+          "gun_steel": {
+            "color": "#ffe0a0",
+            "metallic": 1,
+            "roughness": 0.18
+          }
+        }
+      },
+      "ownership": "grant",
+      "compatibleWith": [
+        "rifle"
+      ],
+      "collection": "rich"
+    },
+    {
+      "id": "rich-smg",
+      "name": "Rich",
+      "weapon": "smg",
+      "rarity": "legendary",
+      "asset": {
+        "model": "assets/models/shared/weapons/smg.glb",
+        "binding": "shared",
+        "materials": {
+          "gun_black": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/rich/gold-albedo.jpg",
+            "normal": "assets/cosmetics/skins/rich/gold-normal.png",
+            "orm": "assets/cosmetics/skins/rich/gold-orm.png",
+            "tile": 0.13,
+            "metallic": 1,
+            "roughness": 1,
+            "clearcoat": 0.35
+          },
+          "gun_polymer": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/rich/lacquer-albedo.jpg",
+            "orm": "assets/cosmetics/skins/rich/lacquer-orm.png",
+            "tile": 0.13,
+            "metallic": 1,
+            "roughness": 1,
+            "clearcoat": 0.8
+          },
+          "gun_steel": {
+            "color": "#ffe0a0",
+            "metallic": 1,
+            "roughness": 0.18
+          }
+        }
+      },
+      "ownership": "grant",
+      "compatibleWith": [
+        "smg"
+      ],
+      "collection": "rich"
+    },
+    {
+      "id": "rich-sniper",
+      "name": "Rich",
+      "weapon": "sniper",
+      "rarity": "legendary",
+      "asset": {
+        "model": "assets/models/shared/weapons/sniper.glb",
+        "binding": "shared",
+        "materials": {
+          "gun_black": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/rich/gold-albedo.jpg",
+            "normal": "assets/cosmetics/skins/rich/gold-normal.png",
+            "orm": "assets/cosmetics/skins/rich/gold-orm.png",
+            "tile": 0.13,
+            "metallic": 1,
+            "roughness": 1,
+            "clearcoat": 0.35
+          },
+          "gun_polymer": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/rich/lacquer-albedo.jpg",
+            "orm": "assets/cosmetics/skins/rich/lacquer-orm.png",
+            "tile": 0.13,
+            "metallic": 1,
+            "roughness": 1,
+            "clearcoat": 0.8
+          },
+          "gun_steel": {
+            "color": "#ffe0a0",
+            "metallic": 1,
+            "roughness": 0.18
+          }
+        }
+      },
+      "ownership": "grant",
+      "compatibleWith": [
+        "sniper"
+      ],
+      "collection": "rich"
+    },
+    {
+      "id": "rich-shotgun",
+      "name": "Rich",
+      "weapon": "shotgun",
+      "rarity": "legendary",
+      "asset": {
+        "model": "assets/models/shared/weapons/shotgun.glb",
+        "binding": "shared",
+        "materials": {
+          "gun_black": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/rich/gold-albedo.jpg",
+            "normal": "assets/cosmetics/skins/rich/gold-normal.png",
+            "orm": "assets/cosmetics/skins/rich/gold-orm.png",
+            "tile": 0.13,
+            "metallic": 1,
+            "roughness": 1,
+            "clearcoat": 0.35
+          },
+          "gun_wood": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/rich/gold-albedo.jpg",
+            "normal": "assets/cosmetics/skins/rich/gold-normal.png",
+            "orm": "assets/cosmetics/skins/rich/gold-orm.png",
+            "tile": 0.13,
+            "metallic": 1,
+            "roughness": 1,
+            "clearcoat": 0.35
+          },
+          "gun_polymer": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/rich/lacquer-albedo.jpg",
+            "orm": "assets/cosmetics/skins/rich/lacquer-orm.png",
+            "tile": 0.13,
+            "metallic": 1,
+            "roughness": 1,
+            "clearcoat": 0.8
+          },
+          "gun_steel": {
+            "color": "#ffe0a0",
+            "metallic": 1,
+            "roughness": 0.18
+          }
+        }
+      },
+      "ownership": "grant",
+      "compatibleWith": [
+        "shotgun"
+      ],
+      "collection": "rich"
+    }
+  ],
+  "collections": [
+    {
+      "id": "green-camo",
+      "name": "Green Camo",
+      "rarity": "uncommon"
+    },
+    {
+      "id": "blue-camo",
+      "name": "Blue Camo",
+      "rarity": "uncommon"
+    },
+    {
+      "id": "red-camo",
+      "name": "Red Camo",
+      "rarity": "uncommon"
+    },
+    {
+      "id": "marble",
+      "name": "Marble",
+      "rarity": "rare"
+    },
+    {
+      "id": "rainbow-glow",
+      "name": "Rainbow Glow",
+      "rarity": "rare"
+    },
+    {
+      "id": "rich",
+      "name": "Rich",
+      "rarity": "legendary",
+      "killEffect": "money"
     }
   ],
   "crate": {
     "price": 300,
-    "available": false,
+    "available": true,
     "distribution": [
       {
         "rarity": "uncommon",
-        "percent": 50
+        "percent": 55
       },
       {
         "rarity": "rare",
-        "percent": 37
-      },
-      {
-        "rarity": "epic",
-        "percent": 10
+        "percent": 40
       },
       {
         "rarity": "legendary",
-        "percent": 3
+        "percent": 5
       }
     ],
-    "preview": "assets/cosmetics/crate/preview.svg"
+    "model": "assets/cosmetics/crate/reward-crate/model.glb",
+    "preview": "assets/cosmetics/crate/reward-crate/thumbnail.png"
   }
 }

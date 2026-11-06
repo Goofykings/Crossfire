@@ -17,7 +17,7 @@ try{
  await page.evaluateOnNewDocument(server=>{
   window.__cosmeticRequests=[];window.__mapRequests=[];window.__socketCount=0;
   const Socket=window.WebSocket;window.WebSocket=class extends Socket{constructor(url,protocols){super(new URL(new URL(url,location.href).pathname,server).href.replace('http:','ws:'),protocols);window.__socketCount++;}};
-  const real=window.fetch;window.fetch=(input,init)=>{const url=new URL(String(input),location.href);if(/assets\/maps\/.*\.glb/.test(url.pathname))window.__mapRequests.push(url.pathname);if(url.pathname.startsWith('/cosmetics'))window.__cosmeticRequests.push({path:url.pathname,method:init?.method??'GET'});return real(['/presence','/profile','/stats','/leaderboard','/rooms','/rooms/join','/cosmetics','/cosmetics/equip'].includes(url.pathname)?new URL(url.pathname+url.search,server):input,init);};
+  const real=window.fetch;window.fetch=(input,init)=>{const url=new URL(String(input),location.href);if(/assets\/maps\/.*\.glb/.test(url.pathname))window.__mapRequests.push(url.pathname);if(url.pathname.startsWith('/cosmetics'))window.__cosmeticRequests.push({path:url.pathname,method:init?.method??'GET'});return real(['/presence','/profile','/stats','/leaderboard','/rooms','/rooms/join','/cosmetics','/cosmetics/equip','/cosmetics/open'].includes(url.pathname)?new URL(url.pathname+url.search,server):input,init);};
  },h.base);
  await page.goto(base+'?quality=low&shadows=off&scale=0.5',{waitUntil:'domcontentloaded',timeout:240000});await completeGuestProfile(page,'Cosmetic Guest');
  await nav('Locker');await visible('#locker');await page.waitForFunction(()=>window.__crossfire.cosmetics().view?.owned.length===4,{timeout:120000});
@@ -25,12 +25,11 @@ try{
  const credential=await page.evaluate(()=>localStorage.getItem(Object.keys(localStorage).find(k=>k.startsWith('crossfire.career.v1:'))));assert.match(credential,/^[a-f0-9]{64}$/);
  await h.central.legacyWalletForStatisticsTest(credential,37);
  await nav('Shop');await visible('#shop');await page.waitForFunction(()=>document.querySelector('.shop-balance')?.textContent==='37 GEMS');
- check(await page.$eval('.shop-crate',n=>n.complete&&n.naturalWidth>0),'original crate asset loads at GitHub Pages subpath');
- check(await page.$eval('.shop-open',n=>n.disabled&&n.textContent.includes('300')),'crate Open disabled');
- check(await page.$eval('.shop-offer',n=>n.textContent.includes('COMING SOON')),'crate clearly Coming Soon');
- check((await page.$$eval('.crate-distribution span',nodes=>nodes.map(n=>n.textContent.match(/\d+%/)[0]))).join(',')==='50%,37%,10%,3%','future distribution displayed correctly');
+ check(await page.$eval('.shop-crate',n=>n.complete&&n.naturalWidth>0),'reward crate asset loads at GitHub Pages subpath');
+ check(await page.$eval('.shop-open',n=>n.disabled&&n.textContent.includes('300')),'crate Open disabled below 300 gems');
+ check((await page.$$eval('.crate-distribution span',nodes=>nodes.map(n=>n.textContent.match(/\d+%/)[0]))).join(',')==='55%,40%,5%','crate odds displayed correctly');
  const requests=await page.evaluate(()=>window.__cosmeticRequests.length);await page.$eval('.shop-open',b=>b.click());await delay(100);
- check(await page.evaluate(n=>window.__cosmeticRequests.length===n,requests),'disabled crate makes no purchase/equip request');await page.screenshot({path:out+'/shop-1000.png'});
+ check(await page.evaluate(n=>!window.__cosmeticRequests.slice(n).some(r=>r.path==='/cosmetics/open'),requests),'disabled crate makes no purchase request');await page.screenshot({path:out+'/shop-1000.png'});
  await nav('Locker');await visible('#locker');await page.waitForFunction(()=>document.querySelectorAll('.cosmetic-card').length===4&&[...document.querySelectorAll('.cosmetic-thumbnail')].every(i=>i.complete&&i.naturalWidth>0),{timeout:240000});
  check(await page.$$eval('.cosmetic-card',cards=>cards.every(c=>c.querySelector('strong').textContent==='Default'&&c.textContent.includes('Common'))),'four actual-model Default Common cards');
  check(await page.$$eval('.equipped-item',n=>n.length===4),'equipped panel includes four categories');await page.screenshot({path:out+'/locker-1000.png'});

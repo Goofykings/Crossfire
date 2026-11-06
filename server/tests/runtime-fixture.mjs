@@ -26,6 +26,12 @@ export class PublicRoom extends ProductionRoom {
     const p=await this.ctx.storage.get('statistics:'+id);if(!p)throw new Error('Requires persisted real profile');
     delete p.totals.assists;await this.ctx.storage.put('statistics:'+id,p);
   }
+  /** Test-only inventory fixture (forces which crate rarities remain). Never in production code. */
+  async inventoryForTest(credential,owned) {
+    const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(credential));
+    const id=[...new Uint8Array(digest)].map(n=>n.toString(16).padStart(2,'0')).join('');
+    const current=await this.inventory.get(id);await this.ctx.storage.put('inventory:'+id,{revision:current.revision+1,owned:[...new Set([...current.owned.filter(id=>id.startsWith('default-')),...owned])],equipped:current.equipped});
+  }
   async legacyWalletForStatisticsTest(credential,gems) {
     const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(credential));
     const id=[...new Uint8Array(digest)].map(n=>n.toString(16).padStart(2,'0')).join('');

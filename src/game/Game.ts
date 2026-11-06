@@ -2,7 +2,9 @@ import { CosmeticsClient } from '../network/CosmeticsClient';
 import { PracticeClient,type MatchSession } from '../practice/PracticeClient';
 import {EnvironmentSimulation} from '../../shared/environment';
 import type { PracticeSetup } from '../practice/config';
-import { defaultEquipment } from '../../shared/cosmetics';
+import { defaultEquipment, killEffect } from '../../shared/cosmetics';
+import { MoneyBurst } from '../weapons/MoneyBurst';
+import { visualCosmetic } from '../rendering/CosmeticAssets';
 import { RoomClient } from '../network/RoomClient';
 import type { RoomAdmission } from '../../shared/rooms';
 import { BulletTrails } from '../weapons/BulletTrails';
@@ -32,7 +34,7 @@ import { Effects } from '../weapons/Effects';
 import { GrenadeView } from '../weapons/GrenadeView';
 import { GRENADE, advanceGrenade, throwGrenade, blastDamage, sweepSphere, type GrenadeEvent, type GrenadeState } from '../../shared/grenades';
 import { applySpread, damageAt, Loadout, WEAPONS, Weapon, type WeaponEvent } from '../weapons/Weapon';
-import { RIG_CONFIGS, WeaponView } from '../weapons/WeaponView';
+import { RIG_CONFIGS, WEAPON_RENDER_GROUP, WeaponView } from '../weapons/WeaponView';
 import { DamageSystem, type Attacker, type HitZone } from './Damage';
 import { TeammateRegistry, type RemotePlayer } from './Teammates';
 import { MultiplayerClient } from '../network/MultiplayerClient';
@@ -95,6 +97,8 @@ export class Game {
   /** Rifle, shotgun, sniper and SMG (slots 1-4); infinite reserve ammunition, limited magazines. */
   readonly loadout = new Loadout(WEAPONS);
   private weaponView: WeaponView | null = null;
+  private moneyView: MoneyBurst | null = null;
+  private moneyWorld: MoneyBurst | null = null;
   private effects: Effects | null = null;
   private readonly trails: BulletTrails;
   private grenadeView: GrenadeView | null = null;
@@ -519,7 +523,7 @@ export class Game {
           this.remotePlayers.eliminate(event);
           if(event.assists?.some(a=>a.id===network.selfId))this.ui.showToast('+50 ASSIST','blue',1.8);
           if (event.killerId === network.selfId && event.victimId !== network.selfId && event.award) this.ui.grenadeReward();
-          if (network.latest) this.ui.combatFeed.add(event, network.latest, network.selfId);
+          if (network.latest) { this.ui.combatFeed.add(event, network.latest, network.selfId); this.killEffect(event, network.latest, network.selfId); }
         };
         network.onSnapshot = (snapshot) => { if (!signal.aborted && this.network === network) this.acceptSnapshot(snapshot); };
         network.onState = (state, message) => {
@@ -620,6 +624,41 @@ export class Game {
     return work;
   }
 
+  /** Legendary Rich kill effect. Cosmetic and local: it reads the killer's synchronized
+   * cosmetic from the snapshot, so other players nearby see it too without new messages. */
+  private killEffect(event: Elimination, snapshot: Snapshot, selfId: string | null): void {
+    if (!event.killerId || event.killerId === event.victimId) return;
+    const killer = snapshot.players.find((p) => p.id === event.killerId);
+    if (!killer?.weapon || killEffect(visualCosmetic(killer.weapon, killer.cosmeticId).id) !== 'money') return;
+    if (event.killerId === selfId) { this.emitMoney(null); return; }
+    const at = this.remotePlayers.muzzle(event.killerId);
+    if (at && at.subtract(this.ctx.camera.globalPosition).length() < 45) this.emitMoney(at);
+  }
+  /** Creates (once) and pre-compiles both Rich effect emitters; called when a match weapon loads. */
+  private prepareMoney(): void {
+    const scene = this.ctx.scene;
+    if (!this.moneyView || this.moneyView.meshes()[0].isDisposed()) {
+      this.moneyView = new MoneyBurst(scene, { parent: this.ctx.camera, group: WEAPON_RENDER_GROUP, scale: .5, pop: .72, size: 1.5 });
+      void this.moneyView.warm().catch(() => {});
+    }
+    if (!this.moneyWorld || this.moneyWorld.meshes()[0].isDisposed()) { this.moneyWorld = new MoneyBurst(scene, { scale: 1.7 }); void this.moneyWorld.warm().catch(() => {}); }
+  }
+  private emitMoney(world: Vector3 | null): void {
+    const camera = this.ctx.camera;
+    if (!world) {
+      if (!this.weaponView) return;
+      // The gun sits ~0.4 m from the eye, so the camera-space burst is scaled down (size,
+      // speed and gravity) to stay framed around it instead of leaving the screen.
+      this.prepareMoney();
+      // Camera space (looking down -Z): pop over the receiver, lower right, mostly toward the
+      // hand side so the burst frames the gun without covering the crosshair.
+      const muzzle = Vector3.TransformCoordinates(this.weaponView.muzzleWorld(), camera.getViewMatrix());
+      this.moneyView!.emit(new Vector3(muzzle.x * .3 + .12, muzzle.y * .3 + .02, muzzle.z * .3 - .26));
+      return;
+    }
+    this.prepareMoney();
+    this.moneyWorld!.emit(world.add(new Vector3(0, .25, 0)));
+  }
   private acceptSnapshot(snapshot: Snapshot): void {
     if (this.presentRoundResult(snapshot) || this.state === 'results') return;
     if (!this.networkReady || !this.player || !this.map || this.network?.state !== 'connected') return;
@@ -640,7 +679,7 @@ export class Game {
     this.health = self.health;
     this.ui.setHealth(self.health, PLAYER_MAX_HEALTH);
     if (self.alive) {
-      if(self.weapon&&self.cosmeticId&&this.shownCosmetic!==`${self.weapon}:${self.cosmeticId}`){this.shownCosmetic=`${self.weapon}:${self.cosmeticId}`;void this.weaponView?.setCosmetic(self.weapon,self.cosmeticId).then(()=>{if(this.map)this.excludeViewFromSun(this.map);}).catch(error=>this.ui.showToast((error as Error).message,'warn'));}
+      if(self.weapon&&self.cosmeticId&&this.shownCosmetic!==`${self.weapon}:${self.cosmeticId}`){this.shownCosmetic=`${self.weapon}:${self.cosmeticId}`;void this.weaponView?.setCosmetic(self.weapon,self.cosmeticId).then(()=>{if(this.map)this.excludeViewFromSun(this.map);this.prepareMoney();}).catch(error=>this.ui.showToast((error as Error).message,'warn'));}
       if ((self.life !== this.networkLife || self.id !== this.appliedPlayerId) && self.weapon) {
         this.lastUsedWeapon.remember(self.weapon);
         this.ui.damage.clear();
@@ -1445,6 +1484,8 @@ export class Game {
       },
       characterAsset: () => this.remotePlayers.characters.inspect(),
       cosmetics:()=>({view:this.cosmetics?.view??null,page:this.ui.cosmetics.inspect()}),
+      /** Freeze the crate reveal or jump to a time on its timeline (screenshots/tests). */
+      crateReveal:(paused:boolean,seek?:number)=>this.ui.cosmetics.revealDebug(paused,seek),
       homeCharacter: () => this.homeCharacter.inspect(),
       /** Pose lab on the isolated home preview (same rig as remote players); null restores it. */
       characterLab: (options: CharacterLabOptions | null) => this.homeCharacter.characterLab(options),
@@ -1547,6 +1588,9 @@ export class Game {
       },
       /** Switch weapons as the number keys do (0-based slot). */
       selectWeapon: (i: number) => this.loadout.select(i),
+      /** Play the Rich kill effect around the first-person gun (screenshots). */
+      moneyBurst: () => this.emitMoney(null),
+      moneyInfo: () => ({ view: this.moneyView?.active ?? 0, world: this.moneyWorld?.active ?? 0 }),
       /** The last shot's pellets, hits, damage and whether it was a headshot. */
       lastShot: () => ({ ...this.lastShot }),
       /** Sounds asked for recently, newest last (works without audio output). */

@@ -1,7 +1,9 @@
 # Shop, Locker and cosmetic inventory
 
 The catalog's single source is `shared/cosmetics.ts`. It contains exactly four
-Common items named Default (one per weapon), all owned and equipped initially.
+Common starter items named Default (one per weapon), all owned and equipped
+initially, plus 24 crate items (six collections x four weapons, see
+`docs/CRATE_REVEAL.md`).
 Weapon statistics, hitboxes, animation timing and collision clearance are not
 cosmetic data. Existing weapon GLBs remain in their original locations.
 
@@ -44,13 +46,15 @@ inventory while the career capability is retained. Clearing browser storage lose
 access to that guest's inventory; localStorage failures allow a temporary profile,
 without a cross-refresh recovery guarantee. This is not an account recovery system.
 
-## Shop deliberately unavailable
+## Shop: server-authoritative Reward Crate (2026-11-05)
 
-The crate is an original lightweight SVG preview. The native disabled
-`300 GEMS - OPEN` button has no purchase handler. The proposed future distribution
-is Uncommon 50%, Rare 37%, Epic 10%, Legendary 3%. There is no draw, grant, purchase,
-crate-opening endpoint or gem deduction. Shop reads the actual existing career
-balance. There is no fifth starter cosmetic or hidden test item.
+Superseded the earlier disabled preview. `POST /cosmetics/open` (body exactly
+`{version:1}`) spends 300 gems and grants one unowned crate item in a single atomic
+storage batch in the canonical object; the browser only animates the result. Odds
+are Uncommon 55%, Rare 40%, Legendary 5%, renormalized over rarities with unowned
+items (never a duplicate). Details, the reveal and the Rich kill effect are in
+`docs/CRATE_REVEAL.md`. There is still no fifth starter item and no HTTP grant
+other than the crate draw.
 
 ## Adding assets later (Claude Opus handoff)
 
@@ -58,8 +62,9 @@ See `public/assets/cosmetics/README.md` for exact GLB, material, manifest and
 attachment conventions. The current adapter supports compatible replacement GLBs
 and isolated material overrides, but new artwork must be inspected in all four
 view contexts before release. There are no alternate assets in this delivery.
-New non-starter items also require a separately designed trusted server-side grant
-source; adding a catalog entry with `ownership:'grant'` never grants ownership.
+Crate items are entries with `ownership:'grant'` and a `collection`; only the
+server crate draw grants them. Other new non-starter items still need their own
+trusted grant source.
 Keep all four original Default entries unchanged.
 
 After editing the source catalog:

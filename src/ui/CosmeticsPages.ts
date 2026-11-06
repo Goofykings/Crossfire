@@ -1,4 +1,5 @@
-import { COSMETICS, CATEGORY_NAMES, WEAPON_CATEGORIES, RARITIES, FUTURE_CRATE, cosmetic, type CosmeticDefinition, type InventoryView } from '../../shared/cosmetics';
+import { COSMETICS, COLLECTIONS, CATEGORY_NAMES, WEAPON_CATEGORIES, RARITIES, CRATE, cosmetic, crateItems, collectionCosmetic, type CosmeticDefinition, type InventoryView } from '../../shared/cosmetics';
+import { CrateReveal } from './CrateReveal';
 import type { WeaponId } from '../weapons/Weapon';
 import type { CosmeticsClient } from '../network/CosmeticsClient';
 import { assetUrl } from '../core/assets';
@@ -16,6 +17,8 @@ export class CosmeticsPages {
   private category:WeaponId|'all'='all';private inventory:InventoryView|null=null;private item:CosmeticDefinition|null=null;
   private images=new Map<string,string>();private selected='';private pending=false;private buttons:HTMLButtonElement[]=[];
   private previewScreen:HTMLElement;
+  private readonly openButton=node('button','btn primary shop-open');private readonly shopStatus=node('p','cosmetic-status');
+  private readonly contents=node('section','crate-contents');private readonly reveal=new CrateReveal();private gems:number|null=null;
   constructor(screen:(id:'shop'|'locker'|'cosmetic-preview')=>HTMLElement,navigate:(id:'menu'|'locker')=>void){
     const shop=screen('shop'),locker=screen('locker');this.previewScreen=screen('cosmetic-preview');
     for(const page of [shop,locker]){page.classList.add('cosmetic-page');const bg=node('img','cosmetic-background');bg.src=assetUrl('assets/ui/town-plaza.webp');bg.alt='';page.append(bg);}
@@ -24,26 +27,50 @@ export class CosmeticsPages {
     for(const category of ['all',...['smg','rifle','sniper','shotgun'] as WeaponId[]] as const){const b=this.button(category==='all'?'ALL':CATEGORY_NAMES[category],()=>{this.category=category;this.render();});b.dataset.category=category;this.buttons.push(b);categories.append(b);}
     const inventory=node('section','cosmetic-inventory');this.status.setAttribute('role','status');const retry=this.button('Refresh',()=>this.load());retry.classList.add('cosmetic-refresh');inventory.append(this.status,this.grid,retry);layout.append(categories,inventory,this.equipped);locker.append(heading,layout);
     const shopHeading=node('header','cosmetic-heading');shopHeading.append(node('h1','','SHOP'),this.balance,this.button('Back',()=>navigate('menu')));
-    const content=node('div','shop-content'),crate=node('img','shop-crate');crate.src=assetUrl('assets/cosmetics/crate/preview.svg');crate.alt='Crossfire cosmetic crate preview';
-    const offer=node('section','shop-offer'),open=node('button','btn shop-open','300 GEMS — OPEN');open.type='button';open.disabled=true;open.setAttribute('aria-disabled','true');
-    offer.append(node('h2','','COMING SOON'),open);const distribution=node('section','crate-distribution');distribution.setAttribute('aria-label','Proposed future crate distribution');distribution.append(node('p','','Proposed future crate distribution'));
-    for(const entry of FUTURE_CRATE.distribution){const label=node('span','',`${RARITIES[entry.rarity].name.toUpperCase()} — ${entry.percent}%`);label.style.color=RARITIES[entry.rarity].color;distribution.append(label);}content.append(crate,offer,distribution);shop.append(shopHeading,content);
+    const content=node('div','shop-content'),stage=node('div','shop-crate-stage'),crate=node('img','shop-crate');crate.src=assetUrl('assets/cosmetics/crate/reward-crate/thumbnail.png');crate.alt='Crossfire reward crate';stage.append(crate);
+    const offer=node('section','shop-offer');this.openButton.type='button';this.openButton.onclick=()=>this.openCrate();this.shopStatus.setAttribute('role','status');
+    offer.append(node('h2','','REWARD CRATE'),node('p','shop-offer-copy','One weapon skin per crate. You never get a duplicate.'),this.openButton,this.shopStatus);
+    const distribution=node('section','crate-distribution');distribution.setAttribute('aria-label','Crate odds');distribution.append(node('p','','ODDS'));
+    for(const entry of CRATE.distribution){const label=node('span','',`${RARITIES[entry.rarity].name.toUpperCase()} — ${entry.percent}%`);label.style.color=RARITIES[entry.rarity].color;distribution.append(label);}
+    this.contents.setAttribute('aria-label','Crate contents');offer.append(distribution);content.append(stage,offer,this.contents);shop.append(shopHeading,content);
     this.previewScreen.classList.add('cosmetic-item-preview');this.previewTitle.id='cosmetic-name';this.previewScreen.setAttribute('aria-labelledby','cosmetic-name');
     const title=node('header');title.append(this.previewTitle,this.previewCategory);const controls=node('footer');this.equipButton.type='button';this.equipButton.onclick=()=>void this.equip();controls.append(this.equipButton,this.button('Back',()=>navigate('locker')));this.previewStatus.setAttribute('role','status');this.previewScreen.append(title,this.previewHost,this.previewStatus,controls);
     this.previewScreen.addEventListener('keydown',e=>{if(e.key==='Escape'){e.stopPropagation();navigate('locker');}});
   }
   private button(text:string,click:()=>void){const b=node('button','btn',text);b.type='button';b.onclick=click;return b;}
-  setBalance(gems:number|null){this.balance.textContent=gems===null?'— GEMS':`${gems.toLocaleString()} GEMS`;}
+  setBalance(gems:number|null){this.gems=gems;this.balance.textContent=gems===null?'— GEMS':`${gems.toLocaleString()} GEMS`;this.renderShop();}
+  private canOpen(){return !!this.client&&this.gems!==null&&this.gems>=CRATE.price&&!!this.inventory&&crateItems().some(c=>!this.inventory!.owned.includes(c.id));}
+  private renderShop(){
+    const left=this.inventory?crateItems().filter(c=>!this.inventory!.owned.includes(c.id)).length:null;
+    this.openButton.textContent=left===0?'ALL SKINS OWNED':`OPEN — ${CRATE.price} GEMS`;this.openButton.disabled=!this.canOpen();
+    this.openButton.title=this.openButton.disabled&&left!==0?'Earn gems from daily and weekly challenges.':'';
+    this.contents.replaceChildren(node('h3','','CRATE CONTENTS'));
+    for(const c of COLLECTIONS){
+      const owned=WEAPON_CATEGORIES.filter(w=>this.inventory?.owned.includes(collectionCosmetic(c.id,w))).length;
+      const row=node('div','crate-collection');row.dataset.collection=c.id;row.style.setProperty('--rarity',RARITIES[c.rarity].color);
+      row.append(node('strong','',c.name),node('small','',RARITIES[c.rarity].name.toUpperCase()),node('span','',this.inventory?`${owned}/4`:'AR · SMG · SNIPER · SHOTGUN'));this.contents.append(row);
+    }
+  }
+  private openCrate(){
+    if(!this.canOpen()||!this.client)return;const client=this.client;
+    void this.reveal.start({
+      open:async signal=>{const result=await client.openCrate(signal);this.inventory=result.inventory;this.setBalance(result.gems);this.onRefreshAccount();return cosmetic(result.item)!;},
+      equip:async item=>{this.inventory=await client.equip(item.id,new AbortController().signal);},
+      isEquipped:item=>this.inventory?.equipped[item.weapon]===item.id,
+      canOpenAgain:()=>this.canOpen(),
+      onClose:()=>{this.renderShop();this.openButton.focus();},
+    });
+  }
   show(page:'shop'|'locker'|'cosmetic-preview'){
     this.request?.abort();this.thumbnails?.abort();this.thumbnails=null;
     if(page==='cosmetic-preview')return;
     this.onRefreshAccount();
-    this.preview.close();this.item=null;this.selected=page;if(page==='locker'){this.inventory=this.client?.view??null;this.render();this.load();}
+    this.preview.close();this.item=null;this.selected=page;this.inventory=this.client?.view??this.inventory;if(page==='locker')this.render();this.renderShop();this.load();
   }
-  hide(){this.selected='';this.request?.abort();this.request=null;this.thumbnails?.abort();this.thumbnails=null;this.preview.close();this.item=null;}
+  hide(){this.reveal.close();this.selected='';this.request?.abort();this.request=null;this.thumbnails?.abort();this.thumbnails=null;this.preview.close();this.item=null;}
   private load(){
     this.request?.abort();const request=new AbortController();this.request=request;this.status.textContent='Loading inventory...';
-    void (async()=>{if(!this.client)throw Error('Inventory unavailable: check multiplayer configuration.');const view=await this.client.load(request.signal);if(request.signal.aborted||this.selected!=='locker')return;this.inventory=view;this.status.textContent='';this.render();})().catch(error=>{if(!request.signal.aborted)this.status.textContent=(error as Error).message;});
+    void (async()=>{if(!this.client)throw Error('Inventory unavailable: check multiplayer configuration.');const view=await this.client.load(request.signal);if(request.signal.aborted||!this.selected)return;this.inventory=view;this.status.textContent='';this.shopStatus.textContent='';if(this.selected==='locker')this.render();this.renderShop();})().catch(error=>{if(!request.signal.aborted)this.status.textContent=this.shopStatus.textContent=(error as Error).message;});
   }
   private thumbnail(item:CosmeticDefinition){const img=node('img','cosmetic-thumbnail');img.alt=`${CATEGORY_NAMES[item.weapon]} ${item.name}`;img.dataset.cosmetic=item.id;const url=item.preview?assetUrl(item.preview):this.images.get(item.id);if(url)img.src=url;else img.hidden=true;return img;}
   private render(){
@@ -76,5 +103,6 @@ export class CosmeticsPages {
     this.pending=true;this.updateEquip();this.request?.abort();const request=new AbortController();this.request=request;
     try{this.inventory=await this.client.equip(item.id,request.signal);if(!request.signal.aborted)this.previewStatus.textContent='';}catch(error){if(!request.signal.aborted)this.previewStatus.textContent=(error as Error).message;}finally{this.pending=false;this.updateEquip();}
   }
-  inspect(){return {inventory:this.inventory,preview:this.preview.inspect()};}
+  inspect(){return {inventory:this.inventory,preview:this.preview.inspect(),reveal:this.reveal.inspect()};}
+  revealDebug(paused:boolean,seek?:number){this.reveal.debug(paused,seek);}
 }

@@ -3,6 +3,7 @@ import type { CosmeticDefinition } from '../../shared/cosmetics';
 import { MaterialLibrary } from '../rendering/MaterialLibrary';
 import { loadCosmeticAsset } from '../rendering/CosmeticAssets';
 import { meshesReady } from '../core/assetReadiness';
+import { studioEnvironment } from '../rendering/StudioEnvironment';
 
 /** One lazy scene for the visible item only; disposed on Back/navigation. */
 export class CosmeticPreview {
@@ -18,7 +19,7 @@ export class CosmeticPreview {
     const key=new DirectionalLight('cosmetic-key',new Vector3(-1,-2,-1),scene);key.intensity=2;
     const materials=new MaterialLibrary(scene);
     try{
-      await materials.load(undefined,abort.signal);const c=await loadCosmeticAsset(item,scene,materials,abort.signal);this.container=c;c.addAllToScene();
+      await Promise.all([materials.load(undefined,abort.signal),studioEnvironment(scene,.9,abort.signal)]);const c=await loadCosmeticAsset(item,scene,materials,abort.signal);this.container=c;c.addAllToScene();
       for(const m of c.meshes)m.computeWorldMatrix(true);const bounds=c.rootNodes[0].getHierarchyBoundingVectors(true),size=bounds.max.subtract(bounds.min),target=bounds.min.add(bounds.max).scale(.5);
       camera.setTarget(target);const fit=()=>{engine.resize();camera.radius=Math.max(size.y,size.z/engine.getAspectRatio(camera),size.x/engine.getAspectRatio(camera))/(2*Math.tan(camera.fov/2))*1.5;camera.lowerRadiusLimit=camera.radius*.75;camera.upperRadiusLimit=camera.radius*2;};
       fit();this.resize=fit;window.addEventListener('resize',fit);await meshesReady(c.meshes,abort.signal);abort.signal.throwIfAborted();

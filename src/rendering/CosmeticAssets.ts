@@ -28,10 +28,22 @@ export async function loadCosmeticAsset(item:CosmeticDefinition,scene:Scene,mate
         if(patch.color)copy.albedoColor=Color3.FromHexString(patch.color);
         if(patch.metallic!==undefined)copy.metallic=patch.metallic;
         if(patch.roughness!==undefined)copy.roughness=patch.roughness;
-        for(const [key,property]of [['albedo','albedoTexture'],['normal','bumpTexture'],['orm','metallicTexture']] as const){
+        for(const [key,property]of [['albedo','albedoTexture'],['normal','bumpTexture'],['orm','metallicTexture'],['emissive','emissiveTexture']] as const){
           const path=patch[key];if(!path)continue;
-          const t=new Texture(assetUrl(path),scene,false,false);t.gammaSpace=key==='albedo';c.textures.push(t);copy[property]=t;
+          const t=new Texture(assetUrl(path),scene,false,false);t.gammaSpace=key==='albedo'||key==='emissive';c.textures.push(t);copy[property]=t;
+          // Weapon UVs are in metres, like MaterialLibrary's `tile`.
+          if(patch.tile){t.uScale=t.vScale=1/patch.tile;}
+          if(key==='emissive'&&patch.scroll){
+            const [u,v]=patch.scroll,start=performance.now();
+            const tick=scene.onBeforeRenderObservable.add(()=>{const s=(performance.now()-start)/1000;t.uOffset=(u*s)%1;t.vOffset=(v*s)%1;});
+            t.onDisposeObservable.addOnce(()=>scene.onBeforeRenderObservable.remove(tick));
+          }
         }
+        if(patch.emissive)copy.emissiveColor=Color3.FromHexString(patch.emissiveColor??'#ffffff');
+        // The library reads roughness from ORM alpha outside Ultra (alpha wins over green).
+        // Skin ORMs are opaque RGB, so read green or every finish renders fully rough.
+        if(patch.orm)copy.useRoughnessFromMetallicTextureAlpha=false;
+        if(patch.clearcoat!==undefined){copy.clearCoat.isEnabled=patch.clearcoat>0;copy.clearCoat.intensity=patch.clearcoat;copy.clearCoat.roughness=.08;}
         copy.useRoughnessFromMetallicTextureGreen=true;copy.useMetallnessFromMetallicTextureBlue=true;copy.useAmbientOcclusionFromMetallicTextureRed=true;
       }
       mesh.material=copy;

@@ -1,3 +1,17 @@
+## Reward crate and crate skins (2026-11-05)
+
+See docs/CRATE_REVEAL.md. This supersedes the "Grants and functional crates are NOT
+implemented / keep the Shop button disabled" rule below (user-authorized). Only
+POST /cosmetics/open grants crate items: 300 gems, crypto draw, no duplicates, gem
+spend and inventory grant in ONE canonical storage batch; never accept client
+rarity/item claims. Six collections x four weapons are material overrides on the
+original GLBs (shared/cosmetics.ts COLLECTIONS; regenerate textures with
+blender/cosmetics/skin_textures.py, crate with generate_reward_crate.py). Skin ORMs
+must be read from green (CosmeticAssets clears the library's alpha-roughness flag).
+Preview scenes use studioEnvironment(); maps keep their HDR. The Rich kill effect
+reads snapshot cosmeticId (no protocol change). Protocol v19, inventory HTTP v1.
+Test with tools/crate-browser-test.mjs against serve-dist. No commit/push/deploy.
+
 ## Browser-local Practice (2026-11-05)
 
 Read docs/PRACTICE.md. PracticeSimulation is in-process authority with explicit

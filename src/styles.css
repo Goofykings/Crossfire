@@ -1684,3 +1684,56 @@ body[data-home-page='shop'] #game,body[data-home-page='locker'] #game,body[data-
 @media(max-width:560px){.locker-layout{grid-template-columns:65px minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;}.cosmetic-equipped{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:4px;max-height:155px;}.cosmetic-equipped h2{grid-column:1/-1;margin:0;}.equipped-item.btn{margin:0;}.shop-content{grid-template-columns:1fr;gap:5px;text-align:center;}.shop-crate{height:180px;}.crate-distribution{gap:10px;font-size:10px;}.home-nav{gap:3px;}.home-nav .btn.nav-button{font-size:9px;letter-spacing:0;padding:12px 3px;}}
 @media(prefers-reduced-motion:reduce){.cosmetic-page{animation:none;}}
 .practice-debug{position:fixed;z-index:100;right:12px;top:12px;width:min(420px,45vw);max-height:calc(100vh - 24px);object-fit:contain;object-position:top;background:#101d28ec;border-radius:8px;pointer-events:none}
+
+/* Reward crate: shop presentation and full-screen reveal. */
+.shop-content {grid-template-columns:minmax(0,1.2fr) minmax(240px,1fr);grid-template-rows:auto auto;}
+.shop-crate-stage {position:relative;display:grid;place-items:center;}
+.shop-crate-stage::before {content:'';position:absolute;inset:12% 18% 4%;border-radius:50%;background:radial-gradient(closest-side,#4d8dff55,#4d8dff00);filter:blur(10px);}
+.shop-crate {position:relative;animation:crate-float 3.2s ease-in-out infinite;}
+@keyframes crate-float {50%{transform:translateY(-10px) rotate(-1deg);}}
+.shop-offer {display:flex;flex-direction:column;gap:10px;}.shop-offer h2 {margin:0;}
+.shop-offer-copy {margin:0;color:#b8c4d2;font-size:13px;line-height:1.5;}
+.shop-open.btn {width:auto;align-self:flex-start;padding:14px 28px;}
+.shop-offer .crate-distribution {justify-content:flex-start;padding:4px 0;gap:6px 18px;}.shop-offer .crate-distribution p {text-align:left;}
+.crate-contents {grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;}
+.crate-contents h3 {grid-column:1/-1;margin:0;font-size:12px;letter-spacing:.14em;color:#9cabbc;}
+.crate-collection {display:grid;gap:3px;padding:10px 12px;border-radius:8px;background:linear-gradient(145deg,#cbd4dd1c,#7b889510);box-shadow:inset 0 -2px var(--rarity);}
+.crate-collection strong {color:var(--rarity);font-size:14px;}.crate-collection small,.crate-collection span {font-size:10px;letter-spacing:.06em;color:#c5cfdb;}.crate-collection small {color:var(--rarity);}
+
+.crate-reveal {--reveal:#5c7cff;--rarity:#c9d2de;position:fixed;inset:0;z-index:1000;display:grid;grid-template-rows:auto 1fr auto;justify-items:center;overflow:hidden;
+  opacity:0;transition:opacity .25s ease;color:#fff;user-select:none;}
+.crate-reveal.visible {opacity:1;}.crate-reveal[hidden] {display:none;}
+.crate-reveal canvas {position:absolute;inset:0;width:100%;height:100%;display:block;outline:none;touch-action:none;}
+.crate-reveal[data-phase='hero'] canvas {cursor:grab;}.crate-reveal.dragging canvas {cursor:grabbing;}
+.reveal-bg,.reveal-rarity-bg,.reveal-flash {position:absolute;inset:0;pointer-events:none;}
+.reveal-bg {background:radial-gradient(ellipse 70% 60% at 50% 62%,#202c44 0%,#0d1220 58%,#05070c 100%);}
+/* While charging, the rarity colour bleeds in from the crate before the full reveal. */
+.reveal-bg::after {content:'';position:absolute;inset:0;opacity:0;transition:opacity .6s ease;
+  background:radial-gradient(ellipse 45% 35% at 50% 66%,color-mix(in srgb,var(--reveal) 55%,transparent),transparent 70%);}
+.crate-reveal.charging .reveal-bg::after {opacity:1;}
+.reveal-rarity-bg {clip-path:circle(0% at 50% 62%);transition:clip-path .85s cubic-bezier(.16,.9,.24,1);
+  background:radial-gradient(ellipse 60% 55% at 50% 46%,color-mix(in srgb,var(--reveal) 60%,#fff) 0%,var(--reveal) 26%,color-mix(in srgb,var(--reveal) 42%,#06080d) 64%,#05070c 100%);}
+.crate-reveal.burst .reveal-rarity-bg {clip-path:circle(150% at 50% 62%);}
+.reveal-flash {background:radial-gradient(circle at 50% 60%,#fff,color-mix(in srgb,var(--reveal) 70%,#fff) 40%,transparent 75%);opacity:0;}
+.crate-reveal.burst .reveal-flash {animation:reveal-flash .55s ease-out;}
+@keyframes reveal-flash {0%{opacity:0;}12%{opacity:.9;}100%{opacity:0;}}
+.reveal-title {position:relative;z-index:1;text-align:center;padding:clamp(20px,6vh,64px) 16px 0;opacity:0;transform:translateY(-14px) scale(1.15);pointer-events:none;}
+.crate-reveal[data-phase='hero'] .reveal-title {opacity:1;transform:none;transition:opacity .35s ease,transform .5s cubic-bezier(.2,1.6,.4,1);}
+.reveal-kicker {margin:0 0 6px;font-size:12px;letter-spacing:.32em;color:#ffffffcc;}
+.reveal-title h1 {margin:0;font-size:clamp(34px,6.5vw,76px);line-height:1;letter-spacing:.06em;text-transform:uppercase;
+  text-shadow:0 0 28px color-mix(in srgb,var(--reveal) 85%,transparent),0 4px 0 #0006;}
+.reveal-rarity {display:inline-block;margin:12px 0 0;padding:5px 16px;border-radius:99px;font-size:13px;font-weight:700;letter-spacing:.24em;
+  color:#06080d;background:var(--rarity);box-shadow:0 0 22px color-mix(in srgb,var(--reveal) 70%,transparent);}
+.reveal-weapon {margin:8px 0 0;font-size:12px;letter-spacing:.2em;color:#ffffffbb;}
+.reveal-status {position:relative;z-index:1;align-self:end;margin:0 16px 12px;text-align:center;font-size:13px;color:#ffd2d2;}
+.reveal-hint {position:absolute;bottom:92px;left:0;right:0;margin:0;text-align:center;font-size:11px;letter-spacing:.24em;color:#ffffff99;opacity:0;pointer-events:none;transition:opacity .4s ease .8s;}
+.crate-reveal[data-phase='hero'] .reveal-hint {opacity:1;}
+.reveal-controls {position:relative;z-index:1;display:flex;flex-wrap:wrap;justify-content:center;gap:12px;padding:0 16px clamp(18px,5vh,44px);width:min(640px,100%);box-sizing:border-box;}
+.reveal-controls .btn {flex:1 1 150px;animation:reveal-rise .35s cubic-bezier(.2,1.4,.4,1) both;}
+.reveal-controls .btn:nth-child(2){animation-delay:.06s;}.reveal-controls .btn:nth-child(3){animation-delay:.12s;}
+@keyframes reveal-rise {from{opacity:0;transform:translateY(16px);}}
+.reveal-skip.btn {position:absolute;top:16px;right:16px;z-index:2;width:auto;padding:8px 16px;font-size:11px;background:#ffffff14;border-color:#ffffff30;}
+@media(max-width:560px){.shop-offer{align-items:center;}.shop-open.btn{align-self:center;}.shop-offer .crate-distribution{justify-content:center;}.reveal-hint{bottom:178px;}}
+@media(prefers-reduced-motion:reduce){.shop-crate{animation:none;}.reveal-rarity-bg{transition-duration:.2s;}.crate-reveal.burst .reveal-flash{animation:none;}}
+.crate-reveal .btn[hidden] {display:none;}
+.crate-reveal:focus {outline:none;}

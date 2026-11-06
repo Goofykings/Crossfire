@@ -1,13 +1,13 @@
 import { visualCosmetic } from '../src/rendering/CosmeticAssets';
 import {afterEach,expect,it,vi} from 'vitest';
 import fs from 'node:fs';
-import {COSMETICS,WEAPON_CATEGORIES,defaultCosmetic,defaultEquipment,normalizeInventory,validInventory,compatibleCosmetic,validCosmeticReference,RARITIES,FUTURE_CRATE} from '../shared/cosmetics';
+import {COSMETICS,WEAPON_CATEGORIES,defaultCosmetic,defaultEquipment,normalizeInventory,validInventory,compatibleCosmetic,validCosmeticReference,RARITIES,CRATE} from '../shared/cosmetics';
 import {CosmeticsClient} from '../src/network/CosmeticsClient';
 import type {CareerClient} from '../src/network/CareerClient';
 const view=()=>({...normalizeInventory(),version:1,serverTime:Date.now()});
 afterEach(()=>{vi.unstubAllGlobals();vi.restoreAllMocks();});
-it('catalog supplies exactly four Common Default cosmetics, with separate weapon categories and original GLBs',()=>{
- expect(COSMETICS).toHaveLength(4);expect(new Set(COSMETICS.map(c=>c.id)).size).toBe(4);
+it('catalog keeps exactly four Common Default starters, with separate weapon categories and original GLBs',()=>{
+ const starters=COSMETICS.filter(c=>c.ownership==='starter');expect(starters).toHaveLength(4);expect(new Set(COSMETICS.map(c=>c.id)).size).toBe(COSMETICS.length);
  for(const w of WEAPON_CATEGORIES){const c=COSMETICS.find(c=>c.id===defaultCosmetic(w))!;expect(c).toMatchObject({weapon:w,name:'Default',rarity:'common',ownership:'starter',compatibleWith:[w]});expect(c.asset.model).toBe(`assets/models/shared/weapons/${w}.glb`);expect(fs.existsSync('public/'+c.asset.model)).toBe(true);}
 });
 it('restores missing starters, repairs cross-category equipment, and separates inventory from money and combat',()=>{
@@ -18,9 +18,9 @@ it('validates bounded inventories, ownership, exact fields and matching equipmen
  expect(validInventory(view())).toBe(true);
  for(const patch of [{version:2},{gems:300},{owned:[]},{revision:-1},{equipped:{...defaultEquipment(),sniper:'default-rifle'}},{owned:[...view().owned,'unowned']},{owned:[...view().owned,'default-rifle']}])expect(validInventory({...view(),...patch})).toBe(false);
 });
-it('rarities have explicit presentation colors and the proposed crate is permanently unavailable with a 100% preview',()=>{
+it('rarities have explicit presentation colors and the crate odds cover the live pool at 100%',()=>{
  expect(Object.keys(RARITIES)).toEqual(['common','uncommon','rare','epic','legendary']);expect(RARITIES.epic.color).toBe('#ed7b82');expect(RARITIES.legendary.color).toBe('#eac567');
- expect(FUTURE_CRATE).toMatchObject({available:false,price:300});expect(FUTURE_CRATE.distribution.map(d=>d.percent)).toEqual([50,37,10,3]);expect(FUTURE_CRATE.distribution.reduce((n,d)=>n+d.percent,0)).toBe(100);
+ expect(CRATE).toMatchObject({available:true,price:300});expect(CRATE.distribution.map(d=>d.rarity)).toEqual(['uncommon','rare','legendary']);expect(CRATE.distribution.reduce((n,d)=>n+d.percent,0)).toBe(100);
  expect(JSON.parse(fs.readFileSync('public/assets/cosmetics/catalog.json','utf8')).items).toEqual(COSMETICS);
 });
 it('fetches server inventory using the existing capability, never browser ownership or gem claims',async()=>{
