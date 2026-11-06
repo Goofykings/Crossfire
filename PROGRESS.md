@@ -1,3 +1,44 @@
+# Assist integration spawn synchronization fix
+
+Fixed locally 2026-11-05. Changes are confined to
+`server/tests/assists.mjs` and this log. No production gameplay, room routing,
+protocol, assist eligibility/scoring, respawn delay or migration changes.
+No commit, push or deployment performed; no service redeployment is needed.
+
+Confirmed root cause: after the second elimination, the test waited for attacker
+A's assist count, then immediately called `spawn(B)`. WebSocket delivery/cache
+updates are independent between peers. B could still have its previous alive
+snapshot (`death: null`), so the old helper calculated no countdown, sent a spawn
+while the real Durable Object was still enforcing B's respawn deadline, ignored
+the actual `respawn_wait` error and waited forever for an impossible `spawned`
+acknowledgment. This was a test synchronization race, not broken room admission
+or multiplayer spawning.
+
+Evidence: the unmodified targeted run initially passed; a subsequent instrumented
+run reproduced the failure on its first attempt. Its trace showed the second
+respawn had no cached `respawnAt` and received `respawn_wait` immediately. The
+server's join/spawn paths and other integration helpers confirmed valid public
+room routing, round/map revision and weapon selection. Diagnostic traces remain
+under ignored `test-results/assist-trace-*`; no production logging was added.
+
+The helper now waits for B's own authoritative unspawned state, then for snapshot
+`serverTime >= death.respawnAt` using existing heartbeat snapshots. It sends one
+request with a unique ID, matches that exact acknowledgment, reports server errors
+or socket closure immediately and checks alive/100 HP/next life/requested weapon.
+No arbitrary delay, retry loop, timeout increase or weakened assertion was added.
+Join rejection also reports its actual error instead of hiding behind a timeout.
+
+Deterministic regression: hold B's actual death snapshots while A receives the
+real assist award, assert that B's cache is still alive and no premature spawn is
+sent, release the genuine snapshot and verify exactly one successful respawn.
+All existing expired-assist, fresh 50-point assist, previous-life cleanup and
+retired-session migration assertions remain.
+
+Validation: `node --test server/tests/assists.mjs` passed after the fix; JavaScript
+syntax and diff whitespace checks passed. Full backend suite and actual
+frontend/Worker protocol compatibility verification are running; final results
+will be recorded before handoff.
+
 # Fully local Practice with AI bots
 
 Implemented locally 2026-11-05 after completing the Foundry asset work below.
