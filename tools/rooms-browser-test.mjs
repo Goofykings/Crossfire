@@ -20,19 +20,22 @@ try{
   await page.evaluateOnNewDocument(server=>{
    window.__roomPackets=[];window.__socketCount=0;window.__openSockets=0;window.__maxSockets=0;window.__mapRequests=[];
    const Socket=window.WebSocket;window.WebSocket=class extends Socket{constructor(url,protocols){const path=new URL(url,location.href).pathname;super(new URL(path,server).href.replace('http:','ws:'),protocols);window.__socketCount++;window.__openSockets++;window.__maxSockets=Math.max(window.__maxSockets,window.__openSockets);this.addEventListener('close',()=>window.__openSockets--);this.addEventListener('message',e=>{window.__roomPackets.push(JSON.parse(e.data));if(window.__roomPackets.length>1000)window.__roomPackets.shift();});}};
-   const real=window.fetch;window.fetch=(input,init)=>{const url=new URL(String(input),location.href);if(/assets\/maps\/.*\.glb/.test(url.pathname))window.__mapRequests.push(url.pathname);return real(['/presence','/profile','/stats','/leaderboard','/rooms','/rooms/join'].includes(url.pathname)?new URL(url.pathname+url.search,server):input,init);};
+   const real=window.fetch;window.fetch=(input,init)=>{const url=new URL(String(input),location.href);if(/assets\/maps\/.*\.glb/.test(url.pathname))window.__mapRequests.push(url.pathname);return real(['/presence','/profile','/stats','/leaderboard','/rooms','/rooms/join','/cosmetics','/cosmetics/equip'].includes(url.pathname)?new URL(url.pathname+url.search,server):input,init);};
    const raf=requestAnimationFrame.bind(window),caf=cancelAnimationFrame.bind(window),pending=new Map();let next=0;
    window.requestAnimationFrame=cb=>{const id=++next,p={timer:0,frame:0};p.timer=setTimeout(()=>{p.frame=raf(time=>{pending.delete(id);cb(time);});},1000/30);pending.set(id,p);return id;};window.cancelAnimationFrame=id=>{const p=pending.get(id);if(p){clearTimeout(p.timer);caf(p.frame);pending.delete(id);}};
   },server);
   await page.goto(base+'?quality=low&shadows=off&scale=0.5',{waitUntil:'domcontentloaded',timeout:240000});await completeGuestProfile(page,name);return page;
  }
  const a=await open('Room Host'),b=await open('Room Guest');
- for(const page of [a,b]){await page.click('#menu .home-actions .primary');await visible(page,'#modes');await until(async()=>await page.$$eval('.room-row',n=>n.length>0),'actual room list');}
- check(await a.evaluate(()=>window.__socketCount===0&&window.__mapRequests.length===0&&window.__crossfire.mapInfo()===null),'Play opens real directory without a socket or map load');
+ await a.click('#menu .home-actions .primary');await visible(a,'#modes');await clickText(a,'#modes','Practice');await visible(a,'#practice-setup');await a.$eval('#practice-setup input[type=range]',n=>{n.value='0';n.dispatchEvent(new Event('input',{bubbles:true}));});await clickText(a,'#practice-setup','START PRACTICE');await visible(a,'#weapons');await a.click('#weapons [data-weapon="rifle"]');await a.waitForFunction(()=>window.__crossfire.ready());await a.evaluate(()=>window.__crossfire.networkLeave());await visible(a,'#menu');
+ check(await a.evaluate(()=>window.__socketCount===0&&!Object.keys(localStorage).some(k=>k.startsWith('crossfire.career.v1:'))),'Practice before online creates no gameplay socket or account credential');
+ const priorMaps=await a.evaluate(()=>window.__mapRequests.length);
+ for(const page of [a,b]){await page.click('#menu .home-actions .primary');await visible(page,'#modes');await clickText(page,'#modes','Public Servers');await until(async()=>await page.$$eval('.room-row',n=>n.length>0),'actual room list');}
+ check(await a.evaluate(n=>window.__socketCount===0&&window.__mapRequests.length===n,priorMaps),'online directory after Practice opens without a socket or additional map load');
  await a.screenshot({path:out+'/mode-select.png'});await clickText(a,'#modes','Refresh');await until(async()=>await a.$$eval('.room-row',n=>n.length>0),'refresh');check(true,'Refresh retrieves actual public-main');
  await clickText(a,'#modes','Join Private Server');await a.type('.room-private input','012345');check(await a.$eval('.room-private input',e=>e.value)==='012345','private input preserves leading zeros');await clickText(a,'.room-private','Cancel');
  await clickText(a,'#modes','Create Server');await visible(a,'#create-room');check(await a.$eval('.room-name',e=>e.value)==="Room Host's Server",'create uses active display name');
- await until(async()=>await a.$$eval('.room-map img',imgs=>imgs.length===3&&imgs.every(i=>i.complete&&i.naturalWidth>0)),'three real thumbnails');
+ await until(async()=>await a.$$eval('#create-room .room-map img',imgs=>imgs.length===3&&imgs.every(i=>i.complete&&i.naturalWidth>0)),'three real thumbnails');
  await a.screenshot({path:out+'/create-1000.png'});await a.setViewport({width:640,height:480});await a.screenshot({path:out+'/create-640.png'});
  check(await a.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'640px menu has no horizontal overflow');await a.setViewport({width:1000,height:700});
  await clickText(a,'#create-room','PRIVATE');await clickText(a,'#create-room','CREATE');await visible(a,'#weapons');

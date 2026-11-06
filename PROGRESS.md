@@ -1,3 +1,272 @@
+# Fully local Practice with AI bots
+
+Implemented locally 2026-11-05 after completing the Foundry asset work below.
+Read `docs/PRACTICE.md` for architecture, usage, tests, limitations and release.
+No commit, push or deployment. All earlier uncommitted work was preserved.
+
+Completed implementation:
+
+- Mode Select includes Practice alongside Public Servers, Join Private Server and
+  Create Server. Setup uses all three existing map cards, FFA/Teams, integer 0–5
+  bots (default 3), Beginner/Advanced/Absurd (default Advanced) and an explicit
+  offline/no-account-rewards notice. Loading cancellation returns to setup.
+- Browser-local PracticeSimulation owns health, weapons, actual ray/pellet hits,
+  grenades, regen, assists, scoring, balanced teams, respawns, the 600-second clock
+  and immutable results. PracticeClient feeds the existing Game presentation and
+  input-reconciliation contract without a WebSocket, server credential or fake
+  handshake. Pausing freezes local time; spectating continues it. Results clearly
+  say PRACTICE — RESULTS NOT SAVED and offer Restart, Settings and Home.
+- Shared production hitscan was extracted to `shared/hitscan.ts`; the Worker and
+  Practice now use it. Existing movement/weapon/damage/grenade/regen/spawn/assist/
+  scoring modules remain shared. No weapon balance, online protocol version,
+  Cloudflare bindings/URL/origins, persistence or deployment workflow changes.
+- Frozen non-rewarding policy, no network/storage/career adapters and no account
+  event path make local statistics ineligible for upload. Cold startup and Mode
+  Select make no backend requests. Public Servers/Refresh and explicit online
+  actions opt into discovery/account services. Practice cancels pending admission,
+  profile/lock and inventory work and stops polling. Late cancelled room requests
+  cannot start a fetch after a credential resolves. Local events are discarded,
+  not queued for a later multiplayer connection.
+- Real animated character bots move/fire with the existing humanoids, four weapon
+  rigs, spatial audio, muzzle flashes, trails, hit/death effects, names, team
+  colors, HUD, kill feed, leaderboard and respawn/spectating UI. Zero bots is alone;
+  human plus five bots is Blue 3 / Red 3 in Teams. No friendly damage.
+- Layered 0.8 m A* navigation rebuilds from the latest actual collision/layout and
+  map revision, with component filtering, sampled bidirectional step/headroom
+  checks and reachable upper/underground floors. Shared controller enforces walls,
+  slopes/stairs, weapon clearance, jumps and slide cooldowns. Bots replan/recover
+  when stuck; only ten seconds of irrecoverable stuck movement causes elimination
+  and normal respawn. Ordinary movement never teleports.
+- Rule-based states cover exploring, patrol, searching, pursuit, attack, cover,
+  retreat, healing and respawn. Real wall LOS and grenade smoke restrict sensing;
+  unseen opponents are pursued at their last seen point. Decision cadence is
+  90–220 ms, route refresh roughly 850 ms. Random weapons on spawn and occasional
+  out-of-encounter switches use real ammo/equip/reload/pump/bolt rules.
+- Beginner: slower movement, 950 ms reaction, ±5° error, infrequent slides.
+  Advanced: normal movement, 320 ms, ±1.3°, combat strafing/cover/retreat.
+  Absurd: 65 ms, zero AI error at the actual crouched/leaned head, frequent legal
+  slide attempts, cover/heal/re-engage. Actual weapon spread/pellets remain intact.
+- DEV-only F4 top-down node/path/visible-target diagnostics show bot state/stuck
+  counters, collision sanity, map revision and FPS. Existing F2 collision and F3
+  FPS remain. Overlay and early-result test action are disabled in production.
+  Character assets are shared, active actors capped at six and no per-bot timers
+  or inference services were introduced. Chromebook graphics settings preserved.
+
+Validation completed:
+
+- Frontend **628 passed, 1 existing opt-in performance test skipped** (63 files).
+  Includes **19 Practice tests**: all bot counts, FFA/Teams, balancing/friendly
+  blocking, real lethal/nonlethal combat, 220-point grenade double elimination
+  without duplicate/headshot awards, regen, respawn, natural 10-minute completion,
+  local input reconciliation/pause/Leave, seeded replay, smoke visibility,
+  difficulty combat, exact leaned-head targeting and retreat/heal/re-engage.
+- Five armed bots traversed each real map for **120 simulated seconds**, climbing
+  upper-floor stairs, sliding and switching weapons. Repeated body-solid/safety
+  checks passed, all bots travelled >80 m, no irrecoverable-stuck respawns in the
+  tested seed. Graphs connect actual spawn points and accessible upper floors.
+- Full backend **70/70 passed**, including real TCP/WebSocket combat, grenade
+  scoring, reconnect/eviction, props, account statistics, public/private rooms,
+  simultaneous six/ten-player rooms and all-map stairs/ladders/wall traversal.
+  Initial overloaded concurrent run timed out one movement acknowledgment;
+  isolated stress retest and complete clean rerun passed. No timeout/assertion
+  bypass or production change was made to conceal that test result.
+- Actual frontend transport ↔ production Worker protocol check **1/1 passed**;
+  deployment-gate tests **7/7 passed**. Protocol remains v19. Worker typecheck,
+  Wrangler dry-run bundle, frontend typecheck/Pages-subpath production build and
+  asset verification passed. Existing Vite bundle-size/plugin-timing and local
+  runtime RPC-disposal warnings remain nonfatal.
+- Real Chrome DEV and production `/crossfire/` offline checks passed with backend
+  fetches/gameplay sockets explicitly rejected: all three maps, real animated bots
+  moving/fighting/scoring, human rifle ammo/partial reload/grenade, solo exploration,
+  five-bot Teams/presentation, unchanged account-related browser data and no missing
+  assets/page exceptions. DEV also verified full results, restart/reset, Settings
+  and F4 cleanup. Entering Practice after an actual failed online fetch made no
+  further backend requests. Screenshots were actually inspected (setup, HUD,
+  scoreboard, results and navigation); label/clock overlap was fixed.
+
+- Final-build **two real Chrome clients ↔ actual local Worker** regression passed
+  **22 checks**, including Practice before any account/socket, subsequent online
+  discovery, private code admission, real synchronized player movement, host
+  transfer, all three maps, Teams, loading cancellation, public custom-room joins,
+  AFK warning/kick and maximum one simultaneous gameplay socket per browser.
+  An old thumbnail test selector initially counted both setup screens; scoping
+  it to Create Server fixed the test without changing production behavior.
+
+Reports/logs live in `test-results/practice-*`; the two-client screenshots/report
+are in `test-results/rooms-browser/`.
+
+Final DEV offline rerun passed **24 browser checks** (including results/restart and
+diagnostics cleanup); final production offline rerun passed **21 browser checks**,
+both with zero page/asset errors.
+Five-bot Modern City low-quality/0.5-scale FPS samples were approximately
+19, 44, 52, 49 and 44 (initial shader/entry recovery included); scene CPU render
+samples were 13–18 ms. These are desktop headless-browser observations, not a
+hardware-independent performance guarantee or physical Chromebook benchmark.
+The final separate DEV five-bot sample measured 58–60 FPS / 6–10 ms scene CPU;
+raw timings for both runs are retained, rather than treating one run as universal.
+The final Shop/Locker browser regression also passed **32 checks**: real inventory/wallet,
+all four model previews, refresh persistence, remote sniper model, peer movement,
+server rifle ammunition and leaving-match inventory preservation. Earlier cosmetic
+and Foundry work remains intact; no staged skins were registered or granted.
+
+New Practice files: `src/practice/{config,types,Navigation,BotBrain,
+PracticeSimulation,PracticeClient,PracticeDebug}.ts`, `src/ui/PracticeMenu.ts`,
+`shared/hitscan.ts`, `tests/practice.test.ts`, `tools/practice-browser-test.mjs`
+and `docs/PRACTICE.md`. Integration changes: Game, EnvironmentProps, RoomMenus,
+UI, RoundResults, styles, CareerClient/RoomClient cancellation, Worker hitscan,
+career/room regression tests and online/cosmetic browser test entry flows.
+
+Known limits: simple tactical AI, no team coordination, ladder-specific planner,
+bot grenade throws or actor-avoidance navmesh. Narrow spaces can cause replanning;
+one tested seed and representative stairs do not prove every route. Desktop
+browser performance was checked, not a physical Chromebook. Frontend assets must
+be hosted/cached; no service-worker/offline installer was added. No live production
+Cloudflare connection was claimed or required. Release the frontend assets and
+matching Worker through existing authorized CI; no new secrets/bindings needed.
+Run locally with `npm.cmd run dev`; Practice needs no backend command or .env edit.
+
+# Foundry Collection: Blender weapon cosmetics and crate assets
+
+Completed locally 2026-11-05 before starting the subsequently requested offline
+Practice feature. See `docs/FOUNDRY_COLLECTION.md` and the staged handoff manifest
+`public/assets/cosmetics/foundry-collection.json`. No commit, push or deployment.
+
+| Asset | Category / rarity | Triangles | Draw primitives | GLB KiB |
+|---|---|---:|---:|---:|
+| Verdant Relay | AR / Uncommon | 1836 | 9 | 688 |
+| Blue Current | SMG / Rare | 468 | 8 | 498 |
+| Crimson Forge | Shotgun / Epic | 1038 | 13 | 556 |
+| Aurum Meridian | Sniper / Legendary | 2504 | 12 | 611 |
+| Foundry Crate | Decorative menu prop | 2832 | 5 | 363 |
+
+Each gun has a compatible embedded-material GLB, 1K original albedo, 512px normal
+and ORM maps, actual transparent 960x460 thumbnail and editable packed .blend.
+Crate has five texture-free PBR materials, fixed latches/handle/diamond badge,
+transparent 960x700 render and editable source. Files follow the established
+category/ID directories; sources are in `blender/source/cosmetics/`.
+
+Original base weapon files/builders and live catalog are unchanged. Named grip,
+sight, muzzle, eject and action anchors, local/world transforms, moving parts and
+overall clearance envelopes match defaults; no offsets or balance changes needed.
+Shotgun pump trim moves with its pump. Sniper rings remain open around the optics.
+No inventory grants, purchases, Shop/Locker logic or multiplayer/scoring changes
+were made for this asset task. New entries are staged, not owned/equippable in the
+live game. Crates remain nonfunctional.
+
+Validation: existing assets:verify passes, including the new collection validator;
+all five .blend files actually reopened/audited in Blender (valid meshes, UVs,
+packed referenced images); zero degenerate triangles in all final GLBs; default
+weapon file diff empty. Frontend **607 passed, 1 opt-in performance test skipped**;
+frontend/lab TypeScript and production build passed. **58 actual Chrome renders**
+passed with the existing WeaponView/CharacterWeapon rigs, including default
+comparison captures; no missing assets/page errors. All four character grip gaps
+were below 0.08 mm. Actual Blender side/front/quarter, browser Locker/front/side,
+FP/ADS/reload/recoil/walk, character ready/side/ADS and reflections-off images were
+inspected in contact sheets and closeups. Reports/screenshots:
+`test-results/cosmetic-collection/`.
+
+Iterations fixed mirrored side lettering, texture weight (initial 3.4 MiB gun
+reduced below 0.7 MiB), vent decals sitting above bevel-inset furniture, concave
+badge bevel slivers and crate bevel degenerates. Tests were not weakened.
+Browser CPU render medians for isolated item views were about 0.2-1.7 ms on this
+machine (not GPU frame times or physical Chromebook benchmarks). Approximate
+texture allocation per finish, including mipmaps, is 6 MiB, cached/shared per model.
+
+Remaining limits: existing stylized silhouettes/rig quality retained. Default
+shotgun FP stock already clips near the camera in the same isolated framing;
+the cosmetic retains that baseline rather than changing gameplay view offsets.
+Small markings are intentionally subtle at thumbnail size. Real online deployment,
+trusted grants, live catalog registration and physical Chromebook benchmarking are
+future work, not claimed complete. Build warnings are existing bundle-size/plugin
+timings; Blender's shared ORM sampler warning is harmless (same UV/sampler).
+
+New files: collection design/generation/source-audit scripts, five .blend sources,
+five GLBs, twelve PBR maps, five thumbnails, staged manifest, verification/review/
+contact-sheet tools and isolated asset-lab HTML/TS. Updated cosmetic asset verifier,
+asset README, CLAUDE.md, this log and handoff documentation. All earlier uncommitted
+Shop/Locker work was retained.
+
+# Shop, Locker, cosmetic inventory and crate preview
+
+Implemented locally 2026-11-05. See `docs/COSMETICS.md` and
+`public/assets/cosmetics/README.md` for authority, asset handoff and release notes.
+No commit, push or deployment performed. Both frontend and Worker need a matching
+authorized release through the existing CI; no new bindings/secrets are needed.
+
+Completed:
+
+- Five equal home tabs: PLAY | SHOP | LOCKER | SETTINGS | LEADERBOARD. Existing
+  home character/background, navigation and settings retained. Shop and Locker
+  use the current minimalist styling and do not load a full map/game socket.
+- Locker category filters, owned cards with actual GLB-rendered thumbnails,
+  separate Default/category labels, shared rarity colors and four equipped rows.
+  Scrollable inventory and short-screen compact equipped rows keep all categories
+  available. An isolated fullscreen model viewer has rarity gradient, orbit,
+  Equip/Equipped and Back; it disposes its renderer on navigation.
+- Exactly four Common Default cosmetics, all initially equipped, using the original
+  weapon files. Shared catalog and asset adapter support compatible alternate GLBs
+  and cloned material/texture variants without changing statistics or rig placement.
+  First-person, home, remote and spectator views resolve the same visual ID.
+  Initial inventory arriving during weapon loading cannot create duplicate rigs;
+  asynchronous cosmetic loading cannot revert a newer weapon selection.
+- Separate server inventory records in canonical public-main, authenticated with
+  the existing career capability. Starter migration, ownership/compatibility
+  validation, persistent equipment, revision-guarded active-room propagation.
+  Wallet, challenges and statistics records are not replaced. Join/resume obtains
+  canonical equipment. Guests retain the existing browser-capability limitations.
+- Shop shows actual career gems, original lightweight crate artwork, a disabled
+  300 GEMS - OPEN button, COMING SOON and clearly proposed future odds 50/37/10/3.
+  There are no purchases, draws, spending, granting or crate-opening endpoints.
+- `PlayerState.cosmeticId` is optional compatible snapshot metadata; gameplay
+  protocol stays v19. Inventory HTTP schema is independently v1. Omission and
+  unknown well-formed future visuals remain compatible; known wrong-category IDs
+  are rejected. Existing backend-first release/deployment configuration retained.
+- Asset directories and generated catalog manifest, verification included in the
+  existing assets:verify CI gate, exact Blender/GLB/anchor/material handoff docs.
+
+Validation:
+
+- Frontend unit suite: **607 passed, 1 pre-existing opt-in skipped**, using both
+  `npm test` and `npm test -- --maxWorkers=2`. Frontend TypeScript and production
+  build passed (existing large-chunk warning only). Updated two material-loader test doubles to include
+  readiness; added inventory/client, material isolation and embedded GLB coverage.
+  An earlier unrestricted run hit the existing CPU-heavy arm-pose test's 5-second
+  timeout under concurrent work; no assertion or timeout was weakened.
+- Worker typecheck and dry-run production bundle passed. Full backend suite:
+  **70/70 passed**, including two new real runtime/TCP inventory tests (auth,
+  ownership rejection, starter records, wallet/statistics preservation, persisted
+  restart, public/custom room metadata, combat state and authenticated reconnect).
+- Real frontend/Worker protocol compatibility: **1/1 passed**, including actual
+  optional cosmetic metadata, missing metadata and future/mismatched ID cases.
+  Existing deployment gates: **7/7 passed**. Asset verification: 199 manifest
+  entries, 214 materials, all three maps and four cosmetic definitions passed.
+- Chrome production `/crossfire/` subpath testing with real local Durable Objects:
+  **32 checks passed**, final build rechecked after the loading race fix;
+  requested navigation, Shop/Locker, all filters, four model thumbnails and
+  fullscreen previews, disabled crate/no requests/no spend, four equipped rows
+  at 640x480 and stacked at 480x480, refresh persistence, Settings/Leaderboard navigation, home appearance,
+  real browser + separate real WebSocket peer, remote sniper model, movement,
+  authoritative rifle ammo and leave preserving inventory passed. No browser
+  exceptions/missing assets. Screenshots inspected for Shop, Locker and every gun.
+  Tool/reports: `tools/cosmetics-browser-test.mjs`, `test-results/cosmetics-browser`.
+
+Limits: only the four real Default assets exist, so their Equip buttons correctly
+show disabled EQUIPPED; future non-default artwork/grants/equip switches still
+require asset-specific visual and integration checks. No fake owned test item was
+added. A large future catalog needs cache-budget profiling. No live Cloudflare
+or public GitHub Pages deployment was tested. The earlier map texture-retention
+checks documented below remain outside this feature's scope.
+
+Files: new shared catalog, server inventory/API/tests, CosmeticsClient, asset
+adapter, CosmeticsPages/CosmeticPreview, crate SVG and category directories,
+catalog exporter/verifier, cosmetics/material tests and browser tool. Updated
+protocol metadata, Game/WeaponView/CharacterWeapon/RemotePlayers/HomeCharacter,
+UI/styles/WeaponPreviews, two existing rig tests, package test/asset scripts and
+documentation. Existing assets/maps/combat rules/deployment workflow unchanged.
+
+STOP: Shop/Locker foundation complete; future artwork, grants and functional
+crates are separate tasks.
+
 # Map overhaul: all three maps redesigned and rebuilt
 
 Completed locally 2026-11-05. See `docs/MAP_OVERHAUL.md` for the design, shared

@@ -1,3 +1,5 @@
+import { CosmeticsPages } from './CosmeticsPages';
+import { PracticeMenu } from './PracticeMenu';
 import { ROOM_LIMITS } from '../../shared/rooms';
 import { RoomMenus } from './RoomMenus';
 import { LeaderboardPage } from './LeaderboardPage';
@@ -24,7 +26,7 @@ import type { RoundResult } from '../../shared/scoring';
 import { createRoundResults } from './RoundResults';
 import type { PlayerTeam } from '../../shared/combat';
 
-export type Screen = 'modes' | 'create-room' | 'menu' | 'leaderboard' | 'loading' | 'start' | 'spectate' | 'results' | 'weapons' | 'hud' | 'pause' | 'settings' | 'error';
+export type Screen = 'practice-setup' | 'shop'|'locker'|'cosmetic-preview' | 'modes' | 'create-room' | 'menu' | 'leaderboard' | 'loading' | 'start' | 'spectate' | 'results' | 'weapons' | 'hud' | 'pause' | 'settings' | 'error';
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, html?: string): HTMLElementTagNameMap[K] {
   const e = document.createElement(tag);
@@ -155,6 +157,8 @@ export class UI {
   readonly challenges: ChallengesPanel;
   readonly leaderboard: LeaderboardPage;
   readonly rooms:RoomMenus;
+  readonly cosmetics:CosmeticsPages;
+  readonly practice:PracticeMenu;
   private resultBody!: HTMLElement;
 
   constructor(
@@ -167,6 +171,9 @@ export class UI {
     this.usernameDraft = profile.value.username;
     this.buildMenu();
     this.rooms=new RoomMenus(name=>this.screen(name),name=>this.show(name),()=>this.profile.value.username,this.root);
+    this.practice=new PracticeMenu(this.screen('practice-setup'),()=>this.show('practice-setup'),()=>this.rooms.open());
+    this.root.append(el('div','practice-indicator','PRACTICE · RESULTS NOT SAVED'));
+    this.cosmetics=new CosmeticsPages(name=>this.screen(name),name=>this.show(name));this.cosmetics.onPreview=()=>this.show('cosmetic-preview');
     this.challenges = new ChallengesPanel(this.screens.get('menu')!);
     this.root.appendChild(this.challenges.account);
     this.leaderboard = new LeaderboardPage(this.screen('leaderboard'), () => this.show('menu'));
@@ -196,9 +203,10 @@ export class UI {
     return s;
   }
 
-  showRoundResult(result: RoundResult, selfId: string, team: PlayerTeam, next: () => void, home: () => void): void {
-    this.resultBody.replaceChildren(createRoundResults(result, selfId, team, next, home)); this.show('results');
+  showRoundResult(result: RoundResult, selfId: string, team: PlayerTeam, next: () => void, home: () => void, practice?:{settings:()=>void}): void {
+    this.resultBody.replaceChildren(createRoundResults(result, selfId, team, next, home,practice)); this.show('results');
   }
+  setPractice(active:boolean){document.body.dataset.practice=String(active);}
 
   private button(label: string, sub: string, cls: string, onClick: () => void): HTMLButtonElement {
     const b = el('button', `btn ${cls}`, `<span>${label}</span>${sub ? `<span class="sub">${sub}</span>` : ''}`);
@@ -288,6 +296,8 @@ export class UI {
     nav.setAttribute('aria-label', 'Main navigation');
     this.homeTabs = [
       this.button('Play', '', 'nav-button', () => { if (this.currentScreen === 'settings') this.closeSettings(); else this.show('menu'); }),
+      this.button('Shop','','nav-button',()=>this.show('shop')),
+      this.button('Locker','','nav-button',()=>this.show('locker')),
       this.button('Settings', '', 'nav-button', () => { if (this.currentScreen !== 'settings') this.openSettings('menu'); }),
       this.button('Leaderboard', '', 'nav-button', () => { if (this.currentScreen === 'settings') this.closeSettings(); this.show('leaderboard'); }),
     ];
@@ -972,16 +982,17 @@ export class UI {
     this.currentScreen = screen;
     document.body.dataset.screen = screen;
     const homeSettings = screen === 'settings' && this.settingsReturn === 'menu';
-    const ranking = screen === 'leaderboard';
+    const ranking = screen === 'leaderboard',cosmetics=screen==='shop'||screen==='locker';
+    if(cosmetics||screen==='cosmetic-preview')this.cosmetics.show(screen as 'shop'|'locker'|'cosmetic-preview');else this.cosmetics.hide();
     if(!['modes','create-room'].includes(screen))this.rooms.cancel();
     const home = screen === 'menu' || homeSettings;
-    document.body.dataset.roomPage=String(['modes','create-room'].includes(screen));
-    document.body.dataset.homePage = ranking ? 'leaderboard' : homeSettings ? 'settings' : home ? 'play' : '';
-    this.homeHeader.hidden = !home;
+    document.body.dataset.roomPage=String(['modes','create-room','practice-setup'].includes(screen));
+    document.body.dataset.homePage = cosmetics ? screen : ranking ? 'leaderboard' : homeSettings ? 'settings' : home ? 'play' : '';
+    this.homeHeader.hidden = !(home||cosmetics);
     this.challenges.account.hidden = screen !== 'menu';
     this.homeHeader.dataset.page = ranking ? 'leaderboard' : homeSettings ? 'settings' : 'play';
     this.homeTabs.forEach((tab, i) => {
-      if (i === (ranking ? 2 : homeSettings ? 1 : 0)) tab.setAttribute('aria-current', 'page');
+      if (i === (ranking ? 4 : homeSettings ? 3 : screen==='shop'?1:screen==='locker'?2:0)) tab.setAttribute('aria-current', 'page');
       else tab.removeAttribute('aria-current');
     });
     if (ranking) this.leaderboard.show(); else this.leaderboard.hide();

@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "id": "default-rifle",
+      "name": "Default",
+      "weapon": "rifle",
+      "rarity": "common",
+      "asset": {
+        "model": "assets/models/shared/weapons/rifle.glb",
+        "binding": "shared"
+      },
+      "ownership": "starter",
+      "compatibleWith": [
+        "rifle"
+      ]
+    },
+    {
+      "id": "default-smg",
+      "name": "Default",
+      "weapon": "smg",
+      "rarity": "common",
+      "asset": {
+        "model": "assets/models/shared/weapons/smg.glb",
+        "binding": "shared"
+      },
+      "ownership": "starter",
+      "compatibleWith": [
+        "smg"
+      ]
+    },
+    {
+      "id": "default-sniper",
+      "name": "Default",
+      "weapon": "sniper",
+      "rarity": "common",
+      "asset": {
+        "model": "assets/models/shared/weapons/sniper.glb",
+        "binding": "shared"
+      },
+      "ownership": "starter",
+      "compatibleWith": [
+        "sniper"
+      ]
+    },
+    {
+      "id": "default-shotgun",
+      "name": "Default",
+      "weapon": "shotgun",
+      "rarity": "common",
+      "asset": {
+        "model": "assets/models/shared/weapons/shotgun.glb",
+        "binding": "shared"
+      },
+      "ownership": "starter",
+      "compatibleWith": [
+        "shotgun"
+      ]
+    }
+  ],
+  "crate": {
+    "price": 300,
+    "available": false,
+    "distribution": [
+      {
+        "rarity": "uncommon",
+        "percent": 50
+      },
+      {
+        "rarity": "rare",
+        "percent": 37
+      },
+      {
+        "rarity": "epic",
+        "percent": 10
+      },
+      {
+        "rarity": "legendary",
+        "percent": 3
+      }
+    ],
+    "preview": "assets/cosmetics/crate/preview.svg"
+  }
+}

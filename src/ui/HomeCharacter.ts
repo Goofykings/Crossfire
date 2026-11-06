@@ -1,3 +1,5 @@
+import { defaultEquipment, type Equipment } from '../../shared/cosmetics';
+import { visualCosmetic } from '../rendering/CosmeticAssets';
 import { Color3, Color4, DirectionalLight, Engine, FreeCamera, HemisphericLight, MeshBuilder,
   PBRMaterial, Quaternion, Scene, Space, TransformNode, Vector3 } from '@babylonjs/core';
 import { CharacterAssetLibrary, type CharacterInstance } from '../game/CharacterAsset';
@@ -40,6 +42,8 @@ export class HomeCharacter {
   private weapons: CharacterWeaponLibrary | null = null;
   private weapon: CharacterWeapon | null = null;
   private selectedWeapon: WeaponId = 'rifle';
+  private equipment=defaultEquipment();
+  setCosmetics(equipment:Equipment){if(JSON.stringify(this.equipment)===JSON.stringify(equipment))return;this.equipment={...equipment};this.syncWeapon();}
   private preferredWeapon: WeaponId = 'rifle';
   private loadingWeapon: WeaponId | null = null;
   private abort: AbortController | null = null;
@@ -90,14 +94,14 @@ export class HomeCharacter {
     this.syncWeapon();
   }
   private syncWeapon(): void {
-    if (!this.character || !this.weapons || !this.abort || this.loadingWeapon || this.weapon?.id === this.selectedWeapon) return;
-    const id = this.selectedWeapon, library = this.weapons, controller = this.abort;
+    if (!this.character || !this.weapons || !this.abort || this.loadingWeapon || this.weapon?.id === this.selectedWeapon&&this.weapon.cosmeticId===visualCosmetic(this.selectedWeapon,this.equipment[this.selectedWeapon]).id) return;
+    const id = this.selectedWeapon,key=visualCosmetic(id,this.equipment[id]).id, library = this.weapons, controller = this.abort;
     this.loadingWeapon = id;
-    void library.load(id, controller.signal).then(() => {
+    void library.load(id, controller.signal,key).then(() => {
       if (controller.signal.aborted || library !== this.weapons || !this.character) return;
-      if (id === this.selectedWeapon) { this.weapon?.dispose(); this.weapon = library.create(this.character, id); }
+      if (id === this.selectedWeapon&&key===visualCosmetic(id,this.equipment[id]).id) { this.weapon?.dispose(); this.weapon = library.create(this.character, id,key); }
     }).catch((error) => { if (!controller.signal.aborted) console.warn('[crossfire] Home weapon:', error); })
-      .finally(() => { if (library === this.weapons) { this.loadingWeapon = null; if (id !== this.selectedWeapon) this.syncWeapon(); } });
+      .finally(() => { if (library === this.weapons) { this.loadingWeapon = null; if (id !== this.selectedWeapon||key!==visualCosmetic(this.selectedWeapon,this.equipment[this.selectedWeapon]).id) this.syncWeapon(); } });
   }
   setVisible(visible: boolean): void {
     if (visible && !this.engine) this.create();

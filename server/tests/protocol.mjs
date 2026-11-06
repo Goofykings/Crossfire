@@ -44,6 +44,7 @@ test('real frontend transport is compatible with the production Worker messages'
     for(const c of [a,b]){
       const self=c.latest.players.find(p=>p.id===c.selfId);assert.equal(self.alive,true);assert.equal(self.health,100);
       assert.ok(self.combat.gun);assert.ok(Number.isFinite(self.motion.crouch));assert.ok(Number.isFinite(self.motion.lean));
+      assert.equal(self.cosmeticId,`default-${self.weapon}`,'Optional visual metadata carries canonical compatible equipment');
     }
     const player=new PlayerController(new CollisionWorld());player.restore(a.latest.players.find(p=>p.id===a.selfId).motion);
     player.yaw=.3;player.pitch=.1;
@@ -59,6 +60,14 @@ test('real frontend transport is compatible with the production Worker messages'
     // Both directions use the same schemas, not just a matching version constant.
     for(const wire of sent)assert.ok(protocol.parseClientMessage(String(wire)),`Invalid frontend packet: ${String(wire).slice(0,100)}`);
     for(const wire of received)assert.ok(protocol.parseServerMessage(String(wire)),'Worker emitted an incompatible message');
+    const visual=received.map(w=>JSON.parse(String(w))).find(m=>m.snapshot?.players.some(p=>p.weapon));
+    assert.ok(visual,'A real armed snapshot is required for metadata compatibility');
+    const old=structuredClone(visual);for(const p of old.snapshot.players)delete p.cosmeticId;
+    assert.ok(protocol.parseServerMessage(JSON.stringify(old)),'Existing snapshots without visual metadata remain valid');
+    const future=structuredClone(visual),armed=future.snapshot.players.find(p=>p.weapon);armed.cosmeticId='future-visual';
+    assert.ok(protocol.parseServerMessage(JSON.stringify(future)),'Unknown well-formed visual IDs must not disconnect old clients');
+    armed.cosmeticId=armed.weapon==='sniper'?'default-rifle':'default-sniper';
+    assert.equal(protocol.parseServerMessage(JSON.stringify(future)),null,'Known cross-category metadata remains invalid');
     assert.ok(sent.some(raw=>JSON.parse(raw).type==='input'));assert.ok(received.some(raw=>JSON.parse(raw).type==='spawned'));
     const selfId=a.selfId;a.disconnect(false);await a.connect();assert.equal(a.selfId,selfId,'Real frontend resume retains server identity');
     assert.equal(a.latest.players.find(p=>p.id===selfId).weapon,'rifle');

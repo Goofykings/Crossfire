@@ -1628,6 +1628,12 @@ body[data-room-page='true'] #game {visibility:hidden;}
 .room-status {font-size:13px;color:#c5d2e2;min-height:1.5em;}
 .room-refresh.btn {font-size:12px;padding:8px 12px;width:auto;flex:0 0 auto;min-width:0;}.room-heading .btn {align-self:flex-start;width:auto;flex:0 0 auto;min-width:0;}
 .room-setup {display:grid;gap:18px;}.room-setup .room-heading h1 {margin:0;}
+.room-public-open.btn{width:auto;padding:8px 0;background:transparent;border:0;box-shadow:none;font-size:16px;text-align:left;}
+.practice-setup{display:grid;gap:18px;}.practice-setup .room-heading h1{margin:0;}.practice-setup .selected{background:#588acb45;box-shadow:inset 0 -2px #a3c5ff;}
+.practice-notice{font-size:12px;line-height:1.6;color:#c2cbd8;max-width:65em;}
+.practice-indicator{display:none;position:absolute;bottom:24px;left:50%;transform:translateX(-50%);color:#b8c7da;font-size:10px;letter-spacing:.09em;pointer-events:none;z-index:42;white-space:nowrap;}
+body[data-practice='true']:has(#hud.visible,#spectate.visible) .practice-indicator{display:block;}
+body[data-practice='true'] .chat-hint{display:none;}
 .room-name,.room-private input {border:0;border-bottom:1px solid #ffffff35;background:#ffffff08;color:white;padding:12px;font:inherit;border-radius:6px;min-width:0;}
 .room-options {display:flex;gap:12px;}.room-options .btn {flex:1;}
 .room-map-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;}
@@ -1641,3 +1647,40 @@ body[data-room-page='true'] #game {visibility:hidden;}
 @keyframes room-enter {from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:none;}}
 @media(max-width:700px){.room-columns{grid-template-columns:1fr;gap:20px;}.room-actions{padding:20px 0 0;flex-direction:row;}.room-actions::before{top:0;bottom:auto;width:100%;height:1px;}.room-list{max-height:30vh;}.room-actions .btn{flex:1;font-size:12px;}.room-map-grid{gap:7px;}.room-map.btn{font-size:11px;}.room-limit{gap:10px;font-size:12px;}}
 @media(prefers-reduced-motion:reduce){.room-screen{animation:none;}}
+
+/* Shop and Locker use the existing home backdrop and five equal navigation tabs. */
+.home-nav {width:min(740px,100%);}
+.home-nav .btn.nav-button {min-width:0;font-size:clamp(10px,1.2vw,14px);letter-spacing:.06em;padding:12px 6px;}
+.home-nav .btn[aria-current='page']::before {opacity:1;background:#dce4ed20;}
+body[data-home-page='shop'] #game,body[data-home-page='locker'] #game,body[data-screen='cosmetic-preview'] #game {visibility:hidden;}
+.cosmetic-page {isolation:isolate;flex-direction:column;padding:var(--home-content-top) clamp(16px,4vw,60px) 22px;background:#161c25;gap:16px;animation:room-enter 180ms ease;}
+.cosmetic-background {position:absolute;inset:0;z-index:-1;width:100%;height:100%;object-fit:cover;filter:blur(8px) brightness(.38);}
+.cosmetic-heading {display:flex;align-items:center;justify-content:space-between;gap:20px;flex-shrink:0;}
+.cosmetic-heading h1 {margin:0;font-size:clamp(20px,2.5vw,30px);letter-spacing:.12em;}
+.cosmetic-heading .btn {width:auto;min-width:0;flex:none;font-size:12px;padding:9px 16px;}
+.locker-layout {display:grid;grid-template-columns:95px minmax(0,1fr) 225px;gap:20px;min-height:0;flex:1;}
+.cosmetic-categories {display:flex;flex-direction:column;gap:10px;overflow:auto;}
+.cosmetic-categories .btn {flex:none;border:0;border-radius:8px;background:#b7c1ce18;padding:13px 8px;font-size:12px;text-align:center;}
+.cosmetic-categories .btn:hover {background:#17212baa;}.cosmetic-categories .btn[aria-pressed='true'] {background:#b6c8df30;box-shadow:inset 0 -2px #b8c8dc;}
+.cosmetic-inventory {min-height:0;overflow:auto;}.cosmetic-status {color:#c0cbd7;font-size:12px;line-height:1.5;min-height:1.5em;margin:0 0 8px;}
+.cosmetic-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:14px;}
+.cosmetic-card.btn {position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0;min-height:176px;padding:12px;background:linear-gradient(145deg,#cbd4dd22,#7b889516);border:0;box-shadow:inset 0 -2px var(--rarity);}
+.cosmetic-card strong {font-size:16px;color:var(--rarity);}.cosmetic-card span,.cosmetic-card small {font-size:10px;letter-spacing:.05em;color:#c5cfdb;}.cosmetic-card small:not(.cosmetic-is-equipped){color:var(--rarity);}
+.cosmetic-card .cosmetic-is-equipped {position:absolute;right:10px;bottom:12px;font-size:9px;color:#bbc8d7;}
+.cosmetic-thumbnail {width:100%;height:85px;object-fit:contain;filter:drop-shadow(0 10px 9px #0005);pointer-events:none;}
+.cosmetic-equipped {padding:16px 12px;border-radius:10px;background:#bbc9d418;overflow:auto;}.cosmetic-equipped h2 {font-size:12px;letter-spacing:.12em;margin:0 0 12px;}
+.equipped-item.btn {display:grid;grid-template-columns:76px minmax(0,1fr);gap:8px;align-items:center;border:0;background:#ffffff09;padding:8px;border-radius:7px;margin-bottom:8px;font-size:10px;white-space:normal;}
+.equipped-item .cosmetic-thumbnail {height:44px;}.cosmetic-refresh.btn {width:auto;font-size:11px;padding:9px 15px;margin-top:12px;}
+.cosmetic-item-preview {flex-direction:column;align-items:center;padding:24px;background:radial-gradient(ellipse at 50% 45%,var(--rarity-background,#454a53),#11151c 80%);}
+.cosmetic-item-preview header {text-align:center;}.cosmetic-item-preview h1 {margin:8px;font-size:clamp(26px,4vw,44px);letter-spacing:.1em;}.cosmetic-item-preview header p {font-size:12px;color:#c2cad5;}
+.cosmetic-model {flex:1;min-height:0;width:min(1150px,100%);}.cosmetic-model canvas {width:100%;height:100%;display:block;outline:none;touch-action:none;}
+.cosmetic-item-preview footer {display:flex;gap:16px;width:min(460px,100%);}.cosmetic-item-preview footer .btn {flex:1;}.cosmetic-item-preview>.cosmetic-status {text-align:center;}
+.shop-content {flex:1;min-height:0;overflow:auto;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(220px,1fr);gap:12px 40px;align-items:center;}
+.shop-crate {width:100%;height:min(40vh,340px);object-fit:contain;filter:drop-shadow(0 25px 30px #0008);}.shop-offer h2 {color:#c9d4df;letter-spacing:.15em;font-size:clamp(20px,3vw,34px);}
+.shop-open.btn:disabled {background:#aab5c31b;color:#a4afba;border:0;opacity:.65;cursor:not-allowed;transform:none;box-shadow:none;}.shop-balance {font-size:14px;font-weight:500;color:#d4dfec;}
+.crate-distribution {grid-column:1/-1;display:flex;flex-wrap:wrap;justify-content:center;gap:14px 26px;padding:14px 0;}.crate-distribution p {width:100%;text-align:center;color:#9cabbc;font-size:12px;margin:0 0 4px;}.crate-distribution span {font-size:12px;}
+@media(max-width:850px){.locker-layout{grid-template-columns:72px minmax(0,1fr) 170px;gap:10px;}.cosmetic-grid{grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:9px;}.equipped-item.btn{grid-template-columns:60px minmax(0,1fr);padding:5px;}.cosmetic-equipped{padding:12px 8px;}}
+@media(max-height:650px){.cosmetic-equipped{padding:10px 8px;}.cosmetic-equipped h2{margin-bottom:8px;}.equipped-item.btn{padding:4px;margin-bottom:5px;min-height:32px;}.equipped-item .cosmetic-thumbnail{height:28px;}}
+@media(max-width:560px){.locker-layout{grid-template-columns:65px minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;}.cosmetic-equipped{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:4px;max-height:155px;}.cosmetic-equipped h2{grid-column:1/-1;margin:0;}.equipped-item.btn{margin:0;}.shop-content{grid-template-columns:1fr;gap:5px;text-align:center;}.shop-crate{height:180px;}.crate-distribution{gap:10px;font-size:10px;}.home-nav{gap:3px;}.home-nav .btn.nav-button{font-size:9px;letter-spacing:0;padding:12px 3px;}}
+@media(prefers-reduced-motion:reduce){.cosmetic-page{animation:none;}}
+.practice-debug{position:fixed;z-index:100;right:12px;top:12px;width:min(420px,45vw);max-height:calc(100vh - 24px);object-fit:contain;object-position:top;background:#101d28ec;border-radius:8px;pointer-events:none}

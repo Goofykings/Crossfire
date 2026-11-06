@@ -27,6 +27,11 @@ it('discovers without credentials or gameplay sockets and uses base-independent 
  const fetch=vi.fn().mockResolvedValue(Response.json({v,rooms:[room]}));vi.stubGlobal('fetch',fetch);const auth=vi.fn(async()=>credential),client=new RoomClient('wss://backend.example/ws',auth);
  expect(await client.list(new AbortController().signal)).toEqual([room]);expect(auth).not.toHaveBeenCalled();expect(String(fetch.mock.calls[0][0])).toBe('https://backend.example/rooms');expect(client.socket(id)).toBe('wss://backend.example/ws/rooms/'+id);expect(client.socket('public-main')).toBe('wss://backend.example/ws');
 });
+it('cancels room admission while its credential is pending without starting a late request',async()=>{
+ const fetch=vi.fn();vi.stubGlobal('fetch',fetch);let complete!:(token:string)=>void;
+ const client=new RoomClient('wss://backend.example/ws',()=>new Promise<string>(resolve=>complete=resolve)),controller=new AbortController(),work=client.join({roomId:id},controller.signal);
+ controller.abort();complete(credential);await expect(work).rejects.toThrow();expect(fetch).not.toHaveBeenCalled();
+});
 it('sends private codes unchanged and capability in header, validates replies and surfaces friendly errors',async()=>{
  const privateRoom={...room,privacy:'private',code:'012345'},fetch=vi.fn().mockResolvedValue(Response.json({v,room:privateRoom,ticket}));vi.stubGlobal('fetch',fetch);const client=new RoomClient('ws://localhost:8787/ws',async()=>credential),signal=new AbortController().signal;
  await client.join({code:'012345'},signal);const [url,options]=fetch.mock.calls[0];expect(String(url)).toBe('http://localhost:8787/rooms/join');expect(String(url)).not.toContain(credential);expect(options.headers.Authorization).toBe('Bearer '+credential);expect(JSON.parse(options.body)).toEqual({v,code:'012345'});

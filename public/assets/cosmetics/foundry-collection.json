@@ -1,0 +1,198 @@
+{
+  "version": 1,
+  "collection": "Foundry Collection",
+  "status": "assets-only; not registered, granted or purchasable",
+  "items": [
+    {
+      "catalogEntry": {
+        "id": "verdant-relay",
+        "name": "Verdant Relay",
+        "weapon": "rifle",
+        "rarity": "uncommon",
+        "ownership": "grant",
+        "compatibleWith": [
+          "rifle"
+        ],
+        "asset": {
+          "model": "assets/cosmetics/ar/verdant-relay/model.glb",
+          "binding": "embedded"
+        },
+        "preview": "assets/cosmetics/ar/verdant-relay/thumbnail.png"
+      },
+      "source": "blender/source/cosmetics/verdant-relay.blend",
+      "textures": [
+        "assets/cosmetics/ar/verdant-relay/finish-albedo.jpg",
+        "assets/cosmetics/ar/verdant-relay/finish-orm.png",
+        "assets/cosmetics/ar/verdant-relay/finish-normal.png"
+      ],
+      "attachments": "Original category hierarchy/anchors/part transforms; no offsets required",
+      "compatibility": {
+        "unit": "metre",
+        "forwardAxis": "-Z",
+        "upAxis": "+Y",
+        "visualOffsetsRequired": false,
+        "anchors": [
+          "muzzle",
+          "sight",
+          "eject",
+          "grip_r",
+          "grip_l",
+          "mag_grip"
+        ],
+        "movingParts": [
+          "mag"
+        ],
+        "firstPersonPreset": "RIG_CONFIGS.rifle",
+        "thirdPersonPreset": "WEAPON_HOLDS.rifle"
+      },
+      "baseModel": "assets/models/shared/weapons/rifle.glb",
+      "baseSha256": "0e7ef259bd6d0c3fab918860a549576b8caa277a62861062a682565ada66b423"
+    },
+    {
+      "catalogEntry": {
+        "id": "blue-current",
+        "name": "Blue Current",
+        "weapon": "smg",
+        "rarity": "rare",
+        "ownership": "grant",
+        "compatibleWith": [
+          "smg"
+        ],
+        "asset": {
+          "model": "assets/cosmetics/smg/blue-current/model.glb",
+          "binding": "embedded"
+        },
+        "preview": "assets/cosmetics/smg/blue-current/thumbnail.png"
+      },
+      "source": "blender/source/cosmetics/blue-current.blend",
+      "textures": [
+        "assets/cosmetics/smg/blue-current/finish-albedo.jpg",
+        "assets/cosmetics/smg/blue-current/finish-orm.png",
+        "assets/cosmetics/smg/blue-current/finish-normal.png"
+      ],
+      "attachments": "Original category hierarchy/anchors/part transforms; no offsets required",
+      "compatibility": {
+        "unit": "metre",
+        "forwardAxis": "-Z",
+        "upAxis": "+Y",
+        "visualOffsetsRequired": false,
+        "anchors": [
+          "muzzle",
+          "sight",
+          "eject",
+          "grip_r",
+          "grip_l",
+          "mag_grip"
+        ],
+        "movingParts": [
+          "mag"
+        ],
+        "firstPersonPreset": "RIG_CONFIGS.smg",
+        "thirdPersonPreset": "WEAPON_HOLDS.smg"
+      },
+      "baseModel": "assets/models/shared/weapons/smg.glb",
+      "baseSha256": "628c8a5f40e66cc1b814f851021d491679c4aa355463c743616c39fd392a4488"
+    },
+    {
+      "catalogEntry": {
+        "id": "crimson-forge",
+        "name": "Crimson Forge",
+        "weapon": "shotgun",
+        "rarity": "epic",
+        "ownership": "grant",
+        "compatibleWith": [
+          "shotgun"
+        ],
+        "asset": {
+          "model": "assets/cosmetics/shotgun/crimson-forge/model.glb",
+          "binding": "embedded"
+        },
+        "preview": "assets/cosmetics/shotgun/crimson-forge/thumbnail.png"
+      },
+      "source": "blender/source/cosmetics/crimson-forge.blend",
+      "textures": [
+        "assets/cosmetics/shotgun/crimson-forge/finish-albedo.jpg",
+        "assets/cosmetics/shotgun/crimson-forge/finish-orm.png",
+        "assets/cosmetics/shotgun/crimson-forge/finish-normal.png"
+      ],
+      "attachments": "Original category hierarchy/anchors/part transforms; no offsets required",
+      "compatibility": {
+        "unit": "metre",
+        "forwardAxis": "-Z",
+        "upAxis": "+Y",
+        "visualOffsetsRequired": false,
+        "anchors": [
+          "muzzle",
+          "sight",
+          "eject",
+          "grip_r",
+          "grip_l",
+          "port"
+        ],
+        "movingParts": [
+          "pump",
+          "shell"
+        ],
+        "firstPersonPreset": "RIG_CONFIGS.shotgun",
+        "thirdPersonPreset": "WEAPON_HOLDS.shotgun"
+      },
+      "baseModel": "assets/models/shared/weapons/shotgun.glb",
+      "baseSha256": "3c9226013517345235c1e88dde58fae20a9287499b666ebaf3a7311b8fc00b54"
+    },
+    {
+      "catalogEntry": {
+        "id": "aurum-meridian",
+        "name": "Aurum Meridian",
+        "weapon": "sniper",
+        "rarity": "legendary",
+        "ownership": "grant",
+        "compatibleWith": [
+          "sniper"
+        ],
+        "asset": {
+          "model": "assets/cosmetics/sniper/aurum-meridian/model.glb",
+          "binding": "embedded"
+        },
+        "preview": "assets/cosmetics/sniper/aurum-meridian/thumbnail.png"
+      },
+      "source": "blender/source/cosmetics/aurum-meridian.blend",
+      "textures": [
+        "assets/cosmetics/sniper/aurum-meridian/finish-albedo.jpg",
+        "assets/cosmetics/sniper/aurum-meridian/finish-orm.png",
+        "assets/cosmetics/sniper/aurum-meridian/finish-normal.png"
+      ],
+      "attachments": "Original category hierarchy/anchors/part transforms; no offsets required",
+      "compatibility": {
+        "unit": "metre",
+        "forwardAxis": "-Z",
+        "upAxis": "+Y",
+        "visualOffsetsRequired": false,
+        "anchors": [
+          "muzzle",
+          "sight",
+          "eject",
+          "grip_r",
+          "grip_l",
+          "mag_grip",
+          "bolt_grip"
+        ],
+        "movingParts": [
+          "bolt",
+          "mag"
+        ],
+        "firstPersonPreset": "RIG_CONFIGS.sniper",
+        "thirdPersonPreset": "WEAPON_HOLDS.sniper"
+      },
+      "baseModel": "assets/models/shared/weapons/sniper.glb",
+      "baseSha256": "60c538cfabcad88b9cf23a70b9179b79430ddfdc55d70922d08c0dc38e4edf1a"
+    }
+  ],
+  "crate": {
+    "id": "foundry-crate",
+    "name": "Foundry Crate",
+    "model": "assets/cosmetics/crate/foundry-crate/model.glb",
+    "preview": "assets/cosmetics/crate/foundry-crate/thumbnail.png",
+    "source": "blender/source/cosmetics/foundry-crate.blend",
+    "functional": false
+  }
+}

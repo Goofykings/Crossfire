@@ -1,14 +1,19 @@
 import { meshesReady } from '../core/assetReadiness';
-import { loadContainer } from '../core/loadContainer';
 import { abortable } from '../core/cancellation';
 import { ArcRotateCamera, Color3, Color4, DirectionalLight, Engine, HemisphericLight, Scene, Vector3 } from '@babylonjs/core';
-import { assetUrl } from '../core/assets';
 import { MaterialLibrary } from '../rendering/MaterialLibrary';
-import { RIG_CONFIGS } from '../weapons/WeaponView';
+import { COSMETICS, type CosmeticDefinition } from '../../shared/cosmetics';
+import { loadCosmeticAsset } from '../rendering/CosmeticAssets';
 import type { WeaponId } from '../weapons/Weapon';
 
-/** Render the existing assets once, then release the preview GPU resources. */
-export async function weaponPreviews(onPreview: (id: WeaponId, url: string) => Promise<void>, signal?: AbortSignal): Promise<void> {
+const cached=new Map<string,string>();
+export async function weaponPreviews(onPreview:(id:WeaponId,url:string)=>Promise<void>,signal?:AbortSignal):Promise<void>{
+  return cosmeticThumbnails(COSMETICS.filter(c=>c.ownership==='starter'),(item,url)=>onPreview(item.weapon,url),signal);
+}
+/** Render actual owned assets; successful snapshots are shared with loadout cards. */
+export async function cosmeticThumbnails(items:readonly CosmeticDefinition[],onPreview:(item:CosmeticDefinition,url:string)=>Promise<void>,signal?:AbortSignal): Promise<void> {
+  for(const item of items)if(cached.has(item.id))await abortable(onPreview(item,cached.get(item.id)!),signal);
+  const missing=items.filter(item=>!cached.has(item.id));if(!missing.length)return;
   const canvas = document.createElement('canvas');
   canvas.width = 960;
   canvas.height = 460;
@@ -28,11 +33,10 @@ export async function weaponPreviews(onPreview: (id: WeaponId, url: string) => P
   const materials = new MaterialLibrary(scene);
   try {
     await materials.load(undefined, signal);
-    for (const cfg of Object.values(RIG_CONFIGS)) {
-      const container = await loadContainer(assetUrl(cfg.file), scene, signal);
+    for (const item of missing) {
+      const container = await loadCosmeticAsset(item,scene,materials,signal);
       container.addAllToScene();
       for (const mesh of container.meshes) {
-        if (mesh.material) mesh.material = materials.get(mesh.material.name);
         mesh.computeWorldMatrix(true);
       }
       const bounds = container.rootNodes[0].getHierarchyBoundingVectors(true);
@@ -43,7 +47,7 @@ export async function weaponPreviews(onPreview: (id: WeaponId, url: string) => P
       await meshesReady(container.meshes, signal);
       signal?.throwIfAborted();
       scene.render();
-      await abortable(onPreview(cfg.id, canvas.toDataURL('image/png')), signal);
+      const url=canvas.toDataURL('image/png');cached.set(item.id,url);await abortable(onPreview(item,url),signal);
       container.dispose();
     }
   } finally { scene.dispose(); engine.dispose(); }

@@ -1,12 +1,10 @@
+import { visualCosmetic, loadCosmeticAsset } from '../rendering/CosmeticAssets';
 import { RemoteMuzzleFlash } from '../weapons/RemoteMuzzleFlash';
 import { meshesReady } from '../core/assetReadiness';
 import { Matrix, Mesh, Quaternion, Space, TransformNode, Vector3, VertexBuffer, type AssetContainer, type Bone, type InstantiatedEntries, type Scene } from '@babylonjs/core';
-import { assetUrl } from '../core/assets';
 import { DampedSpring } from '../core/DampedSpring';
-import { loadContainer } from '../core/loadContainer';
 import type { MaterialLibrary } from '../rendering/MaterialLibrary';
 import type { WeaponAction, WeaponId } from '../weapons/Weapon';
-import { RIG_CONFIGS } from '../weapons/WeaponView';
 import { actionPose, type ActionAnchor, type ActionPose, type BodyPoint } from './CharacterActions';
 import type { CharacterInstance } from './CharacterAsset';
 
@@ -314,34 +312,35 @@ function measureButt(container: AssetContainer): Vector3 {
 
 /** Scene-local copies of the same GLBs used by the first-person weapon view. */
 export class CharacterWeaponLibrary {
-  private readonly containers = new Map<WeaponId, AssetContainer>();
-  private readonly butts = new Map<WeaponId, Vector3>();
-  private readonly pending = new Map<WeaponId, Promise<void>>();
+  private readonly containers = new Map<string, AssetContainer>();
+  private readonly butts = new Map<string, Vector3>();
+  private readonly pending = new Map<string, Promise<void>>();
   constructor(private readonly scene: Scene, private readonly materials: MaterialLibrary) {}
-  load(id: WeaponId, signal?: AbortSignal): Promise<void> {
-    const cached = this.containers.get(id);
+  load(id: WeaponId, signal?: AbortSignal, cosmeticId?:string): Promise<void> {
+    const item=visualCosmetic(id,cosmeticId),key=item.id;
+    const cached = this.containers.get(key);
     if (cached) {
       // A failed join can prune unused shared materials; rebind on retry.
-      for (const mesh of cached.meshes) if (mesh.material) mesh.material = this.materials.get(mesh.material.name);
+      if(item.asset.binding==='shared'&&!item.asset.materials)for (const mesh of cached.meshes) if (mesh.material) mesh.material = this.materials.get(mesh.material.name);
       return Promise.resolve();
     }
-    const pending = this.pending.get(id);
+    const pending = this.pending.get(key);
     if (pending) return pending;
-    const work = loadContainer(assetUrl(RIG_CONFIGS[id].file), this.scene, signal).then((container) => {
+    const work = loadCosmeticAsset(item, this.scene, this.materials, signal).then((container) => {
       if (signal?.aborted || this.scene.isDisposed) { container.dispose(); return; }
-      for (const mesh of container.meshes) if (mesh.material) mesh.material = this.materials.get(mesh.material.name);
-      this.containers.set(id, container);
-      this.butts.set(id, measureButt(container));
-    }).finally(() => { if (this.pending.get(id) === work) this.pending.delete(id); });
-    this.pending.set(id, work);
+      this.containers.set(key, container);
+      this.butts.set(key, measureButt(container));
+    }).finally(() => { if (this.pending.get(key) === work) this.pending.delete(key); });
+    this.pending.set(key, work);
     return work;
   }
   async ready(signal?: AbortSignal): Promise<void> {
     await Promise.all([...this.containers.values()].map(c => meshesReady(c.meshes, signal)));
   }
-  create(character: CharacterInstance, id: WeaponId): CharacterWeapon | null {
-    const container = this.containers.get(id);
-    return container ? new CharacterWeapon(this.scene, character, id, container, this.butts.get(id)!) : null;
+  create(character: CharacterInstance, id: WeaponId, cosmeticId?:string): CharacterWeapon | null {
+    const key=visualCosmetic(id,cosmeticId).id;
+    const container = this.containers.get(key);
+    return container ? new CharacterWeapon(this.scene, character, id, container, this.butts.get(key)!,key) : null;
   }
 }
 
@@ -410,7 +409,7 @@ export class CharacterWeapon {
   private readonly cachedRoot = { position: Vector3.Zero(), rotation: Quaternion.Identity(), valid: false };
   solves = 0;
 
-  constructor(scene: Scene, private readonly character: CharacterInstance, readonly id: WeaponId, container: AssetContainer, butt: Vector3) {
+  constructor(scene: Scene, private readonly character: CharacterInstance, readonly id: WeaponId, container: AssetContainer, butt: Vector3, readonly cosmeticId=visualCosmetic(id).id) {
     this.hold = WEAPON_HOLDS[id];
     this.recoil = new DampedSpring(this.hold.recoil.frequency, .72);
     this.root = new TransformNode(`held:${id}`, scene);
@@ -768,7 +767,7 @@ export class CharacterWeapon {
     const tip = this.fingers[0]?.tip();
     const eye = this.head && this.eyeLocal ? Vector3.TransformCoordinates(this.eyeLocal, this.head.getWorldMatrix()) : null;
     const butt = Vector3.TransformCoordinates(this.anchors.butt, weaponWorld);
-    return { id: this.id, ads: this.state.ads, adsBlend: this.adsBlend, pitch: this.state.pitch, shots: this.shots,
+    return { id: this.id, cosmeticId: this.cosmeticId, ads: this.state.ads, adsBlend: this.adsBlend, pitch: this.state.pitch, shots: this.shots,
       recoil: this.recoil.value, meshes: this.meshes.length, posing: this.posing, solves: this.solves, solveEvery: this.solveEvery,
       instances: this.character.root.getChildTransformNodes(true).filter((n) => /^held:(rifle|smg|shotgun|sniper)$/.test(n.name)).length,
       grips: this.grips.map((g) => g.getAbsolutePosition().asArray()), hands,

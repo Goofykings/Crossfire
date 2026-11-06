@@ -28,7 +28,7 @@ async function rig() {
   new FreeCamera('camera', new Vector3(0, 1.5, -4), scene);
   const characters = new CharacterAssetLibrary(scene);
   const material = new StandardMaterial('test', scene);
-  const weapons = new CharacterWeaponLibrary(scene, { get: () => material } as unknown as MaterialLibrary);
+  const weapons = new CharacterWeaponLibrary(scene, { get: () => material, ready: async () => {} } as unknown as MaterialLibrary);
   // A signal selects the cancellable fetch path (Node has no XMLHttpRequest).
   const signal = new AbortController().signal;
   await Promise.all([characters.load(signal), ...WEAPONS.map((id) => weapons.load(id, signal))]);

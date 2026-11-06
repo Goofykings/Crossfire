@@ -15,6 +15,7 @@ export class CareerClient {
   private work: Promise<void> | null = null;
   private receivedAt = 0;
   private timer: ReturnType<typeof setInterval> | null = null;
+  private activeRequest:AbortController|null=null;
   private readonly endpoint: string;
   private readonly key: string;
   constructor(url: string, private readonly storage = CareerClient.storage()) {
@@ -35,17 +36,20 @@ export class CareerClient {
   }
   ensure(): Promise<void> {
     if (this.work) return this.work;
-    this.work = (typeof navigator !== 'undefined' && navigator.locks ? navigator.locks.request(this.key, () => this.fetchProfile()) : this.fetchProfile()).finally(() => { this.work = null; });
+    const controller=new AbortController();this.activeRequest=controller;
+    this.work = (typeof navigator !== 'undefined' && navigator.locks ? navigator.locks.request(this.key, {signal:controller.signal},() => this.fetchProfile(controller)) : this.fetchProfile(controller)).finally(() => { this.work = null;if(this.activeRequest===controller)this.activeRequest=null; });
     return this.work;
   }
-  private async fetchProfile(): Promise<void> {
+  private async fetchProfile(controller:AbortController): Promise<void> {
+    controller.signal.throwIfAborted();
     if (!this.credential) { try { const saved=this.storage?.getItem(this.key);if(saved&&/^[a-f0-9]{64}$/.test(saved))this.credential=saved; } catch { this.temporary=true; } }
-    const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), 8000);
+    const timeout = setTimeout(() => controller.abort(), 8000);
     try {
       const response = await fetch(this.endpoint, { method: this.credential ? 'GET' : 'POST', cache:'no-store',
         ...(this.credential ? { headers: { Authorization: `Bearer ${this.credential}` } } : {}), signal:controller.signal });
       if (!response.ok) throw new Error(response.status === 401 ? 'Guest credential unavailable. This profile cannot be recovered automatically.' : 'Challenges unavailable. Retry shortly.');
       const data = await response.json() as { v: number; credential?: string; profile: unknown };
+      controller.signal.throwIfAborted();
       if (data.v !== PROTOCOL_VERSION) throw new Error('Challenge protocol differs. Refresh after matching frontend and server deployment.');
       if (!validCareerView(data.profile)) throw new Error('Invalid challenge response.');
       if (!this.credential) {
@@ -54,6 +58,7 @@ export class CareerClient {
         try { this.storage?.setItem(this.key, this.credential); } catch { this.temporary = true; }
       }
       const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(this.credential));
+      controller.signal.throwIfAborted();
       this.scope=[...new Uint8Array(digest)].map(n=>n.toString(16).padStart(2,'0')).join('');
       this.accept(data.profile);
     } catch (error) { this.error = (error as Error).name === 'AbortError' ? 'Challenges timed out. Retry shortly.' : (error as Error).message; this.onChange(); throw error; }
@@ -75,5 +80,5 @@ export class CareerClient {
     if (this.timer) return;
     this.timer = setInterval(() => { if (visible()) void this.ensure().catch(() => {}); }, 30000);
   }
-  dispose(): void { if (this.timer) clearInterval(this.timer); this.timer = null; }
+  dispose(): void { if (this.timer) clearInterval(this.timer); this.timer = null;this.activeRequest?.abort(); }
 }

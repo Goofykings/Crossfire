@@ -7,7 +7,8 @@ export class RoomClient {
  private async request(path:string,signal:AbortSignal,body?:unknown):Promise<unknown>{
   const url=presenceEndpoint(this.url);url.pathname=path;
   const combined=AbortSignal.any([signal,AbortSignal.timeout(10000)]);
-  const response=await fetch(url,{signal:combined,cache:'no-store',...(body?{method:'POST',headers:{Authorization:`Bearer ${await this.credential()}`,'Content-Type':'application/json'},body:JSON.stringify({v:PROTOCOL_VERSION,...body})}:{})});
+  const credential=body?await this.credential():null;combined.throwIfAborted();
+  const response=await fetch(url,{signal:combined,cache:'no-store',...(body?{method:'POST',headers:{Authorization:`Bearer ${credential}`,'Content-Type':'application/json'},body:JSON.stringify({v:PROTOCOL_VERSION,...body})}:{})});
   const data=await response.json() as {error?:string};if(!response.ok)throw Error(data.error??'Room service unavailable. Please retry.');return data;
  }
  async list(signal:AbortSignal):Promise<RoomView[]>{const data=await this.request('/rooms',signal) as {v:number;rooms:unknown[]};

@@ -1,4 +1,5 @@
-import { loadContainer } from '../core/loadContainer';
+import { cosmetic, defaultCosmetic, defaultEquipment, type Equipment } from '../../shared/cosmetics';
+import { loadCosmeticAsset, visualCosmetic } from '../rendering/CosmeticAssets';
 import {
   Color3,
   Mesh,
@@ -44,13 +45,13 @@ interface RigConfig {
 
 export const RIG_CONFIGS: Record<WeaponId, RigConfig> = {
   smg: {
-    id: 'smg', file: 'assets/models/shared/weapons/smg.glb',
+    id: 'smg', file: cosmetic(defaultCosmetic('smg'))!.asset.model,
     hip: [0.20, -0.235, -0.4], hipRot: [0.03, 0.09, -0.06],
     eye: 0.20, casing: 'casing_rifle', flash: 0.75, kick: 0.7,
   },
   rifle: {
     id: 'rifle',
-    file: 'assets/models/shared/weapons/rifle.glb',
+    file: cosmetic(defaultCosmetic('rifle'))!.asset.model,
     hip: [0.22, -0.24, -0.4],
     hipRot: [0.03, 0.09, -0.06],
     eye: 0.21,
@@ -60,7 +61,7 @@ export const RIG_CONFIGS: Record<WeaponId, RigConfig> = {
   },
   shotgun: {
     id: 'shotgun',
-    file: 'assets/models/shared/weapons/shotgun.glb',
+    file: cosmetic(defaultCosmetic('shotgun'))!.asset.model,
     hip: [0.22, -0.235, -0.4],
     hipRot: [0.03, 0.09, -0.06],
     eye: 0.2,
@@ -70,7 +71,7 @@ export const RIG_CONFIGS: Record<WeaponId, RigConfig> = {
   },
   sniper: {
     id: 'sniper',
-    file: 'assets/models/shared/weapons/sniper.glb',
+    file: cosmetic(defaultCosmetic('sniper'))!.asset.model,
     hip: [0.22, -0.235, -0.4],
     hipRot: [0.03, 0.09, -0.06],
     eye: 0.1,
@@ -108,6 +109,7 @@ const mulS = (a: number[], s: number) => a.map((v) => v * s);
 
 /** One weapon's model, moving parts and anchors. */
 interface Rig {
+  cosmeticId:string;
   cfg: RigConfig;
   root: TransformNode;
   meshes: AbstractMesh[];
@@ -134,7 +136,11 @@ interface Pose {
 export class WeaponView {
   readonly root: TransformNode;
   private readonly pivot: TransformNode;
-  private readonly rigs = new Map<WeaponId, Rig>();
+  private readonly rigs = new Map<string, Rig>();
+  private desired:Partial<Equipment>={};
+  private readonly cosmeticWork=new Map<string,Promise<void>>();
+  private loaded=false;
+  private disposed=false;
   private current: Rig | null = null;
   private flashLight: PointLight | null = null;
   private reticle: StandardMaterial | null = null;
@@ -189,12 +195,15 @@ export class WeaponView {
     light.range = 10;
     light.intensity = 0;
     this.flashLight = light;
+    this.loaded=true;
+    await this.setCosmetics({...defaultEquipment(),...this.desired});
     this.select('rifle');
   }
 
-  private async loadRig(cfg: RigConfig, reticle: StandardMaterial, signal?: AbortSignal): Promise<void> {
-    const scene = this.ctx.scene;
-    const c = await loadContainer(assetUrl(cfg.file), scene, signal);
+  private async loadRig(cfg: RigConfig, reticle: StandardMaterial, signal?: AbortSignal, cosmeticId?:string): Promise<void> {
+    const scene = this.ctx.scene,item=visualCosmetic(cfg.id,cosmeticId);
+    const c = await loadCosmeticAsset(item, scene, this.materials, signal);
+    if(this.disposed){c.dispose();throw new DOMException('Weapon view disposed','AbortError');}
     this.containers.push(c);
     c.addAllToScene();
     const root = c.rootNodes[0] as TransformNode;
@@ -208,8 +217,6 @@ export class WeaponView {
       if (name === 'reticle_holo') {
         m.material = reticle;
         m.alphaIndex = 1000;
-      } else if (m.material) {
-        m.material = this.materials.get(name);
       }
       this.prepare(m);
       meshes.push(m);
@@ -228,10 +235,10 @@ export class WeaponView {
     if (bolt) bolt.setPivotPoint(new Vector3(0, anchors.get('muzzle')?.y ?? 0.06, 0));
     const flash = this.createFlash(scene, cfg.flash);
     flash.parent = muzzle;
-    const rig: Rig = { cfg, root, meshes, anchors, pump: node('pump'), bolt, muzzle, eject, flash };
+    const rig: Rig = { cosmeticId:item.id,cfg, root, meshes, anchors, pump: node('pump'), bolt, muzzle, eject, flash };
     root.setEnabled(false);
     this.meshes.push(...meshes, ...flash.getChildMeshes(false), flash);
-    this.rigs.set(cfg.id, rig);
+    this.rigs.set(item.id, rig);
   }
 
   private prepare(m: AbstractMesh): void {
@@ -295,9 +302,17 @@ export class WeaponView {
     return root;
   }
 
+  setCosmetic(weapon:WeaponId,id:string):Promise<void>{return this.setCosmetics({...defaultEquipment(),...this.desired,[weapon]:id});}
+  async setCosmetics(equipment:Equipment):Promise<void>{
+    this.desired={...equipment};for(const cfg of Object.values(RIG_CONFIGS))this.desired[cfg.id]=visualCosmetic(cfg.id,equipment[cfg.id]).id;if(!this.loaded||this.disposed)return;
+    await Promise.all(Object.values(RIG_CONFIGS).map(cfg=>{const item=visualCosmetic(cfg.id,equipment[cfg.id]);if(this.rigs.has(item.id))return Promise.resolve();
+      let work=this.cosmeticWork.get(item.id);if(!work){work=this.loadRig(cfg,this.reticle!,undefined,item.id).finally(()=>this.cosmeticWork.delete(item.id));this.cosmeticWork.set(item.id,work);}return work;}));
+    if(!this.disposed&&this.currentId)this.select(this.currentId);
+  }
+
   /** Show the weapon with this id (called when it is equipped). */
   select(id: WeaponId): void {
-    const rig = this.rigs.get(id);
+    const rig = this.rigs.get(this.desired[id]??defaultCosmetic(id));
     if (!rig || rig === this.current) return;
     this.current?.root.setEnabled(false);
     this.current?.flash.setEnabled(false);
@@ -474,6 +489,7 @@ export class WeaponView {
   }
 
   dispose(): void {
+    this.disposed=true;
     this.ctx.scene.onBeforeRenderingGroupObservable.remove(this.beforeGroup);
     this.ctx.scene.onAfterRenderingGroupObservable.remove(this.afterGroup);
     this.flashLight?.dispose();

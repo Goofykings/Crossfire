@@ -15,11 +15,11 @@ function node<K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', text = ''
 }
 
 /** Built once per immutable server result. No polling, animation timers or live-round data. */
-export function createRoundResults(result: RoundResult, selfId: string, team: PlayerTeam, next: () => void, home: () => void): HTMLElement {
+export function createRoundResults(result: RoundResult, selfId: string, team: PlayerTeam, next: () => void, home: () => void,practice?:{settings:()=>void}): HTMLElement {
   const outcome = resultOutcome(result, selfId, team);
   const panel = node('div', 'round-results'); panel.dataset.outcome = outcome.toLowerCase();
   const banner = node('header', 'result-banner');
-  banner.append(node('small', 'result-mode', result.mode === 'teams' ? 'TEAMS · MATCH COMPLETE' : 'FREE FOR ALL · MATCH COMPLETE'), node('h1', 'result-title', outcome));
+  banner.append(node('small', 'result-mode', practice?'PRACTICE — RESULTS NOT SAVED':result.mode === 'teams' ? 'TEAMS · MATCH COMPLETE' : 'FREE FOR ALL · MATCH COMPLETE'), node('h1', 'result-title', outcome));
   const winner = node('p', 'result-winner', result.draw ? 'Match drawn' : result.mode === 'teams'
     ? `${displayTeam(result.winningTeam, team)?.toUpperCase()} TEAM WINS` : `${result.winner?.name} wins`);
   banner.append(winner); panel.append(banner);
@@ -55,9 +55,10 @@ export function createRoundResults(result: RoundResult, selfId: string, team: Pl
   mvp.append(node('small', '', 'MVP'), node('strong', '', result.mvp?.name ?? 'No participants'), node('span', '', result.mvp ? `${result.mvp.score} points` : ''));
   panel.append(mvp);
   const actions = node('div', 'result-actions');
-  const play = node('button', 'btn primary', 'PLAY AGAIN'), lobby = node('button', 'btn leave-match', 'RETURN TO LOBBY');
+  const play = node('button', 'btn primary', practice?'RESTART':'PLAY AGAIN'), lobby = node('button', 'btn leave-match', practice?'RETURN HOME':'RETURN TO LOBBY');
   let activated = false;
-  const once = (action: () => void) => () => { if (activated) return; activated = true; play.disabled = lobby.disabled = true; action(); };
+  const once = (action: () => void) => () => { if (activated) return; activated = true; for(const button of actions.querySelectorAll('button'))button.disabled=true; action(); };
   play.onclick = once(next); lobby.onclick = once(home); actions.append(play, lobby); panel.append(actions);
+  if(practice){const settings=node('button','btn','PRACTICE SETTINGS');settings.onclick=once(practice.settings);actions.insertBefore(settings,lobby);}
   return panel;
 }

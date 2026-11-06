@@ -1,3 +1,6 @@
+import { traceWeaponShot } from '../../shared/hitscan';
+import { Inventory } from './inventory';
+import { defaultEquipment, defaultCosmetic, compatibleCosmetic, validInventory, type Equipment, type InventoryView } from '../../shared/cosmetics';
 import { RoomDirectory, DirectoryError, type RoomConfig } from './roomDirectory';
 import { ROOM_LIMITS, roomId, type RoomView } from '../../shared/rooms';
 import { advanceStatistics, type StatisticsRecord, type StatisticsEvent } from '../../shared/statistics';
@@ -19,9 +22,9 @@ import { HEARTBEAT_TIMEOUT_MS, NETWORK_HZ, PROTOCOL_VERSION, PUBLIC_ROOM, RESPAW
   type CombatState, type InputFrame, type PlayerState, type ServerMessage, type Snapshot, type ShotResult } from '../../shared/protocol';
 import { WORLDS, MOVEMENT } from './world';
 import { mapRound, type MapSchedule, type MapRound } from '../../shared/maps';
-import { applySpread, damageAt, Weapon, WEAPONS, type WeaponId } from '../../src/weapons/Weapon';
+import { Weapon, WEAPONS, type WeaponId } from '../../src/weapons/Weapon';
 import { DamageSystem } from '../../src/game/Damage';
-import { NO_COMBAT, rayPlayer, roundMode, teammates, type PlayerTeam, type MatchMode } from '../../shared/combat';
+import { NO_COMBAT, roundMode, teammates, type PlayerTeam, type MatchMode } from '../../shared/combat';
 import { normalizeUsername } from '../../shared/username';
 import { regenerate, REGEN_DELAY_MS } from './health';
 import { selectSpawn } from '../../shared/spawns';
@@ -45,6 +48,7 @@ interface Bindings {
   AFK_KICK_MS?:string;
 }
 interface Session extends ScoreState {
+  equipment?:Equipment; cosmeticsRevision?:number;
   activityAt?:number; activitySignature?:string; activityYaw?:number; activityPitch?:number;
   assists: number;
   joinedAt?:number;
@@ -135,6 +139,24 @@ export default {
       const headers={'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Methods':'GET, OPTIONS','Access-Control-Allow-Headers':'Authorization','Cache-Control':'no-store','Vary':'Origin'};
       if(request.method==='OPTIONS')return new Response(null,{status:204,headers});
       if(request.method!=='GET')return new Response('Method not allowed',{status:405,headers});
+      const response=await env.ROOM.getByName(PUBLIC_ROOM).fetch(request);
+      return new Response(response.body,{status:response.status,headers:{...headers,'Content-Type':'application/json'}});
+    }
+    if(url.pathname==='/cosmetics'||url.pathname==='/cosmetics/equip'){
+      const origin=request.headers.get('Origin');if(!origin||!env.ALLOWED_ORIGINS.split(',').map(s=>s.trim()).includes(origin))return new Response('Origin denied',{status:403});
+      const headers={'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Methods':'GET, POST, OPTIONS','Access-Control-Allow-Headers':'Authorization, Content-Type','Cache-Control':'no-store','Vary':'Origin'};
+      if(request.method==='OPTIONS')return new Response(null,{status:204,headers});
+      if(url.search||(url.pathname==='/cosmetics'?request.method!=='GET':request.method!=='POST'))return Response.json({error:'Use GET /cosmetics or POST /cosmetics/equip.'},{status:405,headers});
+      if(request.method==='POST'){
+        const reader=request.body?.getReader();let timer:ReturnType<typeof setTimeout>|undefined;
+        try{
+          if(!reader)throw Error('Missing body');
+          const body=await Promise.race([(async()=>{const chunks:Uint8Array[]=[];let size=0;for(;;){const r=await reader.read();if(r.done)break;size+=r.value.length;if(size>1024)throw Error('Too large');chunks.push(r.value);}const bytes=new Uint8Array(size);let at=0;for(const c of chunks){bytes.set(c,at);at+=c.length;}return JSON.parse(new TextDecoder().decode(bytes));})(),new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(Error('Timed out')),1000);})]);
+          if(!body||Array.isArray(body)||Object.keys(body).some(k=>!['version','id'].includes(k)))throw Error('Invalid equipment');
+          const cleanHeaders=new Headers(request.headers);cleanHeaders.delete('Content-Length');request=new Request(request.url,{method:'POST',headers:cleanHeaders,body:JSON.stringify(body)});
+        }catch{return Response.json({error:'Invalid equipment request.'},{status:400,headers});}
+        finally{if(timer!==undefined)clearTimeout(timer);void reader?.cancel().catch(()=>{});}
+      }
       const response=await env.ROOM.getByName(PUBLIC_ROOM).fetch(request);
       return new Response(response.body,{status:response.status,headers:{...headers,'Content-Type':'application/json'}});
     }
@@ -321,6 +343,14 @@ export class PublicRoom extends DurableObject<Bindings> {
   private readonly players = new Map<string, Entry>();
   private readonly careers = new Careers(this.ctx.storage, () => new Set([...this.players.values()].flatMap(e => e.session.profileId ? [e.session.profileId] : [])));
   private readonly statistics = new Statistics(this.ctx.storage);
+  private readonly inventory=new Inventory(this.ctx.storage,id=>this.careers.load(id));
+  async inventoryForRoom(identity:string):Promise<InventoryView>{return this.exclusive(()=>this.inventory.get(identity));}
+  async refreshEquipment(identity:string,view:InventoryView):Promise<void>{
+    return this.exclusive(async()=>{
+    if(!validInventory(view))return;let changed=false;for(const e of this.players.values())if(e.session.profileId===identity&&(e.session.cosmeticsRevision??-1)<=view.revision){e.session.equipment=structuredClone(view.equipped);e.session.cosmeticsRevision=view.revision;this.attach(e);changed=true;}
+    if(changed){await this.persist();this.broadcast();}
+    });
+  }
   private readonly careerSent = new Map<string, number>();
   private timer: ReturnType<typeof setInterval> | null = null;
   private lastTick = Date.now();
@@ -485,6 +515,11 @@ export class PublicRoom extends DurableObject<Bindings> {
       if(this.statistics.hasPending)await this.persist(); const response=await this.statistics.http(request);
       if(this.statistics.hasPending)await this.persist(); return response;
     });
+    if(new URL(request.url).pathname.startsWith('/cosmetics')){
+      const result=await this.exclusive(()=>this.inventory.http(request));
+      if(result.identity&&result.view){await this.refreshEquipment(result.identity,result.view);const lease=await this.ctx.storage.get<string>('room-member:'+result.identity);if(lease&&await this.directory.active(lease))this.ctx.waitUntil(this.env.ROOM.getByName('room:'+lease).refreshEquipment(result.identity,result.view));}
+      return result.response;
+    }
     if (new URL(request.url).pathname === '/profile') return this.ctx.blockConcurrencyWhile(() => this.careers.http(request));
     if (new URL(request.url).pathname === '/presence') {
       return Response.json({ room: PUBLIC_ROOM, online: this.connected().length+await this.directory.online() });
@@ -657,6 +692,7 @@ export class PublicRoom extends DurableObject<Bindings> {
     regenerate(e.session, Date.now());
     expireCombo(e.session, Date.now());
     if(profileId&&!this.config)await this.statistics.load(profileId,name,this.careers.profiles.get(profileId)!.gems);
+    if(profileId){const inventory=this.config?await this.authority.inventoryForRoom(profileId):await this.inventory.get(profileId);e.session.equipment=inventory.equipped;e.session.cosmeticsRevision=inventory.revision;}else e.session.equipment=defaultEquipment();
     e.session.profileId = profileId;
     e.session.joinedAt??=Date.now();e.session.activityAt??=Date.now();
     e.session.name = name;
@@ -706,6 +742,7 @@ export class PublicRoom extends DurableObject<Bindings> {
       lastPlayedRound: e.session.lastPlayedRound, lastPlayedTeam: e.session.lastPlayedTeam,
       name: e.session.name, motion: e.controller.capture(), ack: e.session.ack, alive: e.session.alive, life: e.session.life,
       health: e.session.health, combat: { ...e.session.combat, gun: e.gun?.capture() ?? null },
+      ...(e.session.weapon?{cosmeticId:compatibleCosmetic(e.session.equipment?.[e.session.weapon],e.session.weapon)?e.session.equipment![e.session.weapon]:defaultCosmetic(e.session.weapon)}:{}),
       weapon: e.session.weapon, kills: e.session.kills, deaths: e.session.deaths, assists:e.session.assists, afkDeadline:e.session.alive?this.afkDeadline(e):null, team: e.session.team, death: e.session.death }));
     return { ...(full?{environment:this.environmentFrame(true)}:{}),grenades: this.grenades, explosions: this.explosions, result: this.lastResult, room: this.roomId, ...(this.config?{roomInfo:this.roomStatus()??undefined}:{}), mapId: this.round.mapId, roundId: this.round.id, mapVersion: this.activeMap.revision, serverTime: Date.now(), players,
       match: { mode: this.mode, endsAt: this.round.endsAt, teamScores: this.mode === 'teams' ? { blue: this.scores.blue, red: this.scores.red } : null } };
@@ -829,50 +866,27 @@ export class PublicRoom extends DurableObject<Bindings> {
 
   private fire(e: Entry, spread: number, control: InputFrame['combat']): boolean {
     const at=Date.now();if(!e.session.alive)return false;
-    const gun = e.gun!;
-    const p = e.controller;
-    const origin = p.leanEye();
-    const yaw = control.aimYaw ?? p.yaw, pitch = control.aimPitch ?? p.pitch, cp = Math.cos(pitch);
-    const aim = applySpread({ x: -Math.sin(yaw) * cp, y: Math.sin(pitch), z: -Math.cos(yaw) * cp }, spread);
-    const result: ShotResult = { id: crypto.randomUUID(), roundId: this.round.id, shooterId: e.session.id, weapon: gun.stats.id, hits: [] };
-    for (let k = 0; k < gun.stats.pellets; k++) {
-      const dir = gun.stats.pellets > 1 ? applySpread(aim, gun.stats.pelletSpread) : aim;
-      const wall = this.activeMap.world.raycast(origin.x, origin.y, origin.z, dir.x, dir.y, dir.z, gun.stats.range);
-      let nearest: { entry: Entry; distance: number; zone: 'head' | 'body' } | null = null;
-      for (const target of this.connected()) {
-
-        if (target === e || !target.session.alive) continue;
-        const hit = rayPlayer(origin, dir, target.controller.capture());
-        if (hit && hit.distance <= gun.stats.range && (!nearest || hit.distance < nearest.distance)) nearest = { entry: target, ...hit };
-      }
-      { const distance=Math.min(gun.stats.range,wall?.distance??Infinity,nearest?.distance??Infinity);
-        (result.traces??=[]).push({from:{...origin},to:{x:origin.x+dir.x*distance,y:origin.y+dir.y*distance,z:origin.z+dir.z*distance}}); }
-      this.environment.shoot(origin,dir,Math.min(gun.stats.range,wall?.distance??Infinity,nearest?.distance??Infinity),gun.stats.id);
-      if (!nearest || (wall && wall.distance <= nearest.distance + .0001)
-        || teammates(this.mode, e.session.team, nearest.entry.session.team)) continue;
-      const target = nearest.entry;
-      let appliedDamage=0;
-      const point = { x: origin.x + dir.x * nearest.distance, y: origin.y + dir.y * nearest.distance, z: origin.z + dir.z * nearest.distance };
-      this.damage.tryApply({ id: e.session.id, position: () => p.position }, {
-        id: target.session.id, alive: target.session.alive, position: () => target.controller.position,
-        applyDamage: (amount) => {
-          appliedDamage=Math.min(target.session.health,amount);
-          this.contributions.damage(target.session.id,target.session.life,this.round.id,e.session.id,e.session.life,appliedDamage,at);
-          target.session.health-=appliedDamage;target.session.regenAt=at+REGEN_DELAY_MS;
-          if (target.session.health === 0) this.eliminate(target, e, nearest!.zone === 'head', { ...dir });
-        },
-      }, { bodyDamage: damageAt(gun.stats, nearest.distance), zone: nearest.zone, point, weapon: gun.stats.id });
-      const previous = result.hits.find((h) => h.id === target.session.id);
-      if (previous) {
-        previous.amount += appliedDamage;
-        previous.health = target.session.health;
-        previous.head ||= nearest.zone === 'head';
-        previous.killed ||= !target.session.alive;
-      } else result.hits.push({ id: target.session.id, life: target.session.life, direction: { ...dir }, amount: appliedDamage, health: target.session.health,
-        head: nearest.zone === 'head', killed: !target.session.alive });
-    }
-    this.publish({ v: PROTOCOL_VERSION, type: 'shot', shot: result });
-    return result.hits.length > 0;
+    const gun=e.gun!,p=e.controller,origin=p.leanEye();
+    const result:ShotResult={id:crypto.randomUUID(),roundId:this.round.id,shooterId:e.session.id,weapon:gun.stats.id,hits:[]};
+    result.traces=traceWeaponShot(this.activeMap.world,origin,control.aimYaw??p.yaw,control.aimPitch??p.pitch,gun.stats,spread,
+      ()=>this.connected().filter(target=>target!==e&&target.session.alive).map(target=>({value:target,motion:target.controller.capture()})),
+      (target,hit)=>{
+        if(teammates(this.mode,e.session.team,target.session.team))return;
+        let appliedDamage=0;
+        this.damage.tryApply({id:e.session.id,position:()=>p.position},{
+          id:target.session.id,alive:target.session.alive,position:()=>target.controller.position,
+          applyDamage:amount=>{
+            appliedDamage=Math.min(target.session.health,amount);
+            this.contributions.damage(target.session.id,target.session.life,this.round.id,e.session.id,e.session.life,appliedDamage,at);
+            target.session.health-=appliedDamage;target.session.regenAt=at+REGEN_DELAY_MS;
+            if(target.session.health===0)this.eliminate(target,e,hit.zone==='head',{...hit.direction});
+          },
+        },{bodyDamage:hit.bodyDamage,zone:hit.zone,point:hit.point,weapon:gun.stats.id});
+        const previous=result.hits.find(h=>h.id===target.session.id);
+        if(previous){previous.amount+=appliedDamage;previous.health=target.session.health;previous.head ||=hit.zone==='head';previous.killed ||=!target.session.alive;}
+        else result.hits.push({id:target.session.id,life:target.session.life,direction:{...hit.direction},amount:appliedDamage,health:target.session.health,head:hit.zone==='head',killed:!target.session.alive});
+      },(dir,distance)=>this.environment.shoot(origin,dir,distance,gun.stats.id));
+    this.publish({v:PROTOCOL_VERSION,type:'shot',shot:result});return result.hits.length>0;
   }
 
   private tick(): void {

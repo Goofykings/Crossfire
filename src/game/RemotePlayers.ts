@@ -1,3 +1,4 @@
+import { visualCosmetic } from '../rendering/CosmeticAssets';
 import { Color3, Frustum, Material, Matrix, MeshBuilder, Quaternion, StandardMaterial, TransformNode, Vector3, type Scene, type Mesh, type BaseTexture } from '@babylonjs/core';
 import type { Elimination, PlayerState, Snapshot } from '../../shared/protocol';
 import { playerColor } from '../ui/teamColors';
@@ -20,6 +21,7 @@ interface Avatar {
   friendly: boolean; visible: boolean; clearFor: number; height: number;
   lean: number;
   weapon: CharacterWeapon | null;
+  loadingCosmetic?:string; failedCosmetic?:string;
   weaponAds: number;
   /** Server-confirmed shots waiting for the interpolated pose to reach them. */
   shots: ShotTimeline;
@@ -113,7 +115,7 @@ export class RemotePlayers {
       if (playerId === id) { a.label.hidden = true; this.silhouettes?.remove(a.meshes); }
     }
   }
-  spectatePose(id: string): { position: Vector3; rotation: Quaternion; weapon: WeaponId; gun: WeaponState;
+  spectatePose(id: string): { position: Vector3; rotation: Quaternion; weapon: WeaponId; cosmeticId:string; gun: WeaponState;
     speed: number; verticalSpeed: number; grounded: boolean; sliding: boolean; crouch: number } | null {
     const a = this.avatars.get(id);
     if (!a || a.death || !a.samples.length) return null;
@@ -125,7 +127,7 @@ export class RemotePlayers {
       a.root.position.y + (MOVEMENT.standEye + (MOVEMENT.crouchEye - MOVEMENT.standEye) * crouch),
       a.root.position.z + offset.z),
       rotation: Quaternion.RotationYawPitchRoll(a.root.rotation.y, a.look.rotation.x, -a.lean * LEAN_ANGLE),
-      weapon: player.weapon, gun: { ...player.combat.gun, ads: a.weaponAds },
+      weapon: player.weapon, cosmeticId:visualCosmetic(player.weapon,player.cosmeticId).id, gun: { ...player.combat.gun, ads: a.weaponAds },
       speed: Math.hypot(player.motion.velocity.x, player.motion.velocity.z), verticalSpeed: player.motion.velocity.y,
       grounded: player.motion.grounded, sliding: player.motion.slideRemaining > 0, crouch };
   }
@@ -201,10 +203,20 @@ export class RemotePlayers {
         this.avatars.set(player.id, a);
         root.setEnabled(player.id !== this.spectatedId);
       }
-      if (a.weapon?.id !== player.weapon) {
-        a.weapon?.dispose();
-        a.weapon = player.weapon && a.character ? this.weapons.create(a.character, player.weapon) : null;
-      }
+      if(player.weapon&&a.character){
+        const weapon=player.weapon,key=visualCosmetic(weapon,player.cosmeticId).id,avatar=a;
+        if(a.weapon?.id!==weapon||a.weapon.cosmeticId!==key){
+          const ready=this.weapons.create(a.character,weapon,key);
+          if(ready){a.weapon?.dispose();a.weapon=ready;}
+          else if(a.loadingCosmetic!==key&&a.failedCosmetic!==key){
+            a.loadingCosmetic=key;if(!a.weapon)a.weapon=this.weapons.create(a.character,weapon);
+            void this.weapons.load(weapon,undefined,key).then(()=>{
+              const latest=avatar.samples.at(-1)?.player;if(this.avatars.get(player.id)!==avatar||!latest?.weapon||visualCosmetic(latest.weapon,latest.cosmeticId).id!==key)return;
+              const next=this.weapons.create(avatar.character!,weapon,key);if(next){avatar.weapon?.dispose();avatar.weapon=next;}
+            }).catch(()=>{avatar.failedCosmetic=key;}).finally(()=>{if(avatar.loadingCosmetic===key)avatar.loadingCosmetic=undefined;});
+          }
+        }
+      }else if(!player.weapon){a.weapon?.dispose();a.weapon=null;}
       a.friendly = playerColor(s.match.mode, selfId, self?.team ?? null, player.id, player.team) === 'friendly';
       if (a.label.textContent !== player.name) a.label.textContent = player.name;
       a.label.dataset.relationship = a.friendly ? 'teammate' : 'opponent';

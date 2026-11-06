@@ -1,0 +1,133 @@
+import {FIXED_DT,MOVEMENT,PLAYER_MAX_HEALTH} from '../config/constants';
+import {PlayerController,NO_INTENT,type Vec3} from '../player/PlayerController';
+import {WEAPONS,Weapon,type WeaponId} from '../weapons/Weapon';
+import {DamageSystem} from '../game/Damage';
+import type {CollisionWorld} from '../physics/CollisionWorld';
+import type {MapLayout} from '../maps/types';
+import type {MapId} from '../../shared/maps';
+import {ROUND_MS} from '../../shared/maps';
+import {RESPAWN_DELAY_MS,type Snapshot,type InputFrame,type ShotResult,type Elimination} from '../../shared/protocol';
+import {teammates,NO_COMBAT} from '../../shared/combat';
+import {traceWeaponShot} from '../../shared/hitscan';
+import {regenerate,REGEN_DELAY_MS} from '../../shared/health';
+import {selectSpawn} from '../../shared/spawns';
+import {awardElimination,expireCombo,resetCombo,finalizeRound,type RoundStanding,type RoundResult} from '../../shared/scoring';
+import {DamageContributions,ASSIST_POINTS} from '../../shared/assists';
+import {unsafeMovement} from '../../shared/movementSafety';
+import {GrenadeCharge} from '../../shared/grenadeCharge';
+import {GRENADE,GRENADE_SMOKE_MS,throwGrenade,advanceGrenade,blastDamage,type GrenadeState,type GrenadeExplosion,type GrenadeEvent} from '../../shared/grenades';
+import type {EnvironmentSimulation,EnvironmentFrame} from '../../shared/environment';
+import {defaultCosmetic} from '../../shared/cosmetics';
+import {PracticeNavigation} from './Navigation';
+import {BotBrain,type BotContext} from './BotBrain';
+import {PRACTICE_POLICY,PracticeRandom,validPractice,type PracticeSetup} from './config';
+import type {PracticeActor} from './types';
+import {smokeObscures} from '../weapons/grenadeSmoke';
+export type PracticeEvent={type:'shot';shot:ShotResult}|{type:'elimination';elimination:Elimination}|{type:'grenade';event:GrenadeEvent};
+export interface PracticeWorld {world:CollisionWorld;layout:MapLayout;revision:string;environment?:EnvironmentSimulation}
+/** Browser-local authority. No fetch/WebSocket/storage/profile/reward adapter exists here.
+ * Orchestration is local; movement, hitscan, damage, spread, grenades, regeneration,
+ * spawn validation, assists, scoring and final rankings reuse production rules. */
+export class PracticeSimulation {
+ readonly policy=PRACTICE_POLICY;readonly selfId='practice-player';readonly actors:PracticeActor[]=[];readonly nav:PracticeNavigation;
+ readonly random:PracticeRandom;readonly events:PracticeEvent[]=[];readonly roundId:number;
+ now:number;started=false;endsAt:number|null=null;result:RoundResult|null=null;private serial=0;private environmentSeq=0;
+ readonly teamScores={blue:0,red:0};private readonly damage=new DamageSystem();private readonly contributions=new DamageContributions();private botContext:BotContext;
+ grenades:GrenadeState[]=[];explosions:GrenadeExplosion[]=[];
+ constructor(readonly setup:PracticeSetup,readonly data:PracticeWorld,name:string,options:{seed?:number;now?:number;roundId?:number;navigation?:PracticeNavigation}={}){
+  if(!validPractice(setup))throw Error('Invalid Practice settings.');this.now=options.now??Date.now();this.roundId=options.roundId??1;this.random=new PracticeRandom(options.seed??12345);this.nav=options.navigation??new PracticeNavigation(data.world,data.layout);
+  this.actors.push(this.create(this.selfId,name,setup.mode==='teams'?'blue':null));
+  for(let i=0;i<setup.bots;i++)this.actors.push(this.create('practice-bot-'+(i+1),'Bot '+(i+1),setup.mode==='teams'?(i%2===0?'red':'blue'):null));
+  for(const a of this.actors.slice(1))a.brain=new BotBrain(a,setup.difficulty,this.random);
+  this.botContext={actors:this.actors,nav:this.nav,now:this.now,mode:setup.mode,random:this.random,switchWeapon:(a,w)=>this.switchWeapon(a,w),obscured:(from,to)=>this.explosions.some(e=>smokeObscures(from,to,e.position,this.now-e.at))};
+ }
+ private id(kind:string){return `practice:${this.roundId}:${kind}:${++this.serial}`;}
+ private create(id:string,name:string,team:'blue'|'red'|null):PracticeActor{
+  const controller=new PlayerController(this.data.world);
+  return{controller,gun:null,brain:null,input:null,charge:new GrenadeCharge(),state:{id,name,team,motion:controller.capture(),ack:0,alive:false,health:100,life:0,weapon:null,combat:{gun:null,triggerHeld:false,reloadHeld:false,aimHeld:false,grenadeHeld:false},grenades:GRENADE.perLife,score:0,kills:0,deaths:0,assists:0,comboCount:0,comboUntil:null,lastPlayedRound:null,lastPlayedTeam:null,death:null,regenAt:null}};
+ }
+ spawn(a:PracticeActor,weapon:WeaponId):boolean{
+  if(this.result||a.state.alive||a.state.death&&this.now<a.state.death.respawnAt)return false;
+  const occupants=this.actors.filter(p=>p!==a&&p.state.alive).map(p=>({...p.controller.position,eyeHeight:p.controller.eyeHeight,opponent:!teammates(this.setup.mode,a.state.team,p.state.team)}));
+  const spawn=selectSpawn(this.data.layout,this.data.world,occupants);if(!spawn)return false;
+  a.controller.teleport({x:spawn.pos[0],y:spawn.pos[1],z:spawn.pos[2]},spawn.heading);a.controller.weaponClearance=weapon;a.gun=new Weapon(WEAPONS.find(w=>w.id===weapon)!);a.charge.reset();a.input=null;
+  Object.assign(a.state,{alive:true,health:PLAYER_MAX_HEALTH,life:a.state.life+1,death:null,regenAt:null,grenades:GRENADE.perLife,weapon,cosmeticId:defaultCosmetic(weapon),lastPlayedRound:this.roundId,lastPlayedTeam:a.state.team,combat:{gun:a.gun.capture(),triggerHeld:false,reloadHeld:false,aimHeld:false,grenadeHeld:false}});
+  resetCombo(a.state);this.contributions.clear(a.state.id);a.brain?.reset(this.now);return true;
+ }
+ spawnHuman(weapon:WeaponId):Snapshot{
+  if(!WEAPONS.some(w=>w.id===weapon))throw Error('Choose a valid weapon.');const human=this.actors[0];
+  if(!human.state.alive&&!this.spawn(human,weapon))throw Error('Wait for a valid respawn.');
+  if(!this.started){this.started=true;this.endsAt=this.now+ROUND_MS;for(const bot of this.actors.slice(1))this.spawn(bot,this.random.pick(WEAPONS).id);}
+  return this.snapshot();
+ }
+ switchWeapon(a:PracticeActor,weapon:WeaponId){if(!a.state.alive||a.gun?.reloading||a.state.weapon===weapon)return;a.gun=new Weapon(WEAPONS.find(w=>w.id===weapon)!);a.gun.equip();a.state.weapon=weapon;a.state.cosmeticId=defaultCosmetic(weapon);a.controller.weaponClearance=weapon;a.state.combat={gun:a.gun.capture(),triggerHeld:false,reloadHeld:false,aimHeld:false,grenadeHeld:false};}
+ private eliminate(victim:PracticeActor,killer:PracticeActor|null,head=false,direction:Vec3|null=null,weapon?:'grenade'){
+  if(!victim.state.alive)return;const id=this.id('death'),at=Math.floor(this.now),credited=killer&&killer!==victim?killer:null;
+  victim.state.alive=false;victim.state.health=0;victim.state.regenAt=null;victim.state.deaths++;victim.charge.reset();resetCombo(victim.state);victim.input=null;
+  if(victim.brain){victim.brain.state='respawning';victim.brain.visible=false;victim.brain.targetId=null;victim.brain.path=[];victim.brain.goal=null;}
+  const assists:{id:string;name:string;points:50}[]=[];
+  for(const source of this.contributions.take(victim.state.id,victim.state.life,this.roundId,at)){
+   const helper=this.actors.find(a=>a.state.id===source.id);if(!credited||!helper||helper===credited||helper===victim||helper.state.life!==source.life)continue;
+   helper.state.assists=(helper.state.assists??0)+1;helper.state.score+=ASSIST_POINTS;assists.push({id:helper.state.id,name:helper.state.name,points:50});
+  }
+  const award=credited?awardElimination(credited.state,at,head):null;
+  if(credited){credited.state.kills++;credited.state.grenades++;if(this.setup.mode==='teams'&&credited.state.team)this.teamScores[credited.state.team]++;if(!credited.state.alive)resetCombo(credited.state);}
+  const event:Elimination={id,at,respawnAt:at+RESPAWN_DELAY_MS,roundId:this.roundId,victimId:victim.state.id,victimName:victim.state.name,victimLife:victim.state.life,victimTeam:victim.state.team,killerId:killer?.state.id??null,killerName:killer?.state.name??null,killerTeam:killer?.state.team??null,weapon:weapon??killer?.state.weapon??null,head,direction,award,assists};
+  victim.state.death=event;this.events.push({type:'elimination',elimination:event});
+ }
+ private apply(victim:PracticeActor,killer:PracticeActor|null,amount:number,zone:'head'|'body',point:Vec3,direction:Vec3,weapon:WeaponId|'grenade'):number{
+  let applied=0;this.damage.tryApply({id:killer?.state.id??'environment',position:()=>point},{id:victim.state.id,alive:victim.state.alive,position:()=>victim.controller.position,applyDamage:damage=>{
+   applied=Math.min(victim.state.health,damage);if(killer)this.contributions.damage(victim.state.id,victim.state.life,this.roundId,killer.state.id,killer.state.life,applied,this.now);
+   victim.state.health-=applied;victim.state.regenAt=this.now+REGEN_DELAY_MS;if(victim.state.health===0)this.eliminate(victim,killer,zone==='head',direction,weapon==='grenade'?'grenade':undefined);
+  }},{bodyDamage:amount,zone,point,weapon});return applied;
+ }
+ private fire(a:PracticeActor,spread:number,control:InputFrame['combat']){
+  const gun=a.gun!,origin=a.controller.leanEye(),shot:ShotResult={id:this.id('shot'),roundId:this.roundId,shooterId:a.state.id,weapon:gun.stats.id,hits:[]};
+  shot.traces=traceWeaponShot(this.data.world,origin,control.aimYaw??a.controller.yaw,control.aimPitch??a.controller.pitch,gun.stats,spread,
+   ()=>this.actors.filter(t=>t!==a&&t.state.alive).map(t=>({value:t,motion:t.controller.capture()})),
+   (target,hit)=>{if(teammates(this.setup.mode,a.state.team,target.state.team))return;const applied=this.apply(target,a,hit.bodyDamage,hit.zone,hit.point,hit.direction,gun.stats.id),previous=shot.hits.find(h=>h.id===target.state.id);
+    if(previous){previous.amount+=applied;previous.health=target.state.health;previous.head ||=hit.zone==='head';previous.killed ||=!target.state.alive;}
+    else shot.hits.push({id:target.state.id,life:target.state.life,amount:applied,health:target.state.health,head:hit.zone==='head',killed:!target.state.alive,direction:hit.direction});},
+   (dir,distance)=>this.data.environment?.shoot(origin,dir,distance,gun.stats.id),this.random.next);
+  this.events.push({type:'shot',shot});
+ }
+ private updateGrenades(){
+  this.explosions=this.explosions.filter(e=>this.now-e.at<GRENADE_SMOKE_MS);
+  for(const g of [...this.grenades]){
+   advanceGrenade(g,this.now,this.data.world,(position,speed)=>{if(speed>1)this.events.push({type:'grenade',event:{kind:'bounce',id:this.id('bounce'),grenadeId:g.id,roundId:this.roundId,at:Math.floor(this.now),position:{...position},strength:Math.min(1,speed/12)}});});
+   if(this.now<g.explodeAt)continue;this.grenades=this.grenades.filter(v=>v!==g);const owner=this.actors.find(a=>a.state.id===g.ownerId)??null;
+   const blast:GrenadeExplosion={id:this.id('blast'),grenadeId:g.id,ownerId:g.ownerId,ownerLife:g.ownerLife,roundId:this.roundId,at:Math.floor(this.now),position:{...g.position},hits:[]};
+   for(const victim of this.actors){if(!victim.state.alive||victim!==owner&&teammates(this.setup.mode,owner?.state.team??null,victim.state.team))continue;
+    const amount=blastDamage(this.data.world,g.position,victim.controller.capture());if(amount<=0)continue;const p=victim.controller.position,dx=p.x-g.position.x,dy=p.y+victim.controller.eyeHeight-g.position.y,dz=p.z-g.position.z,n=Math.hypot(dx,dy,dz)||1,direction={x:dx/n,y:dy/n,z:dz/n};
+    const applied=this.apply(victim,owner,amount,'body',p,direction,'grenade');blast.hits.push({id:victim.state.id,life:victim.state.life,amount:applied,health:victim.state.health,killed:!victim.state.alive,direction});
+   }
+   if(owner&&!owner.state.alive)resetCombo(owner.state);this.explosions.push(blast);if(this.explosions.length>64)this.explosions.shift();this.events.push({type:'grenade',event:{kind:'explode',...blast}});
+  }
+ }
+ step(input:InputFrame|null=null,dt=FIXED_DT){
+  if(!this.started||this.result)return;this.now+=dt*1000;
+  if(this.endsAt!==null&&this.now>=this.endsAt){this.finish();return;}
+  this.botContext.now=this.now;
+  for(const a of this.actors){expireCombo(a.state,this.now);regenerate(a.state,this.now);if(a.brain&&!a.state.alive&&a.state.death&&this.now>=a.state.death.respawnAt)this.spawn(a,this.random.pick(WEAPONS).id);}
+  for(const a of this.actors){
+   if(!a.state.alive)continue;const frame=a===this.actors[0]?input:a.brain?.input(this.botContext,dt)??null;a.input=frame;
+   if(frame){a.controller.yaw=frame.yaw;a.controller.pitch=frame.pitch;a.state.ack=frame.seq;}
+   a.controller.weaponClearance=a.state.weapon;a.controller.fixedUpdate(dt,frame?.intent??{...NO_INTENT});
+   if(unsafeMovement(a.controller.position,this.data.layout)||a.controller.position.y<MOVEMENT.killY||a.brain&&a.brain.stuckFor>10)this.eliminate(a,null);
+  }
+  // Move everyone first, exactly like the Worker; resolve all weapons from this pose.
+  for(const a of this.actors){
+   if(!a.state.alive||!a.gun)continue;const f=a.input,control=f?.combat??NO_COMBAT,c=a.state.combat;
+   const charge=a.charge.update(f?!!control.grenade:undefined,this.now,dt,a.state.grenades>0&&a.gun.action==='idle'&&!a.controller.sliding,!!control.grenadeCancel);
+   if(charge!==null&&this.grenades.length<32){const p=a.controller,g=throwGrenade(this.data.world,p.leanEye(),{x:p.position.x,y:p.position.y+p.eyeHeight,z:p.position.z},p.lookDirection(),p.velocity,{id:this.id('grenade'),ownerId:a.state.id,ownerLife:a.state.life,roundId:this.roundId,at:this.now},charge);if(g){a.state.grenades--;this.grenades.push(g);this.events.push({type:'grenade',event:{kind:'throw',id:this.id('throw'),projectile:g}});}}
+   const events=a.gun.update(dt,{trigger:control.trigger,triggerPressed:control.trigger&&!c.triggerHeld,reloadPressed:control.reload&&!c.reloadHeld,aim:f?.intent.aim??c.aimHeld,moveFactor:a.controller.horizontalSpeed/MOVEMENT.weaponMoveReference,airborne:!a.controller.grounded,sprinting:false});
+   c.triggerHeld=control.trigger;c.reloadHeld=control.reload;c.aimHeld=f?.intent.aim??false;c.grenadeHeld=!!control.grenade;
+   for(const event of events)if(event.type==='fire')this.fire(a,event.spread,control);
+  }
+  this.updateGrenades();this.data.environment?.advance(dt);
+ }
+ finish(){if(this.result)return;const players:Record<string,RoundStanding>={};for(const a of this.actors)players[a.state.id]={id:a.state.id,name:a.state.name,team:a.state.team,weapon:a.state.weapon,kills:a.state.kills,deaths:a.state.deaths,assists:a.state.assists??0,score:a.state.score};this.result=finalizeRound({roundId:this.roundId,mapId:this.setup.mapId,mode:this.setup.mode,endsAt:Math.floor(this.endsAt??this.now),players},this.teamScores);this.grenades=[];}
+ environment(full=false):EnvironmentFrame|null{const env=this.data.environment;if(!env)return null;const states=full?env.capture():env.takeChanges();if(full)env.takeChanges();return !full&&!states.length?null:{roundId:this.roundId,mapVersion:this.data.revision,seq:++this.environmentSeq,at:Math.floor(this.now),full,states};}
+ snapshot():Snapshot{return {room:'practice-local',roundId:this.roundId,mapId:this.setup.mapId as MapId,mapVersion:this.data.revision,serverTime:Math.floor(this.now),match:{mode:this.setup.mode,endsAt:this.endsAt===null?null:Math.floor(this.endsAt),teamScores:this.setup.mode==='teams'?{...this.teamScores}:null},players:this.actors.map(a=>({...a.state,motion:a.controller.capture(),combat:{...a.state.combat,gun:a.gun?.capture()??null}})),grenades:structuredClone(this.grenades),explosions:structuredClone(this.explosions),result:this.result};}
+ inspect(){return {policy:this.policy,setup:this.setup,now:this.now,started:this.started,nav:this.nav.inspect(),bots:this.actors.slice(1).map(a=>({id:a.state.id,name:a.state.name,health:a.state.health,weapon:a.state.weapon,position:{...a.controller.position},...a.brain!.inspect()}))};}
+}

@@ -1,3 +1,43 @@
+## Browser-local Practice (2026-11-05)
+
+Read docs/PRACTICE.md. PracticeSimulation is in-process authority with explicit
+non-rewarding policy and no career/network/storage adapters; never upload local
+events or add a backend fallback. Game uses PracticeClient's presentation contract
+with existing RemotePlayers/HUD/animations. Shared hitscan.ts is also used by the
+Worker; preserve actual spread/damage/LOS. Navigation rebuilds from current real
+collision/layout; use the shared controller for bot movement. Cold startup/Mode
+Select must make no backend requests; Public Servers/online account actions opt
+in. Practice aborts pending account/admission requests and stops polls. Protocol
+v19 and Cloudflare configuration unchanged. F4 nav diagnostics/early finish are
+DEV only. No commit/push/deploy performed. See newest PROGRESS.md for checks.
+
+## Foundry Collection assets (2026-11-05)
+
+See docs/FOUNDRY_COLLECTION.md and public/assets/cosmetics/foundry-collection.json.
+Four original staged GLBs/skins plus crate, packed editable Blender sources and
+transparent thumbnails exist. These are not registered/granted in the live catalog.
+Preserve original Default assets, anchors, moving parts and weapon envelopes.
+Use binding:embedded for the collection. Regenerate with blender/cosmetics scripts;
+assets:verify includes the staged collection check. The isolated tools asset lab
+never contacts inventory or grants items. No functional crates/purchases added.
+
+## Cosmetic inventory / Shop / Locker (2026-11-05)
+
+Read docs/COSMETICS.md and public/assets/cosmetics/README.md before adding skins.
+shared/cosmetics.ts is the source catalog; regenerate the public manifest with
+node tools/export-cosmetics.mjs and run assets:verify. Exactly four Common Default
+items exist. Alternate artwork must preserve the original category's rig frames,
+anchors and moving parts. No balance or collision rules belong in cosmetics.
+CosmeticAssets is shared by first person, characters and previews; never mutate
+shared materials. Canonical public-main stores separate inventory:<identity>
+records using the existing career capability; never overwrite career/wallet/stats
+from a cosmetic write. Grants and functional crates are NOT implemented: keep the
+Shop button disabled, no spending/opening endpoints. Unknown optional visual IDs
+fall back to Default; server equip still requires actual ownership/catalog matches.
+Gameplay protocol stays v19; inventory HTTP schema v1. Notify child rooms outside
+canonical gates and retain revision guards. Both Worker and frontend need the
+matching authorized CI release. Nothing was committed, pushed or deployed.
+
 ## Map overhaul (2026-11-05)
 
 See docs/MAP_OVERHAUL.md and the newest PROGRESS.md entry. All three maps are

@@ -1,3 +1,8 @@
+import { CosmeticsClient } from '../network/CosmeticsClient';
+import { PracticeClient,type MatchSession } from '../practice/PracticeClient';
+import {EnvironmentSimulation} from '../../shared/environment';
+import type { PracticeSetup } from '../practice/config';
+import { defaultEquipment } from '../../shared/cosmetics';
 import { RoomClient } from '../network/RoomClient';
 import type { RoomAdmission } from '../../shared/rooms';
 import { BulletTrails } from '../weapons/BulletTrails';
@@ -72,6 +77,8 @@ export class Game {
   readonly ctx: RenderContext;
   readonly input: Input;
   readonly settings = new SettingsStore();
+  private cosmetics:CosmeticsClient|null=null;
+  private shownCosmetic='';
   private career: CareerClient | null = null;
   readonly guestProfile = new GuestProfileStore();
   private readonly lastUsedWeapon = new LastUsedWeapon();
@@ -118,7 +125,13 @@ export class Game {
   private readonly tmpPos = { x: 0, y: 0, z: 0 };
   /** Other players' last known positions (fed by a future network client; empty in single player). */
   readonly teammates = new TeammateRegistry();
-  private network: MultiplayerClient | null = null;
+  private network: MatchSession | null = null;
+  private practiceSetup:PracticeSetup|null=null;
+  private onlineRequested=false;
+  private onlineAbort:AbortController|null=null;
+  private get localPractice(){return this.network instanceof PracticeClient?this.network:null;}
+  private practiceDebug:import('../practice/PracticeDebug').PracticeDebug|null=null;
+  private practiceDebugLoading=false;
   private leavingRoom:Promise<void>=Promise.resolve();
   private roomClient:RoomClient|null=null;
   private admission:RoomAdmission|null=null;
@@ -205,14 +218,17 @@ export class Game {
     };
     this.ui.onPlay = () => void this.play(this.wantedMap);
     if(this.options.multiplayer)this.ui.onModeSelect=()=>this.ui.rooms.open();
-    this.ui.rooms.onAdmission=admission=>{this.admission=admission;void this.play(admission.room.mapId);};
+    this.ui.rooms.onOnline=()=>{this.practiceSetup=null;this.enableOnline();};
+    this.ui.rooms.onPractice=()=>{this.stopOnline();this.ui.practice.open();};
+    this.ui.practice.onStart=setup=>{this.stopOnline();this.practiceSetup={...setup};this.admission=null;void this.play(setup.mapId);};
+    this.ui.rooms.onAdmission=admission=>{this.practiceSetup=null;this.admission=admission;void this.play(admission.room.mapId);};
     this.ui.onStart = () => void this.spawnSelected();
     this.ui.onResume = () => {
       if (this.preSpawnPaused) { this.preSpawnPaused = false; this.showPreSpawn(); }
       else void this.enterPlay();
     };
     this.ui.onQuit = () => this.quitToMenu();
-    this.ui.onCancelLoading = () => {const selected=!!this.admission;this.quitToMenu();if(selected)this.ui.rooms.open();};
+    this.ui.onCancelLoading = () => {const practice=!!this.practiceSetup,selected=!!this.admission;this.quitToMenu();if(practice)this.ui.practice.open();else if(selected)this.ui.rooms.open();};
     this.ui.onChatSend = (text) => this.network?.sendChat(text) ?? false;
     this.ui.onChatClose = () => {
       if (this.state !== 'playing') return;
@@ -233,7 +249,7 @@ export class Game {
     });
     window.addEventListener('pagehide', () => { this.network?.disconnect(false); this.presence?.dispose(); this.career?.dispose(); });
     window.addEventListener('pageshow', (e) => {
-      if (e.persisted) { this.presence?.start(); this.career?.start(() => this.ui.currentScreen === 'menu'); }
+      if (e.persisted&&this.onlineRequested&&!this.localPractice) { this.presence?.start(); this.career?.start(() => this.onlineRequested&&!this.localPractice&&this.ui.currentScreen === 'menu'); }
       if (e.persisted && this.network) void this.network.connect().catch((error) => this.connectionError((error as Error).message));
     });
     window.addEventListener('keyup', (e) => { if (this.input.matches('leaderboard', e.code)) { this.tabHeld = false; this.ui.scoreboard.setVisible(false); } });
@@ -244,7 +260,7 @@ export class Game {
       if (this.ui.chatOpen || isTextInput(e.target)) return;
       if (this.input.matches('chat', e.code) && this.state === 'playing' && !e.repeat) {
         e.preventDefault();
-        if (this.network?.state !== 'connected') this.ui.showToast('Chat is available in multiplayer', 'warn');
+        if (this.localPractice||this.network?.state !== 'connected') this.ui.showToast('Chat is available in multiplayer', 'warn');
         else { this.input.enabled = false; this.input.clearState(); this.ui.openChat(); this.input.releaseLock(); }
         return;
       }
@@ -263,12 +279,13 @@ export class Game {
       }
       if (e.code === 'F3') this.settings.update({ showFps: !this.settings.value.showFps });
       if (e.code === 'F2' && this.map && this.state === 'playing') void this.map.toggleCollisionDebug();
+      if(import.meta.env.DEV&&e.code==='F4'&&!e.repeat&&this.localPractice){e.preventDefault();void this.togglePracticeDebug();}
     });
     this.ctx.canvas.addEventListener('mousedown', (e) => {
       if (this.ui.chatOpen) return;
       if (this.state === 'playing' && this.input.matches('chat', `Mouse${e.button}`)) {
         e.preventDefault();
-        if (this.network?.state !== 'connected') this.ui.showToast('Chat is available in multiplayer', 'warn');
+        if (this.localPractice||this.network?.state !== 'connected') this.ui.showToast('Chat is available in multiplayer', 'warn');
         else { this.input.enabled = false; this.input.clearState(); this.ui.openChat(); this.input.releaseLock(); }
         return;
       }
@@ -281,19 +298,36 @@ export class Game {
     this.ui.show('menu');
     this.presence = new Presence(this.multiplayerBackend.ok ? this.multiplayerBackend.url : '', (count) => this.ui.setOnline(count),
       () => this.ui.currentScreen === 'menu');
-    this.presence.start();
     if (this.multiplayerBackend.ok) {
       this.career = new CareerClient(this.multiplayerBackend.url);
       this.roomClient=new RoomClient(this.multiplayerBackend.url,async()=>{await this.career!.ensure();const token=this.career!.joinCredential();if(!token)throw Error('A guest profile is required. Retry shortly.');return token;});this.ui.rooms.client=this.roomClient;
-      this.ui.leaderboard.request = (period,metric,signal) => this.career!.statistics(period,metric,signal);
-      this.career.onChange = () => this.ui.challenges.set(this.career!.view, this.career!.error, this.career!.temporary);
-      this.ui.challenges.onRetry = this.ui.challenges.onReset = () => { void this.career?.ensure().catch(() => {}); };
-      this.career.start(() => this.ui.currentScreen === 'menu');
+      this.ui.leaderboard.request = (period,metric,signal) => {this.enableOnline();return this.career!.statistics(period,metric,signal);};
+      this.cosmetics=new CosmeticsClient(this.multiplayerBackend.url,this.career);this.ui.cosmetics.client=this.cosmetics;
+      this.ui.cosmetics.onRefreshAccount=()=>{this.enableOnline();void this.career!.ensure().catch(()=>{});};
+      this.cosmetics.onChange=()=>{if(this.weaponView&&this.cosmetics?.view)void this.weaponView.setCosmetics(this.cosmetics.view.equipped).then(()=>{if(this.map)this.excludeViewFromSun(this.map);}).catch(error=>this.ui.showToast((error as Error).message,'warn'));};
+      this.career.onChange = () => {this.ui.challenges.set(this.career!.view, this.career!.error, this.career!.temporary);this.ui.cosmetics.setBalance(this.career!.view?.gems??null);};
+      this.ui.challenges.onRetry = this.ui.challenges.onReset = () => {this.enableOnline();void this.career?.ensure().catch(() => {});};
+      this.ui.challenges.set(null,'Online data not loaded.');
     } else this.ui.challenges.set(null, 'Challenges unavailable: check multiplayer configuration.');
     this.ctx.engine.runRenderLoop(() => this.frame(this.ctx.engine.getDeltaTime() / 1000));
     await this.ui.ensureGuestProfile();
-    void this.career?.ensure().catch(() => {});
     if (this.options.autoplay) await this.play(first);
+  }
+
+  /** Offline entry cannot start account/directory/presence requests. Online features
+   * opt in explicitly; Practice cancels polling and never receives a reward adapter. */
+  private enableOnline():void {
+    if(this.practiceSetup||this.localPractice||this.onlineRequested)return;
+    this.onlineRequested=true;const abort=new AbortController();this.onlineAbort=abort;
+    this.presence?.start();this.career?.start(()=>this.onlineRequested&&!this.localPractice&&['menu','shop','locker'].includes(this.ui.currentScreen));
+    void this.career?.ensure().then(()=>{abort.signal.throwIfAborted();return this.cosmetics?.load(abort.signal);}).catch(()=>{});
+  }
+  private stopOnline():void {this.onlineRequested=false;this.onlineAbort?.abort();this.onlineAbort=null;this.presence?.dispose();this.career?.dispose();this.ui.rooms.cancel();}
+
+  private async togglePracticeDebug(){
+    if(this.practiceDebug){this.practiceDebug.dispose();this.practiceDebug=null;return;}
+    if(this.practiceDebugLoading)return;this.practiceDebugLoading=true;const session=this.localPractice;
+    try{const {PracticeDebug}=await import('../practice/PracticeDebug');if(session&&session===this.localPractice)this.practiceDebug=new PracticeDebug();}finally{this.practiceDebugLoading=false;}
   }
 
   /** Playable maps and environments are loaded only when entering the game. */
@@ -321,6 +355,7 @@ export class Game {
       signal?.throwIfAborted();
       this.ui.setLoading(0, 'Loading weapon materials');
       await this.materials.ready(signal);
+      await view.setCosmetics(this.cosmetics?.view?.equipped??defaultEquipment());
       await weaponPreviews((id, url) => this.ui.setWeaponPreview(id, url, signal), signal);
       signal?.throwIfAborted();
       this.ui.setWeaponName(this.weapon.stats.name);
@@ -426,12 +461,19 @@ export class Game {
     this.ui.setLoading(0, 'Opening match');
     this.ui.show('loading');
     try {
-      if (this.options.multiplayer) {
-        if (!this.multiplayerBackend.ok) throw new Error(this.multiplayerBackend.error);
-        await this.career?.ensure().catch(() => {});
-        signal.throwIfAborted();
-        const network = new MultiplayerClient(this.admission?this.roomClient!.socket(this.admission.room.id):this.multiplayerBackend.url, () => this.guestProfile.value.username,
-          { ...(this.admission?{roomTicket:this.admission.ticket}:{}),debug: new URLSearchParams(location.search).has('networkDebug'), profileToken: () => this.career?.joinCredential(), profileScope: () => this.career?.sessionScope() });
+      if (this.options.multiplayer||this.practiceSetup) {
+        let network:MatchSession;
+        if(this.practiceSetup){
+          this.ui.setPractice(true);await this.prepareGameAssets(signal);await this.requestMap(id,signal);signal.throwIfAborted();
+          this.map!.props.resetSynchronization();
+          network=new PracticeClient(this.practiceSetup,{world:this.map!.world,layout:this.map!.def.layout,revision:this.map!.revision,environment:new EnvironmentSimulation(this.map!.props.definition,this.map!.world)},this.guestProfile.value.username);
+        }else{
+          this.ui.setPractice(false);this.enableOnline();
+          if (!this.multiplayerBackend.ok) throw new Error(this.multiplayerBackend.error);
+          await this.career?.ensure().catch(() => {});signal.throwIfAborted();
+          network = new MultiplayerClient(this.admission?this.roomClient!.socket(this.admission.room.id):this.multiplayerBackend.url, () => this.guestProfile.value.username,
+            { ...(this.admission?{roomTicket:this.admission.ticket}:{}),debug: new URLSearchParams(location.search).has('networkDebug'), profileToken: () => this.career?.joinCredential(), profileScope: () => this.career?.sessionScope() });
+        }
         this.network = network;
         network.onRoomExit=message=>{if(this.network===network){this.quitToMenu();this.ui.rooms.open(message);}};
         network.onCareer = profile => { if (!signal.aborted && this.network === network) this.career?.accept(profile); };
@@ -541,6 +583,7 @@ export class Game {
         if (!network.latest || network.state !== 'connected') return;
         if (target.roundId !== network.latest.roundId || target.mapId !== network.latest.mapId) continue;
         if (this.map!.revision !== target.mapVersion) throw new Error('Map assets differ from the server. Rebuild matching client/server assets.');
+        this.map!.props.resetSynchronization();
         this.ui.setLoading(0, 'Preparing weapons and character shaders');
         await this.materials.ready(signal);
         await Promise.all([meshesReady(this.weaponView?.meshes ?? [], signal), this.remotePlayers.ready(signal)]);
@@ -551,7 +594,7 @@ export class Game {
         this.networkReady = true;
         this.acceptSnapshot(network.latest);
         if (this.ui.currentScreen === 'results') return;
-        this.ui.setMapTitle(this.map!.def.name, target.match.mode === 'teams' ? 'Teams' : target.match.mode === 'ffa' ? 'Free for all' : 'Public match');
+        this.ui.setMapTitle(this.map!.def.name, (this.localPractice?'Practice · ':'')+(target.match.mode === 'teams' ? 'Teams' : target.match.mode === 'ffa' ? 'Free for all' : 'Public match'));
         this.excludeViewFromSun(this.map!);
         const self = network.latest.players.find((p) => p.id === network.selfId);
         if (!self) throw new Error('Server did not assign a player');
@@ -597,6 +640,7 @@ export class Game {
     this.health = self.health;
     this.ui.setHealth(self.health, PLAYER_MAX_HEALTH);
     if (self.alive) {
+      if(self.weapon&&self.cosmeticId&&this.shownCosmetic!==`${self.weapon}:${self.cosmeticId}`){this.shownCosmetic=`${self.weapon}:${self.cosmeticId}`;void this.weaponView?.setCosmetic(self.weapon,self.cosmeticId).then(()=>{if(this.map)this.excludeViewFromSun(this.map);}).catch(error=>this.ui.showToast((error as Error).message,'warn'));}
       if ((self.life !== this.networkLife || self.id !== this.appliedPlayerId) && self.weapon) {
         this.lastUsedWeapon.remember(self.weapon);
         this.ui.damage.clear();
@@ -624,6 +668,13 @@ export class Game {
     const result = snapshot.result, network = this.network;
     const self = snapshot.players.find((p) => p.id === network?.selfId);
     if (!result || !network || self?.lastPlayedRound !== result.roundId) return false;
+    if(this.localPractice){
+      if(this.state==='results')return true;const setup={...this.practiceSetup!};
+      this.networkReady=false;this.state='results';this.tabHeld=false;this.input.enabled=false;this.input.clearState();this.input.releaseLock();
+      this.spectatingDeath=null;this.remotePlayers.setSpectated(null);this.remotePlayers.clear();this.grenadeView?.clear();this.weaponView?.setVisible(false);this.ui.damage.clear();this.ui.setScope(0);
+      this.ui.showRoundResult(result,network.selfId,self.lastPlayedTeam,()=>{this.quitToMenu();this.stopOnline();this.practiceSetup=setup;void this.play(setup.mapId);},()=>this.quitToMenu(),{settings:()=>{this.quitToMenu();this.ui.practice.open();}});
+      return true;
+    }
     const key = `crossfire.result.${network.selfId}.${result.roundId}`;
     let dismissed = this.dismissedResults.has(key);
     try { dismissed ||= sessionStorage.getItem(key) === 'dismissed'; } catch { /* Optional persistence. */ }
@@ -806,6 +857,8 @@ export class Game {
   }
 
   private quitToMenu(): void {
+    const wasPractice=!!this.practiceSetup||!!this.localPractice;
+    this.practiceDebug?.dispose();this.practiceDebug=null;
     this.ui.rooms.update(null,'',0,false);
     this.admission=null;
     this.grenadeView?.clear(); this.practiceGrenades = []; this.grenadeClick = false; this.grenadeHeld = false;
@@ -825,6 +878,7 @@ export class Game {
     this.preSpawnPaused = false;
     if(this.network)this.leavingRoom=this.network.leaveRoom();
     this.network = null; this.selectionTarget = null; this.selectionFocus = null; this.recentCombat.clear();
+    this.practiceSetup=null;this.ui.setPractice(false);
     this.networkReady = false;
     this.loadedRound = -1;
     this.networkLife = -1;
@@ -839,8 +893,7 @@ export class Game {
     this.weaponView?.setVisible(false);
     this.effects?.clearDecals(); this.trails.clear();
     this.ui.show('menu');
-    void this.presence?.poll();
-    void this.career?.ensure().catch(() => {});
+    if(!wasPractice&&this.onlineRequested){void this.presence?.poll();void this.career?.ensure().then(()=>this.cosmetics?.load(this.onlineAbort?.signal??new AbortController().signal)).catch(() => {});}
   }
 
   private applySettings(raw: Readonly<Settings>, changed: (keyof Settings)[]): void {
@@ -874,6 +927,7 @@ export class Game {
   private frame(rawDt: number): void {
     this.ui.rooms.update(this.network?.latest??null,this.network?.selfId??'',Date.now()+(this.network?.clockOffset??0),!['menu','loading','results'].includes(this.state));
     this.ui.challenges.update(this.guestProfile.value.username, this.career?.serverNow ?? null);
+    this.homeCharacter.setCosmetics(this.cosmetics?.view?.equipped??defaultEquipment());
     this.homeCharacter.setWeapon(this.lastUsedWeapon.value ?? this.ui.selectedWeapon);
     this.homeCharacter.setName(this.guestProfile.value.username);
     this.homeCharacter.setVisible(this.state === 'menu' && this.ui.currentScreen === 'menu' && !this.options.autoplay);
@@ -893,6 +947,8 @@ export class Game {
     } else if (this.map && (this.state === 'start' || this.state === 'loading')) {
       this.selectionCamera(dt);
     }
+    this.localPractice?.advance(dt,this.state==='paused'||this.state==='loading');
+    if(this.practiceDebug&&this.localPractice)this.practiceDebug.update(this.localPractice.simulation,this.fps.value);
     this.updateScoreboard();
     this.remotePlayers.setPresentationVisible(this.ui.currentScreen === 'hud' || this.state === 'spectating');
     if (this.network?.state === 'connected') this.remotePlayers.update(Date.now() + this.network.clockOffset - 100, dt);
@@ -902,6 +958,7 @@ export class Game {
       const death = this.spectatingDeath;
       const pose = death.killerId && this.network?.state === 'connected' ? this.remotePlayers.spectatePose(death.killerId) : null;
       if (pose) {
+        if(this.shownCosmetic!==`${pose.weapon}:${pose.cosmeticId}`){this.shownCosmetic=`${pose.weapon}:${pose.cosmeticId}`;void this.weaponView?.setCosmetic(pose.weapon,pose.cosmeticId).then(()=>{if(this.map)this.excludeViewFromSun(this.map);}).catch(error=>this.ui.showToast((error as Error).message,'warn'));}
         const camera = this.ctx.camera, blend = 1 - Math.exp(-dt * 7);
         camera.position = Vector3.Lerp(camera.position, pose.position, blend);
         camera.rotationQuaternion ??= Quaternion.Identity();
@@ -1305,6 +1362,8 @@ export class Game {
       ready: () => this.state === 'playing' && !!this.map && (!this.options.multiplayer || this.network?.state === 'connected'),
       network: () => ({ state: this.network?.state ?? 'idle', selfId: this.network?.selfId ?? '',
         snapshot: this.network?.latest ?? null, rendered: this.remotePlayers.inspect(), diagnostics: this.network?.inspect() ?? null }),
+      practice:()=>this.localPractice?.simulation.inspect()??null,
+      practiceFinish:()=>{if(import.meta.env.DEV&&this.localPractice){this.localPractice.simulation.finish();this.localPractice.advance(0);}},
       networkReconnect: () => this.network?.reconnect(),
       networkLeave: () => this.quitToMenu(),
       state: () => this.state,
@@ -1385,6 +1444,7 @@ export class Game {
           muzzleBlocked: muzzle && this.map?.world.overlapsCylinder(muzzle.x, muzzle.z, .1, muzzle.y - .1, muzzle.y + .1) };
       },
       characterAsset: () => this.remotePlayers.characters.inspect(),
+      cosmetics:()=>({view:this.cosmetics?.view??null,page:this.ui.cosmetics.inspect()}),
       homeCharacter: () => this.homeCharacter.inspect(),
       /** Pose lab on the isolated home preview (same rig as remote players); null restores it. */
       characterLab: (options: CharacterLabOptions | null) => this.homeCharacter.characterLab(options),

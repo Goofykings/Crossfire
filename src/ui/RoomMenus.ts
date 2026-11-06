@@ -8,6 +8,8 @@ const node=<K extends keyof HTMLElementTagNameMap>(tag:K,cls='',text=''):HTMLEle
 export class RoomMenus {
  client:RoomClient|null=null;
  onAdmission:(admission:RoomAdmission)=>void=()=>{};
+ onPractice:()=>void=()=>{};
+ onOnline:()=>void=()=>{};
  private request:AbortController|null=null;
  private mode:HTMLElement;
  private create:HTMLElement;
@@ -33,8 +35,8 @@ export class RoomMenus {
   const frame=node('div','room-shell');const header=node('header','room-heading');header.append(node('h1','','MODE SELECT'),this.button('Back',()=>{this.cancel();this.show('menu');}));
   const columns=node('div','room-columns'),publicArea=node('section','room-public'),publicHead=node('div','room-list-heading');
   this.refresh=this.button('Refresh',()=>void this.load());this.refresh.className='btn room-refresh';this.refresh.setAttribute('aria-label','Refresh public rooms');
-  publicHead.append(node('h2','','Public Servers'),this.refresh);this.status.setAttribute('role','status');publicArea.append(publicHead,this.list,this.status);
-  const actions=node('aside','room-actions');actions.append(this.button('Join Private Server',()=>{this.privateError.textContent='';this.code.value='';this.privateDialog.showModal();this.code.focus();}),this.button('Create Server',()=>this.openCreate()));
+  const publicOpen=this.button('Public Servers',()=>void this.load());publicOpen.classList.add('room-public-open');publicHead.append(publicOpen,this.refresh);this.status.setAttribute('role','status');publicArea.append(publicHead,this.list,this.status);
+  const actions=node('aside','room-actions');actions.append(this.button('Join Private Server',()=>{this.privateError.textContent='';this.code.value='';this.privateDialog.showModal();this.code.focus();}),this.button('Create Server',()=>this.openCreate()),this.button('Practice',()=>{this.cancel();this.onPractice();}));
   columns.append(publicArea,actions);frame.append(header,columns);this.mode.append(frame);
   const form=node('form','room-setup room-shell');const createHead=node('header','room-heading');createHead.append(node('h1','','CREATE SERVER'),this.button('Back',()=>this.open()));
   this.name.maxLength=48;this.name.required=true;this.name.setAttribute('aria-label','Server name');this.name.className='room-name';
@@ -57,18 +59,18 @@ export class RoomMenus {
  private sync(){for(const o of this.options){const selected=this.setup[o.key]===o.value;o.button.classList.toggle('selected',selected);o.button.setAttribute('aria-pressed',String(selected));}}
  private needClient(){if(!this.client)throw Error('Multiplayer configuration is unavailable.');return this.client;}
  cancel(){this.request?.abort();this.request=null;this.refresh.disabled=false;this.mode.querySelectorAll<HTMLButtonElement>('button').forEach(b=>b.disabled=false);this.create.querySelectorAll<HTMLButtonElement>('button').forEach(b=>b.disabled=false);}
- open(message=''){this.cancel();this.privateDialog.close();this.show('modes');this.status.textContent=message;void this.load(message);}
+ open(message=''){this.cancel();this.privateDialog.close();this.show('modes');this.list.replaceChildren();this.status.textContent=message||'Select Public Servers to connect, or Practice to play offline.';}
  private openCreate(){this.cancel();this.setup={name:roomName(this.username()+"'s Server"),privacy:'public',mapId:'european-town',mode:'ffa',maxPlayers:6};this.name.value=this.setup.name;this.limit.value='6';this.limit.nextElementSibling!.textContent='6';this.creationError.textContent='';this.sync();this.show('create-room');}
  private async load(message=''){
   this.cancel();const request=new AbortController();this.request=request;this.refresh.disabled=true;this.status.textContent=message||'Loading rooms...';this.list.replaceChildren();
-  try{const rooms=await this.needClient().list(request.signal);if(request.signal.aborted)return;this.status.textContent=message||(rooms.length?'':'None');
+  try{this.onOnline();const rooms=await this.needClient().list(request.signal);if(request.signal.aborted)return;this.status.textContent=message||(rooms.length?'':'None');
    for(const room of rooms){const b=this.button('',()=>void this.admit(signal=>this.needClient().join({roomId:room.id},signal),this.status));b.classList.add('room-row');b.append(node('span','',room.name),node('span','room-count',`${room.players}/${room.maxPlayers} players`));this.list.append(b);}
   }catch(error){if(!request.signal.aborted)this.status.textContent=(error as Error).message;}finally{if(this.request===request)this.refresh.disabled=false;}
  }
  private async admit(action:(signal:AbortSignal)=>Promise<RoomAdmission>,error:HTMLElement){
   this.cancel();const request=new AbortController();this.request=request;error.textContent='Connecting...';
-  for(const page of [this.mode,this.create])page.querySelectorAll<HTMLButtonElement>('button').forEach(b=>{if(!['Back','Cancel'].includes(b.textContent??''))b.disabled=true;});
-  try{const admission=await action(request.signal);if(request.signal.aborted)return;this.privateDialog.close();this.onAdmission(admission);}catch(e){if(!request.signal.aborted)error.textContent=(e as Error).message;}finally{if(this.request===request){this.request=null;for(const page of [this.mode,this.create])page.querySelectorAll<HTMLButtonElement>('button').forEach(b=>b.disabled=false);}}
+  for(const page of [this.mode,this.create])page.querySelectorAll<HTMLButtonElement>('button').forEach(b=>{if(!['Back','Cancel','Practice'].includes(b.textContent??''))b.disabled=true;});
+  try{this.onOnline();const admission=await action(request.signal);if(request.signal.aborted)return;this.privateDialog.close();this.onAdmission(admission);}catch(e){if(!request.signal.aborted)error.textContent=(e as Error).message;}finally{if(this.request===request){this.request=null;for(const page of [this.mode,this.create])page.querySelectorAll<HTMLButtonElement>('button').forEach(b=>b.disabled=false);}}
  }
  update(snapshot:Snapshot|null,selfId:string,now:number,visible:boolean){
   const room=snapshot?.roomInfo;this.roomBadge.hidden=!visible||!room;this.warning.hidden=true;

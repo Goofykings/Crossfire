@@ -42,6 +42,7 @@ export class EnvironmentProps {
       }
     } catch(error){this.dispose();throw error;}
   }
+  resetSynchronization():void {this.seq=-1;}
   sync(frame:EnvironmentFrame):void {
     if(frame.seq<=this.seq)return;this.seq=frame.seq;
     for(const state of frame.states) {

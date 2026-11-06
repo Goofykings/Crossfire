@@ -1,3 +1,4 @@
+import { validCosmeticReference } from './cosmetics';
 import { roomId, validRoomView, type RoomView } from './rooms';
 import { normalizeUsername } from './username';
 import { validCareerView, type CareerView } from './challenges';
@@ -40,6 +41,8 @@ export interface Elimination {
   at: number; respawnAt: number; killerTeam: 'blue' | 'red' | null; victimTeam: 'blue' | 'red' | null;
 }
 export interface PlayerState {
+  /** Additive visual metadata; absent on older v19 snapshots. Never a combat input. */
+  cosmeticId?:string;
   grenades: number;
   score: number;
   comboCount: number;
@@ -278,6 +281,7 @@ export function parseServerMessage(text: string): ServerMessage | null {
       && typeof p.combat.aimHeld === 'boolean'
       && typeof p.combat.grenadeHeld === 'boolean'
       && (p.combat.gun === null ? !p.alive : validGun(p.combat.gun))
+      && (p.cosmeticId===undefined||validCosmeticReference(p.cosmeticId,p.weapon))
       && (p.weapon === null || validWeapon(p.weapon)) && (!p.alive || p.weapon !== null)
       && Number.isSafeInteger(p.kills) && (p.kills as number) >= 0 && Number.isSafeInteger(p.deaths) && (p.deaths as number) >= 0
       && team(p.team) && (p.death === null || (validElimination(p.death) && !p.alive && p.death.victimId === p.id

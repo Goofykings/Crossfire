@@ -7,6 +7,11 @@ import {PROTOCOL_VERSION} from '../shared/protocol';
 afterEach(()=>{vi.unstubAllGlobals();vi.restoreAllMocks();});
 const now=Date.UTC(2026,10,3,12),credential='a'.repeat(64),url='wss://example.test/ws';
 const disk=()=>{const data=new Map<string,string>();return {getItem:(key:string)=>data.get(key)??null,setItem:(key:string,value:string)=>{data.set(key,value);}};};
+it('cancels a profile request before accepting or persisting data when entering Practice',async()=>{
+ const storage=disk(),view=careerView(createCareer('id',now),now);let resolve!:(response:Response)=>void;
+ const fetch=vi.fn((_url:RequestInfo|URL,_init?:RequestInit)=>new Promise<Response>(r=>resolve=r));vi.stubGlobal('fetch',fetch);const client=new CareerClient(url,storage),work=client.ensure();await vi.waitFor(()=>expect(fetch).toHaveBeenCalledTimes(1));const rejected=expect(work).rejects.toThrow();client.dispose();
+ resolve(Response.json({v:PROTOCOL_VERSION,credential,profile:view}));await rejected;expect(client.view).toBeNull();expect(storage.getItem('crossfire.career.v1:https://example.test')).toBeNull();expect(fetch.mock.calls[0][1]!.signal!.aborted).toBe(true);
+});
 it('creates a server-owned wallet once and restores the credential without sending local balances',async()=>{
   const storage=disk(),view=careerView(createCareer('id',now),now);
   const fetch=vi.fn().mockResolvedValue(new Response(JSON.stringify({v:PROTOCOL_VERSION,credential,profile:view})));vi.stubGlobal('fetch',fetch);
