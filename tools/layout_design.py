@@ -698,15 +698,12 @@ def emit_layout(areas, rects):
     import underground
     # A tiled loggia along the south street: an elevated route over the bakers' lane mouth.
     layout['upperRoutes'] = [make_route('loggia', [6, 18.7, 22, 21.7], 'gallery')]
-    layout['underground'] = []
-    for p in town_underground():
-        xs = [v for r in p['segments'] + [e['rect'] for e in p['entrances']] for v in (r[0], r[2])]
-        zs = [v for r in p['segments'] + [e['rect'] for e in p['entrances']] for v in (r[1], r[3])]
-        layout['underground'].append({**p, 'floor': underground.FLOOR, 'ceiling': underground.CEIL,
-                                      'rect': [min(xs), min(zs), max(xs), max(zs)], 'waypoints': underground.waypoints(p)})
+    layout['underground'] = [underground.prepare(p) for p in town_underground()]
     finish_layout(layout, PROPS)
     from realism_layout import author
     author(layout)
+    from underground_layouts import underground_props
+    layout['props'] += underground_props(layout, PROPS)
     layout["spawns"] = ffa_spawns(layout, PROPS)
     return layout
 

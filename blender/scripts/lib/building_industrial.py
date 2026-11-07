@@ -56,6 +56,7 @@ DOOR_HEIGHT = {"roller": 4.2, "dock": 3.2, "double": 2.4, "door": 2.2}
 
 
 class IndustrialBuildingGenerator(BuildingGenerator):
+    poster_frame = True
     PALETTES = IND_PALETTES
     # walk-in interior finishes (the city generator overrides these)
     INTERIOR = {"floor": "concrete_floor_dark", "ceiling": "cladding_white", "dado": "concrete_wall_stained", "beams": True,
@@ -422,6 +423,7 @@ class IndustrialBuildingGenerator(BuildingGenerator):
                     self._edge_box(e, s - 0.03, s + 0.03, y - 0.12, y - 0.07, -0.3, 0.0, "steel_dark")
                 if clear(c - 0.2, c + 0.2, 0.0, y):
                     self.md.tube(self.P(e, c, y, -0.2), self.P(e, c, self.ground(e, c) + 0.05, -0.2), 0.07, mat, segments=8)
+        self.poster_pass(e, r0, r1, ops, busy)
 
     def dress_opening(self, e: Edge, o: Opening, openings=()):
         w = o.s1 - o.s0
@@ -647,6 +649,7 @@ class IndustrialBuildingGenerator(BuildingGenerator):
         # walls facing into the hall, with holes where doorways reach the cavity
         sides = {"n": ((cx1, cz0), (cx0, cz0)), "s": ((cx0, cz1), (cx1, cz1)), "w": ((cx0, cz0), (cx0, cz1)),
                  "e": ((cx1, cz1), (cx1, cz0))}
+        poster_walls = []
         for side, (a, c) in sides.items():
             L = math.hypot(c[0] - a[0], c[1] - a[1])
             t = ((c[0] - a[0]) / L, (c[1] - a[1]) / L)
@@ -661,6 +664,7 @@ class IndustrialBuildingGenerator(BuildingGenerator):
                 else:
                     s0, s1 = sorted(((z0 - a[1]) * t[1], (z1 - a[1]) * t[1]))
                 holes.append((s0, s1, d.get("height", 2.4)))
+            poster_walls.append((e, [h[:2] for h in holes]))
             xs = sorted({0.0, L, *[v for h in holes for v in h[:2]]})
             ys = sorted({0.0, 1.2, ch, *[h[2] for h in holes if h[2] < ch]})
             for i in range(len(xs) - 1):
@@ -671,6 +675,8 @@ class IndustrialBuildingGenerator(BuildingGenerator):
                     q = [self.P(e, xs[i], ys[j]), self.P(e, xs[i + 1], ys[j]), self.P(e, xs[i + 1], ys[j + 1]), self.P(e, xs[i], ys[j + 1])]
                     mat = style["dado"] if ym < 1.2 else inner
                     md.face(q[::-1], mat, col=(0.7, 0.7, 0.7, 1.0) if ym < 1.2 else (0.85, 0.85, 0.85, 1.0))
+        if max(cx1 - cx0, cz1 - cz0) >= 6.0 and ch >= 2.6:
+            self.interior_posters(poster_walls, 1.35, 2)
         along_x = (cx1 - cx0) >= (cz1 - cz0)
         if not style["beams"]:
             self.interior_lights(it)

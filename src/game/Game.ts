@@ -225,6 +225,7 @@ export class Game {
     this.materials.setAnisotropy(graphicsPreset(s).anisotropy);
     this.materials.setUltra(!!graphicsPreset(s).ultraMaterials);
     this.remotePlayers.setAnimationDetail(s.chromebookMode ? .25 : s.graphicsQuality === 'low' ? .5 : 1);
+    this.remotePlayers.setTrailsReduced(s.chromebookMode);
     this.materials.setChromebook(s.chromebookMode);
     this.settings.onChange((v, changed) => this.applySettings(v, changed));
 
@@ -372,6 +373,7 @@ export class Game {
       view.setVisible(false);
       melee = new MeleeView(this.ctx, this.remotePlayers.meleeLibrary); this.meleeView = melee;
       melee.flourishHandler = () => this.sound('melee_flourish', .14);
+      melee.setReducedTrails(this.settings.value.chromebookMode);
       grenades = new GrenadeView(this.ctx.scene); this.grenadeView = grenades;
       this.remotePlayers.setSmokeVisibility((from, to) => this.grenadeView?.obscures(from, to) ?? false);
       this.ui.setLoading(0, 'Loading weapons and character');
@@ -996,6 +998,8 @@ export class Game {
       this.materials.setUltra(!!p.ultraMaterials);
       this.materials.setChromebook(v.chromebookMode);
       this.remotePlayers.setAnimationDetail(v.chromebookMode ? .25 : v.graphicsQuality === 'low' ? .5 : 1);
+      this.remotePlayers.setTrailsReduced(v.chromebookMode);
+      this.meleeView?.setReducedTrails(v.chromebookMode);
       this.map?.environment.applyGraphicsPreset(p);
     }
     if (changed.includes('shadowQuality') && this.map) {

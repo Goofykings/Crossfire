@@ -26,6 +26,22 @@ from arch_geometry import profile
 PLASTER_WALLS = ("plaster", "plaster_red", "plaster_worn")
 
 
+def _stable(text: str) -> int:
+    """Small deterministic hash (Python's hash() of a str changes between runs)."""
+    h = 2166136261
+    for ch in str(text):
+        h = ((h ^ ord(ch)) * 16777619) & 0xFFFFFFFF
+    return h
+
+
+def _pick_cell(key: int, salt: int, seen=None) -> int:
+    """Poster design for a new sheet: the least used so far on this map (ties broken by the building id), so no design dominates."""
+    counts = [0] * 12
+    for p in (seen if seen is not None else BuildingGenerator.poster_log):
+        counts[p["cell"] % 12] += 1
+    return min(range(12), key=lambda c: (counts[c], (c * 7 + key + salt * 5) % 12))
+
+
 @dataclass
 class Opening:
     s0: float
@@ -217,6 +233,133 @@ class BuildingGenerator:
         x = e.a[0] + e.t[0] * s + e.n[0] * 0.4
         z = e.a[1] + e.t[1] * s + e.n[1] * 0.4
         return self.index.ground_at(x, z)
+
+
+    # --- decorative posters ----------------------------------------------------------------------
+    poster_frame = False
+    #: every facade poster placed so far (reset by the exporter per map): building, atlas cell, size, position, outward normal
+    poster_log: list = []
+    poster_counts: dict = {}
+
+    def poster_pass(self, e: Edge, r0: float, r1: float, ops, busy=None) -> None:
+        """Original playful posters on blank stretches of a facade run.
+
+        About three in five buildings carry up to three (framed boards: two), chosen from the building id (never from the
+        shared random stream, so the rest of the facade is unchanged). A spot must be clear of every
+        opening, trim and fitting recorded in `busy` (shutters and surrounds are inside the margins),
+        sit inside the run with 0.8 m to spare at both ends (corner quoins, pilasters, downpipes) and
+        stand on level ground. Pasted sheets go at reading height; framed boards (modern and
+        industrial buildings, which have little blank wall at eye level) may also hang in the band
+        between the ground-floor openings and the first-floor windows."""
+        b = self.b
+        if self.backdrop or r1 - r0 < 3.0:
+            return
+        key = _stable(b["id"])
+        if key % 5 > 2:
+            return
+        done = BuildingGenerator.poster_counts.get(b["id"], 0)
+        if done >= (2 if self.poster_frame else 3):
+            return
+        rnd = random.Random(key * 31 + int(round(e.a[0] * 4)) * 7 + int(round(e.a[1] * 4)) * 13)
+        blocks = list(busy) if busy is not None else []
+        if busy is None:
+            blocks += [(o.s0 - 0.45, o.s1 + 0.45, o.y0, o.y1) for o in ops]
+
+        def free(s0, s1, y0, y1):
+            return all(not (s0 < b1 and b0 < s1 and y0 < q1 and q0 < y1) for (b0, b1, q0, q1) in blocks)
+
+        w = rnd.choice((0.55, 0.65, 0.75)) if not self.poster_frame else rnd.choice((0.6, 0.7))
+        h = w * 1.5
+        lo, hi = r0 + 0.8 + w / 2, r1 - 0.8 - w / 2
+        if hi <= lo:
+            return
+        steps = max(1, int((hi - lo) / 0.35))
+        order = list(range(steps + 1))
+        rnd.shuffle(order)
+        # Band between ground-floor openings (and their fascia signs) and the first-floor windows,
+        # for framed boards only: candidate heights are tried bottom-up against every trim in `blocks`.
+        band: list[float] = []
+        if self.poster_frame and not getattr(self, "has_string", False):
+            tops = [o.y1 for o in ops if o.y0 < 2.0] + [2.4]
+            uppers = [o.y0 for o in ops if o.y0 > 2.6] + [self.H - 0.4]
+            y = max(tops) + 0.5
+            while y + h + 0.05 <= min(uppers) - 0.15 and y + h <= 4.3:
+                band.append(round(y, 3))
+                y += 0.1
+        plinth = getattr(self, "plinth_h", 0.0)
+        # A change of wall material (a tiled or concrete base under plaster or brick) is a seam: never cross it.
+        seam = self.pal.get("base_h") if isinstance(getattr(self, "pal", None), dict) and self.pal.get("base") else None
+        if seam:
+            blocks.append((r0, r1, seam - 0.08, seam + 0.08))
+        for level in (0, 1):
+            if level == 1 and not band:
+                continue
+            for i in order:
+                s = lo + (hi - lo) * i / steps
+                g0, g1 = self.ground(e, s - w / 2), self.ground(e, s + w / 2)
+                if abs(g0 - g1) > 0.04:
+                    continue
+                g = max(g0, g1)
+                ys = ([g + max(0.82, plinth + 0.1)] + ([g + seam + 0.1] if seam else [])) if level == 0 else [g + yy for yy in band]
+                y = next((yy for yy in ys if free(s - w / 2 - 0.08, s + w / 2 + 0.08, yy - 0.08, yy + h + 0.08)), None)
+                if y is None:
+                    continue
+                cell = _pick_cell(key // 3, done + int(s))
+                framed = self.poster_frame
+                name = f"fposter_{cell}_{int(w * 100)}{'f' if framed else ''}"
+                self.place(name, lambda c=cell, ww=w, f=framed: kit.poster_fun(c, ww, f), e, s, y)
+                spot = (s - w / 2 - 0.2, s + w / 2 + 0.2, y - 0.1, y + h + 0.1)
+                blocks.append(spot)
+                if busy is not None:
+                    busy.append(spot)
+                p = self.P(e, s, y, 0.0)
+                BuildingGenerator.poster_log.append({"building": b["id"], "cell": cell, "framed": framed, "w": w, "h": round(h, 3),
+                                                     "x": round(p[0], 3), "y": round(y, 3), "z": round(p[2], 3),
+                                                     "normal": [round(e.n[0], 4), round(e.n[1], 4)]})
+                BuildingGenerator.poster_counts[b["id"]] = done + 1
+                return
+
+
+    def interior_posters(self, walls, y0: float, count: int = 2) -> None:
+        """Playful posters on the longest door-free stretches of a walk-in room's walls.
+
+        `walls` is [(edge frame, [(s0, s1) doorway intervals])] with the outward normal in `e.n`; a poster
+        sits 12 mm in front of the wall, at least 0.6 m from any doorway and 0.8 m from the corners,
+        facing into the room. Deterministic per building."""
+        b = self.b
+        key = _stable(b["id"])
+        cands = []
+        for e, holes in walls:
+            spans = [(0.8, e.length - 0.8)]
+            for h0, h1 in holes:
+                nxt = []
+                for a, c in spans:
+                    if h1 + 0.6 <= a or h0 - 0.6 >= c:
+                        nxt.append((a, c))
+                        continue
+                    if h0 - 0.6 > a:
+                        nxt.append((a, h0 - 0.6))
+                    if h1 + 0.6 < c:
+                        nxt.append((h1 + 0.6, c))
+                spans = nxt
+            cands += [(c - a, e, (a + c) / 2) for a, c in spans if c - a >= 1.1]
+        cands.sort(key=lambda t: (-round(t[0], 1), t[1].side))
+        from underground import atlas_uv
+        placed = 0
+        for length, e, s in cands:
+            if placed >= count:
+                break
+            w, h = (0.7, 1.05) if length >= 1.6 else (0.55, 0.825)
+            cell = _pick_cell(key // 7, placed + int(s * 3))
+            px, _, pz = self.P(e, s, y0, 0.012)
+            rx, rz = -e.n[1], e.n[0]
+            pts = [(px - rx * w / 2, y0, pz - rz * w / 2), (px + rx * w / 2, y0, pz + rz * w / 2),
+                   (px + rx * w / 2, y0 + h, pz + rz * w / 2), (px - rx * w / 2, y0 + h, pz - rz * w / 2)]
+            u0, v0, u1, v1 = atlas_uv("poster", cell)
+            self.md.face_toward(pts, "posters_fun", (-e.n[0], 0.0, -e.n[1]), uv=[(u0, v0), (u1, v0), (u1, v1), (u0, v1)])
+            BuildingGenerator.poster_log.append({"building": b["id"], "cell": cell, "framed": False, "interior": True, "w": w, "h": round(h, 3),
+                                                 "x": round(px, 3), "y": round(y0, 3), "z": round(pz, 3), "normal": [round(-e.n[0], 4), round(-e.n[1], 4)]})
+            placed += 1
 
     # --- facades --------------------------------------------------------------------------------
     def build_edge(self, e: Edge, exp):
@@ -554,6 +697,7 @@ class BuildingGenerator:
             for f in range(1, self.b["floors"]):
                 y = bs.floor_base(self.b, f)
                 run_box(r0, r1, y - 0.07, y + 0.07, -0.045, 0.0)
+        self.poster_pass(e, r0, r1, ops)
 
     @staticmethod
     def shutter_room(o: Opening, openings) -> bool:
@@ -812,6 +956,7 @@ class BuildingGenerator:
             "e": ((cx1, cz1), (cx1, cz0)),
         }
         door_by_side = {s: r for s, r in doors}
+        poster_walls = []
         for side, (a, c) in sides.items():
             L = math.hypot(c[0] - a[0], c[1] - a[1])
             t = ((c[0] - a[0]) / L, (c[1] - a[1]) / L)
@@ -827,6 +972,7 @@ class BuildingGenerator:
                     s_a = (dz0 - a[1]) * t[1]
                     s_b = (dz1 - a[1]) * t[1]
                 hole = (min(s_a, s_b), max(s_a, s_b))
+            poster_walls.append((e, [hole] if hole else []))
             xs = sorted({0.0, L, *(hole or ())})
             ys = [0.0, 0.5, bs.ROOM_DOOR_H, clear]
             for i in range(len(xs) - 1):
@@ -839,6 +985,7 @@ class BuildingGenerator:
                     q = q[::-1]  # face into the room
                     md.face(q, imat, col=(0.82, 0.8, 0.78, 1.0) if ys[j] > 0.4 else (0.6, 0.58, 0.55, 1.0))
             # wainscot shelf + a hanging lantern for some warmth
+        self.interior_posters(poster_walls, 1.0, 2)
         mx, mz = (cx0 + cx1) / 2, (cz0 + cz1) / 2
         md.tube((mx, clear - 0.2, mz), (mx, clear - 0.7, mz), 0.01, "iron", segments=4)
         md.cylinder((mx, clear - 1.0, mz), 0.12, 0.3, "lantern_glass", segments=6)

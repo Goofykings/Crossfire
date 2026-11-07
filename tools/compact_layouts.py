@@ -73,20 +73,9 @@ def town(A):
 
 
 def town_underground():
-    """Cistern passage: an old vaulted cistern and wine cellar beneath the square's west wing.
-    It links the market court (portal in its north-east corner) with the cistern court at the
-    square's south-west corner, a covered alternative to market_e and the open square."""
-    return [{
-        'id': 'cistern_passage', 'style': 'cellar',
-        'purpose': 'Old cistern and wine cellar beneath the square, between the market and the cistern court',
-        'segments': [[-11.2, -10.58, -8.8, -3.0], [-11.2, -3.0, -2.7, 2.0], [-5.1, 2.0, -2.7, 4.0]],
-        'piers': [[-8.4, -0.5], [-5.6, -0.5]],
-        'entrances': [
-            {'id': 'market', 'type': 'dogleg', 'rect': [-13, -15.98, -9.02, -10.58], 'side': 's', 'hand': 'left'},
-            {'id': 'cistern', 'type': 'dogleg', 'rect': [-4.98, 4, -1, 9.4], 'side': 'n', 'hand': 'left'},
-        ],
-        'route': [[-10.0, -6.0], [-10.0, 0.8], [-3.9, 0.8]],
-    }]
+    """Cistern passage and wine cellar (authored in tools/underground_layouts.py)."""
+    from underground_layouts import town_underground as authored
+    return authored()
 
 
 def industrial(A):
@@ -165,16 +154,6 @@ def city(A):
 
 
 def city_underground():
-    """Metro underpass: straight stairs from the civic plaza and the south plaza meet a tiled
-    concourse beneath the avenue."""
-    return [{
-        'id': 'metro_underpass', 'style': 'metro',
-        'purpose': 'Pedestrian metro underpass beneath the avenue between the civic and south plazas',
-        'segments': [[2.6, -5.6, 6.0, -3.0], [0.6, -3.0, 8.0, 3.0], [2.6, 3.0, 6.0, 5.4]],
-        'piers': [[2.2, 0.0], [6.4, 0.0]],
-        'entrances': [
-            {'id': 'civic', 'type': 'straight', 'rect': [3, -12.2, 5.6, -5.6], 'side': 'n'},
-            {'id': 'south', 'type': 'straight', 'rect': [3, 5.4, 5.6, 12.0], 'side': 's'},
-        ],
-        'route': [[4.3, -2.0], [4.3, 2.0]],
-    }]
+    """Civic Central metro station (authored in tools/underground_layouts.py)."""
+    from underground_layouts import city_underground as authored
+    return authored()

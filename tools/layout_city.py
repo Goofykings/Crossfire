@@ -529,15 +529,12 @@ def build():
     # Its south stair ends north of the commerce building's exterior stair, so a player sliding
     # down that stair keeps running into the court.
     layout['upperRoutes'] = [make_route('avenue_skywalk', [23,-13.5,26,8.6], 'sky_passage')]
-    layout['underground'] = []
-    for p in city_underground():
-        xs = [v for r in p['segments'] + [e['rect'] for e in p['entrances']] for v in (r[0], r[2])]
-        zs = [v for r in p['segments'] + [e['rect'] for e in p['entrances']] for v in (r[1], r[3])]
-        layout['underground'].append({**p, 'floor': underground.FLOOR, 'ceiling': underground.CEIL,
-                                      'rect': [min(xs), min(zs), max(xs), max(zs)], 'waypoints': underground.waypoints(p)})
+    layout['underground'] = [underground.prepare(p) for p in city_underground()]
     finish_layout(layout, PROPS)
     from realism_layout import author
     author(layout)
+    from underground_layouts import underground_props
+    layout['props'] += underground_props(layout, PROPS)
     layout["spawns"] = ffa_spawns(layout, PROPS)
     return kit, layout
 

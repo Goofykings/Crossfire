@@ -11,6 +11,7 @@ import { PlayerSilhouettes } from '../rendering/PlayerSilhouettes';
 import { CharacterWeaponLibrary, type CharacterWeapon } from './CharacterWeapon';
 import { MeleeLibrary, type CharacterMelee } from './melee/MeleeAssets';
 import type { MeleeClipName, MeleeStage } from './melee/MeleeAnimation';
+import { MeleeTrails, trailPlan } from './melee/MeleeTrail';
 import { presentedAction, ShotTimeline } from './RemoteTimeline';
 import type { MaterialLibrary } from '../rendering/MaterialLibrary';
 import { WEAPONS, type WeaponId, type WeaponState } from '../weapons/Weapon';
@@ -32,6 +33,8 @@ interface Avatar {
   melee?: CharacterMelee | null;
   meleeKey?:string;
   meleeDebug?:boolean;
+  /** Cosmetic blade trails in world space (created at this player's first trail). */
+  trails?: MeleeTrails;
   loadingCosmetic?:string; failedCosmetic?:string;
   weaponAds: number;
   /** Server-confirmed shots waiting for the interpolated pose to reach them. */
@@ -70,6 +73,7 @@ export class RemotePlayers {
   private collisionWorld:CollisionWorld|null=null;
   private dt = 1 / 60;
   private animationDetail = 1;
+  private trailsReduced = false;
   private silhouettes: PlayerSilhouettes | null = null;
   readonly characters: CharacterAssetLibrary;
   private readonly weapons: CharacterWeaponLibrary;
@@ -91,7 +95,7 @@ export class RemotePlayers {
       const camera = scene.activeCamera;
       const planes = camera ? Frustum.GetPlanes(camera.getTransformationMatrix()) : null;
       const eye = camera?.globalPosition;
-      for (const a of this.avatars.values()) {
+      for (const [id, a] of this.avatars) {
         a.character?.applyLean();
         if(a.death)a.character?.poseDeath(a.death.elapsed,a.death.motion.angle,a.death.axis);
         if (a.weapon && !a.death) {
@@ -100,6 +104,7 @@ export class RemotePlayers {
           a.weapon.solveEvery = eye ? solveInterval(Vector3.Distance(eye, a.root.position), this.animationDetail) : 1;
           a.weapon.update();
         }
+        this.trail(a, id, eye);
         this.presentation(a, this.dt);
       }
       this.silhouettes?.update(this.outlinesEnabled && this.presenting);
@@ -137,7 +142,7 @@ export class RemotePlayers {
   inspectMelee(id?: string) {
     const out: Record<string, unknown> = {};
     // Avatars playing their death fade hold no daggers (put away at elimination).
-    for (const [key, a] of this.avatars) if ((!id || key === id) && !a.death) out[key] = a.weapon?.inspectMelee() ?? (a.melee ? a.melee.animator.inspect() : null);
+    for (const [key, a] of this.avatars) if ((!id || key === id) && !a.death) { const base = a.weapon?.inspectMelee() ?? (a.melee ? a.melee.animator.inspect() : null); out[key] = base && { ...base, trail: a.trails?.inspect() ?? null }; }
     return out;
   }
   private meleeFor(id: string, a: Avatar): CharacterMelee | null {
@@ -185,6 +190,24 @@ export class RemotePlayers {
   setOutlinesEnabled(enabled: boolean): void { this.outlinesEnabled = enabled; }
   /** 1 = full third-person animation detail; lower values reduce distant arm solves. */
   setAnimationDetail(detail: number): void { this.animationDetail = detail; }
+  setTrailsReduced(reduced: boolean): void { this.trailsReduced = reduced; for (const a of this.avatars.values()) a.trails?.setReduced(reduced); }
+  /** Simplified third-person blade trail: sampled from the dagger's real world tip and guard
+   * once per frame after the arms are posed (the ribbon is smoothed between frames). Skipped
+   * for avatars that are unseen or far away; purely cosmetic. */
+  private trail(a: Avatar, id: string, eye?: Vector3): void {
+    const melee = a.melee, pose = melee?.pose, plan = pose && !a.death ? trailPlan(pose.clip) : null;
+    const near = !eye || Vector3.DistanceSquared(eye, a.root.position) < 45 * 45;
+    if (plan && pose && melee && near && a.visible && a.weapon?.posing && pose.trail >= .01 && melee.pair.bound) {
+      if (!a.trails) { a.trails = new MeleeTrails(this.scene, `remote-melee:${id}`); a.trails.setReduced(this.trailsReduced); void a.trails.warm(); }
+      a.trails.tick(this.dt);
+      const tips = melee.pair.anchor('tip'), guards = melee.pair.anchor('guard');
+      for (const i of [0, 1] as const) if (plan.sides[i]) a.trails.push(i, plan.finisher, tips[i], guards[i], pose.trail);
+      a.trails.flush(eye);
+    } else if (a.trails) {
+      if (a.death || !a.visible) a.trails.clear();
+      else { a.trails.tick(this.dt); a.trails.flush(eye); }
+    }
+  }
   /** A server-confirmed shot by this player; its cosmetic recoil plays when the delayed
    * (interpolated) pose reaches it. `serverNow` is the estimated current server time. */
   muzzle(id:string):Vector3|null { return this.avatars.get(id)?.weapon?.muzzleWorld()??null; }
@@ -195,6 +218,7 @@ export class RemotePlayers {
   private remove(a: Avatar): void {
     // The daggers hang from the character's hand bones: release them before the rig.
     a.melee?.dispose(); a.melee = null;
+    a.trails?.dispose(); a.trails = undefined;
     this.silhouettes?.remove(a.meshes); a.weapon?.dispose(); a.character?.dispose(); a.root.dispose(); a.label.remove();
     for (const material of a.death?.materials ?? []) material.dispose(false, false);
     for (const texture of a.death?.textures ?? []) texture.dispose();

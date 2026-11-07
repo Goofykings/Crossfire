@@ -245,10 +245,13 @@ MATERIALS.update({
     "sign_industrial": {"albedo": IND_DIR + "signs_industrial.jpg", "tile": 1.0, "roughness": 0.6},
     "sign_city": {"albedo": CITY_DIR + "shop_signs_city.jpg", "tile": 1.0, "roughness": 0.45},
     "posters": {"albedo": CITY_DIR + "posters.jpg", "tile": 1.0, "roughness": 0.8},
+    # Original playful posters (all three maps) and the metro/cellar signage atlas (underground.py, make_underground_art.py).
+    "posters_fun": {"albedo": URBAN_DIR + "posters_fun.jpg", "tile": 1.0, "roughness": 0.8},
+    "underground_signs": {"albedo": CITY_DIR + "underground_signs.jpg", "tile": 1.0, "roughness": 0.4},
 })
 _tints("concrete_spawn", MATERIALS["concrete_floor"], {"blue": [0.76, 0.83, 0.98], "red": [0.98, 0.8, 0.76]})
 _tints("pavers_spawn", MATERIALS["pavers"], {"blue": [0.78, 0.85, 1.0], "red": [1.0, 0.82, 0.78]})
-for _sheet in ("window_blinds", "street_signs", "sign_back", "sign_industrial", "sign_city", "posters"):
+for _sheet in ("window_blinds", "street_signs", "sign_back", "sign_industrial", "sign_city", "posters", "posters_fun", "underground_signs"):
     MATERIALS[_sheet]["atlas"] = True
 for _ground in ("asphalt", "concrete_floor", "asphalt_fine", "pavers"):
     # same surface laid over another one (patches, painted bays): needs the decal polygon offset

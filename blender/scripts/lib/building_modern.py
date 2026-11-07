@@ -216,6 +216,7 @@ class ModernBuildingGenerator(IndustrialBuildingGenerator):
         if b.get("floors", 1) > 1 and self.pal.get("header"):
             y = bs.CITY_GROUND
             run_box(r0, r1, y - 0.08, y + 0.08, -0.045, 0.0, self.pal["header"])
+            busy.append((r0, r1, y - 0.1, y + 0.1))
         # fire escape on the first long run facing an alley or yard (not the front)
         if (b["type"] == "apartment" and not self.fire_escape_done and e.side != b.get("front", "s") and r1 - r0 > 4.5
                 and b.get("floors", 3) >= 3):
@@ -252,6 +253,7 @@ class ModernBuildingGenerator(IndustrialBuildingGenerator):
                 self._edge_box(e, s - 0.12, s + 0.12, H - 0.55, H - 0.3, -0.25, 0.0, "galvanized")
                 self.md.tube(self.P(e, s, H - 0.55, -0.13), self.P(e, s, g + 0.3, -0.13), 0.05, "galvanized", segments=6)
                 self.md.tube(self.P(e, s, g + 0.3, -0.13), self.P(e, s, g + 0.05, -0.32), 0.05, "galvanized", segments=6)
+        self.poster_pass(e, r0, r1, ops, busy)
 
     def corner_details(self, edges, exposure):
         if self.pal["wall"].startswith("cladding"):

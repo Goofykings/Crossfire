@@ -7,6 +7,7 @@ import { loadContainer } from '../../core/loadContainer';
 import { patchCosmetic } from '../../rendering/CosmeticAssets';
 import { MaterialLibrary } from '../../rendering/MaterialLibrary';
 import { cosmetic } from '../../../shared/cosmetics';
+import { broadenCharacter } from '../CharacterProportions';
 import { MELEE_CLIPS, MELEE_NODES, MeleeAnimator, MeleeClipSet, meleePose, type MeleeClipName, type MeleeMetadata,
   type MeleeNode, type MeleePose, type NodeRest, type NodeTracks, type Track } from './MeleeAnimation';
 
@@ -133,7 +134,7 @@ export class DaggerPair {
     }
   }
   /** World positions of the given anchor on both daggers (for tests and trails). */
-  anchor(name: 'tip' | 'grip' | 'edge' | 'pommel'): [Vector3, Vector3] {
+  anchor(name: 'tip' | 'grip' | 'edge' | 'guard' | 'pommel'): [Vector3, Vector3] {
     return this.roots.map((root, i) => {
       const side = i ? 'l' : 'r';
       return Vector3.TransformCoordinates(Vector3.FromArray(this.meta.models[side].anchors[name]), root.computeWorldMatrix(true));
@@ -188,6 +189,7 @@ export class MeleeLibrary {
       const arms = await loadContainer(assetUrl(this.meta!.arms.file), this.scene, signal);
       if (signal?.aborted || this.scene.isDisposed) { arms.dispose(); signal?.throwIfAborted(); return; }
       if (arms.skeletons.length !== 1) throw new Error('Expected one first-person arm rig');
+      broadenCharacter(arms.meshes);
       this.arms = arms;
     }).finally(() => { this.armsLoading = null; });
     return abortable(this.armsLoading, signal);

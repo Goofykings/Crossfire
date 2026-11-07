@@ -1,0 +1,249 @@
+{
+ "map": "industrial-complex",
+ "facade": [
+  {
+   "building": "I05",
+   "cell": 2,
+   "framed": false,
+   "interior": true,
+   "w": 0.7,
+   "h": 1.05,
+   "x": -17.5,
+   "y": 1.35,
+   "z": -24.988,
+   "normal": [
+    0.0,
+    1.0
+   ]
+  },
+  {
+   "building": "I05",
+   "cell": 8,
+   "framed": false,
+   "interior": true,
+   "w": 0.7,
+   "h": 1.05,
+   "x": -23.688,
+   "y": 1.35,
+   "z": -21.15,
+   "normal": [
+    1.0,
+    -0.0
+   ]
+  },
+  {
+   "building": "I10",
+   "cell": 4,
+   "framed": true,
+   "w": 0.7,
+   "h": 1.05,
+   "x": -9.85,
+   "y": 2.9,
+   "z": -17.0,
+   "normal": [
+    -0.0,
+    1.0
+   ]
+  },
+  {
+   "building": "I10",
+   "cell": 6,
+   "framed": true,
+   "w": 0.7,
+   "h": 1.05,
+   "x": -8.0,
+   "y": 2.9,
+   "z": -19.85,
+   "normal": [
+    1.0,
+    0.0
+   ]
+  },
+  {
+   "building": "I14",
+   "cell": 0,
+   "framed": true,
+   "w": 0.7,
+   "h": 1.05,
+   "x": 6.0,
+   "y": 2.9,
+   "z": -15.5,
+   "normal": [
+    1.0,
+    0.0
+   ]
+  },
+  {
+   "building": "I14",
+   "cell": 10,
+   "framed": true,
+   "w": 0.6,
+   "h": 0.9,
+   "x": -6.0,
+   "y": 2.9,
+   "z": -15.1,
+   "normal": [
+    -1.0,
+    0.0
+   ]
+  },
+  {
+   "building": "I06",
+   "cell": 11,
+   "framed": false,
+   "interior": true,
+   "w": 0.7,
+   "h": 1.05,
+   "x": 16.5,
+   "y": 1.35,
+   "z": -24.988,
+   "normal": [
+    0.0,
+    1.0
+   ]
+  },
+  {
+   "building": "I06",
+   "cell": 7,
+   "framed": false,
+   "interior": true,
+   "w": 0.7,
+   "h": 1.05,
+   "x": 23.688,
+   "y": 1.35,
+   "z": -21.15,
+   "normal": [
+    -1.0,
+    -0.0
+   ]
+  },
+  {
+   "building": "I15",
+   "cell": 9,
+   "framed": true,
+   "w": 0.7,
+   "h": 1.05,
+   "x": 13.0,
+   "y": 2.9,
+   "z": -12.85,
+   "normal": [
+    1.0,
+    0.0
+   ]
+  },
+  {
+   "building": "I16",
+   "cell": 1,
+   "framed": true,
+   "w": 0.6,
+   "h": 0.9,
+   "x": 26.0,
+   "y": 2.9,
+   "z": -15.9,
+   "normal": [
+    -1.0,
+    0.0
+   ]
+  },
+  {
+   "building": "I30",
+   "cell": 5,
+   "framed": true,
+   "w": 0.6,
+   "h": 0.9,
+   "x": -10.1,
+   "y": 2.9,
+   "z": 21.0,
+   "normal": [
+    -0.0,
+    1.0
+   ]
+  },
+  {
+   "building": "I30",
+   "cell": 3,
+   "framed": true,
+   "w": 0.6,
+   "h": 0.9,
+   "x": -10.5,
+   "y": 2.9,
+   "z": 9.0,
+   "normal": [
+    -0.0,
+    -1.0
+   ]
+  },
+  {
+   "building": "I31",
+   "cell": 7,
+   "framed": false,
+   "interior": true,
+   "w": 0.7,
+   "h": 1.05,
+   "x": 5.9,
+   "y": 1.35,
+   "z": 9.312,
+   "normal": [
+    0.0,
+    1.0
+   ]
+  },
+  {
+   "building": "I31",
+   "cell": 10,
+   "framed": false,
+   "interior": true,
+   "w": 0.7,
+   "h": 1.05,
+   "x": -2.9,
+   "y": 1.35,
+   "z": 9.312,
+   "normal": [
+    0.0,
+    1.0
+   ]
+  },
+  {
+   "building": "I25",
+   "cell": 5,
+   "framed": true,
+   "w": 0.6,
+   "h": 0.9,
+   "x": 14.46,
+   "y": 2.9,
+   "z": 9.0,
+   "normal": [
+    -0.0,
+    1.0
+   ]
+  },
+  {
+   "building": "I25",
+   "cell": 11,
+   "framed": true,
+   "w": 0.7,
+   "h": 1.05,
+   "x": 13.0,
+   "y": 2.9,
+   "z": 7.5,
+   "normal": [
+    -1.0,
+    0.0
+   ]
+  },
+  {
+   "building": "I26",
+   "cell": 3,
+   "framed": true,
+   "w": 0.7,
+   "h": 1.05,
+   "x": 17.0,
+   "y": 2.9,
+   "z": 4.15,
+   "normal": [
+    -1.0,
+    0.0
+   ]
+  }
+ ]
+}

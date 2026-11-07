@@ -103,6 +103,11 @@ export interface UndergroundPassage {
   route?: [number, number][];
   /** Walkable polyline from the first entrance's street side to the last one's. */
   waypoints: Vec3Tuple[];
+  /** Floor polylines (x, z) into every aisle, room and gate lane: each is walked by the tests. */
+  walks?: [number, number][][];
+  /** Solids on the floor (ticket gates, kiosks, the cistern tank...): real collision boxes. */
+  blocks?: { rect: Rect; h: number; kind: string }[];
+  name?: string;
 }
 
 export interface MapLayout {

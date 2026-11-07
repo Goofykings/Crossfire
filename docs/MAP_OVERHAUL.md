@@ -29,6 +29,11 @@ was committed, pushed or deployed.
 
 ## Shared systems
 
+> **2026-11-07:** the passages were rebuilt deeper and much larger (metro floor -3.8 m with
+> 3.5 m clear, cellar -3.5 m with 3.2 m clear, per-style stair counts, piers, blocks, decor and
+> props); the dimensions below (-2.6 m / 2.3 m, 16 risers) are historical. See
+> docs/UNDERGROUND_POSTERS.md.
+
 `blender/scripts/lib/underground.py` (pure Python) owns underground passages: one
 set of solids feeds the visible mesh, `collision_gen.py`, navigation obstacles,
 spawn/dressing exclusion and the server's lowest legal floor

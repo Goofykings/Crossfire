@@ -6,6 +6,7 @@ import { abortable } from '../core/cancellation';
 import { PlayerAnimator, type CharacterClip, type CharacterMotion } from './PlayerAnimation';
 import { LEAN_ANGLE } from '../../shared/lean';
 import { LimpBody } from './LimpBody';
+import { broadenCharacter } from './CharacterProportions';
 
 export type { CharacterClip } from './PlayerAnimation';
 export interface CharacterAssetDefinition {
@@ -78,6 +79,7 @@ export class CharacterAssetLibrary {
         if (!container.animationGroups.some((g) => g.name === clip)) throw new Error(`Export is missing actual clip: ${clip}`);
       }
       for (const group of container.animationGroups) group.stop();
+      broadenCharacter(container.meshes);
       this.container = container;
       this.definition = definition;
       this.state = 'ready'; this.reason = '';

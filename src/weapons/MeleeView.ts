@@ -2,6 +2,7 @@ import { Matrix, Mesh, Quaternion, Space, TransformNode, Vector3, type Instantia
 import { ArmChain } from '../game/CharacterWeapon';
 import { CharacterMelee, WRIST_TO_PALM, type MeleeLibrary } from '../game/melee/MeleeAssets';
 import { shoulderReach, type MeleeClipName, type MeleeStage } from '../game/melee/MeleeAnimation';
+import { MeleeTrails, trailPlan } from '../game/melee/MeleeTrail';
 import type { RenderContext } from '../rendering/RenderContext';
 import { WEAPON_RENDER_GROUP } from './WeaponView';
 import {meleeClip,type MeleeState} from '../../shared/melee';
@@ -12,7 +13,7 @@ export interface ViewMotion { x: number; y: number; z: number; pitch: number; ya
 const s = {
   pos: Vector3.Zero(), fingers: Vector3.Zero(), back: Vector3.Zero(), wrist: Vector3.Zero(), pole: Vector3.Zero(),
   tmp: Vector3.Zero(), q: new Quaternion(), qw: new Quaternion(), body: new Quaternion(), axis: Vector3.Zero(), m: new Matrix(),
-  identity: Quaternion.Identity(),
+  identity: Quaternion.Identity(), tip: Vector3.Zero(), guard: Vector3.Zero(), inverse: new Matrix(),
 };
 
 /** First-person dual daggers: the player's own arms and gloves (melee_arms.glb, the unchanged
@@ -37,6 +38,13 @@ export class MeleeView {
   private paused = false;
   private loaded: Promise<void> | null = null;
   private syncKey='';
+  private trails: MeleeTrails | null = null;
+  private reducedTrails = false;
+  /** The view-model sway applied last frame (rotation, then offset), reused by the sub-step trail samples. */
+  private readonly sway = { q: Quaternion.Identity(), pos: Vector3.Zero() };
+  /** Where each blade really is (after the arm IK) minus where its socket target puts it, measured
+   * every frame and applied to the next frame's sub-step samples so the trail has no seam. */
+  private readonly trailOffset = [0, 1].map(() => ({ tip: Vector3.Zero(), guard: Vector3.Zero(), rawTip: Vector3.Zero(), rawGuard: Vector3.Zero() }));
   /** Called when the random idle flourish starts (the game plays its sound). */
   flourishHandler: ((clip: MeleeClipName) => void) | null = null;
   sync(state:MeleeState,now:number):string|null {
@@ -68,6 +76,9 @@ export class MeleeView {
     if (!entries || !melee) throw new Error('Melee assets are not loaded');
     this.entries = entries; this.melee = melee;
     melee.animator.onFlourish = (clip) => this.flourishHandler?.(clip);
+    this.trails = new MeleeTrails(this.ctx.scene, 'melee-view', { parent: this.root, renderingGroupId: WEAPON_RENDER_GROUP });
+    this.trails.setReduced(this.reducedTrails);
+    void this.trails.warm();
     for (const node of entries.rootNodes) node.parent = this.rig;
     const skeleton = entries.skeletons[0], bones = skeleton.bones;
     const find = (name: string) => bones.find((b) => b.name === name)!;
@@ -112,34 +123,89 @@ export class MeleeView {
   attack(stage?: MeleeStage): MeleeStage | null { return this.melee?.animator.attack(stage) ?? null; }
   play(clip: MeleeClipName, time = 0): void { this.melee?.animator.play(clip, time); }
   /** Death, respawn or round reset: daggers gone, gun back immediately. */
-  reset(): void { this.syncKey='';this.melee?.animator.reset(); this.melee?.advance(0); }
+  reset(): void { this.syncKey='';this.melee?.animator.reset(); this.melee?.advance(0); this.trails?.clear(); }
   /** Test hook: hold a clip at a time (no advancing) for repeatable screenshots; null resumes. */
   freeze(clip: MeleeClipName | null, time = 0): void {
     this.paused = !!clip;
     // Reset first: play() would otherwise crossfade from the current clip, frozen at fade 0.
-    if (clip && this.melee) { this.melee.animator.reset(); this.melee.animator.play(clip, time); this.melee.advance(0); }
+    if (clip && this.melee) { this.melee.animator.reset(); this.melee.animator.play(clip, time); this.melee.advance(0); this.trails?.clear(); }
   }
   /** Test hooks: pause where the clip is, then advance by exact steps (real transitions,
    * repeatable frames). */
   pause(on: boolean): void { this.paused = on; }
-  step(dt: number): void { this.melee?.advance(dt); }
+  step(dt: number): void { this.run(dt); }
   setVisible(visible: boolean): void { this.visible = visible; }
 
   /** Advance the clip (real seconds); call before WeaponView.update so the gun lowers in step. */
-  advance(dt: number): void { this.melee?.advance(this.paused ? 0 : dt); }
+  advance(dt: number): void { this.run(this.paused ? 0 : dt); }
+  /** Chromebook mode: one trail layer, no extra smoothing, coarser sampling. */
+  setReducedTrails(reduced: boolean): void { this.reducedTrails = reduced; this.trails?.setReduced(reduced); }
+
+  /** Advance the clip. During an attack the step is cut into slices of a few milliseconds so
+   * the blade trail follows the real path of the strike even when a frame covers most of it. */
+  private run(dt: number): void {
+    const melee = this.melee;
+    if (!melee) return;
+    const trails = this.trails;
+    if (!trails || dt <= 0 || melee.animator.state !== 'attacking') { melee.advance(dt); trails?.tick(dt); this.sampleTrail(); return; }
+    const n = Math.max(1, Math.min(10, Math.ceil(dt / (this.reducedTrails ? .008 : .004))));
+    for (let i = 0; i < n; i++) { melee.advance(dt / n); trails.tick(dt / n); this.sampleTrail(); }
+  }
+  /** Push this slice's blade tips (aim frame -> the rig root's space, torso turn and sway included). */
+  private sampleTrail(): void {
+    const melee = this.melee, trails = this.trails;
+    if (!melee || !trails) return;
+    const pose = melee.pose, plan = trailPlan(pose.clip);
+    if (!plan || pose.trail < .01 || pose.hands < .5) return;
+    const fp = melee.pair.meta.firstPerson;
+    Quaternion.SlerpToRef(s.identity, pose.body, fp.body, s.body);
+    for (const i of [0, 1] as const) {
+      if (!plan.sides[i]) continue;
+      const anchors = melee.pair.meta.models[i ? 'l' : 'r'].anchors, socket = pose.sockets[i];
+      for (const [name, out] of [['tip', s.tip], ['guard', s.guard]] as const) {
+        // The dagger relative to its socket (reveal scale, spin), then the socket's own frame.
+        out.set(anchors[name][0], anchors[name][1], anchors[name][2]);
+        Vector3.TransformCoordinatesToRef(out, pose.daggers[i], out);
+        out.applyRotationQuaternionInPlace(socket.rotation).addInPlace(socket.position);
+        out.applyRotationQuaternionInPlace(s.body).applyRotationQuaternionInPlace(this.sway.q).addInPlace(this.sway.pos);
+      }
+      const o = this.trailOffset[i];
+      o.rawTip.copyFrom(s.tip); o.rawGuard.copyFrom(s.guard);
+      trails.push(i, plan.finisher, s.tip.addInPlace(o.tip), s.guard.addInPlace(o.guard), pose.trail);
+    }
+  }
+  /** Put the newest trail samples on the blades' real positions (after the arm IK), then draw. */
+  private finishTrail(): void {
+    const melee = this.melee, trails = this.trails;
+    if (!melee || !trails) return;
+    const plan = trailPlan(melee.pose.clip);
+    if (plan && melee.pose.trail >= .01 && trails.live) {
+      this.root.getWorldMatrix().invertToRef(s.inverse);
+      const tips = melee.pair.anchor('tip'), guards = melee.pair.anchor('guard');
+      for (const i of [0, 1] as const) {
+        if (!plan.sides[i]) continue;
+        const o = this.trailOffset[i];
+        Vector3.TransformCoordinatesToRef(tips[i], s.inverse, s.tip); Vector3.TransformCoordinatesToRef(guards[i], s.inverse, s.guard);
+        s.tip.subtractToRef(o.rawTip, o.tip); s.guard.subtractToRef(o.rawGuard, o.guard);
+        trails.head(i, s.tip, s.guard);
+      }
+    } else for (const o of this.trailOffset) { o.tip.setAll(0); o.guard.setAll(0); }
+    trails.flush();
+  }
 
   /** Pose the arms for this frame from the clip and the view-model's sway/bob. */
   update(motion: ViewMotion): void {
     const melee = this.melee;
     const shown = !!melee && this.visible && melee.animator.state !== 'hidden';
     if (this.root.isEnabled() !== shown) this.root.setEnabled(shown);
-    if (!shown || !melee) return;
+    if (!shown || !melee) { this.trails?.clear(); return; }
     const pose = melee.pose, fp = melee.pair.meta.firstPerson;
     // Sway/bob shared with the gun, plus a share of the clip's torso channel about the shoulders.
     Quaternion.RotationYawPitchRollToRef(motion.yaw, motion.pitch, motion.roll, s.q);
     Quaternion.SlerpToRef(s.identity, pose.body, fp.body, s.body);
     s.q.multiplyToRef(s.body, this.pivot.rotationQuaternion!);
     this.pivot.position.set(motion.x, motion.y, motion.z);
+    this.sway.q.copyFrom(s.q); this.sway.pos.set(motion.x, motion.y, motion.z);
     this.pivot.computeWorldMatrix(true);
     this.rig.computeWorldMatrix(true);
     for (const node of this.entries!.rootNodes) node.computeWorldMatrix(true);
@@ -168,6 +234,7 @@ export class MeleeView {
       arm.solve(s.wrist, s.pole, s.fingers, s.back);
     }
     melee.pair.update(pose);
+    this.finishTrail();
   }
 
   inspect() {
@@ -184,8 +251,8 @@ export class MeleeView {
     });
     return { ready: true, cosmeticId:melee.pair.appearance, ...melee.animator.inspect(), shown: this.root.isEnabled(), gunLower: melee.pose.gunLower, gunVisible: melee.pose.gunVisible,
       daggersVisible: melee.pair.roots.map((r) => r.isEnabled()), scale: [...melee.pose.scale],
-      tips: melee.pair.anchor('tip').map(local), grips: melee.pair.anchor('grip').map(local), fit, paused: this.paused };
+      tips: melee.pair.anchor('tip').map(local), grips: melee.pair.anchor('grip').map(local), fit, paused: this.paused, trail: this.trails ? { ...this.trails.inspect(), offsets: this.trailOffset.map((o) => +o.tip.length().toFixed(3)) } : null };
   }
 
-  dispose(): void { this.melee?.dispose(); this.entries?.dispose(); this.root.dispose(); this.melee = null; this.entries = null; }
+  dispose(): void { this.trails?.dispose(); this.trails = null; this.melee?.dispose(); this.entries?.dispose(); this.root.dispose(); this.melee = null; this.entries = null; }
 }

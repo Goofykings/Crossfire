@@ -159,7 +159,7 @@ const fadeCurve = (x: number) => { const c = Math.max(0, Math.min(1, x)); return
 function weights(meta: MeleeClipMeta, t: number): { hands: number; gunLower: number; gunVisible: number; trail: number } {
   if (meta.name === 'equip') return { hands: span(t, meta.hands), gunLower: span(t, meta.gunDown), gunVisible: t < (meta.gunHidden ?? 0) ? 1 : 0, trail: 0 };
   if (meta.name === 'unequip') return { hands: 1 - span(t, meta.hands), gunLower: 1 - span(t, meta.gunUp), gunVisible: t >= (meta.hidden ?? meta.duration) ? 1 : 0, trail: 0 };
-  const trail = meta.trail ? Math.max(0, Math.min(1, Math.min((t - meta.trail[0]) / .04, (meta.trail[1] - t) / .08))) : 0;
+  const trail = meta.trail ? Math.max(0, Math.min(1, Math.min((t - meta.trail[0]) / .012, (meta.trail[1] - t) / .025))) : 0;
   return { hands: 1, gunLower: 1, gunVisible: 0, trail };
 }
 

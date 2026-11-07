@@ -106,6 +106,102 @@ def utility_box():
     return m
 
 
-COMPACT_BUILDERS={'flower_box':flower_box,'market_crate':market_crate,
+def vending_machine(body='steel_red', accent='steel_blue'):
+    """Drinks/snacks machine (1.0 x 1.95 x 0.85 m, front toward -z): lit product window, selector
+    panel, coin slot and a dispensing tray. Origin at the floor centre."""
+    m=MeshData()
+    W,D,H=.5,.425,1.95
+    m.box(-W,.06,-D,W,H,D,body)
+    m.box(-W+.03,0,-D+.05,W-.03,.07,D-.05,'steel_dark')
+    f=-D-.012
+    # Lit window with three shelves of products, and a panel beside it.
+    m.box(-.43,.62,f,.14,1.78,-D,'plastic_black')
+    m.box(-.40,.66,f-.004,.11,1.74,-D-.004,'lamp_led')
+    cols=('plastic_orange','plastic_green','plastic_blue','plastic_white','paint_white')
+    for row,y in enumerate((.74,1.06,1.38)):
+        m.box(-.40,y+.2,f-.006,.11,y+.215,-D-.006,'aluminium')
+        for k in range(5):
+            m.box(-.37+k*.095,y+.215,f-.03,-.30+k*.095,y+.215+.17,-D-.01,cols[(k+row)%len(cols)])
+    m.box(.2,.62,f,.44,1.78,-D,accent)
+    for r in range(4):
+        for c in range(3): m.box(.235+c*.07,1.5-r*.1,f-.012,.275+c*.07,1.54-r*.1,-D-.004,'aluminium')
+    m.box(.23,.95,f-.01,.41,1.05,-D-.004,'lamp_led')
+    m.box(.3,.7,f-.012,.34,.78,-D-.004,'steel_dark')
+    # Dispensing tray, a top sign box and a fascia stripe.
+    m.box(-.38,.18,f,.1,.5,-D,'plastic_black')
+    m.box(-.34,.22,f-.01,.06,.46,-D-.004,'steel_dark')
+    m.box(-W+.02,1.8,f-.01,W-.02,1.93,-D,'lamp_led')
+    m.box(-W,.52,f-.002,W,.58,-D,accent)
+    return m
+
+
+def wet_floor_sign():
+    """Yellow A-frame caution board (0.4 x 0.67 x 0.45 m): two sloped panels with a dark warning band
+    and a pictogram bar, facing toward -z and +z."""
+    m=MeshData()
+    for sgn in (-1,1):
+        zb,zt=.2*sgn,.04*sgn
+        m.face_toward([(-.19,0,zb),(.19,0,zb),(.145,.64,zt),(-.145,.64,zt)],'steel_yellow',(0,.4,sgn*.9))
+        # Warning band and a pictogram bar, a hair proud of the panel.
+        for y0,y1 in ((.38,.44),(.20,.34)):
+            za=zb+(zt-zb)*y0/.64+sgn*.003; zc=zb+(zt-zb)*y1/.64+sgn*.003
+            hw0=.19-.045*y0/.64; hw1=.19-.045*y1/.64
+            m.face_toward([(-hw0+.02,y0,za),(hw0-.02,y0,za),(hw1-.02,y1,zc),(-hw1+.02,y1,zc)],'steel_dark',(0,.4,sgn*.9))
+    for sgn in (-1,1):
+        m.face_toward([(.19*sgn,0,.2),(.145*sgn,.64,.04),(.145*sgn,.64,-.04),(.19*sgn,0,-.2)],'steel_yellow',(sgn,0,0))
+    m.box(-.145,.64,-.04,.145,.665,.04,'steel_yellow')
+    return m
+
+
+def wine_rack():
+    """Timber wine rack (2.0 x 1.9 x 0.5 m): a frame and seven shelves of bottle ends facing -z."""
+    m=MeshData()
+    for x in (-1,.96): m.box(x,0,-.25,x+.04,1.9,.25,'wood_dark')
+    m.box(-1,1.86,-.25,1,1.9,.25,'wood_dark')
+    m.box(-1,0,-.25,1,.08,.25,'wood_dark')
+    m.box(-.98,.08,.2,.98,1.86,.25,'wood_weathered')
+    for r in range(7):
+        y=.1+r*.255
+        m.box(-.98,y,-.25,.98,y+.025,.2,'wood_weathered')
+        for k in range(9):
+            x=-.88+k*.22
+            m.tube((x,y+.095,.18),(x,y+.095,-.215),.045,'plastic_green' if (k+r)%3 else 'copper',segments=6)
+    return m
+
+
+def cask(length=1.4,radius=.58):
+    """Large wine cask lying on a timber cradle (1.5 x 1.25 x 1.25 m), axis along local x."""
+    m=MeshData()
+    seg,rings=14,6
+    cy=.12+radius
+    prof=[(length*(-.5+i/rings),radius*(.86+.14*math.sin(math.pi*i/rings))) for i in range(rings+1)]
+    for i in range(rings):
+        (x0,r0),(x1,r1)=prof[i],prof[i+1]
+        for s in range(seg):
+            a,b=2*math.pi*s/seg,2*math.pi*(s+1)/seg
+            pts=[(x0,cy+math.sin(a)*r0,math.cos(a)*r0),(x0,cy+math.sin(b)*r0,math.cos(b)*r0),
+                 (x1,cy+math.sin(b)*r1,math.cos(b)*r1),(x1,cy+math.sin(a)*r1,math.cos(a)*r1)]
+            m.face_toward(pts,'wood_weathered',(0,math.sin((a+b)/2),math.cos((a+b)/2)))
+    for sgn in (-1,1):
+        x=sgn*length/2
+        m.face_toward([(x,cy+math.sin(2*math.pi*s/seg)*prof[-1][1]*.99,math.cos(2*math.pi*s/seg)*prof[-1][1]*.99) for s in range(seg)],'wood_dark',(sgn,0,0))
+    for t in (.1,.3,.7,.9):
+        r=radius*(.86+.14*math.sin(math.pi*t))+.008
+        x=length*(t-.5)
+        for s in range(seg):
+            a,b=2*math.pi*s/seg,2*math.pi*(s+1)/seg
+            m.tube((x,cy+math.sin(a)*r,math.cos(a)*r),(x,cy+math.sin(b)*r,math.cos(b)*r),.018,'iron',segments=4,caps=False)
+    # Tap and bung, then the cradle.
+    m.tube((-length/2-.02,cy-.12,0),(-length/2-.14,cy-.12,0),.03,'iron',segments=6)
+    m.box(-.1,cy+radius*.95,-.04,.1,cy+radius*.95+.03,.04,'wood_dark')
+    for x in (-.45*length,.45*length):
+        m.box(x-.09,0,-.5,x+.09,.14,.5,'wood_dark')
+        m.box(x-.09,.14,-.2,x+.09,.5,.2,'wood_dark')
+    return m
+
+
+COMPACT_BUILDERS={'vending_machine':vending_machine,'vending_machine_blue':lambda:vending_machine('steel_blue','steel_red'),
+                  'wet_floor_sign':wet_floor_sign,'wine_rack':wine_rack,'cask':cask,
+                  'flower_box':flower_box,'market_crate':market_crate,
                   'stone_bollard':stone_bollard,'pump_skid':pump_skid,'utility_box':utility_box,
                   'market_table':market_table,'valve_manifold':valve_manifold,'cafe_board':cafe_board}

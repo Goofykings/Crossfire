@@ -224,6 +224,8 @@ def stage_map(key: str, previews: bool):
     catalog=json.loads((SHARED/'props'/'props.json').read_text(encoding='utf8'))
     environment=interactive.map_data(layout,coll,catalog)
     groups = building_groups(layout)
+    from building import BuildingGenerator as _BG
+    _BG.poster_log.clear(); _BG.poster_counts.clear()
     town_col = exporter.collection(cfg["title"])
     bcol = exporter.collection("Buildings", town_col)
     block_files = []
@@ -247,6 +249,11 @@ def stage_map(key: str, previews: bool):
         block_files.append(f"buildings/{name}.glb")
         log(f"{name}: {len(group)} buildings, {path.stat().st_size // 1024} KB")
 
+    # Facade posters (blender/scripts/lib/building.py poster_pass): recorded for review and the placement tests.
+    poster_dir = ROOT / "docs" / "map-posters"
+    poster_dir.mkdir(parents=True, exist_ok=True)
+    (poster_dir / f"{layout['id']}.json").write_text(json.dumps({"map": layout["id"], "facade": list(_BG.poster_log)}, indent=1), encoding="utf-8")
+    log("facade posters:", len(_BG.poster_log))
     tcol = exporter.collection("Terrain", town_col)
     terrain = terrain_cls(layout).build()
     import underground

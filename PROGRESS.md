@@ -1,3 +1,152 @@
+# Melee polish, blade trails, bigger underground spaces and posters (2026-11-07)
+
+Presentation, map-art and navigation pass; see docs/UNDERGROUND_POSTERS.md and the new "Expressive
+arcs, blade trails and a heavier finisher" section of docs/DUAL_DAGGERS.md. `shared/melee.ts`
+(damage, range, arc, contact windows, chain gates), scoring, networking (WebSocket v21, HTTP
+schemas), cosmetics and Cloudflare configuration are unchanged. Layouts, collision and map
+revisions of Town and City changed (Industrial's layout is byte-identical, its buildings gained
+posters), so the frontend assets and the Worker need a matching release when authorized. No
+commit, push or deployment.
+
+## Changed
+- **Melee arcs** (`blender/melee/dagger_design.py`, regenerated `dagger_clips.glb`/`daggers.json`):
+  attack 1 now sweeps the first-person view from upper right to lower left, tip NDC x
+  0.77 -> -0.76 (it was 0.68 -> -0.19), attack 2 mirrors it; the torso turns into the cut and
+  the support hand ducks clear. Timing is still 250/250/400 ms with the same contact windows.
+- **Finisher**: slow 95 ms wind-up pulling both hands to the chest (right above left, elbows
+  folded), 110 ms hold with 1-2 cm secondary drift and a moving torso, then a 40 ms release to
+  +/-0.31 m (grips at +/-0.94 NDC) and a recovery to the guard by 400 ms. Contact 215-305 ms and
+  chain 310 ms unchanged.
+- **Blade trails** (`src/game/melee/MeleeTrail.ts`, `MeleeView.run/sampleTrail/finishTrail`,
+  `RemotePlayers.trail`): camera-facing strip along the dagger tip's animated path, Catmull-Rom
+  smoothed, additive with vertex-alpha fade; slash = cool thin core + halo (150/220 ms),
+  finisher = both hands, warmer, wider, 200/320 ms layers. First person samples 4 ms slices of
+  an attacking frame and corrects the newest sample onto the real blade after the arm IK;
+  third person is a simplified per-frame world-space strip (<= 45 m, visible players only);
+  Chromebook mode: one layer, 8 ms slices. Cosmetic only.
+- **Civic Central metro** (`underground.py`, `tools/underground_layouts.py`): floor -3.8 m, 3.5 m
+  clear (was -2.6 / 2.3), 62 -> 375 m2: 34 x 8 m hall, two stair lobbies, gate line with four
+  gate blocks, ticket machine bank, 14 piers (0.8 m; the original two kept at (2.2, 0) and
+  (6.4, 0)), two pillar-row platform zones, four rooms behind door tunnels; 29 floor props
+  (9 benches, 7 vending machines, 7 bins, wet-floor signs, planter, cabinets, bags), 66 wall
+  items (banners, platform/exit/ticket/restroom/staff signs, two route maps, 38 posters,
+  3 utility doors), ceiling LED grid and beams.
+- **Cistern and wine cellar**: floor -3.5 m, 3.2 m clear, 62 -> 181 m2: cistern hall with six
+  piers around a raised stone tank, wine vault (4 racks, 2 casks, barrels), two stores, brick
+  and flagstone, enamel signs, 11 vintage posters; it shares nothing with the metro's look.
+- **Posters** (all maps): 12 invented designs in `urban/posters_fun.jpg` (one atlas material).
+  Facade pass `BuildingGenerator.poster_pass` + `interior_posters`: Town 13 (2 inside), Industrial
+  17 (6 inside, framed boards), City 6 on facades plus the 38 in the metro; placement registry in
+  `docs/map-posters/<map>.json`.
+- **Generator**: per-style `floor_y`/`risers`/`run`, `prepare()`, piers with size, `blocks`,
+  `decor` validated against real walls, `walks`; new props `vending_machine(_blue)`,
+  `wet_floor_sign`, `wine_rack`, `cask`; materials `posters_fun`, `underground_signs`.
+- **Tests/tools**: `tests/meleeTrail.test.ts`, `tests/posters.test.ts`, new cases in
+  `tests/meleeAnimation.test.ts` and `tests/mapOverhaul.test.ts` (aisle/room walks with rifle and
+  sniper both ways, pillar spans, area/height, Practice navigation); `tools/check_underground.py`,
+  `tools/melee-trail-test.mjs`, `tools/underground-shots.mjs`, `tools/poster-shots.mjs`,
+  `tools/make_underground_art.py`. Small fixes: `tactical.ts` ignores underground props; the
+  street-bench and stair-flight tests skip underground props; `collisionSafety` tolerates float
+  depth (-3.8000000000000003).
+
+## Verified
+- 762 frontend tests pass (1 existing skip); server 85/85 (rebuilt Worker bundle); typecheck,
+  production build, `assets:verify` (216 materials, 3 maps), `python -B -I tools/check_underground.py`.
+- Real Chrome: `node tools/melee-trail-test.mjs` 16 checks (trail at 120 and 30 FPS steps,
+  sample within 2 cm of the blade, fade-out, Chromebook one layer, bot trail),
+  `node tools/melee-anim-test.mjs` and `node tools/melee-browser-test.mjs` (wrists <= 23.5 deg).
+- Visual inspection done by looking at the screenshots (git-ignored `test-results/`): three
+  attacks' key frames and the stepped trail sheets, finisher crossed hold and release (first and
+  third person), the bot's trail close-up, metro (hall both ways, ticket hall, gate line, east and
+  west zones, pillars, vending/bench/bins, route map, poster wall, ceiling lights, the four rooms,
+  both stairs from below and from the street), cellar (stair bottoms, hall, tank, vault, stores,
+  stairs, portals) and 9-10 posters per map including interiors. Corrections found that way:
+  jagged trail (sampling offset), too-wide trails, metro too dark, plain ticket machines,
+  posters crossing a material seam or trim band, a lamp in front of a sign, over-bright
+  bottle ends, posters hiding behind a header course.
+- Map review draw calls (median / max): Town 128 / 192, City 117 / 177, Industrial 113 / 153
+  (the project's earlier figure was about 130 median).
+
+## Remaining limits
+- The metro's clear height is 3.5 m, not more: the civic stair cannot start north of z = -12.2
+  (a long gun needs 1.6 m before the plaza's building edge), which caps the stair length and so
+  the depth. The cellar portals keep their old 5.4 m length for the same reason (a longer
+  portal made a server test's sightline collinear).
+- Practice City lost one target and the Town and City spawns were recomputed (16 each) by the
+  larger stair footprints.
+- Modern facades have little blank wall: City has only 6 facade posters (framed boards use a
+  band under the first floor when trims allow); Industrial interior posters can sit behind
+  racks. No poster is collidable by design.
+- Third-person trails are one strip per frame (smoothed), so a very distant or very fast swing
+  looks simpler; first person is the detailed version. Tested on one machine (headless Chrome,
+  Intel iGPU); no multiplayer session with real peers, low-end device or Chromebook hardware was
+  tested.
+- Wall art, ceiling beams and machine screens are visual only above/against walls (no collision
+  by design); the cistern tank's water is a flat surface.
+- Public Cloudflare behaviour was not validated; old browser tabs need a refresh after the
+  matching releases.
+
+# Player proportions, independent weapon FOV and nametag bars (2026-11-07)
+
+Completed the three presentation refinements. No gameplay, shared protocol,
+Worker, hitbox, movement collision, hosting configuration or original GLB asset
+changes. No commit, push or deployment performed.
+
+- Nametag bars are now 4.5 px tall (50% above the previous 3 px), rounded with
+  the existing translucent backing, and inherit the label color: teammate blue,
+  opponent red, including FFA. Existing health/max-health interpolation remains
+  frame-rate independent. Existing friendly-through-geometry / opponent LOS and
+  smoke visibility rules are preserved; no raycasts were added.
+- The existing depth-isolated first-person rendering group now has its own fixed
+  90-degree horizontal projection and 0.012 m near plane. It shares the world
+  camera's eye/view transform and restores the world projection after rendering.
+  World FOV, ADS magnification and authoritative aim are unchanged. Guns,
+  daggers, muzzle flashes and camera-space effects use the same projection;
+  weapon offsets, reloads, recoil and animation transforms were not retuned.
+- CharacterProportions broadens the shared bind mesh once at asset load: torso
+  and shoulder shell approximately 12%, upper-arm thickness 16%, and legs 14%
+  around their original bone centre lines, blended with the exported weights.
+  It also adjusts the matching first-person dagger arm mesh. Height, head/hand
+  positions, bones, grip targets, animation tracks and texture UVs are preserved.
+  Geometry remains shared across the home preview, remote players and Practice
+  bots; there is no added per-frame mesh deformation or simulation work.
+
+## Files
+
+- `src/styles.css`: bar height and inherited relationship color.
+- `src/weapons/WeaponView.ts`: independent viewmodel projection in existing group.
+- `src/game/CharacterProportions.ts`: shared cosmetic bind-mesh adjustment.
+- `src/game/CharacterAsset.ts`, `src/game/melee/MeleeAssets.ts`: apply once on load.
+- `tests/weaponProjection.test.ts`: all four real weapons at minimum/default/
+  maximum and scope FOV; fixed projection, unchanged transform, world restoration.
+- `tests/characterProportions.test.ts`: real GLB body/limb broadening, unchanged
+  height/head/hands/bind matrices/clips/UVs/indices, idempotence and shared geometry.
+- `tools/player-presentation-browser-test.mjs`: repeatable production-browser QA.
+
+## Verification and limits
+
+- `npm.cmd run typecheck`: passed.
+- `npm.cmd test -- --maxWorkers=2`: **736 passed, 1 intentionally skipped**
+  (the pre-existing opt-in character performance benchmark). Existing real-rig
+  weapon grip, melee, limp-body, lean, movement and protocol tests passed.
+- `npm.cmd run build`: passed; existing large-bundle warning remains.
+- `node tools/player-presentation-browser-test.mjs`: **17 checks passed** against
+  the production build served under `/crossfire/`, using real local Practice.
+  Real teammate/opponent DOM bars match label colors and measured 4.5 px height.
+  All four guns at 70/90/110 FOV, ADS, reload/muzzle-flash poses, a real sniper
+  scope and dagger FOV/grip checks completed without browser errors/missing assets.
+- Visually inspected `test-results/player-presentation/contact-sheet.png` and
+  individual rifle/ADS renders: broader armed/three melee poses, consistent weapon
+  size, centered sights, working scope, intact dagger hands. Report and PNGs are
+  ignored QA outputs. Initial browser-harness assumptions about locked weapon
+  switching and the scope's settling transition were corrected to use real spawn
+  selection and condition-based zoom readiness; no gameplay changes were needed.
+- No new public Cloudflare or live multiplayer validation was performed. Visibility
+  logic was reviewed and left unchanged; the browser checks used actual Practice
+  team identities. These changes require only a frontend release when authorized;
+  no Worker/protocol migration is required. Exhaustive pose/device/GPU coverage
+  and a new performance benchmark were not performed.
+
 # Weapon balancing, sniper zoom and shotgun improvements (2026-11-07)
 
 Completed on the existing shared Weapon state machine and hitscan pipeline.

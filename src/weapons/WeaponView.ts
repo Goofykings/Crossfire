@@ -3,6 +3,7 @@ import { cosmetic, defaultCosmetic, defaultEquipment, type Equipment } from '../
 import { loadCosmeticAsset, visualCosmetic } from '../rendering/CosmeticAssets';
 import {
   Color3,
+  Matrix,
   Mesh,
   MeshBuilder,
   PointLight,
@@ -23,6 +24,8 @@ import type { Weapon, WeaponAction, WeaponId } from './Weapon';
 import { WeaponMotion, type MotionInput } from './WeaponMotion';
 
 export const WEAPON_RENDER_GROUP = 1;
+/** Horizontal viewmodel FOV, independent of world/ADS/scope magnification. */
+export const VIEWMODEL_FOV = Math.PI / 2;
 
 type V3 = [number, number, number];
 /** Camera-space offset and rotation of the weapon: [dx, dy, dz, pitch (muzzle up), yaw (muzzle left), roll (top left)]. */
@@ -155,6 +158,7 @@ export class WeaponView {
   private meleeLower = 0;
   private meleeHidden = false;
   private savedNear: number | null = null;
+  private readonly viewmodelProjection = Matrix.Identity();
   private readonly beforeGroup;
   private readonly afterGroup;
   /** Every weapon mesh: excluded from the sun by the game. */
@@ -173,13 +177,16 @@ export class WeaponView {
     this.pivot = new TransformNode('weapon-pivot', scene);
     this.pivot.parent = this.root;
     scene.setRenderingAutoClearDepthStencil(WEAPON_RENDER_GROUP, true, true, false);
-    // The world needs its 10 cm near plane for distant depth precision; the
-    // camera-mounted stock/grip can legitimately sit closer. Change projection
-    // ONLY for the already depth-isolated weapon group, then restore it.
+    // Share the eye/view transform (including lean and recoil), but give guns,
+    // daggers and their effects a fixed horizontal projection. World FOV/ADS
+    // still control gameplay and scope magnification, never model placement.
     this.beforeGroup = scene.onBeforeRenderingGroupObservable.add(info => {
       if (info.renderingGroupId !== WEAPON_RENDER_GROUP || scene.activeCamera !== ctx.camera) return;
       this.savedNear = ctx.camera.minZ; ctx.camera.minZ = .012;
-      scene.setTransformMatrix(ctx.camera.getViewMatrix(), ctx.camera.getProjectionMatrix(true));
+      const engine = scene.getEngine();
+      Matrix.PerspectiveFovRHToRef(VIEWMODEL_FOV, engine.getAspectRatio(ctx.camera), .012, ctx.camera.maxZ,
+        this.viewmodelProjection, false, engine.isNDCHalfZRange, 0, engine.useReverseDepthBuffer);
+      scene.setTransformMatrix(ctx.camera.getViewMatrix(), this.viewmodelProjection);
     });
     this.afterGroup = scene.onAfterRenderingGroupObservable.add(info => {
       if (info.renderingGroupId !== WEAPON_RENDER_GROUP || this.savedNear === null) return;

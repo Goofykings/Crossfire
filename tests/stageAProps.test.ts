@@ -17,7 +17,8 @@ describe.each(MAP_IDS)('%s bench placement', (id) => {
   it('has supported feet and clearance from solids, stairs and other props', () => {
     const layout = JSON.parse(readFileSync(`src/maps/${id}/layout.json`, 'utf8')) as MapLayout;
     const collision = JSON.parse(readFileSync(`public/assets/models/${id}/collision.json`, 'utf8')) as CollisionFile;
-    const benches = layout.props.filter((p) => p.type === 'bench' || p.type === 'bench_modern');
+    // Street benches only: underground benches stand against tiled walls and are checked by tools/check_underground.py.
+    const benches = layout.props.filter((p) => (p.type === 'bench' || p.type === 'bench_modern') && p.pos[1] >= -0.01);
     for (const bench of benches) {
       const world = createMapWorld(collision, { ...layout, props: layout.props.filter((p) => p !== bench) }, catalog);
       const [x, y, z] = bench.pos;

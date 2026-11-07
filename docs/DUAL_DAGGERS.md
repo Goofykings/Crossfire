@@ -201,6 +201,45 @@ This supersedes the clip table above for the attacks. Presentation and timing me
 - Tests: `tests/meleeAnimation.test.ts` (speed and pose targets, flourish, interruption),
   `tests/limpBody.test.ts`, `node tools/melee-anim-test.mjs`.
 
+## Expressive arcs, blade trails and a heavier finisher (2026-11-07)
+
+Presentation only: `shared/melee.ts` (damage 35, range, arc, contact windows, chain gates, combo
+reset) and the combat protocol are untouched; only `dagger_design.py` poses, the clip trail
+windows, `MeleeTrail.ts` and its hooks changed.
+
+* **Attack 1 / 2** (`SLASH_R`, mirrored for the left): the daggers now cross almost the whole
+  first-person view. Tip positions in normalized device space (90 degree horizontal FOV, 16:9):
+  attack 1 starts at (0.77, 0.95) and ends the strike at (-0.76, -0.58), a 1.53 wide sweep
+  (it was 0.68 -> -0.19, 0.87 wide); attack 2 is the mirror. The torso now turns *into* the cut
+  (body yaw 0.30 rad, 0.6 of it shown in first person; it used to turn the other way) and the
+  support hand lifts and tucks out of the blade's way, so the 6 cm forearm gap and the <= 23
+  degree wrist bend still hold. Timings are unchanged (250 ms, strike in about 30 ms). Tips
+  never come closer to the camera than 0.2 m (tested) and the crosshair is only crossed for
+  about 20 ms.
+* **Finisher** (`FINISH_R/L`, `CROSSED_*`, `OUT_*`): the hands pull back to the chest
+  (z -0.27, right hand above the left), the forearms cross with bent elbows by 95 ms, hold
+  until 205 ms (110 ms, within the 100-150 ms brief, with 1-2 cm of secondary hand drift and a
+  moving torso channel), then both arms whip outward in about 40 ms to +/-0.31 m (grip NDC
+  +/-0.94, blades nearly horizontal) and recover by 400 ms. The wind-up takes 95 ms against a
+  40 ms release. Contact 215-305 ms and chain 310 ms are exactly the old combat metadata.
+* **Trails** (`src/game/melee/MeleeTrail.ts`): a thin camera-facing strip along the dagger tip's
+  animated path (tip plus 12% of the blade), smoothed with a Catmull-Rom curve, additive and
+  vertex-alpha faded, soft edges, tapering tail. Attacks 1 and 2 use the striking hand only
+  (cool white-cyan core 1.3 cm, wide halo 3.4 cm, 150/220 ms); the finisher draws both hands in
+  a warm layered version (core 1.9 cm, halo 5.2 cm, 200/320 ms) with a longer follow-through.
+  First person: `MeleeView.run` cuts an attacking frame into <= 4 ms slices (8 ms in Chromebook
+  mode) and samples each from the socket pose, so a 30 ms strike is a smooth curve even at 30
+  FPS; after the arm IK the newest sample is moved onto the blade's real position and the
+  difference is carried into the next frame's samples (no seams). The strip lives under the
+  camera rig in the depth-cleared weapon group. Third person: `RemotePlayers.trail` samples the
+  real dagger tip and guard once per frame for visible players within 45 m and draws a simpler
+  world-space strip (smoothed between frames). One shared additive material, two 56-sample ring
+  meshes per owner (created at the first trail), disabled when idle; Chromebook mode uses one
+  layer and no extra smoothing. Pure cosmetics: no gameplay state or aim is touched.
+* Tests: `tests/meleeAnimation.test.ts` (screen coverage, depth, finisher hold/release),
+  `tests/meleeTrail.test.ts`, `node tools/melee-trail-test.mjs` (real Chrome, 120 and 30 FPS steps, a bot, Chromebook mode) and
+  `node tools/melee-anim-test.mjs`; screenshots go to the git-ignored `test-results/`.
+
 ## Tests and tools
 
 - **`tests/meleeAnimation.test.ts`:**

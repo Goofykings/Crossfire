@@ -223,7 +223,8 @@ export function deriveTacticalMap(layout: MapLayout, props: PropCatalog | null, 
   if (props) {
     for (const p of [...layout.props, ...layout.obstacles]) {
       const col = props.props[p.type]?.collider;
-      if (!col || col[0] * col[2] < minArea || col[1] < 0.8) continue;
+      // Props standing on an underground floor (pos y below the street) are not obstacles on this map.
+      if (!col || col[0] * col[2] < minArea || col[1] < 0.8 || p.pos[1] < -0.01) continue;
       obstacles.push({ type: p.type, poly: orientedRect(p.pos[0], p.pos[2], col[0] / 2, col[2] / 2, p.heading) });
     }
   }

@@ -1757,6 +1757,28 @@
    "roughness": 0.8,
    "atlas": true
   },
+  "posters_fun": {
+   "tile": 1.0,
+   "tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "albedo": "assets/textures/urban/posters_fun.jpg",
+   "roughness": 0.8,
+   "atlas": true
+  },
+  "underground_signs": {
+   "tile": 1.0,
+   "tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "albedo": "assets/textures/modern-city/underground_signs.jpg",
+   "roughness": 0.4,
+   "atlas": true
+  },
   "concrete_spawn_blue": {
    "tile": 3.2,
    "tint": [

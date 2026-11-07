@@ -6,6 +6,7 @@ import { WORLDS } from '../server/src/world';
 import { FIXED_DT, MOVEMENT } from '../src/config/constants';
 import type { CollisionFile, MapLayout } from '../src/maps/types';
 import { NO_INTENT, PlayerController } from '../src/player/PlayerController';
+import { PracticeNavigation } from '../src/practice/Navigation';
 
 /** Map overhaul (2026-11) regressions: underground passages traversed by the real shared
  * controller, street openings guarded, legal depth for the server's safety net, and no straight
@@ -14,6 +15,9 @@ describe.each(MAP_IDS)('%s overhaul', (id) => {
   const { world, layout } = WORLDS[id];
   const collision = JSON.parse(readFileSync(`public/assets/models/${id}/collision.json`, 'utf8')) as CollisionFile;
 
+  function walk_(player: PlayerController, path: number[][], label: string) {
+    return walk(player, path, label);
+  }
   function walk(player: PlayerController, path: number[][], label: string) {
     let low = Infinity;
     for (let i = 1; i < path.length; i++) {
@@ -53,6 +57,65 @@ describe.each(MAP_IDS)('%s overhaul', (id) => {
       expect(player.position.y, `${passage.id} did not climb back to the street`).toBeGreaterThan(-.05);
     }
   });
+
+  it.each([false, true])('walks every aisle, room and gate lane of each underground space, reverse=%s', (reverse) => {
+    for (const passage of layout.underground ?? []) for (const weapon of [null, 'rifle', 'sniper'] as const) {
+      for (const walk of passage.walks ?? []) {
+        const path = walk.map(([x, z]) => [x, passage.floor, z]);
+        if (reverse) path.reverse();
+        const player = new PlayerController(world);
+        player.weaponClearance = weapon;
+        player.teleport({ x: path[0][0], y: passage.floor, z: path[0][2] }, 0);
+        walk_(player, path, `${passage.id} ${weapon} ${JSON.stringify(walk[0])}`);
+      }
+    }
+  });
+
+  it('is a big, tall room with believable full-height pillars and solid blocks', () => {
+    for (const passage of layout.underground ?? []) {
+      const clear = passage.ceiling - passage.floor;
+      // Before the expansion: 2.3 m clear and 62 m2 (metro) / 62 m2 (cellar).
+      expect(clear, `${passage.id} clear height`).toBeGreaterThanOrEqual(3.1);
+      const area = passage.segments.reduce((sum, [x0, z0, x1, z1]) => sum + (x1 - x0) * (z1 - z0), 0);
+      expect(area, `${passage.id} floor area`).toBeGreaterThan(150);
+      const piers = collision.boxes.filter((b) => b.tag === `underground:${passage.id}:pier`);
+      expect(piers.length, `${passage.id} piers`).toBe((passage.piers ?? []).length);
+      for (const b of piers) {
+        // Floor to the underside of the slab, 0.7-0.9 m square, standing inside the clear floor.
+        expect(Math.abs(b.c[1] - b.h[1] - passage.floor)).toBeLessThan(.002);
+        expect(Math.abs(b.c[1] + b.h[1] - passage.ceiling)).toBeLessThan(.002);
+        expect(b.h[0] * 2).toBeGreaterThanOrEqual(.7); expect(b.h[0] * 2).toBeLessThanOrEqual(.9);
+        expect(b.h[2] * 2).toBeGreaterThanOrEqual(.7); expect(b.h[2] * 2).toBeLessThanOrEqual(.9);
+        expect(passage.segments.some(([x0, z0, x1, z1]) => b.c[0] - b.h[0] >= x0 - 1e-6 && b.c[0] + b.h[0] <= x1 + 1e-6 && b.c[2] - b.h[2] >= z0 - 1e-6 && b.c[2] + b.h[2] <= z1 + 1e-6)).toBe(true);
+      }
+      const blocks = collision.boxes.filter((b) => /:(block|partition)$/.test(b.tag) && b.tag.startsWith(`underground:${passage.id}:`));
+      expect(blocks.length).toBe((passage.blocks ?? []).length);
+    }
+  });
+
+  it('gives Practice bots a connected navigation graph that covers the underground rooms and both stairs', () => {
+    const nav = new PracticeNavigation(world, layout as MapLayout);
+    for (const passage of layout.underground ?? []) {
+      const down = nav.nodes.filter((n) => Math.abs(n.y - passage.floor) < .05);
+      const area = passage.segments.reduce((sum, [x0, z0, x1, z1]) => sum + (x1 - x0) * (z1 - z0), 0);
+      // A 0.8 m grid: at least a third of the clear floor is walkable once piers, blocks and props are subtracted.
+      expect(down.length * .64, `${passage.id} underground nodes`).toBeGreaterThan(area * .33);
+      // Every underground node is in the street's component: the stairs connect, no room is cut off.
+      const street = nav.nearest({ x: passage.waypoints[0][0], y: 0, z: passage.waypoints[0][2] })!;
+      // (single grid nodes squeezed behind a barrel or machine are tolerated; no room or aisle may be cut off.)
+      const cut = down.filter((n) => n.component !== street.component);
+      expect(cut.length, `${passage.id} isolated underground nodes`).toBeLessThanOrEqual(Math.max(3, down.length * .03));
+      // A bot can plan from the first street entrance to the last, and into each side room.
+      const from = { x: passage.waypoints[0][0], y: 0, z: passage.waypoints[0][2] }, last = passage.waypoints[passage.waypoints.length - 1];
+      expect(nav.path(from, { x: last[0], y: 0, z: last[2] }).length, `${passage.id} bot route`).toBeGreaterThan(10);
+      for (const walk of passage.walks ?? []) {
+        const [x, z] = walk[walk.length - 1];
+        const path = nav.path(from, { x, y: passage.floor, z });
+        expect(path.length, `${passage.id} bot route to ${x},${z}`).toBeGreaterThan(4);
+        expect(Math.hypot(path[path.length - 1].x - x, path[path.length - 1].z - z), `${passage.id} bot arrives near ${x},${z}`).toBeLessThan(1.2);
+      }
+    }
+  }, 120_000);
 
   it('keeps headroom along each passage and closes it with thick walls, floor and slab', () => {
     for (const passage of layout.underground ?? []) {
@@ -168,6 +231,7 @@ describe.each(MAP_IDS)('%s overhaul', (id) => {
     }
     for (const o of layout.navigation?.groundObstacles ?? []) if (/(step|stair)/.test(o.id)) flights.push(o.rect);
     for (const p of layout.props) {
+      if (p.pos[1] < -.01) continue;   // underground props stand on a passage floor, not on a street stair
       const c = catalog.props[p.type]?.collider;
       if (!c) continue;
       const r = Math.min(c[0], c[2]) / 2;

@@ -329,3 +329,22 @@ def wall_lantern() -> MeshData:
         x, z = cx + math.cos(a) * 0.1, cz - math.sin(a) * 0.1
         m.box(x - 0.01, bot, z - 0.01, x + 0.01, top - 0.04, z + 0.01, "iron")
     return m
+
+
+def poster_fun(cell: int, w: float = 0.7, framed: bool = False) -> MeshData:
+    """A pasted-up (or framed) playful poster from the shared posters_fun atlas: w wide, 1.5 w tall, its
+    lower edge on the origin, 12 mm proud of the wall (outward = -z). `cell` indexes the 4 x 3 atlas."""
+    from underground import atlas_uv
+    m = MeshData()
+    h = w * 1.5
+    u0, v0, u1, v1 = atlas_uv('poster', cell)
+    z = -0.012 if not framed else -0.026
+    pts = [(w / 2, 0, z), (-w / 2, 0, z), (-w / 2, h, z), (w / 2, h, z)]
+    m.face_toward(pts, "posters_fun", (0, 0, -1), uv=[(u0, v0), (u1, v0), (u1, v1), (u0, v1)])
+    if framed:
+        t = 0.03
+        for x0, y0, x1, y1 in ((-w / 2 - t, -t, w / 2 + t, 0), (-w / 2 - t, h, w / 2 + t, h + t), (-w / 2 - t, 0, -w / 2, h), (w / 2, 0, w / 2 + t, h)):
+            m.box(x0, y0, -0.034, x1, y1, -0.006, "aluminium", skip=("pz",))
+        m.box(-w / 2, h + t, -0.09, w / 2, h + t + 0.035, -0.02, "steel_dark")
+        m.box(-w / 2 + 0.05, h + t - 0.004, -0.085, w / 2 - 0.05, h + t + 0.0, -0.03, "lamp_led", skip=("py",))
+    return m

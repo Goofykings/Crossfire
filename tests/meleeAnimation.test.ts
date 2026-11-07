@@ -196,6 +196,62 @@ describe('melee animator', () => {
     scene.dispose(); engine.dispose();
   });
 
+  it('sweeps the dagger across most of the first-person view (attacks 1 and 2) and spreads wide in the finisher', async () => {
+    const { engine, scene, lib } = await library();
+    const clips = lib.clips!, sample = rigSample(), pose = meleePose();
+    const fp = META.firstPerson, body = Quaternion.Identity(), identity = Quaternion.Identity();
+    /** Normalized device x/y of a dagger tip at clip time t (90 degree horizontal FOV, 16:9), as MeleeView frames the rig. */
+    const ndc = (name: MeleeClipName, t: number, i: number) => {
+      compose(clips.sample(name, t, sample), pose);
+      Quaternion.SlerpToRef(identity, pose.body, fp.body, body);
+      const p = tip(pose, i).applyRotationQuaternionInPlace(body).addInPlace(Vector3.FromArray(fp.shoulders));
+      return { x: p.x / -p.z, y: p.y / -p.z / .5625, depth: -p.z };
+    };
+    const a1 = [ndc('attack_cross', .04, 0), ndc('attack_cross', .104, 0), ndc('attack_cross', .14, 0)];
+    expect(a1[0].x).toBeGreaterThan(.6); expect(a1[0].y).toBeGreaterThan(.5);       // upper right
+    expect(a1[1].x).toBeLessThan(-.55); expect(a1[1].y).toBeLessThan(0);              // lower left
+    expect(a1[0].x - a1[1].x).toBeGreaterThan(1.3);                                   // 65%+ of the screen width (it was 0.86)
+    const a2 = [ndc('attack_forward', .04, 1), ndc('attack_forward', .104, 1)];
+    expect(a2[0].x).toBeLessThan(-.6); expect(a2[0].y).toBeGreaterThan(.5);
+    expect(a2[1].x).toBeGreaterThan(.55); expect(a2[1].y).toBeLessThan(0);
+    expect(a2[1].x - a2[0].x).toBeGreaterThan(1.3);
+    // Never through the camera: every key of every attack keeps the tips well in front of it.
+    for (const name of ['attack_cross', 'attack_forward', 'attack_finisher'] as const) for (let t = 0; t <= META.clips[name].duration; t += .01) for (const i of [0, 1])
+      expect(ndc(name, t, i).depth, `${name} ${t.toFixed(2)} tip ${i} depth`).toBeGreaterThan(.2);
+    // Finisher release: both daggers end far apart, one on each side of the view.
+    const out = [ndc('attack_finisher', .29, 0), ndc('attack_finisher', .29, 1)];
+    expect(out[0].x).toBeGreaterThan(.75); expect(out[1].x).toBeLessThan(-.75);
+    expect(out[0].x - out[1].x).toBeGreaterThan(1.6);
+    scene.dispose(); engine.dispose();
+  });
+
+  it('winds the finisher up slowly, holds the crossed arms 100-150 ms with some secondary motion, then releases fast', async () => {
+    const { engine, scene, lib } = await library();
+    const clips = lib.clips!, sample = rigSample(), pose = meleePose();
+    const hand = (t: number, i: number) => { compose(clips.sample('attack_finisher', t, sample), pose); return pose.sockets[i].position.clone(); };
+    const crossed = hand(.15, 0), crossedLeft = hand(.15, 1);
+    // The crossed pose is held while both hands stay within 2.5 cm of it: 100-150 ms.
+    const held: number[] = [];
+    for (let t = 0; t <= .4; t += .005) if (Vector3.Distance(hand(t, 0), crossed) < .025 && Vector3.Distance(hand(t, 1), crossedLeft) < .025) held.push(t);
+    const hold = held[held.length - 1] - held[0];
+    expect(hold).toBeGreaterThanOrEqual(.1); expect(hold).toBeLessThanOrEqual(.15);
+    // Not frozen: the hands drift a few millimetres and the torso keeps moving during the hold.
+    expect(Vector3.Distance(hand(.1, 0), hand(.2, 0))).toBeGreaterThan(.004);
+    compose(clips.sample('attack_finisher', .12, sample), pose); const b0 = pose.body.clone();
+    compose(clips.sample('attack_finisher', .19, sample), pose); expect(Quaternion.Dot(b0, pose.body) ** 2).toBeLessThan(.99999);
+    // The wind-up (guard -> crossed) takes about twice as long as the release (crossed -> far out).
+    const arrive = held[0], release = .245 - held[held.length - 1];
+    expect(arrive).toBeGreaterThan(release * 2);
+    // The crossed pose is pulled well back toward the chest, with the right hand above the left.
+    expect(crossed.z).toBeGreaterThan(-.31); expect(crossed.y).toBeGreaterThan(crossedLeft.y + .1);
+    // The release travels much farther than before (right hand +0.45 m across, left the mirror).
+    expect(hand(.245, 0).x - crossed.x).toBeGreaterThan(.42); expect(crossedLeft.x - hand(.245, 1).x).toBeGreaterThan(.42);
+    // Contact metadata (shared with combat) is unchanged.
+    expect(META.clips.attack_finisher.contact).toEqual([.215, .305]);
+    expect(META.clips.attack_finisher.trail?.[0]).toBeGreaterThanOrEqual(.2);
+    scene.dispose(); engine.dispose();
+  });
+
   it('plays a cosmetic flourish every 6-12 seconds from the guard, never during combat or blends', async () => {
     const { engine, scene, anim } = await animator();
     let seed = 7; anim.rng = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };

@@ -57,7 +57,7 @@ describe.each(MAP_IDS)('%s actual map safety', id => {
       const well = stairwells.find(s => x >= s.rect[0] && x <= s.rect[2] && z >= s.rect[1] && z <= s.rect[3]);
       // In a stairwell the support may be a step, a landing or the flights' 1 m divider.
       // 1 mm probe: integer sample points can lie exactly on adjoining step edges.
-      expect(world.groundHeight(x,z,well ? .001 : 0,well ? 1.01 : .001)).toBeGreaterThanOrEqual(well ? well.floor : layout.ground.baseHeight);
+      expect(world.groundHeight(x,z,well ? .001 : 0,well ? 1.01 : .001)).toBeGreaterThanOrEqual((well ? well.floor : layout.ground.baseHeight) - 1e-9);
     }
     const boundaries = [...world.all()].filter(c => c.tag === 'boundary');
     expect(boundaries).toHaveLength(4);

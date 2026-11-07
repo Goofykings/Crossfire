@@ -2,7 +2,8 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { readFile } from 'node:fs/promises';
 import { FreeCamera, NullEngine, Scene, StandardMaterial, Vector3 } from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
-import { WeaponView } from '../src/weapons/WeaponView';
+import { VIEWMODEL_FOV, WeaponView } from '../src/weapons/WeaponView';
+import { SETTING_LIMITS, DEFAULT_SETTINGS } from '../src/config/settings';
 import { Weapon, WEAPONS } from '../src/weapons/Weapon';
 import type { RenderContext } from '../src/rendering/RenderContext';
 import type { MaterialLibrary } from '../src/rendering/MaterialLibrary';
@@ -27,13 +28,24 @@ it('preserves all four real weapon rigs and isolates close weapon depth from wor
       const enabled=view.meshes.filter(m=>m.isEnabled()&&m.getTotalVertices()>0&&!m.name.includes('flash'));
       expect(enabled.length).toBeGreaterThan(3);expect(enabled.some(m=>m.name.includes(stats.id))).toBe(true);
       expect(enabled.every(m=>m.renderingGroupId===1&&m.alwaysSelectAsActiveMesh)).toBe(true);
-      const before=camera.getProjectionMatrix(true).clone();
-      // Same notifications as RenderingManager; no lowering of the world's near plane.
-      const info={renderingGroupId:1} as Parameters<typeof scene.onBeforeRenderingGroupObservable.notifyObservers>[0];
-      scene.onBeforeRenderingGroupObservable.notifyObservers(info);
-      expect(camera.minZ).toBe(.012);expect(camera.getProjectionMatrix().equals(before)).toBe(false);
-      scene.onAfterRenderingGroupObservable.notifyObservers(info);
-      expect(camera.minZ).toBe(.1);expect(camera.getProjectionMatrix().equals(before)).toBe(true);
+      let fixed: number[] | undefined;
+      for (const degrees of [SETTING_LIMITS.fov[0], DEFAULT_SETTINGS.fov, SETTING_LIMITS.fov[1], 90*.22]) {
+        camera.fov=degrees*Math.PI/180;
+        const before=camera.getProjectionMatrix(true).clone(),position=view.root.position.clone();
+        // Same notifications as RenderingManager; no lowering of the world's near plane.
+        const info={renderingGroupId:1} as Parameters<typeof scene.onBeforeRenderingGroupObservable.notifyObservers>[0];
+        scene.onBeforeRenderingGroupObservable.notifyObservers(info);
+        expect(camera.minZ).toBe(.012);expect(camera.getProjectionMatrix().equals(before)).toBe(false);
+        const projection=Array.from(scene.getProjectionMatrix().m);
+        if(fixed)expect(projection).toEqual(fixed);else fixed=projection;
+        expect(projection[0]).toBeCloseTo(1/Math.tan(VIEWMODEL_FOV/2));
+        expect(scene.getViewMatrix().equals(camera.getViewMatrix())).toBe(true);
+        expect(view.root.position.equals(position)).toBe(true);
+        expect(camera.fov).toBe(degrees*Math.PI/180);
+        scene.onAfterRenderingGroupObservable.notifyObservers(info);
+        expect(camera.minZ).toBe(.1);expect(camera.getProjectionMatrix().equals(before)).toBe(true);
+        expect(scene.getProjectionMatrix().equals(before)).toBe(true);
+      }
     }
   }finally{view.dispose();scene.dispose();engine.dispose();}
 });

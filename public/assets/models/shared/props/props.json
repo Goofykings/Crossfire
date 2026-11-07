@@ -996,6 +996,67 @@
     5.25
    ]
   },
+  "vending_machine": {
+   "file": "vending_machine.glb",
+   "size": [
+    1.0,
+    1.95,
+    0.85
+   ],
+   "collider": [
+    1.0,
+    1.95,
+    0.85
+   ]
+  },
+  "vending_machine_blue": {
+   "file": "vending_machine_blue.glb",
+   "size": [
+    1.0,
+    1.95,
+    0.85
+   ],
+   "collider": [
+    1.0,
+    1.95,
+    0.85
+   ]
+  },
+  "wet_floor_sign": {
+   "file": "wet_floor_sign.glb",
+   "size": [
+    0.4,
+    0.67,
+    0.45
+   ],
+   "collider": null
+  },
+  "wine_rack": {
+   "file": "wine_rack.glb",
+   "size": [
+    2.0,
+    1.9,
+    0.5
+   ],
+   "collider": [
+    2.0,
+    1.9,
+    0.5
+   ]
+  },
+  "cask": {
+   "file": "cask.glb",
+   "size": [
+    1.5,
+    1.25,
+    1.25
+   ],
+   "collider": [
+    1.5,
+    1.25,
+    1.25
+   ]
+  },
   "flower_box": {
    "file": "flower_box.glb",
    "size": [

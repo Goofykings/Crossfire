@@ -1,3 +1,21 @@
+## Melee trails, bigger underground spaces and posters (2026-11-07)
+
+See docs/UNDERGROUND_POSTERS.md and the newest docs/DUAL_DAGGERS.md section. Melee presentation
+only: shared/melee.ts timing, damage and the protocol are untouched. MeleeTrail.ts is cosmetic
+(strip along the tip path; first person slices attacking frames to 4 ms, third person samples
+per frame; Chromebook = one layer); keep MeleeView.sampleTrail's body/sway transform in the rig
+root's space (not camera space) and the head correction after the arm IK. The underground
+spaces are authored in tools/underground_layouts.py and built by blender/scripts/lib/underground.py:
+STYLES own floor_y/risers/run, rooms join the hall through door-connector rects (touching rects
+fuse), piers/blocks/decor/walks are validated by tools/check_underground.py and walked by
+tests/mapOverhaul.test.ts; the civic stair cannot start north of z = -12.2 and the cellar portals
+keep their 5.4 m length (a longer one broke a server sightline). Underground props have negative
+pos y: street-only code (tactical map, stair/bench tests) skips them. Posters: posters_fun atlas,
+BuildingGenerator.poster_pass/interior_posters never touch the shared random stream; docs/map-posters
+records them. Rebuild with layout tools, run-blender (restore tracked __pycache__ afterwards), then the
+server bundle (npm test --prefix server rebuilds it; a stale dist gave a false failure). No
+commit/push/deploy.
+
 ## Weapon balance and sniper zoom (2026-11-07)
 
 See docs/WEAPON_BALANCE.md. Weapon.ts remains shared by frontend/Worker/Practice.
