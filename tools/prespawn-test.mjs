@@ -147,11 +147,11 @@ try {
   await a.evaluate(() => window.__crossfire.hold('fire', true));
   await a.waitForFunction((n) => window.__crossfire.stats().shots >= n + 3, { timeout: 5000 }, shots);
   await a.evaluate(() => window.__crossfire.hold('fire', false));
-  check(await a.evaluate(() => window.__crossfire.weapon().ammo < 32 && window.__crossfire.weapon().reserve === 'infinite'
+  check(await a.evaluate(() => window.__crossfire.weapon().ammo < 64 && window.__crossfire.weapon().reserve === 'infinite'
     && window.__crossfire.sounds().includes('smg_shot')), 'SMG fires with its own sound and a finite magazine/infinite reserve');
   await a.evaluate(() => window.__crossfire.hold('reload', true)); await delay(60);
   await a.evaluate(() => window.__crossfire.hold('reload', false));
-  await a.waitForFunction(() => window.__crossfire.weapon().ammo === 32 && window.__crossfire.weapon().action === 'idle', { timeout: 5000 });
+  await a.waitForFunction(() => window.__crossfire.weapon().ammo === 64 && window.__crossfire.weapon().action === 'idle', { timeout: 5000 });
   check(await a.evaluate(() => window.__crossfire.weapon().viewMeshes.every((n) => !/hand|forearm/i.test(n))), 'SMG reload fills the magazine without visible arms');
   if (fixture) {
     const ns = await fixture.getDurableObjectNamespace('ROOM');

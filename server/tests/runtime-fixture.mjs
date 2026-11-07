@@ -157,11 +157,12 @@ export class PublicRoom extends ProductionRoom {
     }
     throw new Error('No clear four-direction sightline in actual map geometry');
   }
-  async meleeArenaForTest() {
+  async meleeArenaForTest(clearance=0) {
     const w=this.activeMap.world;
     for(let x=-15;x<=15;x+=1)for(let z=-15;z<=15;z+=1){
       const y=w.groundHeight(x,z,.34,3),a=[x,y,z],b=[x,w.groundHeight(x,z-1.4,.34,3),z-1.4];
       if(![a,b].every(([px,py,pz])=>Number.isFinite(py)&&Math.abs(py-y)<.02&&!w.overlapsCylinder(px,pz,.34,py+.42,py+1.8)))continue;
+      if(clearance&&(!Number.isFinite(w.groundHeight(b[0],b[2]-clearance,.34,3))||Math.abs(w.groundHeight(b[0],b[2]-clearance,.34,3)-y)>.02||w.overlapsCylinder(b[0],b[2]-clearance,.34,y+.02,y+1.8)||w.raycast(b[0],y+.5,b[2],0,0,-1,clearance+.34)))continue;
       if(!w.raycast(x,y+1.3,z,0,0,-1,1.4))return {attacker:a,victim:b};
     }
     throw Error('No actual-map melee test arena');

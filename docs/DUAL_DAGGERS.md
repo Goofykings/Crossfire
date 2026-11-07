@@ -169,6 +169,38 @@ added.
 6. **Trails:** `pose.trail` (0–1) and `DaggerPair.anchor('tip' | 'edge')` give a bounded
    blade-trail source. No trail is rendered yet.
 
+## Fast attacks, flourish and limp death (2026-11-07)
+
+This supersedes the clip table above for the attacks. Presentation and timing metadata only.
+
+| Clip | Duration | Timing |
+|---|---:|---|
+| `attack_cross` (stage 1, right diagonal) | 0.25 | wind-up 0-0.055; strike 0.04-0.104; **contact 0.07-0.16**; chainFrom 0.17; recovery 0.15 |
+| `attack_forward` (stage 2, left diagonal) | 0.25 | mirror of stage 1, same timing |
+| `attack_finisher` (stage 3, crossover) | 0.40 | arms cross by 0.105, hold to 0.205 (~100 ms), release 0.205-0.248; **contact 0.215-0.305**; chainFrom 0.31; recovery 0.29 |
+| `flourish_r`, `flourish_l` | 0.52 | idle finger spin, spin 0.10-0.34; the other hand holds the guard |
+
+- Stages 1 and 2 begin in their own wind-up instead of the guard; `blendIn` is 0.07 s (0.09
+  s for stage 3), so a chained attack blends from the previous follow-through.
+- `shared/melee.ts` carries the same numbers in milliseconds (guarded by
+  `tests/meleeCombat.test.ts`). Chain gates 170/170/310 ms make the combo cycle about
+  650 ms (it was 1190 ms).
+- Clips are exported at 120 Hz (`FPS` in `dagger_design.py`). `validate()` also checks the
+  duration targets and keeps forearm centrelines at least 6 cm apart (the real-rig test
+  measures the same).
+- **Animator**: `play()` during a crossfade freezes the shown pose (`snapshot`) and blends
+  from it. `daggers.json` has `flourish: { clips, interval: [6, 12] }`; the animator
+  starts one only from `idle` with no blend running, resets the timer on any other
+  clip, and `attack()` / `unequip()` / `reset()` cancel it immediately. `state` reports
+  `ready` during a flourish, so gameplay cannot tell. `animator.rng`, `onFlourish` and
+  `flourish(side)` exist for tests; `__crossfire.melee('flourish', 'r' | 'l')` for browsers.
+- **Death** (`src/game/LimpBody.ts`): `CharacterInstance.captureDeath(seed)` freezes the
+  current pose when the elimination arrives, then `poseDeath(elapsed, angle, axis)` runs
+  seeded damped springs toward a limp pose (see PROGRESS.md). `__crossfire.eliminateRemote`
+  plays the death presentation on a bot for tests.
+- Tests: `tests/meleeAnimation.test.ts` (speed and pose targets, flourish, interruption),
+  `tests/limpBody.test.ts`, `node tools/melee-anim-test.mjs`.
+
 ## Tests and tools
 
 - **`tests/meleeAnimation.test.ts`:**

@@ -51,10 +51,10 @@ for (const a of manifest.assets) {
 }
 ok.push(`${manifest.assets.length} manifest entries checked`);
 
-// Dual daggers: metadata references, both models' anchors, all six clips on every channel.
+// Dual daggers: metadata references, both models' anchors, all eight clips on every channel.
 {
   const melee = JSON.parse(fs.readFileSync(path.join(pub, 'assets/models/shared/melee/daggers.json'), 'utf8'));
-  const clips = ['equip', 'idle', 'attack_cross', 'attack_forward', 'attack_finisher', 'unequip'];
+  const clips = ['equip', 'idle', 'attack_cross', 'attack_forward', 'attack_finisher', 'unequip', 'flourish_r', 'flourish_l'];
   for (const file of [melee.models.r.file, melee.models.l.file, melee.arms.file, melee.clipsFile]) {
     if (!fs.existsSync(path.join(pub, file))) problems.push(`daggers.json: missing ${file}`);
   }

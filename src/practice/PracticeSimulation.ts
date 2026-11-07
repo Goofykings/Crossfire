@@ -1,4 +1,4 @@
-import {createMeleeState,stepMelee,meleeBlocked,traceMelee,MELEE} from '../../shared/melee';
+import {createMeleeState,stepMelee,meleeBlocked,traceMelee,meleeKnockback,MELEE} from '../../shared/melee';
 import {FIXED_DT,MOVEMENT,PLAYER_MAX_HEALTH} from '../config/constants';
 import {PlayerController,NO_INTENT,type Vec3} from '../player/PlayerController';
 import {WEAPONS,Weapon,type WeaponId} from '../weapons/Weapon';
@@ -89,7 +89,7 @@ export class PracticeSimulation {
    (target,hit)=>{if(teammates(this.setup.mode,a.state.team,target.state.team))return;const applied=this.apply(target,a,hit.bodyDamage,hit.zone,hit.point,hit.direction,gun.stats.id),previous=shot.hits.find(h=>h.id===target.state.id);
     if(previous){previous.amount+=applied;previous.health=target.state.health;previous.head ||=hit.zone==='head';previous.killed ||=!target.state.alive;}
     else shot.hits.push({id:target.state.id,life:target.state.life,amount:applied,health:target.state.health,head:hit.zone==='head',killed:!target.state.alive,direction:hit.direction});},
-   (dir,distance)=>this.data.environment?.shoot(origin,dir,distance,gun.stats.id),this.random.next);
+   (dir,distance)=>this.data.environment?.shoot(origin,dir,distance,gun.stats.id),this.random.next,gun.ads);
   this.events.push({type:'shot',shot});
  }
  private updateGrenades(){
@@ -124,7 +124,7 @@ export class PracticeSimulation {
    const blocked=meleeBlocked(c.melee);if(blocked)a.charge.reset();
    if(contact){const event:import('../../shared/protocol').MeleeResult={id:this.id('melee'),roundId:this.roundId,shooterId:a.state.id,life:a.state.life,at:Math.floor(this.now),stage:contact.stage,hits:[]};
     const found=traceMelee(this.data.world,a.controller.capture(),this.actors.filter(t=>t!==a&&t.state.alive).map(t=>({value:t,motion:t.controller.capture()})));
-    if(found&&!teammates(this.setup.mode,a.state.team,found.target.state.team)){const t=found.target,amount=this.apply(t,a,MELEE.damage,'body',found.hit.point,found.hit.direction,'melee');event.hits.push({id:t.state.id,life:t.state.life,amount,health:t.state.health,head:false,killed:!t.state.alive,direction:found.hit.direction});}
+    if(found&&!teammates(this.setup.mode,a.state.team,found.target.state.team)){const t=found.target,amount=this.apply(t,a,MELEE.damage,'body',found.hit.point,found.hit.direction,'melee');if(amount>0)meleeKnockback(t.controller,found.hit.direction,contact.stage);event.hits.push({id:t.state.id,life:t.state.life,amount,health:t.state.health,head:false,killed:!t.state.alive,direction:found.hit.direction});}
     this.events.push({type:'melee',event});
    }
    const charge=a.charge.update(f?!!control.grenade:undefined,this.now,dt,!blocked&&a.state.grenades>0&&a.gun.action==='idle'&&!a.controller.sliding,!!control.grenadeCancel);

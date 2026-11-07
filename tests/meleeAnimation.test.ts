@@ -26,7 +26,7 @@ function tip(pose: ReturnType<typeof meleePose>, i: number): Vector3 {
 }
 
 describe('dagger clips GLB', () => {
-  it('has all six clips and matches the Blender checkpoints in game coordinates', async () => {
+  it('has all eight clips and matches the Blender checkpoints in game coordinates', async () => {
     const { engine, scene, lib } = await library();
     const clips = lib.clips!;
     const sample = rigSample(), pose = meleePose();
@@ -139,9 +139,10 @@ describe('melee animator', () => {
     }
     console.info('melee motion', { speed: +speed.toFixed(3), jerk: +jerk.toFixed(3), at, tipJerk: +tipJerk.toFixed(3),
       baseline: +baseline.toFixed(3), baseTip: +baseTip.toFixed(3) });
-    // Strikes peak near 8 m/s (13 cm per 60 Hz frame). Chains, returns and interruptions must
-    // not add a one-frame spike on top of what the clips themselves contain.
-    expect(speed).toBeLessThan(.15);
+    // The slash covers ~45 cm in about 30 ms (a deliberately violent 13-25 cm per 60 Hz frame).
+    // Chains, returns and interruptions must not add a one-frame spike on top of what the
+    // clips themselves contain.
+    expect(speed).toBeLessThan(.3);
     expect(jerk, at).toBeLessThan(baseline * 1.15);
     expect(tipJerk).toBeLessThan(baseTip * 1.15);
     expect(anim.state).toBe('hidden');
@@ -160,6 +161,106 @@ describe('melee animator', () => {
     expect(anim.clip).toBe(other.clip);
     expect(Vector3.Distance(a.sockets[0].position, b.sockets[0].position)).toBeLessThan(.02);
     expect(Quaternion.Dot(a.sockets[0].rotation, b.sockets[0].rotation) ** 2).toBeGreaterThan(.99);
+    scene.dispose(); engine.dispose();
+  });
+
+  it('meets the speed targets: 250/250/400 ms swings, a fast strike and a ~100 ms crossed hold', async () => {
+    const { engine, scene, lib } = await library();
+    const clips = lib.clips!, sample = rigSample(), pose = meleePose();
+    expect([META.clips.attack_cross.duration, META.clips.attack_forward.duration, META.clips.attack_finisher.duration]).toEqual([.25, .25, .4]);
+    // Strike distance covered in the three fastest 60 Hz frames of each attack (the primary move).
+    const fastest = (name: MeleeClipName, i: number) => {
+      const path: Vector3[] = [];
+      for (let f = 0; f <= Math.round(META.clips[name].duration * 60); f++) { compose(clips.sample(name, f / 60, sample), pose); path.push(pose.sockets[i].position.clone()); }
+      let best = 0;
+      for (let f = 0; f + 3 < path.length; f++) best = Math.max(best, Vector3.Distance(path[f], path[f + 3]));
+      return best;
+    };
+    expect(fastest('attack_cross', 0)).toBeGreaterThan(.3);   // right hand: 30+ cm in 3 frames
+    expect(fastest('attack_forward', 1)).toBeGreaterThan(.3); // left hand
+    expect(fastest('attack_finisher', 0)).toBeGreaterThan(.25);
+    // Attack 1 starts high on the right and ends the strike low on the left; attack 2 mirrors it.
+    const at = (name: MeleeClipName, t: number, i: number) => { compose(clips.sample(name, t, sample), pose); return pose.sockets[i].position.clone(); };
+    const r0 = at('attack_cross', 0, 0), r1 = at('attack_cross', .11, 0), l0 = at('attack_forward', 0, 1), l1 = at('attack_forward', .11, 1);
+    expect(r0.x).toBeGreaterThan(.2); expect(r0.y).toBeGreaterThan(0); expect(r1.x).toBeLessThan(0); expect(r1.y).toBeLessThan(r0.y - .1);
+    expect(l0.x).toBeLessThan(-.2); expect(l0.y).toBeGreaterThan(0); expect(l1.x).toBeGreaterThan(0); expect(l1.y).toBeLessThan(l0.y - .1);
+    // Finisher: crossed with the right hand above and left of the left hand, held ~100 ms, then both arms go outward.
+    const hold = [.11, .13, .15, .17, .19].map((t) => [at('attack_finisher', t, 0), at('attack_finisher', t, 1)]);
+    for (const [right, left] of hold) { expect(right.y).toBeGreaterThan(left.y + .08); expect(right.x).toBeLessThan(left.x); }
+    const crossed = hold[0], still = hold[hold.length - 1];
+    expect(Vector3.Distance(crossed[0], still[0])).toBeLessThan(.03); expect(Vector3.Distance(crossed[1], still[1])).toBeLessThan(.03);
+    const out = [at('attack_finisher', .25, 0), at('attack_finisher', .25, 1)];
+    expect(out[0].x).toBeGreaterThan(.25); expect(out[1].x).toBeLessThan(-.25);
+    // The release leaves the crossed pose within ~45 ms.
+    expect(Vector3.Distance(at('attack_finisher', .2, 0), at('attack_finisher', .25, 0))).toBeGreaterThan(.35);
+    scene.dispose(); engine.dispose();
+  });
+
+  it('plays a cosmetic flourish every 6-12 seconds from the guard, never during combat or blends', async () => {
+    const { engine, scene, anim } = await animator();
+    let seed = 7; anim.rng = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    const started: { at: number; clip: string | null }[] = []; let now = 0;
+    anim.onFlourish = (clip) => started.push({ at: now, clip });
+    anim.equip(); run(anim, .6);
+    for (let f = 0; f < 60 * 70; f++) { now = f / 60; anim.advance(1 / 60); expect(anim.state).toBe('ready'); }
+    expect(started.length).toBeGreaterThanOrEqual(5); expect(started.length).toBeLessThanOrEqual(11);
+    for (let i = 1; i < started.length; i++) {
+      const gap = started[i].at - started[i - 1].at;   // flourish length (.52 s) plus the 6-12 s wait
+      expect(gap).toBeGreaterThan(6.4); expect(gap).toBeLessThan(12.8);
+    }
+    expect(new Set(started.map((s) => s.clip)).size).toBe(2);
+    // Combat resets the wait: nothing starts while attacking or within the guard's first seconds.
+    const before = anim.flourishes;
+    anim.attack(); run(anim, 5, 1 / 60, () => { if (anim.clip !== 'idle') expect(['attack_cross', 'idle']).toContain(anim.clip); });
+    expect(anim.flourishes).toBe(before);
+    scene.dispose(); engine.dispose();
+  });
+
+  it('cancels a flourish the moment an attack, unequip or reset arrives, blending without a snap', async () => {
+    const { engine, scene, anim } = await animator();
+    anim.equip(); run(anim, .8);
+    const pose = meleePose(), last = [Vector3.Zero(), Vector3.Zero()];
+    let worst = 0, first = true;
+    const watch = () => {
+      anim.pose(pose);
+      for (let i = 0; i < 2; i++) { const p = pose.sockets[i].position; if (!first) worst = Math.max(worst, Vector3.Distance(p, last[i])); last[i].copyFrom(p); }
+      first = false;
+    };
+    for (const interrupt of ['attack', 'unequip'] as const) {
+      expect(anim.flourish('r')).toBe(true); expect(anim.clip).toBe('flourish_r'); expect(anim.state).toBe('ready');
+      run(anim, .22, 1 / 60, watch);                      // mid-spin
+      worst = 0; first = true;
+      // The input is honoured on this very frame: no waiting for the spin to finish.
+      if (interrupt === 'attack') expect(anim.attack()).toBe(1); else anim.unequip();
+      expect(anim.clip).toBe(interrupt === 'attack' ? 'attack_cross' : 'unequip');
+      run(anim, .3, 1 / 60, watch);
+      expect(worst, interrupt).toBeLessThan(.3);          // an attack's strike is the fastest thing in the set
+      if (interrupt === 'attack') run(anim, 1, 1 / 60, watch); else { run(anim, .3); anim.equip(); run(anim, .7); }
+    }
+    // A second interruption in the middle of a blend freezes the shown pose instead of jumping.
+    anim.flourish('l'); run(anim, .03); anim.attack(); run(anim, .02);
+    worst = 0; first = true; watch();
+    anim.unequip(); run(anim, .2, 1 / 60, watch);
+    expect(worst).toBeLessThan(.12);
+    anim.flourish('l'); anim.reset(); expect(anim.state).toBe('hidden');
+    scene.dispose(); engine.dispose();
+  });
+
+  it('keeps the other hand in its guard while one hand flourishes', async () => {
+    const { engine, scene, lib } = await library();
+    const sample = rigSample(), pose = meleePose(), guard = meleePose();
+    compose(lib.clips!.sample('idle', 0, sample), guard);
+    for (const [clip, moving, still] of [['flourish_r', 0, 1], ['flourish_l', 1, 0]] as const) {
+      let moved = 0;
+      for (let t = 0; t <= .52; t += 1 / 60) {
+        compose(lib.clips!.sample(clip, t, sample), pose);
+        expect(Vector3.Distance(pose.sockets[still].position, guard.sockets[still].position)).toBeLessThan(.002);
+        moved = Math.max(moved, Vector3.Distance(pose.sockets[moving].position, guard.sockets[moving].position));
+      }
+      expect(moved).toBeGreaterThan(.03); expect(moved).toBeLessThan(.09);
+      compose(lib.clips!.sample(clip, .52, sample), pose);
+      expect(Vector3.Distance(pose.sockets[moving].position, guard.sockets[moving].position)).toBeLessThan(.002);
+    }
     scene.dispose(); engine.dispose();
   });
 

@@ -159,8 +159,8 @@ for (const mode of (process.env.CROSSFIRE_SCORING_ONLY ? ['ffa'] : ['ffa', 'team
       for(const [client,position]of [[a,arena.sources.front],[b,arena.center],[c,arena.sources.left],[killer,arena.sources.right]]){
         await stub.placeForCombatTest(client.id,position);client.position=position;
       }
-      await aim(a,b);assert.equal((await shot(a,b)).hits[0].amount,25);
-      await aim(c,b);assert.equal((await shot(c,b)).hits[0].amount,25);
+      await aim(a,b);assert.ok([20,21,22].includes((await shot(a,b)).hits[0].amount));
+      await aim(c,b);assert.ok([20,21,22].includes((await shot(c,b)).hits[0].amount));
       // Resume retains the same authoritative life and contribution, not a new player.
       c.ws.close();await new Promise(resolve=>c.ws.once('close',resolve));const resumed=await open('rifle',c.token,false);assert.equal(resumed.id,c.id);
       await aim(killer,b);const mark=killer.messages.length;
@@ -180,7 +180,7 @@ for (const mode of (process.env.CROSSFIRE_SCORING_ONLY ? ['ffa'] : ['ffa', 'team
       for(const client of [a,b,resumed,killer])await leave(client);
       let next=finished;while(next.mapId!=='european-town')next=await stub.advanceMapForTest();
     });
-    for (const [weapon, expected] of [['rifle', 25], ['smg', 11], ['sniper', 75], ['shotgun', 100]]) {
+    for (let [weapon, expected] of [['rifle', 25], ['smg', 11], ['sniper', 75], ['shotgun', 100]]) {
       await t.test(`${weapon}: actual opponents lose weapon-specific health on both clients`, async () => {
         const a = await open(weapon), b = await open();
         if (mode === 'teams') assert.notEqual(me(a).team, me(b).team);
@@ -190,6 +190,7 @@ for (const mode of (process.env.CROSSFIRE_SCORING_ONLY ? ['ffa'] : ['ffa', 'team
         const teamBefore = mode === 'teams' ? a.snapshot.match.teamScores[me(a).team] : null;
         if (weapon === 'shotgun') a.holdCombatSnapshots = b.holdCombatSnapshots = true;
         const result = await shot(a, b);
+        if(weapon==='rifle'){assert.ok([20,21,22].includes(result.hits[0]?.amount));expected=result.hits[0].amount;}
         assert.equal(result.hits.length, 1); assert.equal(result.hits[0].id, b.id);
         assert.equal(result.hits[0].amount, expected); assert.equal(result.hits[0].head, false);
         assert.equal(result.hits[0].health, 100 - expected);
@@ -265,11 +266,11 @@ for (const mode of (process.env.CROSSFIRE_SCORING_ONLY ? ['ffa'] : ['ffa', 'team
       const a = await open(), b = await open();
       await place(a, b); await aim(a, b, 1.6);
       const hit = await shot(a, b, 1.6);
-      assert.equal(hit.hits[0].amount, 37.5); assert.equal(hit.hits[0].head, true);
-      for (const c of [a, b]) await wait(c, (m) => m.type === 'snapshot' && m.snapshot.players.some((p) => p.id === b.id && p.health === 62.5));
+      assert.ok([30,31.5,33].includes(hit.hits[0].amount));const expectedHealth=100-hit.hits[0].amount; assert.equal(hit.hits[0].head, true);
+      for (const c of [a, b]) await wait(c, (m) => m.type === 'snapshot' && m.snapshot.players.some((p) => p.id === b.id && p.health === expectedHealth));
       b.ws.close(); await delay(100);
       const resumed = await open('rifle', b.token);
-      assert.equal(resumed.id, b.id); assert.equal(me(resumed).health, 62.5);
+      assert.equal(resumed.id, b.id); assert.equal(me(resumed).health, expectedHealth);
       await leave(a); await leave(resumed);
 
       const sniper = await open('sniper'), victim = await open();
@@ -302,7 +303,7 @@ for (const mode of (process.env.CROSSFIRE_SCORING_ONLY ? ['ffa'] : ['ffa', 'team
       victim.send({ type: 'spawn', weapon: 'smg', requestId: 'early', roundId: victim.snapshot.roundId, mapVersion: victim.snapshot.mapVersion });
       assert.equal((await wait(victim, (m) => m.type === 'error', early)).code, 'respawn_wait');
       await spawn(victim, 'smg'); assert.equal(me(victim).life, life + 1); assert.equal(me(victim).deaths, 1);
-      assert.equal(me(victim).combat.gun.ammo, 32);
+      assert.equal(me(victim).combat.gun.ammo, 64);
       // Real resume after earned nonzero scores must retain the entire life/loadout.
       const saved = [sniper, victim].map((c) => ({ id: c.id, score: me(c).score, kills: me(c).kills, deaths: me(c).deaths,
         health: me(c).health, life: me(c).life, team: me(c).team, weapon: me(c).weapon, ammo: me(c).combat.gun.ammo,
@@ -351,7 +352,7 @@ for (const mode of (process.env.CROSSFIRE_SCORING_ONLY ? ['ffa'] : ['ffa', 'team
       send(a, [straight(true), ...Array.from({ length: 5 }, () => straight())]);
       const result = (await wait(a, (m) => m.type === 'shot' && m.shot.shooterId === a.id, mark)).shot;
       assert.equal(result.hits[0]?.id, b.id); assert.equal(result.hits[0]?.head, true);
-      assert.equal(result.hits[0]?.amount, 37.5);
+      assert.ok([30,31.5,33].includes(result.hits[0]?.amount));
       await leave(a); await leave(b);
     });
     await t.test('a leaned shooter cannot fire through a real map wall', async () => {
@@ -410,7 +411,7 @@ for (const mode of (process.env.CROSSFIRE_SCORING_ONLY ? ['ffa'] : ['ffa', 'team
     });
     await t.test('forged shots, targets, damage, origins, cooldowns and impossible input are rejected', async () => {
       const target = await open();
-      for (const extra of [{ damage: 999 }, { targetId: target.id }, { origin: { x: 0, y: 0, z: 0 } }, { cooldown: 0 }, { trigger: 'yes' }]) {
+      for (const extra of [{ damage: 999 }, { targetId: target.id }, { origin: { x: 0, y: 0, z: 0 } }, { cooldown: 0 }, { ads:1 }, { pelletSpread:0 }, { trigger: 'yes' }]) {
         const bad = await open('sniper'); await place(bad, target);
         const f = frame(bad, target, 1.6, true); f.combat = { ...f.combat, ...extra };
         const mark = bad.messages.length; send(bad, [f]);
@@ -428,13 +429,13 @@ for (const mode of (process.env.CROSSFIRE_SCORING_ONLY ? ['ffa'] : ['ffa', 'team
       if (mode === 'teams') assert.notEqual(me(a).team, me(b).team);
       for (const c of extra) await leave(c);
       await place(a, b); await aim(a, b); await shot(a, b); // B: 25 HP.
-      await aim(b, a); await shot(b, a); // A: 75 HP.
+      await aim(b, a); const firstHit=(await shot(b,a)).hits[0];assert.ok([20,21,22].includes(firstHit.amount));
       const first = await stub.healthForTest(a.id);
-      assert.equal(first.health, 75);
+      assert.equal(first.health,100-firstHit.amount);
       assert.ok(first.regenAt > first.now && first.regenAt <= first.now + 5000, JSON.stringify(first));
-      await delay(1300); await shot(b, a); // Another hit before regeneration.
+      await delay(1300); const secondHit=(await shot(b,a)).hits[0];assert.ok([20,21,22].includes(secondHit.amount)); // Another hit before regeneration.
       const second = await stub.healthForTest(a.id);
-      assert.equal(second.health, 50); assert.ok(second.regenAt > first.regenAt + 1000);
+      assert.equal(second.health,first.health-secondHit.amount); assert.ok(second.regenAt > first.regenAt + 1000);
       const at = async (c, time) => {
         await delay(Math.max(0, time - Date.now()));
         return (await wait(c, (m) => m.type === 'snapshot' && m.snapshot.serverTime >= time)).snapshot;
@@ -446,16 +447,16 @@ for (const mode of (process.env.CROSSFIRE_SCORING_ONLY ? ['ffa'] : ['ffa', 'team
       // Leave time to deliver the interrupt before healing reaches the cap even
       // when the local runtime or test process is briefly descheduled.
       const healing = await at(a, second.regenAt + 500);
-      assertRate(healing, a.id, 50, second.regenAt);
+      assertRate(healing, a.id, second.health, second.regenAt);
       const waiting = a.messages.filter((m) => m.type === 'snapshot' && m.snapshot.serverTime > second.regenAt - 5000
         && m.snapshot.serverTime < second.regenAt + 100);
       assert.ok(waiting.length > 40);
-      assert.ok(waiting.every((m) => m.snapshot.players.find((p) => p.id === a.id).health === 50), 'five full seconds plus first complete 100ms step');
+      assert.ok(waiting.every((m) => m.snapshot.players.find((p) => p.id === a.id).health === second.health), 'five full seconds plus first complete 100ms step');
       const peer = (await wait(b, (m) => m.type === 'snapshot' && m.snapshot.serverTime === healing.serverTime)).snapshot;
       assert.equal(peer.players.find((p) => p.id === a.id).health, healing.players.find((p) => p.id === a.id).health);
 
       const interrupt = (await shot(b, a)).hits.find((h) => h.id === a.id); // Interrupt active healing with real damage.
-      assert.ok(interrupt && interrupt.amount === 25 && interrupt.health + interrupt.amount < 100,
+      assert.ok(interrupt && [20,21,22].includes(interrupt.amount) && interrupt.health + interrupt.amount < 100,
         `accepted hit interrupts a still-healing life: ${JSON.stringify(interrupt)}`);
       const interrupted = await stub.healthForTest(a.id);
       assert.equal(interrupted.health, interrupt.health);
@@ -470,7 +471,7 @@ for (const mode of (process.env.CROSSFIRE_SCORING_ONLY ? ['ffa'] : ['ffa', 'team
       const capped = await at(b, interrupted.regenAt + 2200);
       assert.equal(capped.players.find((p) => p.id === b.id).health, 100);
       assert.equal((await stub.healthForTest(b.id)).regenAt, null);
-      for (let k = 0; k < 4 && me(a).alive; k++) { await shot(b, a); await delay(180); }
+      for (let k = 0; k < Math.ceil(100/20) && me(a).alive; k++) { await shot(b, a); await delay(180); }
       assert.equal(me(a).alive, false);
       const guest = await open('rifle', undefined, false);
       await delay(5300);

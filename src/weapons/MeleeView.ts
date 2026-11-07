@@ -37,6 +37,8 @@ export class MeleeView {
   private paused = false;
   private loaded: Promise<void> | null = null;
   private syncKey='';
+  /** Called when the random idle flourish starts (the game plays its sound). */
+  flourishHandler: ((clip: MeleeClipName) => void) | null = null;
   sync(state:MeleeState,now:number):string|null {
     const clip=meleeClip(state) as MeleeClipName|null,key=`${clip}:${state.startedAt}:${state.sequence}`;
     if(!this.melee||key===this.syncKey)return null;
@@ -65,6 +67,7 @@ export class MeleeView {
     const entries = this.library.instantiateArms('melee-view:arms'), melee = this.library.createCharacterMelee('melee-view');
     if (!entries || !melee) throw new Error('Melee assets are not loaded');
     this.entries = entries; this.melee = melee;
+    melee.animator.onFlourish = (clip) => this.flourishHandler?.(clip);
     for (const node of entries.rootNodes) node.parent = this.rig;
     const skeleton = entries.skeletons[0], bones = skeleton.bones;
     const find = (name: string) => bones.find((b) => b.name === name)!;
@@ -104,6 +107,8 @@ export class MeleeView {
   get gunVisible(): boolean { return this.melee?.pose.gunVisible ?? true; }
   equip(): void { this.melee?.animator.equip(); }
   unequip(): void { this.melee?.animator.unequip(); }
+  /** Test hook: start the idle flourish now (only from a settled guard). */
+  flourish(side?: 'r' | 'l'): boolean { return this.melee?.animator.flourish(side) ?? false; }
   attack(stage?: MeleeStage): MeleeStage | null { return this.melee?.animator.attack(stage) ?? null; }
   play(clip: MeleeClipName, time = 0): void { this.melee?.animator.play(clip, time); }
   /** Death, respawn or round reset: daggers gone, gun back immediately. */

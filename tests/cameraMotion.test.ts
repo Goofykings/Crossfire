@@ -15,6 +15,17 @@ function setup() {
 }
 
 describe('camera stairs and impulses', () => {
+  it('sniper recoil kicks upward and recovers without permanent aim drift',()=>{
+    const {rig,player}=setup();const initial={...rig.aimAngles()},yaw=player.yaw,pitch=player.pitch;
+    rig.addRecoil(5.2,.6,false);let peak=0;for(let i=0;i<240;i++){rig.update(1/120,1,90,.268);peak=Math.max(peak,rig.aimAngles().aimPitch);expect(player.yaw).toBe(yaw);expect(player.pitch).toBe(pitch);}
+    expect(peak).toBeGreaterThan(.04);expect(rig.aimAngles().aimPitch).toBeCloseTo(initial.aimPitch,8);expect(rig.aimAngles().aimYaw).toBeCloseTo(initial.aimYaw,8);
+  });
+  it('confirmed melee is optical roll only while mouse look remains live and drift-free',()=>{
+    const {rig,player,camera}=setup();rig.update(0,1,90,1);rig.meleeHit(3);rig.applyLook(10,5,1,false,1);
+    const yaw=player.yaw,pitch=player.pitch,aim=rig.aimAngles();
+    for(let i=0;i<30;i++){rig.update(1/120,1,90,1);expect(player.yaw).toBe(yaw);expect(player.pitch).toBe(pitch);expect(rig.aimAngles()).toEqual(aim);}
+    expect(camera.rotationQuaternion.toEulerAngles().z).toBeCloseTo(0,10);
+  });
   it('decays a confirmed damage-scaled explosion impulse without changing the optical axis or aim', () => {
     const run=(damage:number,reduced=false)=>{
       const {rig,camera}=setup();rig.update(1/60,1,90,1);const aim=rig.aimAngles();

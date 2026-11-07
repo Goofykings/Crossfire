@@ -5,8 +5,10 @@ import { Matrix, Quaternion, Vector3 } from '@babylonjs/core/Maths/math.vector';
  * reads the same timing metadata (daggers.json) and drives this through play/attack calls.
  * Engine-free apart from Babylon's math types, so it is unit tested in Node. */
 
-export type MeleeClipName = 'equip' | 'idle' | 'attack_cross' | 'attack_forward' | 'attack_finisher' | 'unequip';
-export const MELEE_CLIPS: readonly MeleeClipName[] = ['equip', 'idle', 'attack_cross', 'attack_forward', 'attack_finisher', 'unequip'];
+export type MeleeClipName = 'equip' | 'idle' | 'attack_cross' | 'attack_forward' | 'attack_finisher' | 'unequip' | 'flourish_r' | 'flourish_l';
+export const MELEE_CLIPS: readonly MeleeClipName[] = ['equip', 'idle', 'attack_cross', 'attack_forward', 'attack_finisher', 'unequip', 'flourish_r', 'flourish_l'];
+/** Cosmetic idle spins: they play only from the guard and never touch gameplay state. */
+export const FLOURISH_CLIPS: readonly MeleeClipName[] = ['flourish_r', 'flourish_l'];
 export type MeleeStage = 1 | 2 | 3;
 type Window = [number, number];
 
@@ -43,6 +45,8 @@ export interface MeleeMetadata {
    * the camera-mounted arms. */
   firstPerson: { shoulders: number[]; body: number };
   combo: MeleeClipName[];
+  /** Idle flourish clips and the random gap between them (seconds). */
+  flourish: { clips: MeleeClipName[]; interval: [number, number] };
   clips: Record<MeleeClipName, MeleeClipMeta>;
   models: { r: MeleeModelMeta; l: MeleeModelMeta };
   arms: { file: string; triangles: number };
@@ -93,7 +97,7 @@ function sampleRotation(track: Track, t: number, out: Quaternion): void {
   Quaternion.SlerpToRef(qa, qb, k, out);
 }
 
-/** All six clips' tracks, extracted once from the shared GLB. */
+/** All clips' tracks, extracted once from the shared GLB. */
 export class MeleeClipSet {
   constructor(readonly meta: MeleeMetadata, private readonly tracks: Map<MeleeClipName, Map<MeleeNode, NodeTracks>>,
     private readonly rest: Map<MeleeNode, NodeRest>) {
@@ -167,14 +171,26 @@ const scratch = { from: rigSample(), to: rigSample() };
 export class MeleeAnimator {
   private current: Layer | null = null;
   private previous: Layer | null = null;
+  /** `previous` is a frozen copy of an interrupted blend (see snapshot), not a playing clip. */
+  private held = false;
   private fade = 1;
   private fadeTime = 0;
   private queued: MeleeStage | null = null;
   private lastStage: MeleeStage = 3;
   private sinceAttack = Infinity;
+  /** Seconds until the next idle flourish (Infinity while anything else is playing). */
+  private flourishIn = Infinity;
   private readonly sample = rigSample();
+  private readonly heldSample = rigSample();
+  private readonly heldWeights = { hands: 0, gunLower: 0, gunVisible: 1, trail: 0 };
   /** Seconds after an attack ends within which `attack()` continues the combo. */
   comboWindow = .35;
+  /** Random source for flourish timing and hand choice (tests inject their own). */
+  rng: () => number = Math.random;
+  /** Idle flourishes started so far. */
+  flourishes = 0;
+  /** Called when an idle flourish starts, e.g. to play its sound. */
+  onFlourish: ((clip: MeleeClipName) => void) | null = null;
   constructor(readonly clips: MeleeClipSet) {}
 
   get state(): MeleeState {
@@ -182,26 +198,35 @@ export class MeleeAnimator {
     if (!clip) return 'hidden';
     if (clip === 'equip') return 'equipping';
     if (clip === 'unequip') return 'unequipping';
-    return clip === 'idle' ? 'ready' : 'attacking';
+    return clip === 'idle' || clip === 'flourish_r' || clip === 'flourish_l' ? 'ready' : 'attacking';
   }
   get clip(): MeleeClipName | null { return this.current?.clip ?? null; }
   get time(): number { return this.current?.time ?? 0; }
-  /** Start (or switch to) a clip `time` seconds in, crossfading by its blendIn. */
+  /** Start (or switch to) a clip `time` seconds in, crossfading by its blendIn. A switch in the
+   * middle of another crossfade freezes the pose being shown and blends from that, so an
+   * interruption (an attack during a flourish, a gun swap mid-attack) never snaps. */
   play(clip: MeleeClipName, time = 0): void {
     const meta = this.clips.clip(clip);
     if (this.current && meta.blendIn > 0) {
-      this.previous = this.current; this.fade = 0; this.fadeTime = meta.blendIn;
-    } else { this.previous = null; this.fade = 1; }
+      if (this.previous && this.fade < 1) this.snapshot();
+      else { this.previous = this.current; this.held = false; }
+      this.fade = 0; this.fadeTime = meta.blendIn;
+    } else { this.previous = null; this.held = false; this.fade = 1; }
     this.current = { clip, time };
     if (meta.stage) { this.lastStage = meta.stage; this.sinceAttack = 0; }
+    this.flourishIn = clip === 'idle' ? this.nextFlourish() : Infinity;
   }
   equip(): void { if (this.state === 'hidden' || this.state === 'unequipping') this.play('equip'); }
   unequip(): void { if (this.state !== 'hidden' && this.state !== 'unequipping') { this.queued = null; this.play('unequip'); } }
   /** Immediately hidden (death, respawn, round reset); the gun is back in hand. */
-  reset(): void { this.current = this.previous = null; this.queued = null; this.fade = 1; this.sinceAttack = Infinity; this.lastStage = 3; }
-  /** Local presentation request: the next combo stage (or `stage`). Starts now when ready or
-   * once the playing attack reaches chainFrom; one request is buffered. Returns the stage
-   * that started, or null if it was buffered or ignored. */
+  reset(): void {
+    this.current = this.previous = null; this.held = false; this.queued = null; this.fade = 1; this.sinceAttack = Infinity;
+    this.lastStage = 3; this.flourishIn = Infinity;
+  }
+  /** Local presentation request: the next combo stage (or `stage`). Starts now when ready (a
+   * flourish in progress is cancelled by the blend) or once the playing attack reaches
+   * chainFrom; one request is buffered. Returns the stage that started, or null if it was
+   * buffered or ignored. */
   attack(stage?: MeleeStage): MeleeStage | null {
     const state = this.state;
     if (state === 'hidden' || state === 'unequipping') return null;
@@ -217,12 +242,34 @@ export class MeleeAnimator {
     const chained = this.state === 'attacking' || this.sinceAttack <= this.comboWindow;
     return chained ? ((this.lastStage % 3) + 1) as MeleeStage : 1;
   }
+  private nextFlourish(): number {
+    const [lo, hi] = this.clips.meta.flourish?.interval ?? [6, 12];
+    return lo + (hi - lo) * this.rng();
+  }
+  /** Idle flourish: only from a settled guard (no crossfade running), never mid-combat. */
+  private startFlourish(): void {
+    const options = this.clips.meta.flourish?.clips;
+    if (!options?.length) { this.flourishIn = Infinity; return; }
+    const clip = options[Math.min(options.length - 1, Math.floor(this.rng() * options.length))];
+    this.flourishes++;
+    this.play(clip);
+    this.onFlourish?.(clip);
+  }
+  /** Test hook: start a flourish now (only from the guard). */
+  flourish(side?: 'r' | 'l'): boolean {
+    if (this.state !== 'ready' || this.previous) return false;
+    const clip: MeleeClipName = side ? `flourish_${side}` : (this.rng() < .5 ? 'flourish_r' : 'flourish_l');
+    this.flourishes++;
+    this.play(clip);
+    this.onFlourish?.(clip);
+    return true;
+  }
   advance(dt: number): void {
     dt = Math.max(0, Math.min(.1, dt));
     if (this.previous) {
-      this.previous.time += dt;
+      if (!this.held) this.previous.time += dt;
       this.fade = Math.min(1, this.fade + dt / Math.max(1e-6, this.fadeTime));
-      if (this.fade >= 1) this.previous = null;
+      if (this.fade >= 1) { this.previous = null; this.held = false; }
     }
     const layer = this.current;
     if (!layer) return;
@@ -238,21 +285,28 @@ export class MeleeAnimator {
     if (!meta.loop && layer.time >= meta.duration) {
       if (layer.clip === 'unequip') this.reset();
       else this.play('idle', layer.time - meta.duration);
+      return;
     }
+    if (layer.clip === 'idle' && !this.previous && (this.flourishIn -= dt) <= 0) this.startFlourish();
   }
-  /** The blended pose at the current time (written into `out`). */
-  pose(out: MeleePose): MeleePose {
-    const layer = this.current;
-    if (!layer) {
-      out.hands = 0; out.gunLower = 0; out.gunVisible = true; out.scale[0] = out.scale[1] = 0; out.trail = 0;
-      out.clip = null; out.time = 0; return out;
-    }
+  /** Freeze the pose currently shown (a blend in progress) as the next crossfade's source. */
+  private snapshot(): void {
+    const { sample, wt } = this.blend();
+    for (const node of MELEE_NODES) this.heldSample[node].copyFrom(sample[node]);
+    Object.assign(this.heldWeights, wt);
+    this.previous = { clip: this.current!.clip, time: 0 }; this.held = true;
+  }
+  /** The blended rig sample and gun/hand weights at the current time. */
+  private blend(): { sample: RigSample; wt: { hands: number; gunLower: number; gunVisible: number; trail: number } } {
+    const layer = this.current!;
     const to = this.clips.sample(layer.clip, layer.time, scratch.to);
     const w = this.previous ? fadeCurve(this.fade) : 1;
     let sample: RigSample = to;
     const wt = weights(this.clips.clip(layer.clip), layer.time);
     if (this.previous && w < 1) {
-      const from = this.clips.sample(this.previous.clip, this.previous.time, scratch.from), wf = weights(this.clips.clip(this.previous.clip), this.previous.time);
+      let from: RigSample, wf: typeof wt;
+      if (this.held) { from = this.heldSample; wf = this.heldWeights; }
+      else { from = this.clips.sample(this.previous.clip, this.previous.time, scratch.from); wf = weights(this.clips.clip(this.previous.clip), this.previous.time); }
       for (const node of MELEE_NODES) {
         const a = from[node], b = to[node], o = this.sample[node];
         Vector3.LerpToRef(a.position, b.position, w, o.position);
@@ -261,16 +315,27 @@ export class MeleeAnimator {
       }
       sample = this.sample;
       wt.hands = wf.hands + (wt.hands - wf.hands) * w; wt.gunLower = wf.gunLower + (wt.gunLower - wf.gunLower) * w;
-      wt.gunVisible = w < .5 ? wf.gunVisible : wt.gunVisible; wt.trail *= w;
+      wt.gunVisible = w < .5 ? wf.gunVisible : wt.gunVisible; wt.trail = wf.trail + (wt.trail - wf.trail) * w;
     }
+    return { sample, wt };
+  }
+  /** The blended pose at the current time (written into `out`). */
+  pose(out: MeleePose): MeleePose {
+    const layer = this.current;
+    if (!layer) {
+      out.hands = 0; out.gunLower = 0; out.gunVisible = true; out.scale[0] = out.scale[1] = 0; out.trail = 0;
+      out.clip = null; out.time = 0; return out;
+    }
+    const { sample, wt } = this.blend();
     compose(sample, out);
     out.hands = wt.hands; out.gunLower = wt.gunLower; out.gunVisible = wt.gunVisible > .5; out.trail = wt.trail;
     out.clip = layer.clip; out.time = layer.time;
     return out;
   }
   inspect() {
-    return { state: this.state, clip: this.clip, time: +this.time.toFixed(3), previous: this.previous?.clip ?? null,
-      fade: +this.fade.toFixed(3), queued: this.queued, lastStage: this.lastStage };
+    return { state: this.state, clip: this.clip, time: +this.time.toFixed(3), previous: this.held ? 'held' : this.previous?.clip ?? null,
+      fade: +this.fade.toFixed(3), queued: this.queued, lastStage: this.lastStage,
+      flourishIn: Number.isFinite(this.flourishIn) ? +this.flourishIn.toFixed(2) : null, flourishes: this.flourishes };
   }
 }
 

@@ -3,6 +3,7 @@ import type { RenderContext } from '../rendering/RenderContext';
 import type { PlayerController, Vec3 } from './PlayerController';
 import { LEAN_ANGLE, LEAN_OFFSET, leanOffset } from '../../shared/lean';
 import { BlastShake } from './BlastShake';
+import {MeleeImpact} from './MeleeImpact';
 import { DampedSpring } from '../core/DampedSpring';
 
 const DEG = Math.PI / 180;
@@ -23,6 +24,8 @@ export class PlayerCamera {
   private readonly kickPitch = new DampedSpring(Math.sqrt(260), 22 / (2 * Math.sqrt(260)));
   private kickYaw = 0;
   private readonly blast = new BlastShake();
+  private readonly meleeImpact=new MeleeImpact();
+  meleeHit(stage:import('../../shared/melee').MeleeStage){this.meleeImpact.hit(stage);}
   private fov = 90;
   private swayTime = 0;
   private readonly tmp: Vec3 = { x: 0, y: 0, z: 0 };
@@ -47,9 +50,10 @@ export class PlayerCamera {
   }
 
   /** Visual kick (spring-recovered) plus a small permanent drift of the real aim. */
-  addRecoil(pitchDeg: number, yawDeg: number): void {
+  addRecoil(pitchDeg: number, yawDeg: number,affectAim=true): void {
     this.kickPitch.velocity += pitchDeg * DEG * 22;
     this.kickYaw += yawDeg * DEG * (Math.random() < 0.5 ? -1 : 1);
+    if(!affectAim)return;
     this.player.pitch = Math.min(MAX_PITCH, this.player.pitch + pitchDeg * DEG * 0.4);
     this.player.yaw += yawDeg * DEG * 0.25 * (Math.random() - 0.5);
   }
@@ -66,7 +70,7 @@ export class PlayerCamera {
 
   resetMotion(): void {
     this.groundY = null; this.wasGrounded = false;
-    this.dip.reset(); this.blast.reset(); this.kickPitch.reset(); this.kickYaw = 0;
+    this.dip.reset(); this.blast.reset(); this.meleeImpact.reset(); this.kickPitch.reset(); this.kickYaw = 0;
     this.bobWeight = this.bobX = this.bobY = 0;
   }
 
@@ -125,7 +129,7 @@ export class PlayerCamera {
     const safe = p.safeViewLean(pos, lean + (this.bobX+shake.x) / LEAN_OFFSET, eye);
     const offset = leanOffset(p.yaw, safe);
     cam.position.set(pos.x + offset.x, pos.y + eye, pos.z + offset.z);
-    const roll = this.bobX * 0.35 - lean * LEAN_ANGLE + shake.roll;
+    const roll = this.bobX * 0.35 - lean * LEAN_ANGLE + shake.roll+this.meleeImpact.update(dt,reducedMotion);
     cam.rotationQuaternion ??= Quaternion.Identity();
     this.swayTime += dt;
     const aim = this.aimAngles(scopeSway);

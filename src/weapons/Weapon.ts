@@ -48,12 +48,17 @@ export interface WeaponStats {
   rpm: number;
   /** Pump or bolt action after every shot (seconds); 0 for self-loading guns. */
   cycleTime: number;
+  /** Preserve the full empty-reload chambering stroke independently of shot follow-up. */
+  emptyReloadCycleTime?: number;
   cycleCues: Cue[];
   /** Body damage of one bullet (or one pellet) at close range; headshots deal 1.5x (game/Damage.ts). */
   damage: number;
+  /** Authority-only integer base roll; applied before falloff/head multiplier. */
+  damageRoll?: readonly [number,number];
   pellets: number;
   /** Half-angle of the pellet pattern around the aim direction (degrees). */
   pelletSpread: number;
+  pelletSpreadAds?: number;
   /** Damage falls off linearly from `start` to `end` metres, down to `minScale` of full damage. */
   falloff: { start: number; end: number; minScale: number };
   range: number;
@@ -83,10 +88,11 @@ export const RIFLE: WeaponStats = {
   slot: 1,
   magazine: 30,
   mode: 'auto',
-  rpm: 700,
+  rpm: 700 * .90,
   cycleTime: 0,
   cycleCues: [],
-  damage: 25,
+  damage: 21,
+  damageRoll: [20,22],
   pellets: 1,
   pelletSpread: 0,
   falloff: { start: 35, end: 90, minScale: 0.75 },
@@ -122,14 +128,16 @@ export const SHOTGUN: WeaponStats = {
   slot: 2,
   magazine: 2,
   mode: 'pump',
-  rpm: 90,
-  cycleTime: 0.6,
+  rpm: 240,
+  cycleTime: 0.22,
+  emptyReloadCycleTime: 0.6,
   cycleCues: [{ at: 0.18, cue: 'pump_back' }, { at: 0.32, cue: 'eject' }, { at: 0.58, cue: 'pump_fwd' }],
   damage: 14,
   pellets: 14,
   pelletSpread: 7,
-  falloff: { start: 6, end: 22, minScale: 0.18 },
-  range: 60,
+  pelletSpreadAds: 7 * .55,
+  falloff: { start: 12, end: 44, minScale: 0.18 },
+  range: 80,
   reload: { kind: 'shells', start: 0.45, perShell: 0.5, end: 0.4, insertAt: 0.72 },
   spreadHip: 0.7,
   spreadAds: 0.55,
@@ -141,7 +149,7 @@ export const SHOTGUN: WeaponStats = {
   recoilYaw: 1.1,
   viewKick: 22,
   adsTime: 0.22,
-  adsFovScale: 0.88,
+  adsFovScale: 0.82,
   scope: false,
   equipTime: 0.5,
   holsterTime: 0.3,
@@ -151,7 +159,7 @@ export const SNIPER: WeaponStats = {
   id: 'sniper',
   name: 'Sniper Rifle',
   slot: 3,
-  magazine: 5,
+  magazine: 4,
   mode: 'bolt',
   rpm: 50,
   cycleTime: 1.05,
@@ -185,18 +193,18 @@ export const SNIPER: WeaponStats = {
   spreadPerShot: 0,
   spreadRecovery: 6,
   maxBloom: 0,
-  recoilPitch: 3.2,
+  recoilPitch: 5.2,
   recoilYaw: 0.6,
-  viewKick: 16,
-  adsTime: 0.28,
-  adsFovScale: 0.22,
+  viewKick: 26,
+  adsTime: 0.28 * .8,
+  adsFovScale: 0.22 / .82,
   scope: true,
   equipTime: 0.6,
   holsterTime: 0.3,
 };
 
 export const SMG: WeaponStats = {
-  ...RIFLE, id: 'smg', name: 'SMG', slot: 4, magazine: 32, rpm: 1030, damage: 11,
+  ...RIFLE, id: 'smg', name: 'SMG', slot: 4, magazine: 64, rpm: 1030 * 1.09, damage: 11, damageRoll: undefined,
   range: 140, falloff: { start: 15, end: 55, minScale: 0.55 },
   reload: { ...(RIFLE.reload as MagazineReload), time: 1.65, emptyTime: 2.05 },
   spreadHip: 1.7, spreadAds: 0.16, recoilPitch: 0.34, recoilYaw: 0.18, viewKick: 5,
@@ -241,11 +249,16 @@ export type WeaponAction =
   | 'shellEnd';
 
 /** Linear damage falloff with distance (game/Damage.ts then applies the headshot multiplier). */
-export function damageAt(s: WeaponStats, distance: number): number {
+export function damageAt(s: WeaponStats, distance: number,base=s.damage): number {
   const { start, end, minScale } = s.falloff;
   const t = Math.max(0, Math.min(1, (distance - start) / Math.max(1e-6, end - start)));
-  return s.damage * (1 + (minScale - 1) * t);
+  return base * (1 + (minScale - 1) * t);
 }
+
+export function rollDamage(s:WeaponStats,random:()=>number):number {
+  return s.damageRoll?s.damageRoll[0]+Math.min(s.damageRoll[1]-s.damageRoll[0],Math.floor(random()*(s.damageRoll[1]-s.damageRoll[0]+1))):s.damage;
+}
+export function pelletSpreadAt(s:WeaponStats,ads:number):number{return s.pelletSpread+((s.pelletSpreadAds??s.pelletSpread)-s.pelletSpread)*Math.max(0,Math.min(1,ads));}
 
 /** Trusted server snapshots only; clients never submit this state. */
 export interface WeaponState {
@@ -351,7 +364,9 @@ export class Weapon {
     const wantAds = input.aim && !input.sprinting && canAim;
     const adsRate = dt / s.adsTime;
     this.ads = Math.max(0, Math.min(1, this.ads + (wantAds ? adsRate : -adsRate)));
-    this.cooldown = Math.max(0, this.cooldown - dt);
+    // Carry the final fractional tick into the next shot instead of rounding RPM down.
+    const overshoot=this.cooldown>0?Math.min(0,this.cooldown-dt):0;
+    this.cooldown = Math.max(0,this.cooldown-dt);
     this.emptyClickCooldown = Math.max(0, this.emptyClickCooldown - dt);
     this.bloom = Math.max(0, this.bloom - s.spreadRecovery * dt);
 
@@ -370,7 +385,7 @@ export class Weapon {
       if (this.ammo > 0) {
         const spread = this.spread(input);
         this.ammo--;
-        this.cooldown += this.fireInterval;
+        this.cooldown += this.fireInterval+overshoot;
         this.bloom = Math.min(this.bloom + s.spreadPerShot, s.maxBloom);
         events.push({ type: 'fire', spread });
         if (this.ammo === 0) {
@@ -446,7 +461,7 @@ export class Weapon {
         events.push({ type: 'reloadEnd' });
         if (this.fromEmpty) {
           // chamber a shell: work the pump
-          this.setAction('cycle', s.cycleTime, s.cycleCues.filter((c) => c.cue !== 'eject'));
+          this.setAction('cycle', s.emptyReloadCycleTime??s.cycleTime, s.cycleCues.filter((c) => c.cue !== 'eject'));
           events.push({ type: 'cycleStart' });
         } else {
           this.setAction('idle', 0);

@@ -6,12 +6,14 @@ import { validCareerView, type CareerView } from './challenges';
 import { validEnvironmentFrame, type EnvironmentFrame } from './environment';
 import { validMap, type MapId } from './maps';
 import type { MoveIntent, ControllerState, Vec3 } from '../src/player/PlayerController';
+import {WEAPONS} from '../src/weapons/Weapon';
 import type { WeaponId, WeaponState } from '../src/weapons/Weapon';
 import type { CombatIntent } from './combat';
 import { pointsOrder, type ScoreAward, type RoundResult, type RoundStanding } from './scoring';
 import { GRENADE, type GrenadeState, type GrenadeEvent, type GrenadeExplosion } from './grenades';
 
-export const PROTOCOL_VERSION = 20;
+// v21 expands authoritative magazine state to 64; v20 clients reject those snapshots.
+export const PROTOCOL_VERSION = 21;
 export const validWeapon = (x: unknown): x is WeaponId => x === 'rifle' || x === 'shotgun' || x === 'sniper' || x === 'smg';
 export const PUBLIC_ROOM = 'public-main';
 export const INPUT_BATCH_LIMIT = 12;
@@ -219,7 +221,7 @@ export function validMotion(x: unknown): x is ControllerState {
 }
 
 export function validGun(x: unknown): x is WeaponState {
-  if (!record(x) || !Number.isSafeInteger(x.ammo) || (x.ammo as number) < 0 || (x.ammo as number) > 32) return false;
+  if (!record(x) || !Number.isSafeInteger(x.ammo) || (x.ammo as number) < 0 || (x.ammo as number) > Math.max(...WEAPONS.map(w=>w.magazine))) return false;
   return ['idle', 'equip', 'holster', 'holstered', 'cycle', 'reload', 'reloadEmpty', 'shellStart', 'shell', 'shellEnd'].includes(x.action as string)
     && ['ads', 'progress'].every((k) => finite(x[k]) && x[k] >= 0 && x[k] <= 1)
     && ['time', 'duration', 'cooldown', 'bloom', 'emptyClickCooldown'].every((k) => finite(x[k]) && x[k] >= 0 && x[k] < 120)

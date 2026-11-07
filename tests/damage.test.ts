@@ -54,12 +54,12 @@ describe('damage', () => {
     expect(b.alive).toBe(true);
   });
 
-  it('needs four rifle body hits or three headshots, and a point-blank shotgun blast kills', () => {
+  it('needs five rifle body hits or four headshots, and a point-blank shotgun blast kills', () => {
     const shots = (zone: 'head' | 'body') => Math.ceil(100 / zoneDamage(damageAt(RIFLE, 20), zone));
-    expect(shots('body')).toBe(4);
-    expect(shots('head')).toBe(3);
+    expect(shots('body')).toBe(5);
+    expect(shots('head')).toBe(4);
     expect(SHOTGUN.pellets * damageAt(SHOTGUN, 4)).toBeGreaterThanOrEqual(100);
-    expect(SHOTGUN.pellets * damageAt(SHOTGUN, 30)).toBeLessThan(50);
+    expect(SHOTGUN.pellets * damageAt(SHOTGUN, SHOTGUN.falloff.end)).toBeLessThan(50);
   });
 
   it('refuses damage to a dead target', () => {

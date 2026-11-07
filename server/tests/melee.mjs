@@ -6,22 +6,28 @@ import {crateItems} from '../../shared/cosmetics.ts';
 for(const mode of ['ffa','teams'])test(`authoritative dual daggers: combo, score, immunity, resume and gun preservation (${mode})`,{timeout:45000},async t=>{
  const h=await harness(t),token=await h.profile(),other=await h.profile(),ad=await h.create(token,{mode});
  let a=await h.open(ad,token);const b=await h.open(await h.admission(other,{roomId:ad.room.id}),other);await h.spawn(a);await h.spawn(b,'smg');
- const room=h.room(ad.room.id),arena=await room.meleeArenaForTest();
+ const room=h.room(ad.room.id),arena=await room.meleeArenaForTest(.65);
  await room.placeForCombatTest(a.id,arena.attacker);await room.placeForCombatTest(b.id,arena.victim);
  await until(()=>self(a).combat.gun.action==='idle','gun equip complete');
  frames(a,{melee:true,yaw:0});await ack(a);await until(()=>self(a).combat.melee?.phase==='ready','equipped daggers').catch(error=>{throw Error(error.message+' '+JSON.stringify({combat:self(a).combat,errors:a.messages.filter(m=>m.type==='error')}));});
  assert.equal(self(a).weapon,'rifle');assert.equal(self(a).combat.gun.ammo,30);
- const attack=async stage=>{const before=a.messages.filter(m=>m.type==='melee').length;frames(a,{trigger:true,yaw:0});await ack(a);const event=await until(()=>a.messages.filter(m=>m.type==='melee')[before]?.event,'confirmed swing '+stage);assert.equal(event.stage,stage);return event;};
+ const attack=async stage=>{const before=a.messages.filter(m=>m.type==='melee').length;frames(a,{trigger:true,yaw:0});await ack(a);const event=await until(()=>a.messages.filter(m=>m.type==='melee')[before]?.event,'confirmed swing '+stage).catch(error=>{throw Error(error.message+' '+JSON.stringify({self:self(a).combat.melee,target:self(b).health,errors:a.messages.filter(m=>m.type==='error')}));});if(stage!==undefined)assert.equal(event.stage,stage);return event;};
  const first=await attack(1);assert.equal(first.hits[0]?.amount,35);await until(()=>self(b).health===65,'first authoritative damage');
+ await until(()=>self(b).motion.position.z<arena.victim[2]-.015,'confirmed knockback moves target away from attacker').catch(error=>{throw Error(error.message+' '+JSON.stringify({arena,motion:self(b).motion}));});
+ assert.ok(self(b).motion.position.y>=arena.victim[1]-.05,'knockback preserves map floor');
  // Resume the real authenticated session mid-combo; no health/score/gun reset.
  const id=a.id,resume=a.token;a.ws.terminate();await until(()=>a.ws.readyState===3,'real close');
  a=await h.open(await h.admission(token,{roomId:ad.room.id}),token,{resumeToken:resume});assert.equal(a.id,id);assert.equal(a.welcome.resumed,true);assert.equal(self(a).combat.gun.ammo,30);
  // A resumed connection can arrive after the short combo window, so inspect the
  // confirmed phase and begin a fresh deterministic three-hit sequence if necessary.
+ // Establish an acknowledged release on the resumed socket before a new press;
+ // a welcome snapshot can precede the final queued release from the old socket.
+ frames(a,{yaw:0});await ack(a);
  const phase=self(a).combat.melee;assert.notEqual(phase.phase,'hidden');
- const expected=phase.phase==='attacking'||phase.comboAt!==null&&Date.now()-phase.comboAt<=350?2:1;
- const second=await attack(expected);assert.equal(second.hits[0]?.amount,35);await until(()=>self(b).health===30,'second authoritative damage');
- const third=await attack(expected%3+1);assert.equal(third.hits[0]?.amount,30);await until(()=>!self(b).alive&&self(a).score===100,'lethal score and victim snapshot');
+ // The 350 ms gate can expire after a snapshot but before the new press arrives.
+ // Both legal transitions retain the same session, inventory and damage already checked.
+ const second=await attack();assert.ok([1,2].includes(second.stage),'resumed press continues stage 2 or starts stage 1 after actual expiry');assert.equal(second.hits[0]?.amount,35);await until(()=>self(b).health===30,'second authoritative damage');
+ const third=await attack(second.stage%3+1);assert.equal(third.hits[0]?.amount,30);await until(()=>!self(b).alive&&self(a).score===100,'lethal score and victim snapshot');
  assert.equal(self(a).kills,1);assert.equal(self(b).death.weapon,'melee');assert.equal(self(b).death.head,false);assert.equal(self(b).death.award.total,100);assert.equal(self(a).combat.gun.ammo,30);
  assert.equal(new Set(a.messages.filter(m=>m.type==='melee').map(m=>m.event.id)).size,a.messages.filter(m=>m.type==='melee').length,'one confirmed contact per swing');
  const score=self(a).score;frames(a,{trigger:true,yaw:0});await ack(a);assert.equal(self(a).score,score,'dead body cannot award twice');
@@ -68,10 +74,10 @@ test('a melee finisher shares gun assists and persistent statistics',{timeout:30
  await until(async()=>{frames(helper,{yaw,pitch,aim:true});await ack(helper);return self(helper).combat.gun.ads>=.99;},'helper authoritative ADS');
  const shotMark=helper.messages.length;frames(helper,{trigger:true,yaw,pitch,aim:true});await ack(helper);
  const shot=await until(()=>helper.messages.slice(shotMark).find(m=>m.type==='shot')?.shot,'helper confirmed shot');
- assert.equal(shot.hits[0]?.id,b.id,JSON.stringify(shot));assert.equal(shot.hits[0].amount,25);
- await until(()=>self(b).health===75,'real helper rifle damage');
+ assert.equal(shot.hits[0]?.id,b.id,JSON.stringify(shot));assert.ok([20,21,22].includes(shot.hits[0].amount));const damagedHealth=100-shot.hits[0].amount;
+ await until(()=>self(b).health===damagedHealth,'real helper rifle damage');
  frames(a,{melee:true,yaw:0});await ack(a);await until(()=>self(a).combat.melee.phase==='ready','melee equipped');
- for(const hp of [40,5,0]){frames(a,{trigger:true,yaw:0});await ack(a);await until(()=>self(b).health===hp,'confirmed melee damage '+hp);}
+ for(const hp of [damagedHealth-35,damagedHealth-70,0]){frames(a,{trigger:true,yaw:0});await ack(a);await until(()=>self(b).health===hp,'confirmed melee damage '+hp).catch(error=>{throw Error(error.message+' '+JSON.stringify({health:self(b).health,expected:hp,melee:self(a).combat.melee,events:a.messages.filter(m=>m.type==='melee').slice(-3)}));});}
  await until(()=>self(a).score===100&&self(helper).score===50,'authoritative points');assert.equal(self(helper).assists,1);assert.equal(self(b).death.assists[0].id,helper.id);assert.equal(self(b).death.weapon,'melee');
  await until(async()=>{const stats=(await h.api('/stats',tokens[2])).data.totals;return stats.assists===1&&stats.points===50;},'persistent assist statistics');for(const c of [a,b,helper])await h.leave(c);
 });

@@ -1,3 +1,41 @@
+## Weapon balance and sniper zoom (2026-11-07)
+
+See docs/WEAPON_BALANCE.md. Weapon.ts remains shared by frontend/Worker/Practice.
+AR: 630 RPM, authoritative integer base rolls 20-22; SMG: 64 rounds, 1122.7 RPM,
+11 damage (explicitly no inherited AR roll). Sniper: 4 rounds, temporary stronger
+camera/model recoil, 224 ms ADS, configurable local wheel zoom ~2.95-4.55x/default
+3.73x. Shotgun: 2 shells, 250 ms trigger interval, 220 ms between-shot pump,
+55% ADS pellet cone, doubled falloff distances; original shell reload and 600 ms
+empty-reload chamber stroke remain. ADS cone uses real authority gun state.
+Protocol v21 is required because v20 rejects ammo above 32. No new client combat
+claims or Durable Object migration. Preserve models/cosmetics and current melee.
+Release both frontend and Worker through the existing workflow when authorized.
+No commit, push or deployment performed.
+
+## Confirmed melee impact feedback (2026-11-07)
+
+See docs/MELEE_IMPACT.md. Keep Claude's current clips/timing and LimpBody intact.
+Positive authoritative contacts alone call shared meleeKnockback on Worker and
+Practice. Camera feedback is finite optical roll, never addRecoil or aim changes.
+MeleeFeedback deduplicates and rejects stale contacts; no impact cues on misses.
+Third-hit kills correlate through existing MeleeResult stage/victim life to a
+once-only swept DeathMotion boost. Protocol remains v20. Regenerate original
+swoosh/impact WAVs with tools/generate-melee-impact-audio.py. Frontend and Worker
+both need release when authorized; no commit/push/deploy performed.
+
+## Fast daggers, flourish and limp death (2026-11-07)
+
+See docs/DUAL_DAGGERS.md (newest section) and the top PROGRESS.md entry. Attacks are
+250/250/400 ms (stage 1/2 diagonals, stage 3 crossover); clip ids are unchanged.
+dagger_design.py remains the single source: edit poses there, regenerate, and keep
+shared/melee.ts equal to daggers.json (tests/meleeCombat.test.ts). Chain gates shorten
+the combo cycle to ~650 ms; retune them if melee DPS must stay as before. The animator
+blends from a frozen snapshot when interrupted mid-blend and plays cosmetic idle
+flourishes (6-12 s, guard only, cancelled by any input). Deaths use LimpBody
+(captureDeath on elimination, poseDeath each frame): do not restore the old additive
+poseDeath on a paused running pose. Verify with tools/melee-anim-test.mjs. No
+commit/push/deploy.
+
 ## UI sounds, configurable magnets and Practice AI (2026-11-07)
 
 See docs/UI_SOUNDS_BOTS.md. UISounds owns delegated body-level audio (including

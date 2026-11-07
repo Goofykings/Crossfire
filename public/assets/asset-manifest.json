@@ -730,7 +730,7 @@
   {
    "path": "assets/models/shared/melee/dagger_clips.glb",
    "kind": "melee-clips",
-   "bytes": 170392,
+   "bytes": 269184,
    "description": "Six melee clips on animated empties (hand sockets, spins, elbows, torso)",
    "script": "blender/melee/generate_daggers.py"
   },
@@ -762,7 +762,7 @@
   {
    "path": "assets/models/shared/melee/daggers.json",
    "kind": "melee-metadata",
-   "bytes": 14613,
+   "bytes": 18502,
    "description": "Attachment, clip timing, combo and checkpoint metadata",
    "script": "blender/melee/generate_daggers.py"
   },
@@ -1559,7 +1559,7 @@
   {
    "path": "blender/source/daggers.blend",
    "kind": "melee-source",
-   "bytes": 403230,
+   "bytes": 410662,
    "description": "Editable dagger pair, first-person arms, clip rig and six melee actions",
    "script": "blender/melee/generate_daggers.py"
   },

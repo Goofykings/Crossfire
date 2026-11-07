@@ -3,12 +3,23 @@ import type { CollisionWorld } from '../src/physics/CollisionWorld';
 import { playerHeight, rayPlayer } from './combat';
 
 /** Authored clip timings from daggers.json, guarded by the metadata compatibility test.
- * Seconds in the asset become milliseconds here. Combat never depends on rendering. */
+ * Seconds in the asset become milliseconds here. Combat never depends on rendering.
+ * The fast-animation pass (2026-11-07) shortened the swings to 250/250/400 ms and moved the
+ * hit windows with them (same 90 ms width); damage, range, arc and the combo reset are unchanged. */
 export const MELEE = Object.freeze({damage:35,range:1.85,arc:55*Math.PI/180,comboReset:350,equip:500,unequip:400,
-  attacks:[{clip:'attack_cross',duration:620,contact:130,contactEnd:220,chain:300},
-    {clip:'attack_forward',duration:520,contact:140,contactEnd:230,chain:290},
-    {clip:'attack_finisher',duration:820,contact:400,contactEnd:500,chain:600}] as const});
+  attacks:[{clip:'attack_cross',duration:250,contact:70,contactEnd:160,chain:170},
+    {clip:'attack_forward',duration:250,contact:70,contactEnd:160,chain:170},
+    {clip:'attack_finisher',duration:400,contact:215,contactEnd:305,chain:310}] as const});
 export type MeleeStage=1|2|3;
+export const MELEE_IMPACT=Object.freeze({speeds:[1.4,1.4,3.1] as const,maxSpeed:8,lift:.8});
+/** Called only inside the authoritative successful-damage path. Never teleports. */
+export function meleeKnockback(player:import('../src/player/PlayerController').PlayerController,direction:Vec3,stage:MeleeStage):void {
+ const n=Math.hypot(direction.x,direction.z);if(!Number.isFinite(n)||n<.001)return;
+ const v=player.velocity,speed=MELEE_IMPACT.speeds[stage-1];v.x+=direction.x/n*speed;v.z+=direction.z/n*speed;
+ const total=Math.hypot(v.x,v.z);if(total>MELEE_IMPACT.maxSpeed){v.x*=MELEE_IMPACT.maxSpeed/total;v.z*=MELEE_IMPACT.maxSpeed/total;}
+ if(player.grounded){v.y=Math.max(v.y,MELEE_IMPACT.lift);player.grounded=false;}
+ if(player.sliding){player.slideRemaining=0;player.slideCooldown=player.cfg.slideCooldown;}
+}
 export type MeleePhase='hidden'|'equipping'|'ready'|'attacking'|'unequipping';
 export interface MeleeState {
   phase:MeleePhase;stage:MeleeStage;startedAt:number;sequence:number;contactDone:boolean;

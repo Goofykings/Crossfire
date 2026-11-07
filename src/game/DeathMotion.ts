@@ -5,6 +5,9 @@ import {sweepSphere} from '../../shared/grenades';
 export class DeathMotion {
  readonly center:Vec3;readonly fall:{x:number;z:number};angle=0;time=0;
  private readonly velocity:Vec3;private readonly baseY:number;
+ private finisher=false;
+ /** One collision-swept emphasis; late/replayed confirmations cannot kick a settled body. */
+ emphasize(){if(this.finisher||this.time>.2)return;this.finisher=true;this.velocity.x+=this.fall.x*1.8;this.velocity.z+=this.fall.z*1.8;this.velocity.y+=.3;}
  constructor(position:Vec3,direction:Vec3|null,private readonly world:CollisionWorld|null){
   this.baseY=position.y;this.center={x:position.x,y:position.y+.92,z:position.z};
   const n=Math.hypot(direction?.x??0,direction?.z??0),fall=n>.001?{x:direction!.x/n,z:direction!.z/n}:{x:0,z:1};let selected=fall;

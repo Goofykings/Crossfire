@@ -17,6 +17,7 @@ import { WEAPONS, type WeaponId, type WeaponState } from '../weapons/Weapon';
 import { MOVEMENT, PLAYER_MAX_HEALTH } from '../config/constants';
 import { LEAN_ANGLE, leanOffset } from '../../shared/lean';
 import {DeathMotion} from './DeathMotion';
+import {hashSeed} from './LimpBody';
 import type {CollisionWorld} from '../physics/CollisionWorld';
 import type {AimTarget} from '../player/AimAssist';
 
@@ -35,7 +36,7 @@ interface Avatar {
   weaponAds: number;
   /** Server-confirmed shots waiting for the interpolated pose to reach them. */
   shots: ShotTimeline;
-  life: number; death?: { elapsed: number; started: number; direction: Elimination['direction']; rotation: Quaternion; motion:DeathMotion; materials: Material[]; textures: Set<BaseTexture> };
+  life: number; death?: { elapsed: number; started: number; direction: Elimination['direction']; rotation: Quaternion; motion:DeathMotion; axis: Vector3; materials: Material[]; textures: Set<BaseTexture> };
 }
 
 /** Interval between shots at the weapon's cadence (milliseconds). */
@@ -92,7 +93,7 @@ export class RemotePlayers {
       const eye = camera?.globalPosition;
       for (const a of this.avatars.values()) {
         a.character?.applyLean();
-        if(a.death)a.character?.poseDeath(a.death.elapsed);
+        if(a.death)a.character?.poseDeath(a.death.elapsed,a.death.motion.angle,a.death.axis);
         if (a.weapon && !a.death) {
           // Arm IK only for avatars that can be seen; their blend states still advance.
           a.weapon.posing = a.root.isEnabled() && (!planes || a.meshes.some((mesh) => { mesh.computeWorldMatrix(); return mesh.isInFrustum(planes); }));
@@ -129,6 +130,8 @@ export class RemotePlayers {
   syncMelee(id: string, clip: MeleeClipName, elapsed: number): void {
     const a = this.avatars.get(id), melee = a && this.meleeFor(id, a);
     if(a)a.meleeDebug=true;
+    // The random idle flourish is a cosmetic variant of idle: an idle resync must not cancel it.
+    if (clip === 'idle' && melee?.animator.clip?.startsWith('flourish_')) return;
     if (melee && (melee.animator.clip !== clip || Math.abs(melee.animator.time - elapsed) > .1)) melee.animator.play(clip, elapsed);
   }
   inspectMelee(id?: string) {
@@ -196,6 +199,15 @@ export class RemotePlayers {
     for (const material of a.death?.materials ?? []) material.dispose(false, false);
     for (const texture of a.death?.textures ?? []) texture.dispose();
   }
+  private readonly meleeFinishers=new Set<string>();
+  meleeImpact(event:import('../../shared/protocol').MeleeResult):void {
+    if(event.stage!==3)return;
+    for(const hit of event.hits){if(!hit.killed||hit.amount<=0)continue;const key=`${hit.id}:${hit.life}`;
+      if(this.meleeFinishers.has(key))continue;this.meleeFinishers.add(key);
+      if(this.meleeFinishers.size>128)this.meleeFinishers.delete(this.meleeFinishers.values().next().value!);
+      const avatar=this.avatars.get(hit.id);if(avatar?.life===hit.life)avatar.death?.motion.emphasize();
+    }
+  }
   eliminate(event: Elimination): void {
     this.avatars.get(event.victimId)?.weapon?.stopFiring();
     const a = this.avatars.get(event.victimId);
@@ -220,12 +232,26 @@ export class RemotePlayers {
         if(this.avatars.get(event.victimId)===a&&a.death&&!mesh.isDisposed())mesh.material=faded;
       }).catch(()=>{ /* Retain the original lit material if the GPU rejects the fade variant. */ });
     }
-    a.death = { elapsed: 0, started: performance.now(), direction: event.direction, motion:new DeathMotion(a.root.position,event.direction,this.collisionWorld),
-      rotation: Quaternion.FromEulerAngles(0, a.root.rotation.y, 0), materials: [...materials.values()], textures };
+    const motion=new DeathMotion(a.root.position,event.direction,this.collisionWorld),rotation=Quaternion.FromEulerAngles(0, a.root.rotation.y, 0);
+    // The body tips about Cross(up, fall): the limbs lag behind that rotation in the character's own pre-fall frame.
+    if(this.meleeFinishers.has(`${event.victimId}:${event.victimLife}`))motion.emphasize();
+    const axis=new Vector3(motion.fall.z,0,-motion.fall.x).applyRotationQuaternionInPlace(Quaternion.Inverse(rotation));
+    a.death = { elapsed: 0, started: performance.now(), direction: event.direction, motion, axis, rotation, materials: [...materials.values()], textures };
+    // Relax from the exact pose of the last frame (gun or dagger IK included), whatever the player was doing.
+    a.character?.captureDeath(hashSeed(event.id));
     a.label.hidden = true;
     this.silhouettes?.remove(a.meshes);
     // The death fade clones character/gun materials only: put the daggers away at once.
     if (a.melee) { a.melee.animator.reset(); a.melee.advance(0); a.melee.pair.update(a.melee.pose); }
+  }
+  /** Test hook: play the real death presentation for one avatar (no scoring, no authority). */
+  debugEliminate(id: string | null, direction: Elimination['direction']): string | null {
+    const found = [...this.avatars].find(([key, a]) => (id === null || key === id) && !a.death);
+    if (!found) return null;
+    const [key, a] = found;
+    this.eliminate({ id: `debug:${key}:${Math.round(performance.now())}`, victimId: key, victimLife: a.life, direction, award: null, roundId: 0, victimName: '',
+      killerId: null, killerName: null, weapon: null, head: false, at: 0, respawnAt: 0, killerTeam: null, victimTeam: null });
+    return key;
   }
   snapshot(s: Snapshot, selfId: string): void {
     const self = s.players.find((p) => p.id === selfId);
@@ -300,6 +326,8 @@ export class RemotePlayers {
         a.root.rotationQuaternion = Quaternion.RotationAxis(new Vector3(body.fall.z, 0, -body.fall.x), body.angle).multiply(death.rotation);
         const hip=new Vector3(0,.9,0).applyRotationQuaternion(a.root.rotationQuaternion);
         a.root.position.set(body.center.x-hip.x,body.center.y-hip.y,body.center.z-hip.z);
+        // The collision spheres keep the body axis 0.30 m up while the real torso is thinner: settle the lying body onto the floor.
+        const lying=Math.min(1,body.angle/(Math.PI*.45));a.root.position.y-=.04*lying*lying;
         for (const material of death.materials) material.alpha = pose.opacity;
         continue;
       }
@@ -416,6 +444,7 @@ export class RemotePlayers {
       health: a.samples.at(-1)?.player.health ?? 0 }));
   }
   clear(): void {
+    this.meleeFinishers.clear();
     for (const a of this.avatars.values()) this.remove(a);
     this.avatars.clear(); this.labels.classList.remove('spectator-scoped'); this.silhouettes?.update(false);
   }

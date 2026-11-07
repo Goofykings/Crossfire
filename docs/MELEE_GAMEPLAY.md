@@ -127,3 +127,9 @@ Local automated checks do not verify the public Cloudflare service, real Interne
 latency or physical laptop/Chromebook performance. Existing melee hit detection is
 a short-range cone/capsule test with solid occlusion, not per-finger blade mesh
 collision. Public deployment and public multi-client validation remain separate.
+
+## Confirmed impact follow-up
+
+See [MELEE_IMPACT.md](MELEE_IMPACT.md) for shared authoritative knockback, finite
+camera roll, dedicated impact/spatial audio, third-stage death emphasis and checks.
+Claude's newer clip timings and joint relaxation remain the current baseline.

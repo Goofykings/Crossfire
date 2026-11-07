@@ -18,11 +18,11 @@ it('authoritative attack timings exactly match all authored clips',()=>{
 });
 it('one contact per animation, held fire cannot spam and rapid presses chain all three clips',()=>{
  const s=createMeleeState();stepMelee(s,0,{melee:true,trigger:false});stepMelee(s,500,{trigger:false});expect(s.phase).toBe('ready');
- stepMelee(s,510,{trigger:true});expect(stepMelee(s,639,undefined)).toBeNull();expect(stepMelee(s,640,undefined)?.stage).toBe(1);
- for(let t=641;t<700;t++)expect(stepMelee(s,t,{trigger:true})).toBeNull();expect(s.sequence).toBe(1);
- stepMelee(s,700,{trigger:false});stepMelee(s,720,{trigger:true});stepMelee(s,810,undefined);expect(s.stage).toBe(2);
- expect(stepMelee(s,950,{trigger:false})?.stage).toBe(2);stepMelee(s,960,{trigger:true});stepMelee(s,1100,undefined);expect(s.stage).toBe(3);
- expect(stepMelee(s,1500,{trigger:false})?.stage).toBe(3);expect(stepMelee(s,1600,undefined)).toBeNull();expect(validMelee(s)).toBe(true);
+ stepMelee(s,510,{trigger:true});expect(stepMelee(s,579,undefined)).toBeNull();expect(stepMelee(s,580,undefined)?.stage).toBe(1);
+ for(let t=581;t<700;t++)expect(stepMelee(s,t,{trigger:true})).toBeNull();expect(s.sequence).toBe(1);
+ stepMelee(s,800,{trigger:false});stepMelee(s,820,{trigger:true});stepMelee(s,830,undefined);expect(s.stage).toBe(2);
+ expect(stepMelee(s,900,{trigger:false})?.stage).toBe(2);stepMelee(s,910,{trigger:true});stepMelee(s,1000,undefined);expect(s.stage).toBe(3);
+ expect(stepMelee(s,1240,{trigger:false})?.stage).toBe(3);expect(stepMelee(s,1500,undefined)).toBeNull();expect(validMelee(s)).toBe(true);
 });
 it('combo expires, transitions block firing and interrupted swings never repeat',()=>{
  const s=createMeleeState();stepMelee(s,0,{melee:true,trigger:false},false);expect(s.phase).toBe('hidden');

@@ -1,3 +1,241 @@
+# Weapon balancing, sniper zoom and shotgun improvements (2026-11-07)
+
+Completed on the existing shared Weapon state machine and hitscan pipeline.
+Models, cosmetics, difficulty progression, melee gameplay and hosting settings
+are preserved, including prior uncommitted work. No commit, push or deployment.
+See `docs/WEAPON_BALANCE.md` for implementation details, commands and release notes.
+
+## Exact final configuration
+
+| Weapon | Magazine | RPM / trigger interval | Close body damage | Additional changes |
+|---|---:|---:|---|---|
+| AR | 30 | 630 / 95.238 ms | Server/local-authority integer roll 20, 21 or 22 per hit | Exactly 10% lower RPM; original recoil/range/falloff retained |
+| SMG | 64 | 1122.7 / 53.443 ms | 11 | Exactly 9% higher RPM; original range, recoil and reload timing |
+| Sniper | 4 | 50 / 1200 ms | 75 | 5.2 degree camera kick tuning input, view kick 26; 224 ms ADS; no permanent aim contribution |
+| Shotgun | 2 | 240 / 250 ms | 14 per pellet, 14 pellets | 220 ms between-shot pump; 7 degree hip / 3.85 degree ADS pellet cone; 12-44 m falloff to 18%; 80 m maximum range |
+
+- Existing 1.5x headshot multiplier and damage falloff apply after the AR's base
+  roll. The Worker controls randomness; Practice uses its seeded RNG. The roll
+  feeds confirmed damage, health, death and scoring together. SMG explicitly
+  clears the new inherited AR roll option. AR's displayed base is the average 21.
+- Fractional fixed-tick cooldown carry avoids rounding the new RPMs downward.
+  Snapshot cooldown remains nonnegative/replayable; no catch-up burst is added.
+- Shotgun aimed cone is 55% of hip (about 57% combined with its center aim cone).
+  Only actual simulated gun ADS controls this cone in Worker and Practice. No
+  client-supplied ADS state, damage, spread or hit claim is accepted. Hip cone and
+  pellet damage remain unchanged; doubled falloff plus ADS makes medium range
+  more useful without making long range reliable.
+- Shotgun ADS FOV scale is 0.82 (previously 0.88), and its existing sight anchor
+  moves 4 cm closer. Pump cue fractions follow the faster cycle. Shell reload
+  450/500/400 ms start/per-shell/end and the 600 ms empty-reload chamber stroke
+  remain unchanged through a separate shared emptyReloadCycleTime setting.
+- Sniper ADS duration is 20% shorter than 280 ms. Default FOV scale is .22/.82,
+  yielding about 3.73x FOV-ratio magnification (18% below the old default).
+  SNIPER_ZOOM configures a smooth approximately 2.95-4.55x range, 0.25x wheel
+  steps and interpolation. A small scope HUD indicator shows current zoom.
+- Scoped wheel input is consumed before weapon cycling; other bindings and menu
+  scrolling remain intact. Zoom changes neither aim angles nor damage/accuracy.
+  Stronger camera recoil uses existing recovering springs without permanent yaw
+  or pitch changes; the real sniper model also receives a stronger impulse.
+- HUD, ammo/reloads and all four bot tiers reuse the shared configurations.
+  Practice still has no persistent statistics/reward adapter.
+
+## Protocol and release
+
+Protocol is now **v21**: v20's decoder hardcoded a 32-round maximum and would
+reject valid 64-round SMG snapshots. Validation now derives its upper bound from
+shared weapon configuration. No new wire fields or client combat claims were
+added. Actual frontend/Worker integration covers the 64-round SMG. The existing
+backend-first release workflow/health gate remains unchanged.
+
+Both frontend/assets and Worker require an authorized matching release. No
+Durable Object migration, URL, env file, credentials or Pages base-path changes.
+No public Cloudflare deployment or public-server validation was performed.
+
+## Verification
+
+- Final full frontend run (`npm test -- --maxWorkers=2`): **735 passed, 1 existing
+  skip**, 75 passing files. Worker count was bounded after concurrent runs caused
+  timing-only timeouts in unchanged rig/collision tests; no assertions/timeouts
+  were disabled or increased.
+- Focused weapon/balance/damage/replay/camera suite: **49/49 passed**. Includes
+  exact RPM ratios and long-run cadence, 64/4-round capacities and reloads, two
+  rapid shotgun shots, all AR rolls and head/falloff multipliers, seeded medium-
+  range shotgun comparisons, smooth bounded zoom, wheel routing and no aim drift.
+- Final real workerd/WebSocket run: **44/44 passed**, covering weapon-balance,
+  combat, assists, melee, actual frontend protocol and match-reward integration.
+  Includes FFA/Teams, server ADS cones, cooldown denial, new capacities/reloads,
+  all four guns, authoritative health/score, forged ADS/spread rejection, headshots,
+  leaning/walls, regeneration, session resume, assists and durable gem grants.
+- Test expectations now use legal confirmed AR rolls and corresponding health.
+  Assist fixtures use two actual AR bullets when the old 25+75 body-hit setup no
+  longer eliminates. The second waits for acknowledged cooldown state. The melee
+  resume assertion accepts legal continuation or expiry across the existing
+  350 ms gate rather than predicting it from a stale snapshot. Gameplay timing
+  and combo rules were not changed.
+- Final production `/crossfire/` Chrome Practice suite: **15/15 passed**, zero
+  browser exceptions/missing assets. Real wheel zoom, defaults/limits/HUD, no
+  weapon-switch conflict, visible sniper recoil with no aim drift, smooth exit,
+  shotgun follow-up shots, SMG HUD/reload to 64 and local non-persistent policy.
+  Inspected sniper maximum-zoom and shotgun ADS screenshots.
+- Deployment release tests: **7/7 passed**. Frontend/backend typechecks,
+  production frontend build, Worker dry build and git diff --check pass.
+  The existing large-bundle build warning remains.
+- Reports/logs/screenshots: ignored `test-results/balance-*` and
+  `test-results/weapon-balance-browser`.
+
+## Limits
+
+Browser checks used local Windows Chrome, not public multiplayer, physical
+Chromebooks or other browsers. Medium-range balance has seeded collision/hitscan
+coverage but still benefits from human playtesting. Adjustable zoom is cosmetic
+and not sent to spectators; their view uses the weapon's new default zoom.
+Nothing was committed, pushed or deployed.
+
+# Confirmed melee impact, audio and knockback (2026-11-07)
+
+Completed the focused feedback update on Claude's current fast dagger clips and
+LimpBody baseline. Preserved the existing dirty animation/model work. Damage 35,
+combo/scoring rules, hit validation, authored contact/chain timing, equipment and
+wire protocol v20 are unchanged. No commit, push or deployment.
+See `docs/MELEE_IMPACT.md` for files, tuning, commands and release details.
+
+## Completed
+
+- Added shared authoritative meleeKnockback after positive confirmed damage in
+  both Worker and local Practice. Stages 1/2 add matching 1.4 m/s horizontal
+  impulses; stage 3 adds 3.1 m/s. Direction is normalized from the server trace,
+  total speed is bounded, and a small grounded lift preserves the brief reaction.
+  Sliding uses its existing cancellation/cooldown. Existing controller substeps,
+  wall/floor collision, snapshots and reconciliation handle actual displacement.
+  No client-provided impulse or teleport path exists.
+- Added configurable finite optical camera roll: left/right 100 ms responses and
+  a stronger two-direction 180 ms third response. Smooth recovery reaches exactly
+  zero; new hits replace rather than stack. Mouse look, player yaw/pitch, intended
+  aim and shot direction are untouched. Reduced motion suppresses it; resets clear it.
+- Generated original paired fast swooshes, a deeper layered finisher swoosh and
+  a separate crisp non-graphic impact WAV. Existing master/SFX settings, limiter,
+  spatial distance attenuation and voice budgets remain active. Local swings use
+  current metadata timing and stop at clip end; remote contacts use spatial audio.
+- Added bounded per-session confirmation deduplication and timing/round/readiness
+  guards. Only positive confirmed contacts produce impact sound, hit marker and
+  attacker camera reaction. A miss produces no false impact. Old contacts cannot
+  play after the remaining clip window. Flourishes keep their separate twirl cue
+  and never enter attack/damage feedback.
+- Stage-3 lethal confirmations correlate with victim/life in either elimination
+  event order, without adding protocol fields. DeathMotion gets one early bounded
+  backward boost, then retains its swept three-sphere collision and Claude's
+  captureDeath/poseDeath/LimpBody loose-joint relaxation. Duplicate or late events
+  cannot repeatedly kick a corpse. Practice uses the same presentation.
+
+## Verified
+
+- Full frontend suite: **727 passed, 1 existing skip** (74 passing test files).
+- Focused melee/camera/death/limp-body suite: **33/33 passed**, including unchanged
+  authored timing, real Practice human/bot combat, impulse direction/strength/cap,
+  wall/floor safety, death emphasis, finite camera response at 30/60/144 FPS,
+  live mouse look/no aim drift, reduced motion, duplicate/stale events and WAVs.
+- Final real workerd regression run: **38/38 passed**, across backend melee,
+  combat, grenades and frontend/Worker protocol integration. Confirms FFA/Teams,
+  actual knockback movement, combo kills/points, session resume, team immunity,
+  assists/statistics, all four guns, ammo/reload/fire-rate validation, wall/lean
+  collision, regeneration, grenade/crouch behavior and wire compatibility.
+- Backend melee focused run also passed **5/5**. Its movement regression requests
+  explicit free space behind the actual-map victim: an earlier valid melee fixture
+  had a wall directly behind the victim that correctly prevented displacement.
+  The resume test now acknowledges a neutral input before the next press, avoiding
+  dependence on the old socket's release state. No arbitrary wait or timing change.
+- Production `/crossfire/` Chrome + real local Worker/second WebSocket client:
+  **20/20 browser checks passed**, zero browser errors/missing assets. Verified
+  physical V equip, remote animation/damage, stages 1/2/3, exactly three dedicated
+  impact cues for three hits, actual spatial playback with inverse attenuation,
+  a confirmed miss with no impact cue, unchanged firearm ammunition, weapon return
+  and killer spectating. Inspected the elimination screenshot. Existing Locker,
+  crate ownership and retry-safe purchases still pass in that same scenario.
+- Frontend and backend typechecks pass; frontend production build and Worker dry
+  build pass. Existing frontend large-bundle warning remains. git diff --check passes.
+  Reports/logs/screenshots are under ignored `test-results/melee-impact-*` and
+  `test-results/melee-gameplay-browser`.
+
+## Remaining limitations and release
+
+- Public Cloudflare/Internet latency, physical devices and subjective speaker
+  quality were not validated. These are actual local workerd/Chrome results.
+- Existing limp limbs still lack individual floor colliders; collision-safe root
+  approximation is preserved. A reconnecting spectator cannot infer a historical
+  third-stage kill from an old elimination without its melee confirmation.
+- Expired confirmations intentionally do not produce delayed cosmetic feedback.
+- Both frontend/assets and Worker require an authorized release for the complete
+  feature. Protocol remains v20; no Durable Object migration, URL, credentials or
+  deployment workflow changes. Nothing was committed, pushed or deployed.
+
+# Fast dagger attacks, idle flourish and limp death (2026-11-07)
+
+Animation-only pass on the existing melee system and death presentation; see
+`docs/DUAL_DAGGERS.md` (section "Fast attacks, flourish and limp death"). The rig,
+dagger models, CharacterWeapon pose system, damage, range, arc, scoring, cosmetics and
+protocol (v20) are unchanged. No commit, push or deployment.
+
+## Changed
+- **Attacks** (`blender/melee/dagger_design.py`, regenerated clips + `daggers.json`):
+  stage 1 `attack_cross` is the right-hand diagonal (upper right to lower left, 250 ms),
+  stage 2 `attack_forward` its left-hand mirror (250 ms), stage 3 `attack_finisher` the
+  crossover (400 ms: arms fold and cross with the right hand above the left, ~100 ms
+  hold, then both arms snap outward). The strike itself covers 40+ cm in about 30 ms
+  (2-3 frames at 60 FPS); wind-up and recovery stay smooth. Clip ids are unchanged
+  because gameplay and the network use them. Clips are exported at 120 Hz.
+- **Transitions** (`MeleeAnimation.ts`): attacks 1-2 start in their own wind-up and are
+  blended in over 70 ms from wherever the arms are, so a chain flows from the previous
+  follow-through. An interruption in the middle of a crossfade now freezes the pose being
+  shown and blends from it (the old code dropped the half-blended layer).
+- **Idle flourish**: new clips `flourish_r` / `flourish_l` (520 ms finger spin, the other
+  hand holds the guard). The animator starts one at random every 6-12 s, only from a
+  settled guard, never during a blend or combat. An attack, unequip or reset cancels it
+  at once. Cosmetic only; remote players and bots run their own random flourishes.
+- **Death** (`src/game/LimpBody.ts`, `CharacterAsset.captureDeath/poseDeath`): every joint
+  is a damped spring that starts exactly at the last living pose (gun/dagger IK
+  included) and relaxes to a limp pose. The body tipping over lags into the limbs, each
+  limb has its own frequency, delay and asymmetry (seeded by the elimination id), knees
+  are heavily damped (no hyperextension), arms come to rest on the floor whichever way
+  the body falls, hips return to standing height and the body settles 4 cm lower.
+- **Combat metadata (the one gameplay-adjacent change)**: `shared/melee.ts` now mirrors
+  the new timings: duration 250/250/400 ms, contact 70-160 / 70-160 / 215-305 ms (same
+  90 ms width as before), chain 170 / 170 / 310 ms. Damage 35, range, arc, combo reset
+  350 ms, equip and unequip are unchanged. **Side effect:** the combo cycle is about
+  650 ms instead of 1190 ms, so melee damage per second is roughly 1.8x higher. Tune the
+  three `chain` values (via `dagger_design.py` and `shared/melee.ts`) if that is
+  unwanted; `tests/meleeCombat.test.ts` fails if the two disagree. The Worker and the
+  frontend need a matching release.
+
+## Verified
+- 718 frontend tests pass (1 existing skip), server 84/84, typecheck, production build
+  and `assets:verify` (8 clips). New tests: speed and pose targets, flourish scheduling
+  and interruption, no-snap blending, limp relaxation (running, sliding and
+  gun-and-dagger starts, no snap at capture, knees, gravity-aware arms for backward,
+  forward and side falls).
+- `node tools/melee-anim-test.mjs` (new, real Chrome, Practice) passes: first-person key
+  poses, a mashed 60 FPS combo that never returns to idle (worst grip step 0.18 m per
+  frame), a flourish and a flourish interrupted by an attack, frame-rate independence
+  at 30/60/144 FPS steps, a bot flourish, and deaths while standing and running (no
+  clipping, no hovering). `node tools/melee-browser-test.mjs` still passes 12/12.
+- Contact sheets inspected in `test-results/melee-anim/` (git-ignored): attacks 1 and 2
+  start and follow-through, the crossed pose and the release, combo frames, both
+  flourishes, the interruption frames, third-person key poses, and the standing and
+  running death sequences with the resting pose. Wrists stay at most 23 degrees;
+  forearm clearance is at least 6 cm.
+
+## Remaining limits
+- Chain gates are shorter than before (see above); retune if the DPS change is unwanted.
+- The first-person slash ends low and partly below the bottom edge at 90 degree FOV;
+  other FOVs were not checked. At the finisher release the blades point forward and up
+  and are partly hidden behind the fists.
+- Limbs have no individual floor collision: the limp pose follows gravity and the body
+  is placed by the existing three-sphere DeathMotion, so a hand may sink a few cm into
+  uneven ground. Death photos use wall-clock time and were taken at 18-60 FPS headless.
+- The bot flourish was photographed at 2.4 m only (small); the third-person lab sheet is
+  the clear view. Idle flourishes have no spatial sound for remote players.
+- No multiplayer session, low-end device or Chromebook mode was tested.
+
 # UI sound polish, magnetic ranges and Practice bots (2026-11-07)
 
 Completed the attached focused update using the existing UI, AudioManager,

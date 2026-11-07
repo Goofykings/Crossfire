@@ -13,6 +13,7 @@ const nav=text=>click('.home-nav',text),visible=id=>page.waitForSelector(id+'.vi
 try{
  browser=await puppeteer.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true,pipe:true,timeout:120000,protocolTimeout:240000,defaultViewport:{width:1280,height:800},args:['--ignore-gpu-blocklist','--enable-gpu','--use-angle=d3d11','--disable-background-timer-throttling','--disable-renderer-backgrounding']});
  page=await (await browser.createBrowserContext()).newPage();page.on('pageerror',e=>errors.push(String(e)));page.on('response',r=>{if(r.status()>=400&&r.url().includes('/assets/'))errors.push(r.status()+' '+r.url());});
+ await page.evaluateOnNewDocument(()=>{window.__meleePanners=[];const create=AudioContext.prototype.createPanner;AudioContext.prototype.createPanner=function(){const p=create.call(this);window.__meleePanners.push(p);return p;};});
  await page.evaluateOnNewDocument(server=>{const Socket=window.WebSocket;window.WebSocket=class extends Socket{constructor(url,protocols){const u=new URL(url,location.href);super(u.pathname.startsWith('/ws')?new URL(u.pathname+u.search,server).href.replace('http:','ws:'):url,protocols);}};const real=window.fetch;window.fetch=(input,init)=>{const u=new URL(String(input),location.href);if(u.pathname==='/cosmetics/open')window.__crateRequest=JSON.parse(init.body);return real(['/presence','/profile','/stats','/leaderboard','/rooms','/rooms/join','/cosmetics','/cosmetics/equip','/cosmetics/open'].includes(u.pathname)?new URL(u.pathname+u.search,server):input,init);};},h.base);
  await page.goto(base+'?quality=low&shadows=off&scale=0.5',{waitUntil:'domcontentloaded',timeout:240000});await completeGuestProfile(page,'Dagger Player');
  await nav('Settings');await visible('#settings');await page.click('#tab-controls');
@@ -43,17 +44,24 @@ try{
  check(states.equipped.cosmeticId==='rich-melee'&&!states.equipped.gunVisible,'physical V equips both skinned daggers and hides the gun at its authored timing');await shot('first-person-daggers');
  frames(peer,{melee:true});await ack(peer);await until(()=>self(peer).combat.melee.phase==='ready','remote equip');
  await page.waitForFunction(id=>{const p=window.__crossfire.meleeRemoteInspect(id)[id];return p?.daggersVisible?.every(Boolean);},{timeout:30000},peer.id);check(true,'real second client displays both equipped daggers on its remote animated character');await shot('remote-daggers');
+ const spatialBefore=await page.evaluate(()=>window.__crossfire.spatialAudio().started);
  frames(peer,{yaw:Math.PI,trigger:true});await ack(peer);
  await Promise.all([page.waitForFunction(id=>window.__crossfire.meleeRemoteInspect(id)[id]?.clip==='attack_cross',{timeout:10000},peer.id),until(()=>peer.snapshot.players.find(p=>p.id===n.selfId).health===65,'remote player confirmed hit')]);
  check(true,'remote attack clip and server-confirmed damage reach the browser');await shot('remote-attack');
+ const impactsBefore=await page.evaluate(()=>window.__crossfire.sounds().filter(n=>n==='melee_impact').length);
  for(const [i,hp]of [65,30,0].entries()){
   await page.evaluate(()=>window.__crossfire.hold('fire',true));await until(()=>self(peer).health===hp,'browser confirmed hit '+(i+1));await page.evaluate(()=>window.__crossfire.hold('fire',false));
   const authoritative=peer.snapshot.players.find(p=>p.id===n.selfId).combat.melee;check(authoritative.stage===i+1,`attack ${i+1}: authoritative combo stage and opponent health ${hp}`);
   states['attack'+(i+1)]=authoritative;await until(()=>!peer.snapshot.players.find(p=>p.id===n.selfId).combat.melee.triggerHeld,'released attack input');
  }
+ await page.waitForFunction(before=>window.__crossfire.sounds().filter(n=>n==='melee_impact').length===before+3,{},impactsBefore);check(true,'three confirmed local contacts produce exactly three dedicated impact cues');
+ check(await page.evaluate(before=>window.__crossfire.spatialAudio().started>before&&window.__meleePanners.some(p=>p.distanceModel==='inverse'&&p.refDistance===5&&p.maxDistance===180&&p.rolloffFactor===1),spatialBefore),'remote confirmed melee uses existing distance-attenuated audio');
  await shot('combo-completed');
  await page.waitForFunction(()=>{const n=window.__crossfire.network(),s=n.snapshot.players.find(p=>p.id===n.selfId);return s.score===100&&s.kills===1;});
  check(await page.evaluate(()=>{const n=window.__crossfire.network();return n.snapshot.players.find(p=>p.id===n.selfId).combat.gun.ammo===30;}),'three melee hits score one elimination without consuming firearm ammunition');
+ const beforeMiss=await page.evaluate(()=>{const n=window.__crossfire.network();return{sequence:n.snapshot.players.find(p=>p.id===n.selfId).combat.melee.sequence,impacts:window.__crossfire.sounds().filter(n=>n==='melee_impact').length};});
+ await page.evaluate(()=>window.__crossfire.hold('fire',true));await page.waitForFunction(before=>{const n=window.__crossfire.network(),m=n.snapshot.players.find(p=>p.id===n.selfId).combat.melee;return m.sequence>before.sequence&&m.contactDone;},{timeout:10000},beforeMiss);await page.evaluate(()=>window.__crossfire.hold('fire',false));
+ check(await page.evaluate(before=>window.__crossfire.sounds().filter(n=>n==='melee_impact').length===before.impacts,beforeMiss),'a confirmed miss on the dead target produces no false impact cue');
  await page.keyboard.press('v');await page.waitForFunction(()=>{const n=window.__crossfire.network();return n.snapshot.players.find(p=>p.id===n.selfId).combat.melee.phase==='hidden';});
  check(await page.evaluate(()=>window.__crossfire.weapon().id==='rifle'||window.__crossfire.network().snapshot.players.find(p=>p.id===window.__crossfire.network().selfId).weapon==='rifle'),'V restores the previously selected rifle');
  await until(()=>Date.now()>=self(peer).death.respawnAt,'real victim respawn delay');await h.spawn(peer,'smg');

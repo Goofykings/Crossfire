@@ -12,7 +12,7 @@ for(const mode of ['ffa','teams'])for(const custom of [false,true])test(`match g
  await h.spawn(a,'sniper');await h.spawn(b,'smg');await h.spawn(c,'rifle');
  const arena=await room.directionalArenaForTest();for(const [peer,position]of [[a,arena.sources.front],[b,arena.center],[c,arena.sources.left]]){peer.position=position;await room.placeForCombatTest(peer.id,position);}
  if(mode==='teams'){assert.equal(self(a).team,self(c).team);assert.notEqual(self(a).team,self(b).team);}
- const look=await aim(c,b),mark=c.messages.length;frames(c,{...look,trigger:true});await until(()=>c.messages.slice(mark).some(m=>m.type==='shot'&&m.shot.shooterId===c.id&&m.shot.hits.some(hit=>hit.id===b.id&&hit.amount===25)),'actual contributor hit');
+ const look=await aim(c,b),mark=c.messages.length;frames(c,{...look,trigger:true});await until(()=>c.messages.slice(mark).some(m=>m.type==='shot'&&m.shot.shooterId===c.id&&m.shot.hits.some(hit=>hit.id===b.id&&[20,21,22].includes(hit.amount))),'actual contributor hit');
  const target=await aim(a,b),p=a.position,q=b.position;target.pitch=Math.atan2(q[1]+1.6-p[1]-1.64,Math.hypot(q[0]-p[0],q[2]-p[2]));frames(a,{...target,trigger:true});await ack(a);
  await until(()=>self(a).kills===1&&a.snapshot.players.find(p=>p.id===c.id)?.assists===1,'real final scoring');
  await room.qualifyMatchGemsForTest([a.id,b.id,c.id]);

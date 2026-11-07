@@ -1,3 +1,5 @@
+import {SniperZoom} from '../player/SniperZoom';
+import {MeleeFeedback} from './melee/MeleeFeedback';
 import {meleeBlocked,meleeClip,createMeleeState,stepMelee,MELEE} from '../../shared/melee';
 import { CosmeticsClient } from '../network/CosmeticsClient';
 import { PracticeClient,type MatchSession } from '../practice/PracticeClient';
@@ -35,7 +37,7 @@ import { UI } from '../ui/UI';
 import { Effects } from '../weapons/Effects';
 import { GrenadeView } from '../weapons/GrenadeView';
 import { GRENADE, advanceGrenade, throwGrenade, blastDamage, sweepSphere, type GrenadeEvent, type GrenadeState } from '../../shared/grenades';
-import { applySpread, damageAt, Loadout, WEAPONS, Weapon, type WeaponEvent } from '../weapons/Weapon';
+import { applySpread, damageAt, rollDamage, pelletSpreadAt, Loadout, WEAPONS, Weapon, type WeaponEvent } from '../weapons/Weapon';
 import { RIG_CONFIGS, WEAPON_RENDER_GROUP, WeaponView } from '../weapons/WeaponView';
 import { MeleeView } from '../weapons/MeleeView';
 import type { MeleeClipName, MeleeStage } from './melee/MeleeAnimation';
@@ -103,6 +105,7 @@ export class Game {
   readonly loadout = new Loadout(WEAPONS);
   private weaponView: WeaponView | null = null;
   /** First-person dual daggers (presentation; the combat layer drives equip/attack/unequip). */
+  private readonly sniperZoom=new SniperZoom();
   private meleeView: MeleeView | null = null;
   private localMelee=createMeleeState();
   private meleeDebug=false;
@@ -226,6 +229,7 @@ export class Game {
     this.settings.onChange((v, changed) => this.applySettings(v, changed));
 
     // Public Play has no silent practice fallback.
+    this.input.onWheel=direction=>{if(this.state!=='playing'||!this.weapon.stats.scope||this.weapon.ads<.72||meleeBlocked(this.network?.melee??this.localMelee))return false;this.sniperZoom.scroll(-direction);return true;};
     this.input.onClear = () => {this.meleeTogglePending=false;this.cancelGrenadeCharge();};
     this.ui.onGrenade = (held, cancel) => {
       if (cancel) { this.cancelGrenadeCharge(); return; }
@@ -367,6 +371,7 @@ export class Game {
       this.weaponView = view;
       view.setVisible(false);
       melee = new MeleeView(this.ctx, this.remotePlayers.meleeLibrary); this.meleeView = melee;
+      melee.flourishHandler = () => this.sound('melee_flourish', .14);
       grenades = new GrenadeView(this.ctx.scene); this.grenadeView = grenades;
       this.remotePlayers.setSmokeVisibility((from, to) => this.grenadeView?.obscures(from, to) ?? false);
       this.ui.setLoading(0, 'Loading weapons and character');
@@ -534,12 +539,19 @@ export class Game {
             hits: shot.hits.length, damage: shot.hits.reduce((n, h) => n + h.amount, 0), head, target: shot.hits[0].id };
         };
         network.onEnvironment=(frame)=>{if(!signal.aborted&&this.network===network&&this.networkReady&&frame.roundId===this.loadedRound)this.map?.props.sync(frame);};
+        const meleeFeedback=new MeleeFeedback();
         network.onMelee=(event)=>{
           if(signal.aborted||this.network!==network)return;
-          const selfId=network.selfId;
-          if(event.shooterId!==selfId){const p=network.latest?.players.find(p=>p.id===event.shooterId);if(p)this.audio.playSpatial('melee_swing'+event.stage as SoundName,p.motion.position,.32);}
-          if(event.hits.length&&event.shooterId===selfId){this.ui.hitMarker(false);this.sound('hit',.45);}
-          for(const hit of event.hits)if(hit.id===selfId&&hit.life===this.networkLife){this.ui.damage.hit(hit.direction,hit.amount);}
+          if(event.roundId!==this.loadedRound||!this.networkReady||!meleeFeedback.accept(event,Date.now()+network.clockOffset))return;
+          const selfId=network.selfId,shooter=network.latest?.players.find(p=>p.id===event.shooterId);
+          this.remotePlayers.meleeImpact(event);
+          if(event.shooterId!==selfId&&shooter?.life===event.life)this.audio.playSpatial(('melee_swing'+event.stage) as SoundName,shooter.motion.position,.32);
+          const hit=event.hits.find(h=>h.amount>0);
+          if(hit){
+            if(event.shooterId===selfId&&event.life===this.networkLife){this.ui.hitMarker(false);this.sound('melee_impact',.55);this.cameraRig?.meleeHit(event.stage);}
+            else {const target=network.latest?.players.find(p=>p.id===hit.id&&p.life===hit.life);if(target)this.audio.playSpatial('melee_impact',target.motion.position,.42);}
+          }
+          for(const hit of event.hits)if(hit.amount>0&&hit.id===selfId&&hit.life===this.networkLife){this.ui.damage.hit(hit.direction,hit.amount);}
         };
         network.onGrenade = (event) => {
           if (!signal.aborted && this.network === network && this.networkReady) this.presentGrenade(event);
@@ -718,7 +730,7 @@ export class Game {
         this.network.melee=structuredClone(self.combat.melee??createMeleeState());this.localMelee=createMeleeState();this.meleeDebug=false;this.meleeSoundSequence=-1;
         this.meleeView?.reset();
         this.weaponView?.motion.reset();
-        this.cameraRig?.resetMotion();
+        this.cameraRig?.resetMotion();this.sniperZoom.reset();
         this.ui.setWeaponName(this.weapon.stats.name);
         if (self.combat.gun) this.weapon.restore(self.combat.gun);
         this.acc = 0;
@@ -883,7 +895,7 @@ export class Game {
     this.grenadeCount = GRENADE.perLife; this.practiceGrenades = []; this.grenadeHeld = false;
     this.grenadeView?.clear(); this.ui.setGrenades(this.grenadeCount);
     this.health = PLAYER_MAX_HEALTH;
-    this.cameraRig?.resetMotion();
+    this.cameraRig?.resetMotion();this.sniperZoom.reset();
     this.weaponView?.motion.reset();
     this.cameraRig?.snapFov(this.settings.value.fov);
   }
@@ -1165,7 +1177,9 @@ export class Game {
     this.meleeTogglePending ||= input.wasPressed('melee');
     if(this.meleeTogglePending)this.meleeDebug=false;
     const blockedMelee=meleeBlocked(meleeState);
-    const zoom = 1 + (this.weapon.stats.adsFovScale - 1) * this.weapon.ads;
+    const magnification=this.sniperZoom.update(dt);
+    const zoom = 1 + ((this.weapon.stats.scope?1/magnification:this.weapon.stats.adsFovScale) - 1) * this.weapon.ads;
+    this.ui.setScopeZoom(magnification);
     const events: WeaponEvent[] = [];
     // weapon switching: number keys and mouse wheel
     for (let k = 0; k < this.loadout.weapons.length; k++) {
@@ -1262,7 +1276,7 @@ export class Game {
       const activeClip=meleeClip(state),flourish=activeClip&&this.remotePlayers.meleeLibrary.meta?.clips[activeClip as MeleeClipName].flourish;
       const elapsed=(Date.now()+(this.network?.clockOffset??0)-state.startedAt)/1000,key=`${activeClip}:${state.startedAt}:${state.sequence}`;
       if(flourish&&elapsed>=flourish[0]&&elapsed<=flourish[1]&&this.meleeFlourishKey!==key){this.meleeFlourishKey=key;this.sound('melee_flourish',.18);}
-      if(state.phase==='attacking'&&state.sequence!==this.meleeSoundSequence&&Date.now()+(this.network?.clockOffset??0)-state.startedAt>=MELEE.attacks[state.stage-1].contact-50){this.meleeSoundSequence=state.sequence;this.sound(('melee_swing'+state.stage) as SoundName,.35);}
+      if(state.phase==='attacking'&&state.sequence!==this.meleeSoundSequence&&Date.now()+(this.network?.clockOffset??0)-state.startedAt>=MELEE.attacks[state.stage-1].contact-50&&Date.now()+(this.network?.clockOffset??0)-state.startedAt<=MELEE.attacks[state.stage-1].duration){this.meleeSoundSequence=state.sequence;this.sound(('melee_swing'+state.stage) as SoundName,.35);}
       this.meleeView?.setCosmetic(this.network?.latest?.players.find(p=>p.id===this.network?.selfId)?.meleeCosmeticId??this.cosmetics?.view?.equipped.melee);
     }
     this.meleeView?.advance(dt);
@@ -1279,7 +1293,7 @@ export class Game {
 
     // HUD
     const aimDeg = w.spread({ moveFactor: player.horizontalSpeed / MOVEMENT.weaponMoveReference, airborne: !player.grounded });
-    const spreadDeg = aimDeg + w.stats.pelletSpread;
+    const spreadDeg = aimDeg + pelletSpreadAt(w.stats,w.ads);
     const px = (Math.tan((spreadDeg * Math.PI) / 180) / Math.tan(this.ctx.camera.fov / 2)) * (this.ctx.engine.getRenderWidth() / 2);
     // render pixels -> CSS pixels; hidden while aimed (the sight has its own reticle) or switching
     const crosshair = w.ads < 0.6 && (w.action === 'idle' || w.action === 'cycle' || w.reloading);
@@ -1381,7 +1395,7 @@ export class Game {
     this.sound(`${st.id}_shot` as SoundName, st.id === 'rifle' ? 0.5 : 0.62);
     this.weaponView?.fire();
     const angles = this.cameraRig?.aimAngles(this.scope) ?? { aimYaw: this.player!.yaw, aimPitch: this.player!.pitch };
-    this.cameraRig?.addRecoil(st.recoilPitch * (1 - w.ads * 0.4), st.recoilYaw);
+    this.cameraRig?.addRecoil(st.recoilPitch * (st.scope?1:1 - w.ads * 0.4), st.recoilYaw,!st.scope);
     // self-loading rifle: the case flies out with every shot (pump and bolt guns eject when worked)
     if (st.cycleTime === 0) this.ejectCase();
     cam.computeWorldMatrix();
@@ -1392,7 +1406,7 @@ export class Game {
     const aim = applySpread({ x: -Math.sin(angles.aimYaw) * cp, y: Math.sin(angles.aimPitch), z: -Math.cos(angles.aimYaw) * cp }, spreadDeg);
     const shot = { weapon: st.id, pellets: st.pellets, hits: 0, damage: 0, head: false, target: '' };
     for (let k = 0; k < st.pellets; k++) {
-      const dir = st.pellets > 1 ? applySpread(aim, st.pelletSpread) : aim;
+      const dir = st.pellets > 1 ? applySpread(aim, pelletSpreadAt(st,w.ads)) : aim;
       const hit = map.world.raycast(origin.x, origin.y, origin.z, dir.x, dir.y, dir.z, st.range);
       if(!this.options.multiplayer)map.props.practice.shoot({x:origin.x,y:origin.y,z:origin.z},dir,hit?.distance??st.range,st.id);
       if (!hit) continue;
@@ -1406,7 +1420,7 @@ export class Game {
       if (t) {
         const zone: HitZone = t.zone;
         const res = this.damage.tryApply(this.attacker, t.target, {
-          bodyDamage: damageAt(st, end.subtract(origin).length()),
+          bodyDamage: damageAt(st, end.subtract(origin).length(),rollDamage(st,Math.random)),
           point: hit.point,
           zone,
           weapon: st.id,
@@ -1492,7 +1506,7 @@ export class Game {
       teleport: (x: number, y: number, z: number, heading = 0, pitch = 0) => {
         if (this.state === 'paused' && this.options.autoplay) this.state = 'playing';
         this.player?.teleport({ x, y, z }, heading);
-        this.cameraRig?.resetMotion();
+        this.cameraRig?.resetMotion();this.sniperZoom.reset();
         if (this.player) this.player.pitch = (pitch * Math.PI) / 180;
       },
       look: (headingDeg: number, pitchDeg: number) => {
@@ -1567,7 +1581,7 @@ export class Game {
        * 'equip' | 'unequip' | 'attack' (optional stage) | 'reset', or 'freeze' with a clip and
        * time for repeatable screenshots ('freeze' with no clip resumes); 'pause'/'step'/'resume'
        * advance real transitions by exact steps. */
-      melee: (command: 'equip' | 'unequip' | 'attack' | 'reset' | 'freeze' | 'pause' | 'resume' | 'step', arg?: MeleeStage | MeleeClipName | number, time?: number) => {
+      melee: (command: 'equip' | 'unequip' | 'attack' | 'reset' | 'freeze' | 'pause' | 'resume' | 'step' | 'flourish', arg?: MeleeStage | MeleeClipName | number | 'r' | 'l', time?: number) => {
         this.meleeDebug=true;
         const view = this.meleeView;
         if (!view) return null;
@@ -1575,12 +1589,15 @@ export class Game {
         else if (command === 'step') view.step(Number(arg ?? 1 / 60));
         else if (command === 'equip') view.equip();
         else if (command === 'unequip') view.unequip();
+        else if (command === 'flourish') view.flourish(arg === 'r' || arg === 'l' ? arg : undefined);
         else if (command === 'attack') return view.attack(arg as MeleeStage | undefined);
         else if (command === 'reset') view.reset();
         else view.freeze((arg as MeleeClipName | undefined) ?? null, time ?? 0);
         return view.inspect();
       },
       meleeInspect: () => this.meleeView?.inspect() ?? null,
+      /** Test hook: play the death presentation for a remote avatar / bot (id null = the first living one). */
+      eliminateRemote: (id: string | null = null, dx = 0, dz = 1) => this.remotePlayers.debugEliminate(id, { x: dx, y: 0, z: dz }),
       /** Same commands for remote players and practice bots (third person); id null = all. */
       meleeRemote: (command: 'equip' | 'unequip' | 'attack' | 'reset', stage?: MeleeStage, id: string | null = null) => this.remotePlayers.presentMelee(id, command, stage),
       meleeRemoteSync: (id: string, clip: MeleeClipName, elapsed: number) => this.remotePlayers.syncMelee(id, clip, elapsed),

@@ -97,11 +97,11 @@ Regenerate with `npm run assets` (see docs/ASSET_PIPELINE.md).
 | `assets/models/shared/kit/stone_wall_pillar.glb` | kit | 6 KB | 58 | Modular piece: stone_wall_pillar |
 | `assets/models/shared/kit/window_box.glb` | kit | 8 KB | 46 | Modular piece: window_box |
 | `assets/models/shared/kit/window_std_1x1.5.glb` | kit | 6 KB | 46 | Modular piece: window_std_1x1.5 |
-| `assets/models/shared/melee/dagger_clips.glb` | melee-clips | 166 KB |  | Six melee clips on animated empties (hand sockets, spins, elbows, torso) |
+| `assets/models/shared/melee/dagger_clips.glb` | melee-clips | 263 KB |  | Six melee clips on animated empties (hand sockets, spins, elbows, torso) |
 | `assets/models/shared/melee/dagger_l.glb` | melee-weapon | 192 KB | 3440 | Left dagger: recurved blade, jimping, spike pommel, anchors |
 | `assets/models/shared/melee/dagger_r.glb` | melee-weapon | 193 KB | 3812 | Right dagger: ring pommel, two-tone saber-ground blade, anchors |
 | `assets/models/shared/melee/daggers-thumbnail.png` | melee-thumbnail | 114 KB |  | Transparent 512px render of the dagger pair |
-| `assets/models/shared/melee/daggers.json` | melee-metadata | 14 KB |  | Attachment, clip timing, combo and checkpoint metadata |
+| `assets/models/shared/melee/daggers.json` | melee-metadata | 18 KB |  | Attachment, clip timing, combo and checkpoint metadata |
 | `assets/models/shared/melee/melee_arms.glb` | melee-arms | 120 KB | 1632 | First-person arms and gloves from the player character, unchanged 26-joint rig |
 | `assets/models/shared/props/ac_condenser.glb` | prop | 14 KB | 126 | ac_condenser (1 x 0.8 x 0.44 m) |
 | `assets/models/shared/props/barrel.glb` | prop | 19 KB | 430 | barrel (0.62 x 0.9 x 0.62 m) |
@@ -201,7 +201,7 @@ Regenerate with `npm run assets` (see docs/ASSET_PIPELINE.md).
 | `assets/models/shared/weapons/sniper.glb` | weapon | 159 KB | 1936 | sniper first-person model: moving parts (bolt, mag) and anchors (muzzle, sight, eject, grip_r, grip_l, mag_grip, bolt_grip) |
 | `blender/characters/player.blend` | character-source | 442 KB |  | Editable humanoid mesh, 26-joint rig (clavicles, index phalanges) and seven in-place actions |
 | `blender/source/building_library.blend` | blend | 1217 KB |  | Editable source: catalogue of the 8 building types x 2 variants |
-| `blender/source/daggers.blend` | melee-source | 394 KB |  | Editable dagger pair, first-person arms, clip rig and six melee actions |
+| `blender/source/daggers.blend` | melee-source | 401 KB |  | Editable dagger pair, first-person arms, clip rig and six melee actions |
 | `blender/source/environment.blend` | blend | 137 KB |  | Editable apples, loose props and hinged shop panels |
 | `blender/source/european-town.blend` | blend | 2297 KB |  | Editable source: buildings, terrain, collision, markers, prop preview |
 | `blender/source/grenade.blend` | blend | 115 KB |  | Editable original grenade source |

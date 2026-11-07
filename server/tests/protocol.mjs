@@ -43,7 +43,7 @@ test('real frontend transport is compatible with the production Worker messages'
     await Promise.all([a.spawn('rifle'),b.spawn('smg')]);
     for(const c of [a,b]){
       const self=c.latest.players.find(p=>p.id===c.selfId);assert.equal(self.alive,true);assert.equal(self.health,100);
-      assert.ok(self.combat.gun);assert.ok(Number.isFinite(self.motion.crouch));assert.ok(Number.isFinite(self.motion.lean));
+      assert.ok(self.combat.gun);if(self.weapon==='smg')assert.equal(self.combat.gun.ammo,64,'real frontend accepts the shared expanded magazine limit');assert.ok(Number.isFinite(self.motion.crouch));assert.ok(Number.isFinite(self.motion.lean));
       assert.equal(self.cosmeticId,`default-${self.weapon}`,'Optional visual metadata carries canonical compatible equipment');
     }
     const player=new PlayerController(new CollisionWorld());player.restore(a.latest.players.find(p=>p.id===a.selfId).motion);

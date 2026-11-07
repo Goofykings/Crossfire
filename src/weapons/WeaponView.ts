@@ -1,3 +1,4 @@
+import {WEAPONS} from './Weapon';
 import { cosmetic, defaultCosmetic, defaultEquipment, type Equipment } from '../../shared/cosmetics';
 import { loadCosmeticAsset, visualCosmetic } from '../rendering/CosmeticAssets';
 import {
@@ -64,7 +65,7 @@ export const RIG_CONFIGS: Record<WeaponId, RigConfig> = {
     file: cosmetic(defaultCosmetic('shotgun'))!.asset.model,
     hip: [0.22, -0.235, -0.4],
     hipRot: [0.03, 0.09, -0.06],
-    eye: 0.2,
+    eye: 0.16,
     casing: 'casing_shell',
     flash: 1.5,
     kick: 2.6,
@@ -338,7 +339,7 @@ export class WeaponView {
   fire(): void {
     const rig = this.current;
     if (!rig) return;
-    this.motion.fire(rig.cfg.kick);
+    this.motion.fire(rig.cfg.kick*(rig.cfg.id==='sniper'?(WEAPONS.find(w=>w.id==='sniper')!.viewKick/16):1));
     this.flashTimer = 0.045;
     rig.flash.setEnabled(!this.hidden && !this.meleeHidden);
     rig.flash.rotationQuaternion = Quaternion.RotationAxis(Vector3.Forward(), Math.random() * Math.PI * 2);

@@ -51,17 +51,17 @@ try {
   };
   const views = { front: { heading: 25, pitch: 6, distance: 2.7, height: 1.25 }, side: { heading: 95, pitch: 4, distance: 2.7, height: 1.25 },
     back: { heading: 155, pitch: 10, distance: 2.8, height: 1.3 } };
-  const tpTimes = { equip: [0, .12, .2, .3, .5], idle: [0], attack_cross: [.09, .14, .19, .3], attack_forward: [.09, .17, .23], attack_finisher: [.15, .27, .35, .42, .48, .56], unequip: [.08, .16, .3] };
+  const tpTimes = { equip: [0, .12, .2, .3, .5], idle: [0], attack_cross: [.04, .072, .104, .19], attack_forward: [.04, .104, .19], attack_finisher: [.105, .205, .248, .29, .345], unequip: [.08, .16, .3], flourish_r: [.16, .3] };
   let worstGap = 0, worstWrist = 0;
   for (const [clip, times] of Object.entries(tpTimes)) for (const time of times) for (const [view, camera] of Object.entries(views)) {
-    if (view !== 'front' && !(clip === 'idle' || (clip === 'attack_cross' && time === .19) || (clip === 'attack_finisher' && (time === .35 || time === .48)) || (clip === 'attack_forward' && time === .17))) continue;
+    if (view !== 'front' && !(clip === 'idle' || (clip === 'attack_cross' && time === .104) || (clip === 'attack_finisher' && (time === .205 || time === .248)) || (clip === 'attack_forward' && time === .104))) continue;
     const file = `${out}/tp-${clip}-${time}-${view}.png`;
     const state = await lab(file, { weapon: 'rifle', melee: { clip, time }, camera, advance: .05 });
     const m = state.weapon && state.character ? state : null;
     keep(view === 'front' ? 'tp-front' : 'tp-angles', `${clip} ${time}s ${view}`, file);
     void m;
   }
-  const tpState = await page.evaluate(() => window.__crossfire.characterLab({ weapon: 'smg', melee: { clip: 'attack_cross', time: .19 }, advance: .05 }));
+  const tpState = await page.evaluate(() => window.__crossfire.characterLab({ weapon: 'smg', melee: { clip: 'attack_cross', time: .104 }, advance: .05 }));
   check(!!tpState, 'third-person pose lab renders the dual daggers');
   for (const id of ['rifle', 'smg', 'shotgun', 'sniper']) {
     const file = `${out}/tp-gun-down-${id}.png`;
@@ -72,7 +72,7 @@ try {
     keep('tp-guns', `${id}: after unequip (grip restored)`, back);
   }
   // Grip close-ups (camera aimed at each dagger's grip anchor): the fist must wrap the handle.
-  for (const [clip, time] of [['idle', 0], ['attack_cross', .19], ['attack_forward', .19], ['attack_finisher', .45]]) {
+  for (const [clip, time] of [['idle', 0], ['attack_cross', .104], ['attack_forward', .104], ['attack_finisher', .248]]) {
     const first = await page.evaluate((o) => window.__crossfire.characterLab(o), { weapon: 'rifle', melee: { clip, time }, advance: .05 });
     for (const hand of [0, 1]) for (const [view, heading, pitch] of [['out', hand ? 60 : -60, 20], ['front', 15, 8]]) {
       const file = `${out}/grip-${clip}-${time}-${hand ? 'L' : 'R'}-${view}.png`;
@@ -149,8 +149,8 @@ try {
   check(after.id === before.id && after.ammo === before.ammo, 'gun state machine untouched by the dagger presentation');
 
   // Frozen key poses, first person (exact times).
-  const fpTimes = { equip: [.1, .2, .3, .4], idle: [0, 1.2], attack_cross: [.05, .09, .12, .15, .19, .28, .4], attack_forward: [.09, .14, .17, .23, .33],
-    attack_finisher: [.1, .2, .27, .35, .4, .44, .48, .55, .66], unequip: [.06, .12, .18, .24] };
+  const fpTimes = { equip: [.1, .2, .3, .4], idle: [0, 1.2], attack_cross: [0, .04, .072, .104, .14, .19], attack_forward: [0, .072, .104, .14, .19],
+    attack_finisher: [.06, .105, .155, .205, .226, .248, .29, .345], unequip: [.06, .12, .18, .24], flourish_r: [.09, .16, .22, .3], flourish_l: [.16, .22] };
   for (const [clip, times] of Object.entries(fpTimes)) for (const time of times) {
     await melee('freeze', clip, time); await place(); await delay(80);
     const file = `${out}/fp-${clip}-${time}.png`; await fp(file); keep('fp-' + clip, `${clip} ${time}s`, file);
@@ -211,7 +211,7 @@ try {
     if (await page.evaluate((id) => window.__crossfire.network().rendered.find((p) => p.id === id)?.visible, bot)) framing = { offset, distance };
   }
   console.log('bot framing', JSON.stringify(framing));
-  for (const [clip, time] of [['idle', .2], ['attack_cross', .08], ['attack_cross', .19], ['attack_forward', .17], ['attack_finisher', .34], ['attack_finisher', .44]]) {
+  for (const [clip, time] of [['idle', .2], ['attack_cross', .072], ['attack_cross', .104], ['attack_forward', .104], ['attack_finisher', .205], ['attack_finisher', .248]]) {
     await page.evaluate(({ clip, time, framing }) => {
       const bot = window.__crossfire.network().rendered.find((p) => p.source === 'glb' && !p.death);
       const heading = -bot.yaw * 180 / Math.PI + framing.offset, r = heading * Math.PI / 180;
@@ -230,7 +230,7 @@ try {
   check(errors.length === 0, 'no page errors or missing assets');
 
   await sheet('sheet-fp-sequence', shots['fp-sequence'].filter((_, i) => i % 2 === 0 || i < 2), 6, [320, 180]);
-  for (const clip of ['equip', 'idle', 'attack_cross', 'attack_forward', 'attack_finisher', 'unequip']) await sheet('sheet-fp-' + clip, shots['fp-' + clip], 4, [400, 225]);
+  for (const clip of ['equip', 'idle', 'attack_cross', 'attack_forward', 'attack_finisher', 'unequip', 'flourish_r', 'flourish_l']) await sheet('sheet-fp-' + clip, shots['fp-' + clip], 4, [400, 225]);
   await sheet('sheet-tp-front', shots['tp-front'], 6, [240, 320]);
   await sheet('sheet-tp-angles', shots['tp-angles'], 4, [240, 320]);
   await sheet('sheet-tp-guns', shots['tp-guns'], 4, [240, 320]);

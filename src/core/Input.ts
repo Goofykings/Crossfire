@@ -42,6 +42,8 @@ export class Input {
   private locked = false;
   /** When false (menus open) game actions are ignored. */
   enabled = false;
+  /** Return true to consume gameplay wheel input (e.g. scoped zoom). */
+  onWheel:(direction:number)=>boolean=()=>false;
   onClear: () => void = () => {};
   readonly lockListeners = new Set<(locked: boolean) => void>();
   private readonly disposers: (() => void)[] = [];
@@ -96,7 +98,7 @@ export class Input {
       (e) => {
         if (!this.enabled || e.defaultPrevented || e.deltaY === 0) return;
         e.preventDefault();
-        this.pressedEdges.add(e.deltaY > 0 ? 'nextWeapon' : 'prevWeapon');
+        if(!this.onWheel(Math.sign(e.deltaY)))this.pressedEdges.add(e.deltaY > 0 ? 'nextWeapon' : 'prevWeapon');
       },
       { passive: false },
     );

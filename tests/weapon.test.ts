@@ -44,10 +44,10 @@ const count = (ev: WeaponEvent[], type: WeaponEvent['type']) => ev.filter((e) =>
 const cues = (ev: WeaponEvent[]) => ev.filter((e): e is Extract<WeaponEvent, { type: 'cue' }> => e.type === 'cue').map((e) => e.cue);
 
 describe('SMG', () => {
-  it('fires approximately 17 rounds per second while retaining the lowest bullet damage', () => {
+  it('fires approximately 19 rounds per second while retaining the lowest bullet damage', () => {
     const w = new Weapon(SMG), fired = count(simulate(w, 1, { trigger: true }), 'fire');
-    const oldRate = count(simulate(new Weapon({ ...SMG, rpm: 960 }), 1, { trigger: true }), 'fire');
-    expect(fired).toBeGreaterThanOrEqual(16); expect(fired).toBeLessThanOrEqual(18);
+    const oldRate = count(simulate(new Weapon({ ...SMG, rpm: 1030 }), 1, { trigger: true }), 'fire');
+    expect(fired).toBeGreaterThanOrEqual(18); expect(fired).toBeLessThanOrEqual(20);
     expect(fired).toBeGreaterThan(oldRate);
     expect(SMG.damage).toBeLessThan(RIFLE.damage); expect(w.ammo).toBe(SMG.magazine - fired);
   });
@@ -58,8 +58,8 @@ describe('Assault rifle', () => {
     const w = new Weapon(RIFLE);
     const ev = simulate(w, 1.0, { trigger: true });
     const shots = count(ev, 'fire');
-    expect(shots).toBeGreaterThanOrEqual(11);
-    expect(shots).toBeLessThanOrEqual(12);
+    expect(shots).toBeGreaterThanOrEqual(10);
+    expect(shots).toBeLessThanOrEqual(11);
     expect(w.ammo).toBe(RIFLE.magazine - shots);
   });
 
@@ -136,7 +136,7 @@ describe('Pump shotgun', () => {
     expect(SHOTGUN.pellets).toBeGreaterThan(9); expect(SHOTGUN.pelletSpread).toBeGreaterThan(6);
     expect(SHOTGUN.spreadAds / SHOTGUN.spreadHip).toBeGreaterThan(.7);
     expect(SHOTGUN.damage * SHOTGUN.pellets).toBeGreaterThan(108);
-    expect(damageAt(SHOTGUN, 30) * SHOTGUN.pellets).toBeLessThan(50);
+    expect(damageAt(SHOTGUN, SHOTGUN.falloff.end) * SHOTGUN.pellets).toBeLessThan(50);
     w.restore({ ...w.capture(), ammo: 6 }); expect(w.ammo).toBe(2);
   });
   it('counts individual pellets, allowing a centered close elimination without granting missed damage', () => {
@@ -158,7 +158,7 @@ describe('Pump shotgun', () => {
     // holding the trigger does not fire again: it needs a fresh pull after the pump stroke
     const cycle = simulate(w, SHOTGUN.cycleTime + 0.2, { trigger: true });
     expect(count(cycle, 'fire')).toBe(0);
-    expect(cues(cycle)).toEqual(['pump_back', 'eject', 'pump_fwd']);
+    expect(cues([...ev,...cycle])).toEqual(['pump_back', 'eject', 'pump_fwd']);
     expect(w.action).toBe('idle');
     const pumped = simulate(w, 0.05, { trigger: true });
     expect(count(pumped, 'fire')).toBe(1);
@@ -180,7 +180,7 @@ describe('Pump shotgun', () => {
     simulate(w, SHOTGUN.cycleTime + 0.05);
     expect(w.ammo).toBe(SHOTGUN.magazine - 2);
     simulate(w, 0.02, { reloadPressed: true });
-    const ev = simulate(w, r.start + r.perShell * 2 + r.end + 0.1);
+    const ev = simulate(w, r.start + r.perShell * 2 + r.end + (SHOTGUN.emptyReloadCycleTime??SHOTGUN.cycleTime) + 0.1);
     expect(count(ev, 'shellIn')).toBe(2);
     expect(w.ammo).toBe(SHOTGUN.magazine);
     // Interrupt a partial reload before the next shell starts.
@@ -199,7 +199,7 @@ describe('Pump shotgun', () => {
     simulate(w, 0.05, { trigger: true });
     expect(w.action).toBe('shellStart');
     const r = SHOTGUN.reload as ShellReload;
-    const ev = simulate(w, r.start + r.perShell * SHOTGUN.magazine + r.end + SHOTGUN.cycleTime + 0.1);
+    const ev = simulate(w, r.start + r.perShell * SHOTGUN.magazine + r.end + (SHOTGUN.emptyReloadCycleTime??SHOTGUN.cycleTime) + 0.1);
     expect(w.ammo).toBe(SHOTGUN.magazine);
     expect(cues(ev)).toEqual(['pump_back', 'pump_fwd']);
     expect(w.action).toBe('idle');
@@ -207,7 +207,7 @@ describe('Pump shotgun', () => {
 
   it('loses damage with distance', () => {
     expect(damageAt(SHOTGUN, 3)).toBe(SHOTGUN.damage);
-    expect(damageAt(SHOTGUN, 40)).toBeCloseTo(SHOTGUN.damage * SHOTGUN.falloff.minScale, 6);
+    expect(damageAt(SHOTGUN, SHOTGUN.falloff.end)).toBeCloseTo(SHOTGUN.damage * SHOTGUN.falloff.minScale, 6);
     expect(damageAt(SHOTGUN, 15)).toBeLessThan(SHOTGUN.damage);
   });
 });

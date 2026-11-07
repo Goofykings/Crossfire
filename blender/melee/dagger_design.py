@@ -18,7 +18,8 @@ import math
 
 Vec = tuple[float, float, float]
 
-FPS = 60
+# Fast strikes last only 2-3 frames at 60 Hz, so the GLB is sampled at 120 Hz.
+FPS = 120
 # Handle slant across the palm: the fist holds the handle diagonally (like the project's
 # pistol grips), which tips the blade toward the knuckles and keeps wrists straighter.
 SLANT = math.radians(20.0)
@@ -94,8 +95,8 @@ def socket_axes(knuckles: Vec, blade_hint: Vec) -> tuple[Vec, Vec, Vec]:
     return x_world, (-edge[0], -edge[1], -edge[2]), (-blade[0], -blade[1], -blade[2])
 
 
-def forearm(side: str, wrist: Vec, pole: Vec) -> Vec:
-    """Forearm direction of ArmChain.solve for a wrist target and elbow hint (aim frame)."""
+def arm_joints(side: str, wrist: Vec, pole: Vec) -> tuple[Vec, Vec]:
+    """Elbow and (reach-clamped) wrist of ArmChain.solve for a wrist target and elbow hint."""
     sh = (SHOULDER_X if side == "r" else -SHOULDER_X, 0.0, 0.0)
     a, b = UPPER_ARM, FOREARM
     d = add(wrist, sh, -1.0)
@@ -106,7 +107,13 @@ def forearm(side: str, wrist: Vec, pole: Vec) -> Vec:
     bend = add(pole, d, -dot(pole, d))
     bend = norm(bend) if dot(bend, bend) > 1e-10 else (0.0, -1.0, 0.0)
     elbow = add(add(sh, d, along), bend, math.sqrt(max(0.0, a * a - along * along)))
-    return norm(add(add(sh, d, dist), elbow, -1.0))
+    return elbow, add(sh, d, dist)
+
+
+def forearm(side: str, wrist: Vec, pole: Vec) -> Vec:
+    """Forearm direction of ArmChain.solve for a wrist target and elbow hint (aim frame)."""
+    elbow, end = arm_joints(side, wrist, pole)
+    return norm(add(end, elbow, -1.0))
 
 
 def hand_axes(side: str, pose: dict) -> tuple[Vec, Vec, Vec]:
@@ -125,6 +132,35 @@ def hand_axes(side: str, pose: dict) -> tuple[Vec, Vec, Vec]:
         n = norm(add(pose["b"], f, -dot(pose["b"], f)))
         k = norm(add((f[0] * math.cos(cock), f[1] * math.cos(cock), f[2] * math.cos(cock)), n, -math.sin(cock)))
     return socket_axes(k, pose["b"])
+
+
+def pose_arm(side: str, pose: dict) -> tuple[Vec, Vec]:
+    """Elbow and wrist the runtime IK reaches for a hand pose (aim frame)."""
+    pole = norm(D_ELBOW[side] if pose["e"] is None else pose["e"])
+    cock = COCK if pose["cock"] is None else pose["cock"]
+    sh = (SHOULDER_X if side == "r" else -SHOULDER_X, 0.0, 0.0)
+    k = norm(add(pose["p"], sh, -1.0))
+    wrist = pose["p"]
+    for _ in range(12):  # same fixed point as hand_axes: the knuckle direction follows the arm
+        xs, _, _ = socket_axes(k, pose["b"])
+        bk = xs if side == "r" else (-xs[0], -xs[1], -xs[2])
+        wrist = add(add(pose["p"], bk, GRIP_DEPTH), k, -WRIST_TO_PALM)
+        f = forearm(side, wrist, pole)
+        n = norm(add(pose["b"], f, -dot(pose["b"], f)))
+        k = norm(add((f[0] * math.cos(cock), f[1] * math.cos(cock), f[2] * math.cos(cock)), n, -math.sin(cock)))
+    return arm_joints(side, wrist, pole)
+
+
+def segment_gap(a0: Vec, a1: Vec, b0: Vec, b1: Vec) -> float:
+    """Closest distance between two segments (sampled; the arms are short)."""
+    best = 1e9
+    for i in range(21):
+        pa = add(a0, add(a1, a0, -1.0), i / 20)
+        for j in range(21):
+            pb = add(b0, add(b1, b0, -1.0), j / 20)
+            d = add(pa, pb, -1.0)
+            best = min(best, math.sqrt(dot(d, d)))
+    return best
 
 
 def quat_from_axes(x: Vec, y: Vec, z: Vec) -> tuple[float, float, float, float]:
@@ -184,17 +220,89 @@ def mirror(pose: dict, shift: Vec = (0.0, 0.0, 0.0)) -> dict:
 # Clip keys. Each channel is a list of (seconds, value). Hand channels hold poses; `spin_*`
 # and `twirl_*` hold degrees about SPIN_AXIS/TWIRL_AXIS; `scale_*` the dagger reveal scale;
 # `body` holds (yaw left, pitch up, roll right) radians of the torso.
-CROSS_R = [  # wide wind-up, fast sweep across with the edge leading, crossed follow-through
-    P((0.3, 0.09, -0.3), (0.55, 0.55, 0.6), (0.85, -0.25, 0.45)),
-    P((0.12, 0.02, -0.47), (-0.2, 0.6, -0.78), (0.75, -0.35, 0.2)),
-    P((-0.1, -0.09, -0.41), (-0.3, 0.45, -0.84), (0.85, -0.5, -0.1)),
-    P((-0.13, -0.15, -0.36), (-0.4, 0.15, -0.9), (0.8, -0.6, -0.05)),
-    P((0.03, -0.13, -0.37), (-0.2, 0.75, -0.62), (0.7, -0.65, 0.0)),
-    P((0.165, -0.075, -0.37), (-0.12, 0.85, -0.5), ELBOW_R),
+#
+# Stage 1 (attack_cross) and stage 2 (attack_forward) keep their ids because gameplay and the
+# network refer to them: they are now the right and left diagonal slashes. Stage 3
+# (attack_finisher) is the crossover. Attacks 1 and 2 begin in their own wind-up, not in the
+# guard: the crossfade into them starts from wherever the arms are (the guard, or the previous
+# attack's follow-through), so a chain never detours through the guard.
+
+# Attack 1: the right hand starts high on the right, pulls back, cuts to the lower left in
+# about 30 ms and follows through; the left hand yields and then returns to its guard.
+SLASH_R = [
+    (0.000, P((0.235, 0.11, -0.335), (0.45, 0.60, 0.50), (0.85, -0.25, 0.40))),
+    (0.040, P((0.27, 0.14, -0.31), (0.55, 0.55, 0.55), (0.88, -0.20, 0.45))),
+    (0.072, P((0.09, 0.045, -0.46), (-0.20, 0.60, -0.78), (0.75, -0.35, 0.20))),
+    (0.104, P((-0.065, -0.055, -0.42), (-0.30, 0.45, -0.84), (0.85, -0.50, -0.10))),
+    (0.140, P((-0.12, -0.09, -0.385), (-0.40, 0.20, -0.90), (0.80, -0.60, -0.05))),
+    (0.190, P((0.03, -0.11, -0.375), (-0.20, 0.75, -0.62), (0.70, -0.65, 0.00))),
+    (0.250, IDLE_R),
 ]
-# The left arm trails the right by 10-20 ms and stays above and in front of it while crossing
-# and uncrossing (forearms ~3.5 cm in radius need ~7 cm between them), so it is staggered.
-CROSS_L = [mirror(p, (0.0, 0.11, -0.08)) for p in CROSS_R[:4]] + [mirror(CROSS_R[4], (0.0, 0.14, -0.07))] + [mirror(CROSS_R[5], (0.015, 0.03, -0.035))]
+SLASH_R_SUPPORT = [  # left hand: a small counter-movement that keeps clear of the sweeping blade
+    (0.000, IDLE_L),
+    (0.060, P((-0.175, -0.01, -0.395), (0.15, 0.85, -0.45), ELBOW_L)),
+    (0.110, P((-0.215, 0.025, -0.36), (0.18, 0.85, -0.40), (-0.85, -0.45, 0.2))),
+    (0.170, P((-0.19, -0.01, -0.385), (0.14, 0.85, -0.47), ELBOW_L)),
+    (0.250, IDLE_L),
+]
+SLASH_L = [(t, mirror(p)) for t, p in SLASH_R]
+SLASH_L_SUPPORT = [(t, mirror(p)) for t, p in SLASH_R_SUPPORT]
+# The guards are not exact mirrors of each other: begin/end exactly on the real guard poses.
+SLASH_L[-1] = (0.250, IDLE_L)
+SLASH_L_SUPPORT[0] = (0.000, IDLE_R)
+SLASH_L_SUPPORT[-1] = (0.250, IDLE_R)
+
+# Attack 3, the crossover: both elbows fold, the hands cross in front of the chest with the
+# right above the left, hold ~100 ms, then both arms snap outward in opposite directions.
+CROSSED_R = P((-0.095, 0.062, -0.31), (-0.50, 0.70, -0.45), (0.55, -0.80, 0.10))
+CROSSED_L = P((0.105, -0.075, -0.43), (0.50, 0.70, -0.45), (-0.55, -0.80, 0.10))
+OUT_R = P((0.29, 0.04, -0.43), (0.55, 0.60, -0.55), (0.90, -0.40, 0.10))
+OUT_L = P((-0.29, 0.04, -0.43), (-0.55, 0.60, -0.55), (-0.90, -0.40, 0.10))
+FINISH_R = [
+    (0.000, IDLE_R),
+    (0.060, P((0.07, 0.005, -0.35), (-0.30, 0.78, -0.45), (0.65, -0.70, 0.10))),
+    (0.105, CROSSED_R),
+    (0.155, P((-0.102, 0.066, -0.315), (-0.52, 0.70, -0.45), (0.55, -0.82, 0.10))),
+    (0.205, P((-0.108, 0.068, -0.32), (-0.52, 0.70, -0.45), (0.55, -0.82, 0.10))),
+    (0.226, P((0.12, 0.04, -0.44), (0.40, 0.45, -0.70), (0.80, -0.55, 0.10))),
+    (0.248, OUT_R),
+    (0.290, P((0.315, 0.02, -0.405), (0.60, 0.50, -0.55), (0.92, -0.35, 0.10))),
+    (0.345, P((0.245, -0.035, -0.39), (0.30, 0.65, -0.65), (0.82, -0.55, 0.10))),
+    (0.400, IDLE_R),
+]
+FINISH_L = [
+    (0.000, IDLE_L),
+    (0.060, P((-0.065, -0.03, -0.34), (0.30, 0.78, -0.45), (-0.65, -0.70, 0.10))),
+    (0.105, CROSSED_L),
+    (0.155, P((0.112, -0.078, -0.435), (0.52, 0.70, -0.45), (-0.55, -0.82, 0.10))),
+    (0.205, P((0.118, -0.08, -0.44), (0.52, 0.70, -0.45), (-0.55, -0.82, 0.10))),
+    (0.226, P((-0.11, 0.025, -0.44), (-0.40, 0.45, -0.70), (-0.80, -0.55, 0.10))),
+    (0.248, OUT_L),
+    (0.290, P((-0.315, 0.02, -0.405), (-0.60, 0.50, -0.55), (-0.92, -0.35, 0.10))),
+    (0.345, P((-0.245, -0.03, -0.395), (-0.30, 0.65, -0.65), (-0.82, -0.55, 0.10))),
+    (0.400, IDLE_L),
+]
+
+
+def flourish(side: str) -> dict:
+    """Idle finger-spin flourish: one hand lifts a little and spins its dagger a full turn about
+    the thumb/index pinch point, then settles back into the guard; the other hand stays put."""
+    guard = IDLE_R if side == "r" else IDLE_L
+    other = "l" if side == "r" else "r"
+    other_guard = IDLE_L if side == "r" else IDLE_R
+    sgn = 1.0 if side == "r" else -1.0
+    g = guard["p"], guard["b"]
+    lift = P((g[0][0] + 0.012 * sgn, g[0][1] + 0.045, g[0][2] + 0.035), (g[1][0], 0.9, g[1][2] + 0.05), guard["e"], guard["cock"])
+    flick = P((g[0][0] + 0.008 * sgn, g[0][1] + 0.052, g[0][2] + 0.025), (g[1][0], 0.92, g[1][2] + 0.05), guard["e"], guard["cock"])
+    return {
+        "duration": 0.52, "loop": False, "blendIn": 0.1,
+        "events": {"flourish": [0.1, 0.34]},
+        f"hand_{side}": [(0.0, guard), (0.09, lift), (0.34, flick), (0.43, breath(guard, 0.004, 0.01)), (0.52, guard)],
+        f"hand_{other}": [(0.0, other_guard), (0.52, other_guard)],
+        f"spin_{side}": [(0.0, 0.0), (0.1, 0.0), (0.22, 200.0), (0.34, 360.0), (0.52, 360.0)],
+        "body": [(0.0, (0.0, 0.0, 0.0)), (0.2, (0.01 * sgn, 0.012, 0.0)), (0.52, (0.0, 0.0, 0.0))],
+    }
+
 
 CLIPS: dict[str, dict] = {
     "equip": {
@@ -225,59 +333,32 @@ CLIPS: dict[str, dict] = {
         "body": [(0.0, (0.0, 0.0, 0.0)), (0.6, (0.004, 0.006, 0.0)), (1.2, (0.0, 0.0, 0.0)),
                  (1.8, (-0.004, -0.004, 0.0)), (2.4, (0.0, 0.0, 0.0))],
     },
-    "attack_cross": {
-        "duration": 0.62, "loop": False, "blendIn": 0.15,
-        "events": {"anticipation": [0.0, 0.1], "contact": [0.13, 0.22], "chainFrom": 0.3, "recovery": 0.38,
-                   "trail": [0.1, 0.3]},
-        "hand_r": [(0.0, IDLE_R)] + list(zip((0.09, 0.135, 0.19, 0.28, 0.38, 0.5), CROSS_R)) + [(0.62, IDLE_R)],
-        "hand_l": [(0.0, IDLE_L)] + list(zip((0.1, 0.155, 0.21, 0.3, 0.4, 0.52), CROSS_L)) + [(0.62, IDLE_L)],
-        "body": [(0.0, (0.0, 0.0, 0.0)), (0.09, (0.0, 0.05, 0.0)), (0.2, (0.0, -0.09, 0.0)),
-                 (0.3, (0.0, -0.1, 0.0)), (0.45, (0.0, -0.02, 0.0)), (0.62, (0.0, 0.0, 0.0))],
+    "attack_cross": {  # stage 1: right-hand diagonal, upper right to lower left
+        "duration": 0.25, "loop": False, "blendIn": 0.07,
+        "events": {"anticipation": [0.0, 0.055], "contact": [0.07, 0.16], "chainFrom": 0.17, "recovery": 0.15,
+                   "trail": [0.05, 0.15]},
+        "hand_r": SLASH_R, "hand_l": SLASH_R_SUPPORT,
+        "body": [(0.0, (0.0, 0.0, 0.0)), (0.04, (0.05, 0.03, 0.0)), (0.104, (-0.1, -0.06, 0.03)), (0.15, (-0.09, -0.05, 0.02)),
+                 (0.25, (0.0, 0.0, 0.0))],
     },
-    "attack_forward": {
-        "duration": 0.52, "loop": False, "blendIn": 0.15,
-        "events": {"anticipation": [0.0, 0.09], "contact": [0.14, 0.23], "chainFrom": 0.29, "recovery": 0.33,
-                   "trail": [0.09, 0.24]},
-        "hand_r": [(0.0, IDLE_R),
-                   (0.09, P((0.18, -0.1, -0.2), (0.0, 0.6, -0.8), (0.85, -0.5, 0.25))),
-                   (0.165, P((0.07, -0.04, -0.555), (-0.05, 0.3, -0.95), (0.8, -0.55, 0.0))),
-                   (0.225, P((0.065, -0.045, -0.565), (-0.05, 0.28, -0.96), (0.8, -0.55, 0.0))),
-                   (0.33, P((0.15, -0.08, -0.41), (-0.1, 0.75, -0.65), ELBOW_R)),
-                   (0.52, IDLE_R)],
-        "hand_l": [(0.0, IDLE_L),
-                   (0.09, P((-0.12, 0.0, -0.43), (0.2, 0.9, -0.35), (-0.8, -0.55, 0.1))),
-                   (0.16, P((-0.16, -0.05, -0.31), (0.15, 0.85, -0.45), (-0.85, -0.5, 0.25))),
-                   (0.3, P((-0.16, -0.04, -0.37), (0.12, 0.85, -0.5), ELBOW_L)),
-                   (0.52, IDLE_L)],
-        "body": [(0.0, (0.0, 0.0, 0.0)), (0.09, (-0.12, 0.0, 0.02)), (0.16, (0.13, -0.05, -0.02)),
-                 (0.25, (0.1, -0.04, -0.01)), (0.4, (0.01, 0.0, 0.0)), (0.52, (0.0, 0.0, 0.0))],
+    "attack_forward": {  # stage 2: left-hand diagonal, upper left to lower right (mirror of stage 1)
+        "duration": 0.25, "loop": False, "blendIn": 0.07,
+        "events": {"anticipation": [0.0, 0.055], "contact": [0.07, 0.16], "chainFrom": 0.17, "recovery": 0.15,
+                   "trail": [0.05, 0.15]},
+        "hand_l": SLASH_L, "hand_r": SLASH_L_SUPPORT,
+        "body": [(0.0, (0.0, 0.0, 0.0)), (0.04, (-0.05, 0.03, 0.0)), (0.104, (0.1, -0.06, -0.03)), (0.15, (0.09, -0.05, -0.02)),
+                 (0.25, (0.0, 0.0, 0.0))],
     },
-    "attack_finisher": {
-        "duration": 0.82, "loop": False, "blendIn": 0.15,
-        "events": {"anticipation": [0.0, 0.36], "flourish": [0.04, 0.28], "contact": [0.4, 0.5], "chainFrom": 0.6,
-                   "recovery": 0.62, "trail": [0.36, 0.56]},
-        # Left: rises while the finger spin plays, cocks over the shoulder, then a diagonal
-        # downward sweep to the lower right. Right: tucked guard that pulls back to the hip.
-        "hand_l": [(0.0, IDLE_L),
-                   (0.14, P((-0.19, 0.07, -0.4), (0.2, 0.85, -0.2), (-0.85, -0.45, 0.2))),
-                   (0.27, P((-0.2, 0.13, -0.38), (0.35, 0.3, 0.85), (-0.9, -0.1, 0.4))),
-                   (0.35, P((-0.21, 0.17, -0.31), (0.45, -0.2, 0.85), (-0.85, 0.0, 0.5))),
-                   (0.41, P((-0.07, 0.07, -0.49), (0.35, 0.6, -0.7), (-0.85, -0.35, 0.3))),
-                   (0.47, P((0.09, -0.11, -0.44), (0.4, 0.45, -0.78), (-0.6, -0.7, 0.1))),
-                   (0.55, P((0.15, -0.15, -0.36), (0.3, 0.2, -0.93), (-0.5, -0.8, 0.0))),
-                   (0.66, P((-0.02, -0.1, -0.39), (0.2, 0.75, -0.6), (-0.75, -0.6, 0.1))),
-                   (0.82, IDLE_L)],
-        "hand_r": [(0.0, IDLE_R),
-                   (0.2, P((0.12, -0.12, -0.35), (-0.15, 0.85, -0.5), ELBOW_R)),
-                   (0.36, P((0.13, -0.1, -0.37), (-0.15, 0.86, -0.48), ELBOW_R)),
-                   (0.46, P((0.21, -0.17, -0.27), (-0.05, 0.75, -0.65), (0.85, -0.5, 0.25))),
-                   (0.6, P((0.2, -0.13, -0.31), (-0.08, 0.8, -0.6), ELBOW_R)),
-                   (0.82, IDLE_R)],
-        "spin_l": [(0.0, 0.0), (0.04, 0.0), (0.28, 360.0), (0.82, 360.0)],
-        "body": [(0.0, (0.0, 0.0, 0.0)), (0.2, (0.04, 0.03, 0.0)), (0.35, (0.1, 0.06, -0.03)),
-                 (0.45, (-0.06, -0.08, 0.04)), (0.55, (-0.13, -0.12, 0.05)), (0.68, (-0.04, -0.04, 0.01)),
-                 (0.82, (0.0, 0.0, 0.0))],
+    "attack_finisher": {  # stage 3: crossover, ~100 ms crossed hold, then both arms snap outward
+        "duration": 0.4, "loop": False, "blendIn": 0.09,
+        "events": {"anticipation": [0.0, 0.205], "contact": [0.215, 0.305], "chainFrom": 0.31, "recovery": 0.29,
+                   "trail": [0.2, 0.3]},
+        "hand_r": FINISH_R, "hand_l": FINISH_L,
+        "body": [(0.0, (0.0, 0.0, 0.0)), (0.105, (0.0, -0.07, 0.0)), (0.205, (0.0, -0.085, 0.0)), (0.25, (0.0, 0.08, 0.0)),
+                 (0.3, (0.0, 0.06, 0.0)), (0.4, (0.0, 0.0, 0.0))],
     },
+    "flourish_r": flourish("r"),
+    "flourish_l": flourish("l"),
     "unequip": {
         "duration": 0.4, "loop": False, "blendIn": 0.1,
         "events": {"flourish": [0.03, 0.2], "hidden": 0.22, "gunUp": [0.22, 0.4], "hands": [0.22, 0.4]},
@@ -297,6 +378,9 @@ CLIPS: dict[str, dict] = {
 
 # Combo order: each attack chains into the next and the finisher loops back to the cross.
 COMBO = ["attack_cross", "attack_forward", "attack_finisher"]
+# Cosmetic idle flourishes: one hand spins its dagger while the other holds the guard.
+FLOURISH = ["flourish_r", "flourish_l"]
+FLOURISH_INTERVAL = (6.0, 12.0)
 CHANNELS = ("hand_r", "hand_l", "spin_r", "spin_l", "twirl_r", "twirl_l", "scale_r", "scale_l", "body")
 
 
@@ -332,6 +416,7 @@ def metadata() -> dict:
         "spin": {"pivot": list(SPIN_PIVOT), "axis": list(SPIN_AXIS), "twirlAxis": list(TWIRL_AXIS)},
         "firstPerson": {k: list(v) if isinstance(v, tuple) else v for k, v in FIRST_PERSON.items()},
         "combo": COMBO,
+        "flourish": {"clips": FLOURISH, "interval": list(FLOURISH_INTERVAL)},
         "clips": clips,
     }
 
@@ -351,13 +436,44 @@ def validate() -> list[str]:
             errors.append(f"{name}: contact/chainFrom out of order")
         if clip["loop"] and (clip["hand_r"][0][1] != clip["hand_r"][-1][1] or clip["hand_l"][0][1] != clip["hand_l"][-1][1]):
             errors.append(f"{name}: loop seam")
-    # Every attack starts and ends in the guard, so a chain or a return never snaps.
-    for name in COMBO + ["unequip"]:
+    # Attacks 1 and 2 begin in their own wind-up (the blend picks the arms up wherever they are);
+    # everything else starts and ends in the guard, so a return or a flourish never snaps.
+    for name in ["attack_finisher", "unequip", *FLOURISH]:
         if CLIPS[name]["hand_r"][0][1] != IDLE_R or CLIPS[name]["hand_l"][0][1] != IDLE_L:
             errors.append(f"{name}: must start in the guard pose")
-    for name in COMBO + ["equip"]:
+    for name in COMBO + ["equip", *FLOURISH]:
         if CLIPS[name]["hand_r"][-1][1] != IDLE_R or CLIPS[name]["hand_l"][-1][1] != IDLE_L:
             errors.append(f"{name}: must end in the guard pose")
+    for name in FLOURISH:
+        other = "hand_l" if name.endswith("_r") else "hand_r"
+        if any(pose != IDLE_L and pose != IDLE_R for _, pose in CLIPS[name][other]):
+            errors.append(f"{name}: the other hand must hold its guard")
+    # Targets for the animation (the brief): strike speed, total length, crossed hold.
+    for name, limit in (("attack_cross", 0.26), ("attack_forward", 0.26), ("attack_finisher", 0.41)):
+        if CLIPS[name]["duration"] > limit:
+            errors.append(f"{name}: slower than {limit} s")
+    # Forearms must not pass through each other (a forearm is ~3.5 cm in radius): sample the
+    # interpolated arms every 5 ms and require 6 cm between the centrelines.
+    for name in COMBO:
+        clip, worst = CLIPS[name], (1e9, 0.0)
+        steps = round(clip["duration"] / 0.005)
+        for i in range(steps + 1):
+            t = i * 0.005
+            arms = {}
+            for side in ("r", "l"):
+                keys = clip[f"hand_{side}"]
+                j = max(k for k in range(len(keys) - 1) if keys[k][0] <= t) if t < keys[-1][0] else len(keys) - 2
+                (t0, p0), (t1, p1) = keys[j], keys[j + 1]
+                u = min(1.0, max(0.0, (t - t0) / (t1 - t0)))
+                lerp = lambda v0, v1: None if v0 is None or v1 is None else add(v0, add(v1, v0, -1.0), u)
+                pose = P(lerp(p0["p"], p1["p"]), lerp(p0["b"], p1["b"]), lerp(p0["e"] or D_ELBOW[side], p1["e"] or D_ELBOW[side]),
+                         p0["cock"] if p0["cock"] is not None else None)
+                arms[side] = pose_arm(side, pose)
+            gap = segment_gap(arms["r"][0], arms["r"][1], arms["l"][0], arms["l"][1])
+            if gap < worst[0]:
+                worst = (gap, t)
+        if worst[0] < 0.06:
+            errors.append(f"{name}: forearms {worst[0] * 100:.1f} cm apart at {worst[1]:.3f} s (need 6 cm)")
     return errors
 
 

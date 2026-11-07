@@ -116,6 +116,7 @@ export class UI {
   private weaponSlots!: HTMLElement;
   private slotNames = '';
   private scope!: HTMLElement;
+  private scopeZoom!:HTMLElement;
   private spectatorScope!: HTMLElement;
   private fpsBox!: HTMLElement;
   /** The FPS readout element (read by the debug API). */
@@ -540,6 +541,7 @@ export class UI {
     s.appendChild(br);
     // sniper scope: black surround, the round field of view with a mil-dot reticle (SVG, crisp at any resolution)
     this.scope = el('div', 'scope', scopeSvg('local'));
+    this.scopeZoom=el('span','scope-zoom');this.scope.append(this.scopeZoom);
     s.insertBefore(this.scope, s.firstChild);
     this.toast = el('div', 'toast');
     s.appendChild(this.toast);
@@ -1099,6 +1101,7 @@ export class UI {
   }
 
   /** Scope overlay (sniper fully aimed): `amount` 0..1 fades it in as the scope reaches the eye. */
+  setScopeZoom(magnification:number):void {this.scopeZoom.textContent=`${magnification.toFixed(1)}x`; }
   setScope(amount: number): void {
     for (const scope of [this.scope, this.spectatorScope]) {
       scope.style.opacity = String(amount);

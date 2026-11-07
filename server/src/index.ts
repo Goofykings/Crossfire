@@ -1,4 +1,4 @@
-import {createMeleeState,stepMelee,meleeBlocked,traceMelee,MELEE,validMelee} from '../../shared/melee';
+import {createMeleeState,stepMelee,meleeBlocked,traceMelee,meleeKnockback,MELEE,validMelee} from '../../shared/melee';
 import { traceWeaponShot } from '../../shared/hitscan';
 import {matchRewardRequests,matchIdentity,payMatchGems,type MatchLedger,type MatchRewardRequest} from './matchRewards';
 import { Inventory } from './inventory';
@@ -917,6 +917,7 @@ export class PublicRoom extends DurableObject<Bindings> {
       this.damage.tryApply({id:e.session.id,position:()=>e.controller.position},{id:target.session.id,alive:target.session.alive,position:()=>target.controller.position,applyDamage:damage=>{
         amount=Math.min(target.session.health,damage);this.contributions.damage(target.session.id,target.session.life,this.round.id,e.session.id,e.session.life,amount,at);
         target.session.health-=amount;target.session.regenAt=at+REGEN_DELAY_MS;
+        if(amount>0)meleeKnockback(target.controller,hit.direction,stage);
         if(target.session.health===0)this.eliminate(target,e,false,hit.direction,'melee');
       }},{bodyDamage:MELEE.damage,zone:'body',point:hit.point,weapon:'melee'});
       event.hits.push({id:target.session.id,life:target.session.life,amount,health:target.session.health,head:false,killed:!target.session.alive,direction:hit.direction});
@@ -945,7 +946,7 @@ export class PublicRoom extends DurableObject<Bindings> {
         const previous=result.hits.find(h=>h.id===target.session.id);
         if(previous){previous.amount+=appliedDamage;previous.health=target.session.health;previous.head ||=hit.zone==='head';previous.killed ||=!target.session.alive;}
         else result.hits.push({id:target.session.id,life:target.session.life,direction:{...hit.direction},amount:appliedDamage,health:target.session.health,head:hit.zone==='head',killed:!target.session.alive});
-      },(dir,distance)=>this.environment.shoot(origin,dir,distance,gun.stats.id));
+      },(dir,distance)=>this.environment.shoot(origin,dir,distance,gun.stats.id),Math.random,gun.ads);
     this.publish({v:PROTOCOL_VERSION,type:'shot',shot:result});return result.hits.length>0;
   }
 

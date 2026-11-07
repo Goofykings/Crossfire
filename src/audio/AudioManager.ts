@@ -1,7 +1,7 @@
 import { assetUrl } from '../core/assets';
 
 export type SoundName =
-  | 'melee_equip' | 'melee_flourish' | 'melee_swing1' | 'melee_swing2' | 'melee_swing3'
+  | 'melee_impact' | 'melee_equip' | 'melee_flourish' | 'melee_swing1' | 'melee_swing2' | 'melee_swing3'
   | 'grenade_explosion'
   | 'rifle_shot'
   | 'smg_shot'
@@ -35,6 +35,7 @@ export type SoundName =
   | 'ui_hover';
 
 const FILES: Record<SoundName, string> = {
+  melee_impact:'melee_impact.wav',
   melee_equip:'melee_equip.wav',melee_flourish:'melee_flourish.wav',melee_swing1:'melee_swing1.wav',melee_swing2:'melee_swing2.wav',melee_swing3:'melee_swing3.wav',
   grenade_explosion: 'grenade_explosion.wav',
   rifle_shot: 'rifle_shot.wav',

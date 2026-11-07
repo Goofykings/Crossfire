@@ -7,7 +7,7 @@
     "types": "wrangler types",
     "typecheck": "npm run types && tsc --noEmit",
     "build": "wrangler deploy --dry-run --outdir dist",
-    "test": "npm run build && node --test --test-concurrency=1 tests/integration.mjs tests/rooms.mjs tests/cosmetics.mjs tests/assists.mjs tests/combat.mjs tests/traversal.mjs tests/grenades.mjs tests/grenade-buffs.mjs tests/melee.mjs tests/environment.mjs tests/challenges.mjs tests/statistics.mjs tests/match-rewards.mjs"
+    "test": "npm run build && node --test --test-concurrency=1 tests/integration.mjs tests/rooms.mjs tests/cosmetics.mjs tests/assists.mjs tests/combat.mjs tests/weapon-balance.mjs tests/traversal.mjs tests/grenades.mjs tests/grenade-buffs.mjs tests/melee.mjs tests/environment.mjs tests/challenges.mjs tests/statistics.mjs tests/match-rewards.mjs"
   },
   "devDependencies": {
     "wrangler": "4.152.0",
