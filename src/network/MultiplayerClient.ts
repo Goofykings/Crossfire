@@ -1,3 +1,4 @@
+import {createMeleeState,stepMelee,meleeBlocked,type MeleeState} from '../../shared/melee';
 import type { CareerView } from '../../shared/challenges';
 import type { EnvironmentFrame } from '../../shared/environment';
 import { FIXED_DT } from '../config/constants';
@@ -31,6 +32,9 @@ export class MultiplayerClient {
   onRoomExit:(message:string)=>void=()=>{};
   onCareer: (profile: CareerView) => void = () => {};
   onSnapshot: (snapshot: Snapshot) => void = () => {};
+  melee:MeleeState=createMeleeState();
+  private inputTimes=new Map<number,number>();
+  onMelee:(event:import('../../shared/protocol').MeleeResult)=>void=()=>{};
   onShot: (shot: ShotResult) => void = () => {};
   onElimination: (event: Elimination) => void = () => {};
   onGrenade: (event: GrenadeEvent) => void = () => {};
@@ -153,7 +157,7 @@ export class MultiplayerClient {
     this.resumedAt = 0;
     this.sentAt.clear(); this.ackLatency = 0;
     this.setState(this.attempts ? 'reconnecting' : 'connecting');
-    this.pending = [];
+    this.pending = [];this.inputTimes.clear();
     this.unsent = [];
     this.lastYaw = this.lastPitch = NaN;
     this.lastSlide = false;
@@ -205,7 +209,7 @@ export class MultiplayerClient {
         this.lastAck = this.sequence; this.lastAckAt = Date.now();
         this.round = m.snapshot.roundId;
         this.life = m.snapshot.players.find((p) => p.id === m.selfId)?.life ?? -1;
-        this.pending = [];
+        this.pending = [];this.inputTimes.clear();
         this.unsent = [];
         this.connectedAt = Date.now();
         this.trace('welcome', { resumed: m.resumed, id: m.selfId });
@@ -227,7 +231,7 @@ export class MultiplayerClient {
         const self = m.snapshot.players.find((p) => p.id === this.selfId);
         const ack = self?.ack ?? 0;
         if (!self?.alive || self.life !== this.life || m.snapshot.roundId !== this.round) {
-          this.pending = [];
+          this.pending = [];this.inputTimes.clear();
           this.unsent = [];
           this.sequence = ack;
           this.sentSequence = ack;
@@ -267,6 +271,7 @@ export class MultiplayerClient {
         }
       } else if (m.type === 'chat') {
         this.onChat(m);
+      } else if(m.type==='melee'){if(m.event.roundId===this.latest?.roundId&&this.firstCombatEvent(m.event.id))this.onMelee(m.event);
       } else if (m.type === 'shot') {
         if (m.shot.roundId === this.latest?.roundId && this.firstCombatEvent(m.shot.id)) this.onShot(m.shot);
       } else if (m.type === 'elimination') {
@@ -296,7 +301,7 @@ export class MultiplayerClient {
       this.stopTimers();
       this.cancelSpawn('Connection interrupted. Try spawning again after reconnection.');
       this.socket = null;
-      this.pending = [];
+      this.pending = [];this.inputTimes.clear();
       this.unsent = [];
       if (this.stopped || this.fatal) return;
       if (event.code === 4001) {
@@ -375,13 +380,14 @@ export class MultiplayerClient {
 
   fixedInput(player: PlayerController, intent: MoveIntent, combat: CombatIntent = NO_COMBAT): void {
     if (this.state !== 'connected' || !this.latest?.players.find((p) => p.id === this.selfId)?.alive) return;
+    stepMelee(this.melee,Math.floor(Date.now()+this.clockOffset),combat,this.latest?.players.find(p=>p.id===this.selfId)?.combat.gun?.action==='idle');
     const yaw = Math.atan2(Math.sin(player.yaw), Math.cos(player.yaw));
     // No need to stream 120 identical standing frames per second. The room's
     // neutral input still settles gravity/friction, and heartbeats maintain liveness.
     if (player.grounded && Math.hypot(player.velocity.x, player.velocity.y, player.velocity.z) < 0.001
       && player.crouch === 0 && !intent.crouch && !player.sliding && player.slideCooldown === 0 && !this.lastSlide && !intent.slide && !intent.jumpPressed && intent.x === 0 && intent.z === 0
       && !intent.aim && !this.lastAim && !intent.lean && !this.lastLean && player.lean === 0
-      && !combat.grenadeCancel && !combat.grenade && !this.lastCombat.grenade && !combat.trigger && !combat.reload && !this.lastCombat.trigger && !this.lastCombat.reload
+      && !combat.melee && !this.lastCombat.melee && !combat.grenadeCancel && !combat.grenade && !this.lastCombat.grenade && !combat.trigger && !combat.reload && !this.lastCombat.trigger && !this.lastCombat.reload
       && yaw === this.lastYaw && player.pitch === this.lastPitch) return;
     if (this.pending.length >= 120) {
       if (Date.now() - this.lastBackpressure >= 1000) {
@@ -399,6 +405,7 @@ export class MultiplayerClient {
     this.lastLean = intent.lean ?? 0;
     this.lastCombat = { ...combat };
     const frame: InputFrame = { seq: ++this.sequence, yaw, pitch: player.pitch, intent: { ...intent }, combat: { ...combat } };
+    this.inputTimes.set(frame.seq,Math.floor(Date.now()+this.clockOffset));
     this.pending.push(frame);
     this.unsent.push(frame);
   }
@@ -406,18 +413,24 @@ export class MultiplayerClient {
   reconcile(player: PlayerController, snapshot: Snapshot, gun?: Weapon): void {
     const self = snapshot.players.find((p) => p.id === this.selfId);
     if (!self?.alive) return;
+    this.melee=structuredClone(self.combat.melee??createMeleeState());
+    for(const seq of this.inputTimes.keys())if(seq<=self.ack)this.inputTimes.delete(seq);
     const yaw = player.yaw, pitch = player.pitch;
     player.restore(self.motion);
-    player.weaponClearance = self.weapon;
+    player.weaponClearance = meleeBlocked(this.melee)?null:self.weapon;
     if (gun && self.combat.gun) gun.restore(self.combat.gun);
     let trigger = self.combat.triggerHeld, reload = self.combat.reloadHeld;
     for (const frame of this.pending) {
       if (frame.seq <= self.ack) continue;
+      // Movement uses the equipment at the start of the tick, just like authority.
+      player.weaponClearance = meleeBlocked(this.melee)?null:self.weapon;
+      stepMelee(this.melee,Math.max(this.melee.startedAt,this.inputTimes.get(frame.seq)??snapshot.serverTime),frame.combat,gun?.action==='idle');
+      const blocked=meleeBlocked(this.melee);
       player.yaw = frame.yaw;
       player.pitch = frame.pitch;
       player.fixedUpdate(FIXED_DT, frame.intent);
-      gun?.update(FIXED_DT, { trigger: frame.combat.trigger, triggerPressed: frame.combat.trigger && !trigger,
-        reloadPressed: frame.combat.reload && !reload, aim: frame.intent.aim,
+      gun?.update(FIXED_DT, { trigger: !blocked&&frame.combat.trigger, triggerPressed: !blocked&&frame.combat.trigger && !trigger,
+        reloadPressed: !blocked&&frame.combat.reload && !reload, aim: !blocked&&frame.intent.aim,
         moveFactor: player.horizontalSpeed / MOVEMENT.weaponMoveReference, airborne: !player.grounded, sprinting: false });
       trigger = frame.combat.trigger; reload = frame.combat.reload;
     }
@@ -452,7 +465,7 @@ export class MultiplayerClient {
     if (forget) this.token = '';
     this.saveToken();
     this.latest = null;this.environment=null;
-    this.pending = [];
+    this.pending = [];this.inputTimes.clear();
     this.unsent = [];
     this.reject?.(new Error('Connection cancelled'));
     this.reject = this.resolve = null;

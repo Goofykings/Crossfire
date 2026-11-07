@@ -33,7 +33,7 @@ export class ExplosionBurst {
       sps.setParticles(); return sps;
     };
     this.fire = batch('explosion-fire', 4 * 8, false);
-    this.glow = batch('explosion-additive', 4 * 12, true);
+    this.glow = batch('explosion-additive', 4 * 32, true);
     const ringMat = new StandardMaterial('explosion-shockwave', scene);
     ringMat.disableLighting = true; ringMat.diffuseColor = Color3.Black(); ringMat.emissiveColor = new Color3(1, .3, .04);
     ringMat.alphaMode = Constants.ALPHA_ADD; ringMat.disableDepthWrite = true;
@@ -59,7 +59,7 @@ export class ExplosionBurst {
       const e = burstEnvelope(event ? now - event.at : 1000);
       if (event && e.age >= .55) this.slots[slot] = null;
       const position = event ? new Vector3(event.position.x, event.position.y + .45, event.position.z) : Vector3.Zero();
-      const lobes = reduced ? 4 : 8, sparks = reduced ? 4 : 10;
+      const lobes = reduced ? 4 : 8, sparks = reduced ? 4 : 30;
       for (let i = 0; i < 8; i++) {
         const p = this.fire.particles[slot * 8 + i], angle = i * 2.399963 + slot;
         const radius = (.3 + (i % 3) * .25) * e.expansion;
@@ -68,8 +68,8 @@ export class ExplosionBurst {
         const core = i % 3 === 0;
         p.color!.set(1, core ? Math.max(.15, .65 - e.age) : .19, core ? .08 : .018, i < lobes ? e.fire * (core ? .92 : .8) : 0);
       }
-      for (let i = 0; i < 12; i++) {
-        const p = this.glow.particles[slot * 12 + i], core = i < 2;
+      for (let i = 0; i < 32; i++) {
+        const p = this.glow.particles[slot * 32 + i], core = i < 2;
         const angle = i * 2.399963 + slot, speed = 2 + i % 4;
         p.position.copyFrom(position);
         if (core) p.position.y += (i ? .5 : .2) * e.expansion;
@@ -105,7 +105,7 @@ export class ExplosionBurst {
     this.glow.mesh.setEnabled(this.slots.some(event => !!event && burstEnvelope(now - event.at).sparks > 0));
     this.fire.setParticles(); this.glow.setParticles();
   }
-  inspect(now: number) { return { budget: 4, fireParticles: 32, additiveParticles: 48, lights: 2,
+  inspect(now: number) { return { budget: 4, fireParticles: 32, additiveParticles: 128, lights: 2,
     visibleFire: this.fire.particles.filter(p => p.scaling.x > 0).length,
     visibleGlow: this.glow.particles.filter(p => p.scaling.x > 0).length,
     active: this.slots.flatMap(e => e ? [{ id: e.id, ...burstEnvelope(now - e.at) }] : []) }; }

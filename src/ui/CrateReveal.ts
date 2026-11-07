@@ -47,6 +47,7 @@ export class CrateReveal {
   private readonly closeButton=node('button','btn','CONTINUE');private readonly skipButton=node('button','btn reveal-skip','SKIP');
   private engine:Engine|null=null;private scene:Scene|null=null;private abort:AbortController|null=null;
   private actions:RevealActions|null=null;private item:CosmeticDefinition|null=null;private phase:Phase='closed';
+  private returnFocus:HTMLElement|null=null;
   private t=0;private intro=0;private time=0;private motion=1;private timeScale=1;
   private crate:TransformNode|null=null;private lids:{mesh:TransformNode;rest:Vector3;seed:number}[]=[];
   private seam:StandardMaterial|null=null;private core:StandardMaterial|null=null;
@@ -68,7 +69,15 @@ export class CrateReveal {
     e.append(node('div','reveal-bg'),node('div','reveal-rarity-bg'),node('div','reveal-flash'),this.canvas,header,this.status,node('p','reveal-hint','DRAG TO ROTATE'),footer,this.skipButton);
     this.equipButton.onclick=()=>void this.equip();this.againButton.onclick=()=>{if(this.actions?.canOpenAgain())void this.start(this.actions);};
     this.closeButton.onclick=()=>this.finish();this.skipButton.onclick=()=>this.skip();
-    e.addEventListener('keydown',ev=>{if(ev.key==='Escape'){ev.stopPropagation();if(this.phase==='opening')this.skip();else if(this.phase!=='loading'&&this.phase!=='waiting')this.finish();}});
+    e.addEventListener('keydown',ev=>{if(ev.key==='Escape'){ev.stopPropagation();if(this.phase==='opening')this.skip();else if(this.phase!=='loading'&&this.phase!=='waiting')this.finish();}
+      if(ev.key==='Tab'){
+        const controls=[...e.querySelectorAll<HTMLElement>('button:not(:disabled):not([hidden]), [tabindex="0"]')];
+        const index=controls.indexOf(document.activeElement as HTMLElement);
+        if(!controls.length){ev.preventDefault();e.focus();}
+        else if(ev.shiftKey&&index<=0){ev.preventDefault();controls.at(-1)!.focus();}
+        else if(!ev.shiftKey&&(index<0||index===controls.length-1)){ev.preventDefault();controls[0].focus();}
+      }
+    });
     this.canvas.addEventListener('pointerdown',ev=>{if(this.phase!=='hero')return;this.canvas.setPointerCapture(ev.pointerId);this.drag={active:true,x:ev.clientX,y:ev.clientY,lastX:ev.clientX,lastY:ev.clientY,at:performance.now()};this.yaw.v=this.pitch.v=0;e.classList.add('dragging');});
     this.canvas.addEventListener('pointermove',ev=>{if(!this.drag.active)return;const dx=ev.clientX-this.drag.lastX,dy=ev.clientY-this.drag.lastY,now=performance.now(),dt=Math.max(.008,(now-this.drag.at)/1000);
       this.yaw.x+=dx*.011;this.pitch.x=Math.max(-.75,Math.min(.75,this.pitch.x+dy*.007));this.yaw.v=dx*.011/dt;this.pitch.v=dy*.007/dt;this.drag.lastX=ev.clientX;this.drag.lastY=ev.clientY;this.drag.at=now;});
@@ -81,10 +90,12 @@ export class CrateReveal {
 
   /** Opens the overlay with a closed crate and asks the server for the reward. */
   async start(actions:RevealActions):Promise<void>{
+    if(this.element.hidden)this.returnFocus=document.activeElement instanceof HTMLElement?document.activeElement:null;
+    this.element.inert=false;
     this.reset();this.actions=actions;const abort=new AbortController();this.abort=abort;const {signal}=abort;
     this.motion=matchMedia('(prefers-reduced-motion: reduce)').matches?0:1;this.timeScale=this.motion?1:1.6;
     const e=this.element;e.hidden=false;e.className='crate-reveal';e.dataset.phase=this.phase='loading';this.status.textContent='';this.setControls(false);
-    e.style.setProperty('--reveal','#5c7cff');requestAnimationFrame(()=>e.classList.add('visible'));e.focus({preventScroll:true});
+    e.style.setProperty('--reveal','#5c7cff');requestAnimationFrame(()=>{if(!signal.aborted&&!e.hidden)e.classList.add('visible');});e.focus({preventScroll:true});
     try{
       await this.buildScene(signal);
       this.phase='waiting';e.dataset.phase='waiting';
@@ -102,7 +113,7 @@ export class CrateReveal {
       this.closeButton.hidden=false;this.closeButton.textContent='BACK';this.closeButton.focus();
     }
   }
-  close():void{this.reset();this.element.hidden=true;this.element.classList.remove('visible');this.phase='closed';this.actions=null;}
+  close():void{const restore=this.element.contains(document.activeElement);this.reset();this.element.inert=true;this.element.hidden=true;this.element.classList.remove('visible');this.phase='closed';this.actions=null;if(restore&&this.returnFocus?.isConnected&&!this.returnFocus.closest('[inert]'))this.returnFocus.focus({preventScroll:true});this.returnFocus=null;}
   private finish():void{const actions=this.actions;this.close();actions?.onClose();}
   private skip():void{if(this.phase==='opening'&&this.t<REVEAL.burst+REVEAL.controls)this.t=Math.max(this.t,REVEAL.burst+.9);}
 

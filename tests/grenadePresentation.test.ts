@@ -36,7 +36,7 @@ it('shows a just-received flash even after a slow frame, then cleans up by its a
     expect(view.inspect().burst.visibleGlow).toBe(24);
     view.setReduced(false);view.update(0,10930,world);
     expect(view.inspect().burst.visibleFire).toBe(32);
-    expect(view.inspect().burst.visibleGlow).toBe(48);
+    expect(view.inspect().burst.visibleGlow).toBe(128);
     view.clear();expect(view.inspect().projectiles).toBe(0);
     expect(view.inspect().burst.visibleFire).toBe(0);
     expect(view.inspect().burst.visibleGlow).toBe(0);

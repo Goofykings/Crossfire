@@ -1,3 +1,4 @@
+import {createMeleeState,stepMelee,meleeBlocked,traceMelee,MELEE} from '../../shared/melee';
 import {FIXED_DT,MOVEMENT,PLAYER_MAX_HEALTH} from '../config/constants';
 import {PlayerController,NO_INTENT,type Vec3} from '../player/PlayerController';
 import {WEAPONS,Weapon,type WeaponId} from '../weapons/Weapon';
@@ -15,7 +16,7 @@ import {awardElimination,expireCombo,resetCombo,finalizeRound,type RoundStanding
 import {DamageContributions,ASSIST_POINTS} from '../../shared/assists';
 import {unsafeMovement} from '../../shared/movementSafety';
 import {GrenadeCharge} from '../../shared/grenadeCharge';
-import {GRENADE,GRENADE_SMOKE_MS,throwGrenade,advanceGrenade,blastDamage,type GrenadeState,type GrenadeExplosion,type GrenadeEvent} from '../../shared/grenades';
+import {GRENADE,GRENADE_SMOKE_MS,throwGrenade,advanceGrenade,blastDamage,grenadeKnockback,type GrenadeState,type GrenadeExplosion,type GrenadeEvent} from '../../shared/grenades';
 import type {EnvironmentSimulation,EnvironmentFrame} from '../../shared/environment';
 import {defaultCosmetic} from '../../shared/cosmetics';
 import {PracticeNavigation} from './Navigation';
@@ -23,7 +24,7 @@ import {BotBrain,type BotContext} from './BotBrain';
 import {PRACTICE_POLICY,PracticeRandom,validPractice,type PracticeSetup} from './config';
 import type {PracticeActor} from './types';
 import {smokeObscures} from '../weapons/grenadeSmoke';
-export type PracticeEvent={type:'shot';shot:ShotResult}|{type:'elimination';elimination:Elimination}|{type:'grenade';event:GrenadeEvent};
+export type PracticeEvent={type:'melee';event:import('../../shared/protocol').MeleeResult}|{type:'shot';shot:ShotResult}|{type:'elimination';elimination:Elimination}|{type:'grenade';event:GrenadeEvent};
 export interface PracticeWorld {world:CollisionWorld;layout:MapLayout;revision:string;environment?:EnvironmentSimulation}
 /** Browser-local authority. No fetch/WebSocket/storage/profile/reward adapter exists here.
  * Orchestration is local; movement, hitscan, damage, spread, grenades, regeneration,
@@ -32,26 +33,26 @@ export class PracticeSimulation {
  readonly policy=PRACTICE_POLICY;readonly selfId='practice-player';readonly actors:PracticeActor[]=[];readonly nav:PracticeNavigation;
  readonly random:PracticeRandom;readonly events:PracticeEvent[]=[];readonly roundId:number;
  now:number;started=false;endsAt:number|null=null;result:RoundResult|null=null;private serial=0;private environmentSeq=0;
- readonly teamScores={blue:0,red:0};private readonly damage=new DamageSystem();private readonly contributions=new DamageContributions();private botContext:BotContext;
+ readonly teamScores={blue:0,red:0};private readonly damage=new DamageSystem();private readonly contributions=new DamageContributions();private botContext:BotContext;private nextBotGrenade=0;
  grenades:GrenadeState[]=[];explosions:GrenadeExplosion[]=[];
  constructor(readonly setup:PracticeSetup,readonly data:PracticeWorld,name:string,options:{seed?:number;now?:number;roundId?:number;navigation?:PracticeNavigation}={}){
   if(!validPractice(setup))throw Error('Invalid Practice settings.');this.now=options.now??Date.now();this.roundId=options.roundId??1;this.random=new PracticeRandom(options.seed??12345);this.nav=options.navigation??new PracticeNavigation(data.world,data.layout);
   this.actors.push(this.create(this.selfId,name,setup.mode==='teams'?'blue':null));
   for(let i=0;i<setup.bots;i++)this.actors.push(this.create('practice-bot-'+(i+1),'Bot '+(i+1),setup.mode==='teams'?(i%2===0?'red':'blue'):null));
   for(const a of this.actors.slice(1))a.brain=new BotBrain(a,setup.difficulty,this.random);
-  this.botContext={actors:this.actors,nav:this.nav,now:this.now,mode:setup.mode,random:this.random,switchWeapon:(a,w)=>this.switchWeapon(a,w),obscured:(from,to)=>this.explosions.some(e=>smokeObscures(from,to,e.position,this.now-e.at))};
+  this.botContext={actors:this.actors,nav:this.nav,now:this.now,mode:setup.mode,random:this.random,reserveGrenade:()=>{if(this.now<this.nextBotGrenade)return false;this.nextBotGrenade=this.now+3500;return true;},switchWeapon:(a,w)=>this.switchWeapon(a,w),obscured:(from,to)=>this.explosions.some(e=>smokeObscures(from,to,e.position,this.now-e.at))};
  }
  private id(kind:string){return `practice:${this.roundId}:${kind}:${++this.serial}`;}
  private create(id:string,name:string,team:'blue'|'red'|null):PracticeActor{
   const controller=new PlayerController(this.data.world);
-  return{controller,gun:null,brain:null,input:null,charge:new GrenadeCharge(),state:{id,name,team,motion:controller.capture(),ack:0,alive:false,health:100,life:0,weapon:null,combat:{gun:null,triggerHeld:false,reloadHeld:false,aimHeld:false,grenadeHeld:false},grenades:GRENADE.perLife,score:0,kills:0,deaths:0,assists:0,comboCount:0,comboUntil:null,lastPlayedRound:null,lastPlayedTeam:null,death:null,regenAt:null}};
+  return{controller,gun:null,brain:null,input:null,charge:new GrenadeCharge(),state:{id,name,team,motion:controller.capture(),ack:0,alive:false,health:100,life:0,weapon:null,combat:{melee:createMeleeState(),gun:null,triggerHeld:false,reloadHeld:false,aimHeld:false,grenadeHeld:false},grenades:GRENADE.perLife,score:0,kills:0,deaths:0,assists:0,comboCount:0,comboUntil:null,lastPlayedRound:null,lastPlayedTeam:null,death:null,regenAt:null}};
  }
  spawn(a:PracticeActor,weapon:WeaponId):boolean{
   if(this.result||a.state.alive||a.state.death&&this.now<a.state.death.respawnAt)return false;
   const occupants=this.actors.filter(p=>p!==a&&p.state.alive).map(p=>({...p.controller.position,eyeHeight:p.controller.eyeHeight,opponent:!teammates(this.setup.mode,a.state.team,p.state.team)}));
   const spawn=selectSpawn(this.data.layout,this.data.world,occupants);if(!spawn)return false;
   a.controller.teleport({x:spawn.pos[0],y:spawn.pos[1],z:spawn.pos[2]},spawn.heading);a.controller.weaponClearance=weapon;a.gun=new Weapon(WEAPONS.find(w=>w.id===weapon)!);a.charge.reset();a.input=null;
-  Object.assign(a.state,{alive:true,health:PLAYER_MAX_HEALTH,life:a.state.life+1,death:null,regenAt:null,grenades:GRENADE.perLife,weapon,cosmeticId:defaultCosmetic(weapon),lastPlayedRound:this.roundId,lastPlayedTeam:a.state.team,combat:{gun:a.gun.capture(),triggerHeld:false,reloadHeld:false,aimHeld:false,grenadeHeld:false}});
+  Object.assign(a.state,{alive:true,health:PLAYER_MAX_HEALTH,life:a.state.life+1,death:null,regenAt:null,grenades:GRENADE.perLife,weapon,cosmeticId:defaultCosmetic(weapon),lastPlayedRound:this.roundId,lastPlayedTeam:a.state.team,combat:{melee:createMeleeState(),gun:a.gun.capture(),triggerHeld:false,reloadHeld:false,aimHeld:false,grenadeHeld:false}});
   resetCombo(a.state);this.contributions.clear(a.state.id);a.brain?.reset(this.now);return true;
  }
  spawnHuman(weapon:WeaponId):Snapshot{
@@ -61,9 +62,9 @@ export class PracticeSimulation {
   return this.snapshot();
  }
  switchWeapon(a:PracticeActor,weapon:WeaponId){if(!a.state.alive||a.gun?.reloading||a.state.weapon===weapon)return;a.gun=new Weapon(WEAPONS.find(w=>w.id===weapon)!);a.gun.equip();a.state.weapon=weapon;a.state.cosmeticId=defaultCosmetic(weapon);a.controller.weaponClearance=weapon;a.state.combat={gun:a.gun.capture(),triggerHeld:false,reloadHeld:false,aimHeld:false,grenadeHeld:false};}
- private eliminate(victim:PracticeActor,killer:PracticeActor|null,head=false,direction:Vec3|null=null,weapon?:'grenade'){
+ private eliminate(victim:PracticeActor,killer:PracticeActor|null,head=false,direction:Vec3|null=null,weapon?:'grenade'|'melee'){
   if(!victim.state.alive)return;const id=this.id('death'),at=Math.floor(this.now),credited=killer&&killer!==victim?killer:null;
-  victim.state.alive=false;victim.state.health=0;victim.state.regenAt=null;victim.state.deaths++;victim.charge.reset();resetCombo(victim.state);victim.input=null;
+  victim.state.alive=false;victim.state.combat.melee=createMeleeState();victim.state.health=0;victim.state.regenAt=null;victim.state.deaths++;victim.charge.reset();resetCombo(victim.state);victim.input=null;
   if(victim.brain){victim.brain.state='respawning';victim.brain.visible=false;victim.brain.targetId=null;victim.brain.path=[];victim.brain.goal=null;}
   const assists:{id:string;name:string;points:50}[]=[];
   for(const source of this.contributions.take(victim.state.id,victim.state.life,this.roundId,at)){
@@ -75,10 +76,10 @@ export class PracticeSimulation {
   const event:Elimination={id,at,respawnAt:at+RESPAWN_DELAY_MS,roundId:this.roundId,victimId:victim.state.id,victimName:victim.state.name,victimLife:victim.state.life,victimTeam:victim.state.team,killerId:killer?.state.id??null,killerName:killer?.state.name??null,killerTeam:killer?.state.team??null,weapon:weapon??killer?.state.weapon??null,head,direction,award,assists};
   victim.state.death=event;this.events.push({type:'elimination',elimination:event});
  }
- private apply(victim:PracticeActor,killer:PracticeActor|null,amount:number,zone:'head'|'body',point:Vec3,direction:Vec3,weapon:WeaponId|'grenade'):number{
+ private apply(victim:PracticeActor,killer:PracticeActor|null,amount:number,zone:'head'|'body',point:Vec3,direction:Vec3,weapon:WeaponId|'grenade'|'melee'):number{
   let applied=0;this.damage.tryApply({id:killer?.state.id??'environment',position:()=>point},{id:victim.state.id,alive:victim.state.alive,position:()=>victim.controller.position,applyDamage:damage=>{
    applied=Math.min(victim.state.health,damage);if(killer)this.contributions.damage(victim.state.id,victim.state.life,this.roundId,killer.state.id,killer.state.life,applied,this.now);
-   victim.state.health-=applied;victim.state.regenAt=this.now+REGEN_DELAY_MS;if(victim.state.health===0)this.eliminate(victim,killer,zone==='head',direction,weapon==='grenade'?'grenade':undefined);
+   victim.state.health-=applied;victim.state.regenAt=this.now+REGEN_DELAY_MS;if(victim.state.health===0)this.eliminate(victim,killer,zone==='head',direction,weapon==='grenade'||weapon==='melee'?weapon:undefined);
   }},{bodyDamage:amount,zone,point,weapon});return applied;
  }
  private fire(a:PracticeActor,spread:number,control:InputFrame['combat']){
@@ -97,9 +98,9 @@ export class PracticeSimulation {
    advanceGrenade(g,this.now,this.data.world,(position,speed)=>{if(speed>1)this.events.push({type:'grenade',event:{kind:'bounce',id:this.id('bounce'),grenadeId:g.id,roundId:this.roundId,at:Math.floor(this.now),position:{...position},strength:Math.min(1,speed/12)}});});
    if(this.now<g.explodeAt)continue;this.grenades=this.grenades.filter(v=>v!==g);const owner=this.actors.find(a=>a.state.id===g.ownerId)??null;
    const blast:GrenadeExplosion={id:this.id('blast'),grenadeId:g.id,ownerId:g.ownerId,ownerLife:g.ownerLife,roundId:this.roundId,at:Math.floor(this.now),position:{...g.position},hits:[]};
-   for(const victim of this.actors){if(!victim.state.alive||victim!==owner&&teammates(this.setup.mode,owner?.state.team??null,victim.state.team))continue;
+   for(const victim of this.actors){if(!victim.state.alive||victim.state.id===g.ownerId||teammates(this.setup.mode,owner?.state.team??null,victim.state.team))continue;
     const amount=blastDamage(this.data.world,g.position,victim.controller.capture());if(amount<=0)continue;const p=victim.controller.position,dx=p.x-g.position.x,dy=p.y+victim.controller.eyeHeight-g.position.y,dz=p.z-g.position.z,n=Math.hypot(dx,dy,dz)||1,direction={x:dx/n,y:dy/n,z:dz/n};
-    const applied=this.apply(victim,owner,amount,'body',p,direction,'grenade');blast.hits.push({id:victim.state.id,life:victim.state.life,amount:applied,health:victim.state.health,killed:!victim.state.alive,direction});
+    const applied=this.apply(victim,owner,amount,'body',p,direction,'grenade');if(applied>0&&victim.state.alive)grenadeKnockback(victim.controller,g.position,applied);if(applied>0)blast.hits.push({id:victim.state.id,life:victim.state.life,amount:applied,health:victim.state.health,killed:!victim.state.alive,direction});
    }
    if(owner&&!owner.state.alive)resetCombo(owner.state);this.explosions.push(blast);if(this.explosions.length>64)this.explosions.shift();this.events.push({type:'grenade',event:{kind:'explode',...blast}});
   }
@@ -112,15 +113,23 @@ export class PracticeSimulation {
   for(const a of this.actors){
    if(!a.state.alive)continue;const frame=a===this.actors[0]?input:a.brain?.input(this.botContext,dt)??null;a.input=frame;
    if(frame){a.controller.yaw=frame.yaw;a.controller.pitch=frame.pitch;a.state.ack=frame.seq;}
-   a.controller.weaponClearance=a.state.weapon;a.controller.fixedUpdate(dt,frame?.intent??{...NO_INTENT});
+   a.controller.weaponClearance=meleeBlocked(a.state.combat.melee)?null:a.state.weapon;a.controller.fixedUpdate(dt,frame?.intent??{...NO_INTENT});
    if(unsafeMovement(a.controller.position,this.data.layout)||a.controller.position.y<MOVEMENT.killY||a.brain&&a.brain.stuckFor>10)this.eliminate(a,null);
   }
   // Move everyone first, exactly like the Worker; resolve all weapons from this pose.
   for(const a of this.actors){
    if(!a.state.alive||!a.gun)continue;const f=a.input,control=f?.combat??NO_COMBAT,c=a.state.combat;
-   const charge=a.charge.update(f?!!control.grenade:undefined,this.now,dt,a.state.grenades>0&&a.gun.action==='idle'&&!a.controller.sliding,!!control.grenadeCancel);
+   c.melee??=createMeleeState();
+   const contact=stepMelee(c.melee,Math.floor(this.now),f?.combat,a.gun.action==='idle');
+   const blocked=meleeBlocked(c.melee);if(blocked)a.charge.reset();
+   if(contact){const event:import('../../shared/protocol').MeleeResult={id:this.id('melee'),roundId:this.roundId,shooterId:a.state.id,life:a.state.life,at:Math.floor(this.now),stage:contact.stage,hits:[]};
+    const found=traceMelee(this.data.world,a.controller.capture(),this.actors.filter(t=>t!==a&&t.state.alive).map(t=>({value:t,motion:t.controller.capture()})));
+    if(found&&!teammates(this.setup.mode,a.state.team,found.target.state.team)){const t=found.target,amount=this.apply(t,a,MELEE.damage,'body',found.hit.point,found.hit.direction,'melee');event.hits.push({id:t.state.id,life:t.state.life,amount,health:t.state.health,head:false,killed:!t.state.alive,direction:found.hit.direction});}
+    this.events.push({type:'melee',event});
+   }
+   const charge=a.charge.update(f?!!control.grenade:undefined,this.now,dt,!blocked&&a.state.grenades>0&&a.gun.action==='idle'&&!a.controller.sliding,!!control.grenadeCancel);
    if(charge!==null&&this.grenades.length<32){const p=a.controller,g=throwGrenade(this.data.world,p.leanEye(),{x:p.position.x,y:p.position.y+p.eyeHeight,z:p.position.z},p.lookDirection(),p.velocity,{id:this.id('grenade'),ownerId:a.state.id,ownerLife:a.state.life,roundId:this.roundId,at:this.now},charge);if(g){a.state.grenades--;this.grenades.push(g);this.events.push({type:'grenade',event:{kind:'throw',id:this.id('throw'),projectile:g}});}}
-   const events=a.gun.update(dt,{trigger:control.trigger,triggerPressed:control.trigger&&!c.triggerHeld,reloadPressed:control.reload&&!c.reloadHeld,aim:f?.intent.aim??c.aimHeld,moveFactor:a.controller.horizontalSpeed/MOVEMENT.weaponMoveReference,airborne:!a.controller.grounded,sprinting:false});
+   const events=a.gun.update(dt,{trigger:!blocked&&control.trigger,triggerPressed:!blocked&&control.trigger&&!c.triggerHeld,reloadPressed:!blocked&&control.reload&&!c.reloadHeld,aim:!blocked&&(f?.intent.aim??c.aimHeld),moveFactor:a.controller.horizontalSpeed/MOVEMENT.weaponMoveReference,airborne:!a.controller.grounded,sprinting:false});
    c.triggerHeld=control.trigger;c.reloadHeld=control.reload;c.aimHeld=f?.intent.aim??false;c.grenadeHeld=!!control.grenade;
    for(const event of events)if(event.type==='fire')this.fire(a,event.spread,control);
   }

@@ -1,3 +1,4 @@
+import {meleeClip,meleeBlocked} from '../../shared/melee';
 import { visualCosmetic } from '../rendering/CosmeticAssets';
 import { Color3, Frustum, Material, Matrix, MeshBuilder, Quaternion, StandardMaterial, TransformNode, Vector3, type Scene, type Mesh, type BaseTexture } from '@babylonjs/core';
 import type { Elimination, PlayerState, Snapshot } from '../../shared/protocol';
@@ -8,24 +9,33 @@ import { animationVelocity } from './PlayerAnimation';
 import { deathPose } from './CombatPresentation';
 import { PlayerSilhouettes } from '../rendering/PlayerSilhouettes';
 import { CharacterWeaponLibrary, type CharacterWeapon } from './CharacterWeapon';
+import { MeleeLibrary, type CharacterMelee } from './melee/MeleeAssets';
+import type { MeleeClipName, MeleeStage } from './melee/MeleeAnimation';
 import { presentedAction, ShotTimeline } from './RemoteTimeline';
 import type { MaterialLibrary } from '../rendering/MaterialLibrary';
 import { WEAPONS, type WeaponId, type WeaponState } from '../weapons/Weapon';
-import { MOVEMENT } from '../config/constants';
+import { MOVEMENT, PLAYER_MAX_HEALTH } from '../config/constants';
 import { LEAN_ANGLE, leanOffset } from '../../shared/lean';
+import {DeathMotion} from './DeathMotion';
+import type {CollisionWorld} from '../physics/CollisionWorld';
+import type {AimTarget} from '../player/AimAssist';
 
 interface Sample { at: number; player: PlayerState }
 interface Avatar {
   root: TransformNode; look: TransformNode; samples: Sample[]; seen: number;
-  meshes: Mesh[]; label: HTMLDivElement; character: CharacterInstance | null;
+  meshes: Mesh[]; label: HTMLDivElement; nameLabel:HTMLSpanElement; healthFill:HTMLSpanElement; shownHealth:number; character: CharacterInstance | null;
   friendly: boolean; visible: boolean; clearFor: number; height: number;
   lean: number;
   weapon: CharacterWeapon | null;
+  /** Dual daggers (created on first use; survive gun swaps, hidden at death). */
+  melee?: CharacterMelee | null;
+  meleeKey?:string;
+  meleeDebug?:boolean;
   loadingCosmetic?:string; failedCosmetic?:string;
   weaponAds: number;
   /** Server-confirmed shots waiting for the interpolated pose to reach them. */
   shots: ShotTimeline;
-  life: number; death?: { elapsed: number; started: number; direction: Elimination['direction']; rotation: Quaternion; baseY: number; materials: Material[]; textures: Set<BaseTexture> };
+  life: number; death?: { elapsed: number; started: number; direction: Elimination['direction']; rotation: Quaternion; motion:DeathMotion; materials: Material[]; textures: Set<BaseTexture> };
 }
 
 /** Interval between shots at the weapon's cadence (milliseconds). */
@@ -56,14 +66,18 @@ export class RemotePlayers {
   private spectatedId: string | null = null;
   private outlinesEnabled = true;
   private visibilityWorld: VisibilityWorld | null = null;
+  private collisionWorld:CollisionWorld|null=null;
   private dt = 1 / 60;
   private animationDetail = 1;
   private silhouettes: PlayerSilhouettes | null = null;
   readonly characters: CharacterAssetLibrary;
   private readonly weapons: CharacterWeaponLibrary;
+  /** Dagger models and clips for this scene (also used by the first-person MeleeView). */
+  readonly meleeLibrary: MeleeLibrary;
   constructor(private readonly scene: Scene, uiRoot: HTMLElement, materials: MaterialLibrary) {
     this.characters = new CharacterAssetLibrary(scene);
     this.weapons = new CharacterWeaponLibrary(scene, materials);
+    this.meleeLibrary = new MeleeLibrary(scene);
     this.labels.className = 'remote-player-labels';
     this.labels.setAttribute('aria-hidden', 'true');
     uiRoot.append(this.labels);
@@ -78,6 +92,7 @@ export class RemotePlayers {
       const eye = camera?.globalPosition;
       for (const a of this.avatars.values()) {
         a.character?.applyLean();
+        if(a.death)a.character?.poseDeath(a.death.elapsed);
         if (a.weapon && !a.death) {
           // Arm IK only for avatars that can be seen; their blend states still advance.
           a.weapon.posing = a.root.isEnabled() && (!planes || a.meshes.some((mesh) => { mesh.computeWorldMatrix(); return mesh.isInFrustum(planes); }));
@@ -90,16 +105,49 @@ export class RemotePlayers {
     });
   }
   async prepare(signal?: AbortSignal): Promise<void> {
-    await Promise.all([this.characters.load(signal), ...(['rifle', 'smg', 'shotgun', 'sniper'] as WeaponId[])
+    await Promise.all([this.characters.load(signal), this.meleeLibrary.load(signal), ...(['rifle', 'smg', 'shotgun', 'sniper'] as WeaponId[])
       .map((id) => this.weapons.load(id, signal))]);
   }
-  async ready(signal?: AbortSignal): Promise<void> { await Promise.all([this.characters.ready(signal), this.weapons.ready(signal)]); }
-  prepareVisibility(): void {
+  async ready(signal?: AbortSignal): Promise<void> {
+    await Promise.all([this.characters.ready(signal), this.weapons.ready(signal), this.meleeLibrary.whenReady(signal)]);
+  }
+  /** Dual-dagger presentation for one remote player (or every avatar with null): the combat
+   * sync calls this with the authoritative melee state; presentation only. */
+  presentMelee(id: string | null, command: 'equip' | 'unequip' | 'attack' | 'reset', stage?: MeleeStage): void {
+    for (const [key, a] of this.avatars) {
+      if (id !== null && key !== id) continue;
+      const melee = this.meleeFor(key, a);
+      if (!melee) continue;
+      a.meleeDebug=command!=='reset';
+      if (command === 'equip') melee.animator.equip();
+      else if (command === 'unequip') melee.animator.unequip();
+      else if (command === 'attack') melee.animator.attack(stage);
+      else melee.animator.reset();
+    }
+  }
+  /** Play a clip from a given elapsed time (late joiners / authoritative resync). */
+  syncMelee(id: string, clip: MeleeClipName, elapsed: number): void {
+    const a = this.avatars.get(id), melee = a && this.meleeFor(id, a);
+    if(a)a.meleeDebug=true;
+    if (melee && (melee.animator.clip !== clip || Math.abs(melee.animator.time - elapsed) > .1)) melee.animator.play(clip, elapsed);
+  }
+  inspectMelee(id?: string) {
+    const out: Record<string, unknown> = {};
+    // Avatars playing their death fade hold no daggers (put away at elimination).
+    for (const [key, a] of this.avatars) if ((!id || key === id) && !a.death) out[key] = a.weapon?.inspectMelee() ?? (a.melee ? a.melee.animator.inspect() : null);
+    return out;
+  }
+  private meleeFor(id: string, a: Avatar): CharacterMelee | null {
+    if (!a.melee && a.character && !a.death && this.meleeLibrary.ready) a.melee = this.meleeLibrary.createCharacterMelee(`remote-melee:${id}`);
+    return a.melee ?? null;
+  }
+  prepareVisibility(world?:CollisionWorld): void {
+    this.collisionWorld=world??null;
     this.visibilityWorld = VisibilityWorld.fromMeshes(this.scene.meshes);
     this.silhouettes ??= new PlayerSilhouettes(this.scene, this.scene.activeCamera!);
     this.silhouettes.setWorld(this.scene.meshes);
   }
-  releaseVisibility(): void { this.visibilityWorld = null; this.silhouettes?.clear(); }
+  releaseVisibility(): void { this.visibilityWorld = null;this.collisionWorld=null; this.silhouettes?.clear(); }
   silhouetteStats() { return this.silhouettes?.inspect() ?? null; }
   refreshEffects(): void { this.silhouettes?.keepLast(); }
   silhouetteInterior() { return this.silhouettes?.interiorPixels() ?? Promise.resolve([]); }
@@ -116,7 +164,7 @@ export class RemotePlayers {
     }
   }
   spectatePose(id: string): { position: Vector3; rotation: Quaternion; weapon: WeaponId; cosmeticId:string; gun: WeaponState;
-    speed: number; verticalSpeed: number; grounded: boolean; sliding: boolean; crouch: number } | null {
+    melee?:import('../../shared/melee').MeleeState;meleeCosmeticId?:string;speed: number; verticalSpeed: number; grounded: boolean; sliding: boolean; crouch: number } | null {
     const a = this.avatars.get(id);
     if (!a || a.death || !a.samples.length) return null;
     const player = a.samples.at(-1)!.player;
@@ -128,7 +176,7 @@ export class RemotePlayers {
       a.root.position.z + offset.z),
       rotation: Quaternion.RotationYawPitchRoll(a.root.rotation.y, a.look.rotation.x, -a.lean * LEAN_ANGLE),
       weapon: player.weapon, cosmeticId:visualCosmetic(player.weapon,player.cosmeticId).id, gun: { ...player.combat.gun, ads: a.weaponAds },
-      speed: Math.hypot(player.motion.velocity.x, player.motion.velocity.z), verticalSpeed: player.motion.velocity.y,
+      melee:player.combat.melee,meleeCosmeticId:player.meleeCosmeticId,speed: Math.hypot(player.motion.velocity.x, player.motion.velocity.z), verticalSpeed: player.motion.velocity.y,
       grounded: player.motion.grounded, sliding: player.motion.slideRemaining > 0, crouch };
   }
   setOutlinesEnabled(enabled: boolean): void { this.outlinesEnabled = enabled; }
@@ -142,6 +190,8 @@ export class RemotePlayers {
   }
   effectAnchor(id: string): TransformNode | null { const a=this.avatars.get(id);return a&&!a.death?a.root:null; }
   private remove(a: Avatar): void {
+    // The daggers hang from the character's hand bones: release them before the rig.
+    a.melee?.dispose(); a.melee = null;
     this.silhouettes?.remove(a.meshes); a.weapon?.dispose(); a.character?.dispose(); a.root.dispose(); a.label.remove();
     for (const material of a.death?.materials ?? []) material.dispose(false, false);
     for (const texture of a.death?.textures ?? []) texture.dispose();
@@ -162,12 +212,20 @@ export class RemotePlayers {
         copy.needDepthPrePass = true;
         materials.set(source, copy);
       }
-      mesh.material = copy;
+      // Keep the already compiled, lit material while the transparent skinning
+      // variant warms up. Swapping immediately rendered the falling body black
+      // during parallel shader compilation on a cold graphics cache.
+      const faded=copy;
+      void faded.forceCompilationAsync(mesh).then(()=>{
+        if(this.avatars.get(event.victimId)===a&&a.death&&!mesh.isDisposed())mesh.material=faded;
+      }).catch(()=>{ /* Retain the original lit material if the GPU rejects the fade variant. */ });
     }
-    a.death = { elapsed: 0, started: performance.now(), direction: event.direction, baseY: a.root.position.y,
+    a.death = { elapsed: 0, started: performance.now(), direction: event.direction, motion:new DeathMotion(a.root.position,event.direction,this.collisionWorld),
       rotation: Quaternion.FromEulerAngles(0, a.root.rotation.y, 0), materials: [...materials.values()], textures };
     a.label.hidden = true;
     this.silhouettes?.remove(a.meshes);
+    // The death fade clones character/gun materials only: put the daggers away at once.
+    if (a.melee) { a.melee.animator.reset(); a.melee.advance(0); a.melee.pair.update(a.melee.pose); }
   }
   snapshot(s: Snapshot, selfId: string): void {
     const self = s.players.find((p) => p.id === selfId);
@@ -197,8 +255,10 @@ export class RemotePlayers {
         }
         const label = document.createElement('div');
         label.className = 'remote-player-label'; label.dataset.playerId = player.id; label.hidden = true;
+        const nameLabel=document.createElement('span');nameLabel.className='remote-player-name';
+        const healthBar=document.createElement('span');healthBar.className='remote-player-health';const healthFill=document.createElement('span');healthBar.append(healthFill);label.append(nameLabel,healthBar);
         this.labels.append(label);
-        a = { root, look, samples: [], seen: performance.now(), label, character,
+        a = { root, look, samples: [], seen: performance.now(), label, nameLabel, healthFill, shownHealth:player.health/PLAYER_MAX_HEALTH, character,
           meshes, weapon: null, weaponAds: player.combat.gun?.ads ?? 0, shots: new ShotTimeline(), friendly: false, visible: false, clearFor: 0, height: 1.8, lean: 0, life: player.life };
         this.avatars.set(player.id, a);
         root.setEnabled(player.id !== this.spectatedId);
@@ -218,7 +278,8 @@ export class RemotePlayers {
         }
       }else if(!player.weapon){a.weapon?.dispose();a.weapon=null;}
       a.friendly = playerColor(s.match.mode, selfId, self?.team ?? null, player.id, player.team) === 'friendly';
-      if (a.label.textContent !== player.name) a.label.textContent = player.name;
+      if (a.nameLabel.textContent !== player.name) a.nameLabel.textContent = player.name;
+      a.label.dataset.health=String(player.health);a.label.dataset.maxHealth=String(PLAYER_MAX_HEALTH);
       a.label.dataset.relationship = a.friendly ? 'teammate' : 'opponent';
       a.seen = performance.now();
       a.samples.push({ at: s.serverTime, player });
@@ -235,13 +296,17 @@ export class RemotePlayers {
         const pose = deathPose(death.elapsed, death.direction);
         if (pose.done) { this.remove(a); this.avatars.delete(id); continue; }
         // Cross(up, fall) rotates the upright body away from the incoming shot.
-        a.root.rotationQuaternion = Quaternion.RotationAxis(new Vector3(pose.fall.z, 0, -pose.fall.x), pose.tip).multiply(death.rotation);
-        a.root.position.y = death.baseY + pose.lift;
+        death.motion.advance(dt);const body=death.motion;
+        a.root.rotationQuaternion = Quaternion.RotationAxis(new Vector3(body.fall.z, 0, -body.fall.x), body.angle).multiply(death.rotation);
+        const hip=new Vector3(0,.9,0).applyRotationQuaternion(a.root.rotationQuaternion);
+        a.root.position.set(body.center.x-hip.x,body.center.y-hip.y,body.center.z-hip.z);
         for (const material of death.materials) material.alpha = pose.opacity;
         continue;
       }
       if (performance.now() - a.seen > 4000) { this.remove(a); this.avatars.delete(id); continue; }
       const samples = a.samples;
+      a.shownHealth+=(samples.at(-1)!.player.health/PLAYER_MAX_HEALTH-a.shownHealth)*(1-Math.exp(-dt*18));
+      a.healthFill.style.transform=`scaleX(${Math.max(0,Math.min(1,a.shownHealth))})`;
       while (samples.length > 2 && samples[1].at < serverTime) samples.shift();
       const older = samples[0], newer = samples[1] ?? older;
       const k = Math.max(0, Math.min(1, (serverTime - older.at) / Math.max(1, newer.at - older.at)));
@@ -256,6 +321,16 @@ export class RemotePlayers {
       a.weapon?.setState({ pitch: a.look.rotation.x, ads: aimIntent(newer.player, gun?.action), airborne: !(k < .5 ? m.grounded : n.grounded),
         action: gun?.action ?? 'idle', progress: gun?.progress ?? 0 });
       if (a.shots.due(serverTime)) a.weapon?.fire();
+      const meleeState=(newer.player.combat.melee&&newer.player.combat.melee.startedAt<=serverTime?newer.player:older.player).combat.melee;
+      if(!a.meleeDebug&&meleeBlocked(meleeState)){
+        const melee=this.meleeFor(id,a),clip=meleeState&&meleeClip(meleeState),key=meleeState&&`${clip}:${meleeState.startedAt}:${meleeState.sequence}`;
+        if(melee&&clip&&key!==a.meleeKey){a.meleeKey=key;melee.animator.play(clip as MeleeClipName,Math.max(0,(serverTime-meleeState!.startedAt)/1000));}
+        melee?.pair.setCosmetic(newer.player.meleeCosmeticId);
+      }else if(!a.meleeDebug&&meleeState&&a.melee?.active){a.melee.animator.reset();a.meleeKey='';}
+      if (a.melee) {
+        a.melee.advance(dt);
+        if (a.weapon && a.weapon.melee !== a.melee) a.weapon.melee = a.melee;
+      }
       a.weapon?.advance(dt);
       const crouch = m.crouch + (n.crouch - m.crouch) * k;
       a.lean = m.lean + (n.lean - m.lean) * k;
@@ -322,6 +397,14 @@ export class RemotePlayers {
     return false;
   }
 
+  aimTargets():AimTarget[]{return [...this.avatars].flatMap(([id,a])=>{
+    const motion=a.samples.at(-1)?.player.motion;
+    return !a.death&&!a.friendly&&a.visible&&a.clearFor>=.04&&motion?[{id,point:{x:a.root.position.x,y:a.root.position.y+a.height*.68,z:a.root.position.z},velocity:{...motion.velocity},grounded:motion.grounded,sliding:motion.slideRemaining>0}]:[];
+  });}
+  aimVisible(target:AimTarget,eye:{x:number;y:number;z:number}):boolean{
+    const from=new Vector3(eye.x,eye.y,eye.z),to=new Vector3(target.point.x,target.point.y,target.point.z),delta=to.subtract(from),distance=delta.length();
+    return !!this.visibilityWorld&&!this.smokeObscures(from,to)&&!this.visibilityWorld.occluded(from,delta.scale(1/Math.max(.001,distance)),distance-.04);
+  }
   inspect() {
     return [...this.avatars].map(([id, a]) => ({ id, x: a.root.position.x, y: a.root.position.y, z: a.root.position.z,
       yaw: a.root.rotation.y, scale: a.root.scaling.x, height: a.height, lean: a.lean, friendly: a.friendly, visible: a.visible,

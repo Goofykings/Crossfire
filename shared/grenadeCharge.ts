@@ -11,6 +11,10 @@ export class GrenadeCharge {
   progress(now: number): number {
     return this.active ? Math.min(1, Math.max(0, Math.min(this.credited, now - this.started)) / GRENADE.chargeMs) : 0;
   }
+  /** HUD interpolation between input ticks; never used to authorize throw power. */
+  presentationProgress(now:number):number{
+    return this.active?Math.min(1,Math.max(0,Math.min(this.credited+Math.min(50,Math.max(0,now-this.seen)),now-this.started))/GRENADE.chargeMs):0;
+  }
   update(held: boolean | undefined, now: number, dt: number, allowed: boolean, cancel = false): number | null {
     if (cancel || !allowed || (this.active && now - this.seen > 400)) { this.reset(); return null; }
     if (held === undefined) return null;

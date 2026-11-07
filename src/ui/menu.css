@@ -1,0 +1,77 @@
+/* The same mounted header and account nodes serve all five main pages. */
+.home-header { gap:var(--nav-gap); }
+body[data-home-page] .home-header::before {
+  bottom:-20px;
+  background:linear-gradient(to bottom,#111923ac 0%,#11192380 45%,#11192335 78%,#11192300 100%);
+}
+.home-header .home-account { top:0;right:0;max-width:min(22vw,240px); }
+.home-account[hidden] { display:none; }
+.home-nav { height:60px;padding:8px 12px;width:min(764px,100%);flex-shrink:0; }
+#ui .home-nav .btn.nav-button { min-height:44px;min-width:0;font-size:15.4px;padding:10px 7px;border:0;box-shadow:none; }
+#ui .home-nav .nav-button::after { content:none; }
+#ui .home-nav .nav-button[aria-current='page'] { background:#b8c9df17;box-shadow:none; }
+#ui .home-nav .nav-button:first-child[aria-current='page'] { background:#4c78ae36; }
+#ui .home-nav .nav-button[aria-current='page']::before { background:#b9d0ee17; }
+
+/* Pages own their content, never a second navigation/account overlay. */
+#leaderboard { inset:0;padding-top:var(--home-content-top);background:#171c22;backdrop-filter:none;border-radius:0; }
+#leaderboard::before { content:none; }
+body[data-home-page='leaderboard'] #ui { background:transparent; }
+#leaderboard>.leaderboard-backdrop { position:absolute;filter:blur(8px) brightness(.46); }
+.leaderboard-heading { padding:0 8px; }
+.leaderboard-content { padding:8px 14px 18px; }
+.leaderboard-tabs { gap:12px; }
+.cosmetic-heading { padding:0 8px; }
+.locker-layout { grid-template-columns:112px minmax(0,1fr) 225px; }
+.cosmetic-categories { padding:9px 8px;gap:12px;scroll-padding-block:8px; }
+#ui .cosmetic-categories .btn { scroll-margin-block:8px; }
+#ui .cosmetic-categories .btn { min-height:44px;box-shadow:none; }
+#ui .cosmetic-categories .btn[aria-pressed='true'] { background:#b6c8df38;box-shadow:none;color:#fff; }
+.cosmetic-inventory { padding:10px;scroll-padding-block:8px; }
+.cosmetic-card,.equipped-item { scroll-margin-block:8px; }
+.cosmetic-equipped { padding:18px 14px;scroll-padding-block:8px; }
+.shop-content { padding:10px 14px; }
+/* Scroll panels reserve room for scaled controls and focus rings. Their actual
+ * scrolling is preserved; only animation spill on the other axis is clipped. */
+.settings-panel { padding:10px 14px;overflow-x:hidden; }
+#settings .settings-tabs { padding-top:8px;padding-bottom:8px;padding-left:8px;scroll-padding-block:8px; }
+#settings .settings-tabs .tab { scroll-margin-block:8px; }
+.room-list { padding:14px; }
+.room-shell { padding:clamp(24px,3vw,36px); }
+.practice-setup { grid-template-columns:minmax(0,1fr);min-width:0; }
+.practice-setup .room-options { display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr); }
+.practice-setup .room-options .btn { min-width:0;padding:13px 6px;font-size:clamp(10px,1.4vw,14px);letter-spacing:.04em; }
+.practice-setup .room-map { overflow-wrap:anywhere; }
+.practice-setup .practice-notice { min-width:0;overflow-wrap:anywhere; }
+
+/* Cross-browser styling for actual scroll containers, not every element. */
+:is(.home-nav,.leaderboard-content,.personal-stats,.cosmetic-inventory,.cosmetic-equipped,.cosmetic-categories,.shop-content,.settings-tabs,.settings-panel,.room-shell,.room-list,.challenge-list,.dropdown-list,.weapon-grid) {
+  scrollbar-width:thin;scrollbar-color:#aab7c45e #8d9aa30c;overscroll-behavior:contain;
+}
+:is(.home-nav,.leaderboard-content,.personal-stats,.cosmetic-inventory,.cosmetic-equipped,.cosmetic-categories,.shop-content,.settings-tabs,.settings-panel,.room-shell,.room-list,.challenge-list,.dropdown-list,.weapon-grid)::-webkit-scrollbar { width:7px;height:7px; }
+:is(.home-nav,.leaderboard-content,.personal-stats,.cosmetic-inventory,.cosmetic-equipped,.cosmetic-categories,.shop-content,.settings-tabs,.settings-panel,.room-shell,.room-list,.challenge-list,.dropdown-list,.weapon-grid)::-webkit-scrollbar-track { background:#8d9aa30c;border-radius:8px; }
+:is(.home-nav,.leaderboard-content,.personal-stats,.cosmetic-inventory,.cosmetic-equipped,.cosmetic-categories,.shop-content,.settings-tabs,.settings-panel,.room-shell,.room-list,.challenge-list,.dropdown-list,.weapon-grid)::-webkit-scrollbar-thumb { background:#aab7c45e;border-radius:8px; }
+:is(.home-nav,.leaderboard-content,.personal-stats,.cosmetic-inventory,.cosmetic-equipped,.cosmetic-categories,.shop-content,.settings-tabs,.settings-panel,.room-shell,.room-list,.challenge-list,.dropdown-list,.weapon-grid)::-webkit-scrollbar-thumb:hover { background:#cad5df88; }
+
+.magnetic-slider { position:relative;display:grid;grid-template-columns:1fr auto;gap:12px 16px;padding:10px 12px 4px;touch-action:none;cursor:ew-resize;min-width:0;border-radius:10px; }
+.magnetic-label { font-size:12px;letter-spacing:.12em;color:#c2ccd7; }
+.magnetic-count { font:600 17px var(--font);color:#e5edf7;font-variant-numeric:tabular-nums; }
+.magnetic-track { position:relative;grid-column:1/-1;height:5px;margin:10px 0 6px;background:#d9e1eb21;border-radius:8px;box-shadow:inset 0 1px 3px #0003; }
+.magnetic-thumb { position:absolute;left:calc(var(--bot-position,.6) * 100%);top:50%;width:17px;height:23px;transform:translate(-50%,-50%);border-radius:7px;background:linear-gradient(#e6edf3,#9dabb9);box-shadow:0 2px 8px #0005,0 0 0 3px #c5d9f00c;pointer-events:none; }
+.magnetic-slider:hover .magnetic-thumb { background:linear-gradient(#f1f5f8,#afc7df); }
+.magnetic-slider:focus-within { outline:2px solid var(--accent-2);outline-offset:3px; }
+.magnetic-slider input[type='range'] { position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;pointer-events:none; }
+.magnetic-marks { grid-column:1/-1;display:flex;justify-content:space-between;font-size:11px;color:#aebac7; }
+.magnetic-marks span { width:1ch;text-align:center; }
+@media(max-width:680px) {
+  .home-header { left:16px;right:16px;align-items:stretch; }
+  .home-header .logo { align-self:flex-start;max-width:calc(100% - 150px);font-size:clamp(30px,5vw,38px); }
+  .home-header .home-account { max-width:140px; }
+  .home-nav { width:100%;overflow-x:auto;overflow-y:hidden;min-height:66px; }
+  #ui .home-nav .btn.nav-button { flex:0 0 auto;min-width:112px;padding-left:12px;padding-right:12px; }
+  :root { --logo-size:clamp(30px,5vw,38px); }
+  .locker-layout { gap:8px; }
+}
+@media(max-width:560px) {
+  .locker-layout { grid-template-columns:90px minmax(0,1fr); }
+}

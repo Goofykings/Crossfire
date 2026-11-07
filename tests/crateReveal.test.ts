@@ -8,14 +8,14 @@ import { REVEAL_COLORS } from '../src/ui/CrateReveal';
 const seq = (...values:number[]) => { let i=0; return () => values[i++ % values.length]; };
 
 describe('crate collections', () => {
-  it('has six named families, each with a version for all four weapons', () => {
+  it('has six named families, each with a version for all four guns and the matching dagger pair', () => {
     expect(COLLECTIONS.map(c => [c.name, c.rarity])).toEqual([
       ['Green Camo','uncommon'],['Blue Camo','uncommon'],['Red Camo','uncommon'],['Marble','rare'],['Rainbow Glow','rare'],['Rich','legendary']]);
-    expect(crateItems()).toHaveLength(24);
+    expect(crateItems()).toHaveLength(30);
     for (const c of COLLECTIONS) for (const w of WEAPON_CATEGORIES) {
       const item = cosmetic(collectionCosmetic(c.id, w))!;
       expect(item).toMatchObject({ name:c.name, rarity:c.rarity, weapon:w, compatibleWith:[w], ownership:'grant', collection:c.id });
-      expect(item.asset.model).toBe(`assets/models/shared/weapons/${w}.glb`);
+      expect(item.asset.model).toBe(w==='melee'?'assets/models/shared/melee/dagger_r.glb':`assets/models/shared/weapons/${w}.glb`);
       const names = Object.keys(item.asset.materials ?? {});
       expect(names.length).toBeGreaterThan(0);
       for (const name of names) expect(WEAPON_MATERIALS[w]).toContain(name);
@@ -36,13 +36,13 @@ describe('server crate draw', () => {
     expect(drawCrate([], seq(0, 0))!.rarity).toBe('uncommon');
     expect(drawCrate([], seq(.56, 0))!.rarity).toBe('rare');
     expect(drawCrate([], seq(.96, 0))!.id).toBe('rich-rifle');
-    expect(drawCrate([], seq(.999, .999))!.id).toBe('rich-shotgun');
+    expect(drawCrate([], seq(.999, .999))!.id).toBe('rich-melee');
   });
   it('never repeats an owned item and renormalizes when a rarity is exhausted', () => {
     const owned:string[] = [];
     const random = (() => { let s = 7; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();
-    for (let i = 0; i < 24; i++) { const item = drawCrate(owned, random)!; expect(owned).not.toContain(item.id); owned.push(item.id); }
-    expect(new Set(owned).size).toBe(24);
+    for (let i = 0; i < 30; i++) { const item = drawCrate(owned, random)!; expect(owned).not.toContain(item.id); owned.push(item.id); }
+    expect(new Set(owned).size).toBe(30);
     expect(drawCrate(owned, random)).toBeUndefined();
     const noUncommon = crateItems().filter(c => c.rarity === 'uncommon').map(c => c.id);
     expect(drawCrate(noUncommon, seq(0, 0))!.rarity).toBe('rare');
@@ -106,7 +106,7 @@ describe('reveal timeline', () => {
     expect(Math.abs(s.x)).toBeLessThan(Math.PI);
     for (let i = 0; i < 120; i++) { const sign = Math.sign(s.x); stepSpring(s, 1 / 120); if (Math.sign(s.x) !== sign && sign) crossed = true; }
     expect(crossed).toBe(true);
-    for (let i = 0; i < 240; i++) stepSpring(s, 1 / 120);
+    for (let i = 0; i < 300; i++) stepSpring(s, 1 / 120);
     expect(Math.abs(s.x)).toBeLessThan(.01);
   });
   it('uses green, blue and gold reveal light for the three crate rarities', () => {

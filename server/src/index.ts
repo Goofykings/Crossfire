@@ -1,11 +1,14 @@
+import {createMeleeState,stepMelee,meleeBlocked,traceMelee,MELEE,validMelee} from '../../shared/melee';
 import { traceWeaponShot } from '../../shared/hitscan';
+import {matchRewardRequests,matchIdentity,payMatchGems,type MatchLedger,type MatchRewardRequest} from './matchRewards';
 import { Inventory } from './inventory';
 import { defaultEquipment, defaultCosmetic, compatibleCosmetic, validInventory, drawCrate, CRATE, COSMETICS_API_VERSION, type Equipment, type InventoryView } from '../../shared/cosmetics';
 import { RoomDirectory, DirectoryError, type RoomConfig } from './roomDirectory';
 import { ROOM_LIMITS, roomId, type RoomView } from '../../shared/rooms';
 import { advanceStatistics, type StatisticsRecord, type StatisticsEvent } from '../../shared/statistics';
 import type { CareerProfile } from '../../shared/challenges';
-interface RewardCommand { seq:number; identity:string; name:string; challenge?:ChallengeEvent; stats:StatisticsEvent }
+interface RewardCommand { seq:number; identity:string; name:string; challenge?:ChallengeEvent; stats:StatisticsEvent; matchReward?:MatchRewardRequest }
+interface RewardPresentation {roundId:number;matchId:string;awards:Record<string,number>;identities:Record<string,string>}
 import { DamageContributions, ASSIST_POINTS, ASSIST_WINDOW_MS, type Contribution } from '../../shared/assists';
 import { migrateSession, migrateResult } from './legacyState';
 import { Statistics } from './statistics';
@@ -28,8 +31,8 @@ import { NO_COMBAT, roundMode, teammates, type PlayerTeam, type MatchMode } from
 import { normalizeUsername } from '../../shared/username';
 import { regenerate, REGEN_DELAY_MS } from './health';
 import { selectSpawn } from '../../shared/spawns';
-import { COMBO_WINDOW_MS, awardElimination, expireCombo, resetCombo, finalizeRound, type RoundLedger, type RoundResult, type ScoreState } from '../../shared/scoring';
-import { GRENADE, advanceGrenade, blastDamage, throwGrenade, type GrenadeState, type GrenadeExplosion } from '../../shared/grenades';
+import { COMBO_WINDOW_MS, awardElimination, expireCombo, resetCombo, finalizeRound, type RoundResult, type ScoreState } from '../../shared/scoring';
+import { GRENADE, advanceGrenade, blastDamage, throwGrenade, grenadeKnockback, type GrenadeState, type GrenadeExplosion } from '../../shared/grenades';
 import { validGrenade, validExplosion } from '../../shared/protocol';
 
 interface Bindings {
@@ -152,7 +155,7 @@ export default {
         try{
           if(!reader)throw Error('Missing body');
           const body=await Promise.race([(async()=>{const chunks:Uint8Array[]=[];let size=0;for(;;){const r=await reader.read();if(r.done)break;size+=r.value.length;if(size>1024)throw Error('Too large');chunks.push(r.value);}const bytes=new Uint8Array(size);let at=0;for(const c of chunks){bytes.set(c,at);at+=c.length;}return JSON.parse(new TextDecoder().decode(bytes));})(),new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(Error('Timed out')),1000);})]);
-          if(!body||Array.isArray(body)||Object.keys(body).some(k=>!(url.pathname==='/cosmetics/open'?['version']:['version','id']).includes(k)))throw Error('Invalid equipment');
+          if(!body||Array.isArray(body)||Object.keys(body).some(k=>!(url.pathname==='/cosmetics/open'?['version','requestId']:['version','id']).includes(k)))throw Error('Invalid equipment');
           const cleanHeaders=new Headers(request.headers);cleanHeaders.delete('Content-Length');request=new Request(request.url,{method:'POST',headers:cleanHeaders,body:JSON.stringify(body)});
         }catch{return Response.json({error:'Invalid equipment request.'},{status:400,headers});}
         finally{if(timer!==undefined)clearTimeout(timer);void reader?.cancel().catch(()=>{});}
@@ -211,6 +214,8 @@ export class PublicRoom extends DurableObject<Bindings> {
   private rewardState:{next:number;events:RewardCommand[]}={next:0,events:[]};
   private rewardSaved=0;
   private rewardWork:Promise<void>|null=null;
+  private pendingMatchGems:RewardPresentation|null=null;
+  private confirmedMatchGems:RewardPresentation|null=null;
   private readonly pendingChallenge=new Map<string,ChallengeEvent>();
   private readonly directory=new RoomDirectory(this.ctx.storage,this.env.ROOM,id=>this.careers.load(id),()=>this.roomStatus());
   private get roomId(){return this.config?.id??PUBLIC_ROOM;}
@@ -273,6 +278,7 @@ export class PublicRoom extends DurableObject<Bindings> {
         const p=profiles.get(item.identity)??structuredClone(original);profiles.set(item.identity,p);
         const stats=records.get(item.identity)??structuredClone((await this.statistics.load(item.identity,item.name,p.gems))!);records.set(item.identity,stats);
         const before=p.gems;if(item.challenge)advanceChallenges(p,item.identity,item.challenge,item.stats.at);
+        if(item.matchReward)payMatchGems(p,id,item.matchReward);
         const event={...item.stats,gems:p.gems-before};if(event.kind==='round')event.round=stats.lastRound+1;
         advanceStatistics(stats,event);cursor=item.seq;
       }
@@ -287,10 +293,10 @@ export class PublicRoom extends DurableObject<Bindings> {
     });
   }
 
-  private recordStatistics(identity:string|undefined,event:StatisticsEvent):void{
+  private recordStatistics(identity:string|undefined,event:StatisticsEvent,matchReward?:MatchRewardRequest):void{
     if(!this.config){this.statistics.event(identity,event.kind==='round'&&identity?{...event,id:'public-main:'+event.id,round:this.statistics.nextRound(identity)}:event);return;}if(!identity)return;
     const challenge=this.pendingChallenge.get(identity);this.pendingChallenge.delete(identity);
-    this.rewardState.events.push({seq:++this.rewardState.next,identity,name:[...this.players.values()].find(e=>e.session.profileId===identity)?.session.name??'Player',stats:{...event,id:event.kind==='round'?this.roomId+':'+event.id:event.id},...(challenge?{challenge}:{} )});
+    this.rewardState.events.push({seq:++this.rewardState.next,identity,name:[...this.players.values()].find(e=>e.session.profileId===identity)?.session.name??'Player',stats:{...event,id:event.kind==='round'?this.roomId+':'+event.id:event.id},...(challenge?{challenge}:{} ),...(matchReward?{matchReward}:{})});
   }
   private flushRewards():Promise<void>{
     if(!this.config||!this.rewardState.events.length)return Promise.resolve();
@@ -299,6 +305,11 @@ export class PublicRoom extends DurableObject<Bindings> {
         const ack=await this.authority.applyRoomRewards(this.roomId,batch);
         await this.ctx.storage.put('room-reward-ack',ack.cursor);this.rewardState.events=this.rewardState.events.filter(e=>e.seq>ack.cursor);
         for(const item of ack.profiles){const old=this.careers.profiles.get(item.identity);this.careers.profiles.set(item.identity,{...item.profile,lastMatchRound:old?.lastMatchRound??-1,abandonedRound:old?.abandonedRound??-1});this.careers.mark(item.identity);}
+        const pending=this.pendingMatchGems;
+        if(pending&&Object.entries(pending.identities).every(([,identity])=>this.careers.profiles.get(identity)?.matchRewards?.[this.roomId]?.matchId===pending.matchId)){
+          for(const [session,identity]of Object.entries(pending.identities))pending.awards[session]=this.careers.profiles.get(identity)!.matchRewards![this.roomId].gems;
+          this.confirmedMatchGems=structuredClone(pending);await this.persist();this.broadcast();
+        }
         this.sendCareerViews(this.careers.views(Date.now()));
       }
     })().finally(()=>{this.rewardWork=null;});
@@ -341,7 +352,7 @@ export class PublicRoom extends DurableObject<Bindings> {
 
   private contributions!: DamageContributions;
   private readonly players = new Map<string, Entry>();
-  private readonly careers = new Careers(this.ctx.storage, () => new Set([...this.players.values()].flatMap(e => e.session.profileId ? [e.session.profileId] : [])));
+  private readonly careers = new Careers(this.ctx.storage, () => new Set([...this.players.values()].flatMap(e => e.session.profileId ? [e.session.profileId] : []).concat(Object.values(this.ledger?.rewardParticipants??{}).filter(p=>!p.abandoned).map(p=>p.identity))));
   private readonly statistics = new Statistics(this.ctx.storage);
   private readonly inventory=new Inventory(this.ctx.storage,id=>this.careers.load(id));
   async inventoryForRoom(identity:string):Promise<InventoryView>{return this.exclusive(()=>this.inventory.get(identity));}
@@ -351,10 +362,13 @@ export class PublicRoom extends DurableObject<Bindings> {
     const token=request.headers.get('Authorization')?.replace(/^Bearer /,'')??'';
     if(this.config||!validCareerCredential(token))return Response.json({error:'A valid guest credential is required.'},{status:401});
     const body=await request.json().catch(()=>null) as Record<string,unknown>|null;
-    if(!body||Array.isArray(body)||Object.keys(body).some(k=>k!=='version')||body.version!==COSMETICS_API_VERSION)return Response.json({error:'Invalid crate request.'},{status:400});
+    if(!body||Array.isArray(body)||Object.keys(body).some(k=>!['version','requestId'].includes(k))||body.version!==COSMETICS_API_VERSION||(body.requestId!==undefined&&(typeof body.requestId!=='string'||!/^[-a-zA-Z0-9]{1,48}$/.test(body.requestId))))return Response.json({error:'Invalid crate request.'},{status:400});
     const identity=await careerIdentity(token),profile=await this.careers.load(identity);
     if(!profile)return Response.json({error:'Guest profile not found.'},{status:401});
     const view=await this.inventory.get(identity);
+    if(!CRATE.available)return Response.json({error:'Crates are unavailable.'},{status:409});
+    const receiptKey=body.requestId?`crate:${identity}:${body.requestId}`:null;
+    if(receiptKey){const receipt=await this.ctx.storage.get<{item:string}>(receiptKey);if(receipt&&view.owned.includes(receipt.item))return Response.json({version:COSMETICS_API_VERSION,item:receipt.item,gems:profile.gems,inventory:view});}
     if(profile.gems<CRATE.price)return Response.json({error:`Not enough gems. A crate costs ${CRATE.price}.`},{status:409});
     const item=drawCrate(view.owned,()=>crypto.getRandomValues(new Uint32Array(1))[0]/2**32);
     if(!item)return Response.json({error:'You already own every crate item.'},{status:409});
@@ -362,7 +376,7 @@ export class PublicRoom extends DurableObject<Bindings> {
     // capture the pre-purchase balance after this batch; roll back if the write fails.
     const before=structuredClone(profile);profile.gems-=CRATE.price;profile.revision++;
     const inventory={revision:view.revision+1,owned:[...view.owned,item.id],equipped:view.equipped},career=this.careers.capture();
-    try{await this.ctx.storage.put({...career.records,['career:'+identity]:structuredClone(profile),['inventory:'+identity]:inventory});}
+    try{await this.ctx.storage.put({...career.records,['career:'+identity]:structuredClone(profile),['inventory:'+identity]:inventory,...(receiptKey?{[receiptKey]:{item:item.id}}:{})});}
     catch(error){Object.assign(profile,before);throw error;}
     this.careers.committed(career.versions);this.sendCareerViews(new Map([[identity,careerView(profile,Date.now())]]));
     return Response.json({version:COSMETICS_API_VERSION,item:item.id,gems:profile.gems,inventory:{...inventory,version:COSMETICS_API_VERSION,serverTime:Date.now()}});
@@ -382,7 +396,7 @@ export class PublicRoom extends DurableObject<Bindings> {
   private round!: MapRound;
   private activeMap!: typeof WORLDS[keyof typeof WORLDS];
   private scores = { roundId: -1, blue: 0, red: 0 };
-  private ledger!: RoundLedger;
+  private ledger!: MatchLedger;
   private lastResult: RoundResult | null = null;
   private readonly damage = new DamageSystem();
   private environment!:EnvironmentSimulation;
@@ -405,7 +419,8 @@ export class PublicRoom extends DurableObject<Bindings> {
       this.round = this.scheduledRound();
       this.activeMap = WORLDS[this.round.mapId];
       const scores = await ctx.storage.get<typeof this.scores>('team-scores');
-      const ledger = migrateResult(await ctx.storage.get<RoundLedger>('round-ledger'));
+      const ledger = migrateResult(await ctx.storage.get<MatchLedger>('round-ledger'));
+      const gemState=await ctx.storage.get<{pending:RewardPresentation|null;confirmed:RewardPresentation|null}>('round-gem-state');this.pendingMatchGems=gemState?.pending??null;this.confirmedMatchGems=gemState?.confirmed??null;
       await ctx.storage.delete('powerups');
       this.contributions=new DamageContributions(positive(env.ASSIST_WINDOW_MS??'',ASSIST_WINDOW_MS),await ctx.storage.get<Contribution[]>('damage-contributions')??[],Date.now());
       this.lastResult = migrateResult(await ctx.storage.get<RoundResult>('round-result') ?? null);
@@ -424,9 +439,10 @@ export class PublicRoom extends DurableObject<Bindings> {
       }
       const stored = await ctx.storage.get<Session[]>('sessions') ?? [];
       const attachments = ctx.getWebSockets().map(s => (s.deserializeAttachment() as Attachment)?.session);
-      await Promise.all([...new Set([...stored, ...attachments].flatMap(s => s?.profileId ? [s.profileId] : []))].map(async id => {
-        const p=await this.careers.load(id),session=[...attachments,...stored].find(s=>s?.profileId===id);
-        if(p&&session&&!this.config)await this.statistics.load(id,session.name,p.gems);
+      const participants=Object.values(ledger?.rewardParticipants??{}).filter(p=>!p.abandoned);
+      await Promise.all([...new Set([...stored, ...attachments].flatMap(s => s?.profileId ? [s.profileId] : []).concat(participants.map(p=>p.identity)))].map(async id => {
+        const p=await this.careers.load(id),name=[...attachments,...stored].find(s=>s?.profileId===id)?.name??participants.find(p=>p.identity===id)?.name;
+        if(p&&name&&!this.config)await this.statistics.load(id,name,p.gems);
       }));
       this.grenades = ((await ctx.storage.get<unknown[]>('grenades')) ?? []).filter(validGrenade).filter(g=>g.roundId===this.round.id);
       this.explosions = ((await ctx.storage.get<unknown[]>('explosions')) ?? []).filter(validExplosion).filter(e=>e.roundId===this.round.id&&Date.now()-e.at<GRENADE_SMOKE_MS);
@@ -452,7 +468,7 @@ export class PublicRoom extends DurableObject<Bindings> {
         this.players.set(s.id, e);
       }
       for(const e of this.players.values()){regenerate(e.session,Date.now());}
-      if (ledger && ledger.roundId < this.round.id && this.lastResult) this.finishCareerRound(this.lastResult);
+      if (ledger && ledger.roundId < this.round.id && this.lastResult) {this.finishCareerRound(this.lastResult);this.finishMatchGems(this.lastResult,ledger);}
       for(const e of this.players.values())if(e.socket)e.restoredUntil=Date.now()+Math.min(this.timeout,2000);
       this.trace('restore', { sockets: ctx.getWebSockets().length, sessions: this.players.size });
       this.prune();
@@ -500,10 +516,11 @@ export class PublicRoom extends DurableObject<Bindings> {
     if (session.death) session.death.award ??= null;
     if (session.alive) session.death = null;
     session.health ??= session.alive ? PLAYER_MAX_HEALTH : 0;
+    if(session.combat&&!validMelee(session.combat.melee))session.combat.melee=createMeleeState();
     // Older stored records have no damage timestamp: begin a conservative full
     // waiting period rather than granting health on migration.
     if (session.regenAt === undefined) session.regenAt = session.alive && session.health < PLAYER_MAX_HEALTH ? Date.now() + REGEN_DELAY_MS : null;
-    session.combat ??= { gun: null, triggerHeld: false, reloadHeld: false, aimHeld: false, grenadeHeld: false };
+    session.combat ??= { melee:createMeleeState(), gun: null, triggerHeld: false, reloadHeld: false, aimHeld: false, grenadeHeld: false };
     session.combat.grenadeHeld ??= false;
     session.team = this.mode === 'teams' ? session.team ?? this.chooseTeam() : null;
     // Stored protocol-v6 sessions have no lean state; keep their lives intact.
@@ -515,7 +532,7 @@ export class PublicRoom extends DurableObject<Bindings> {
       session.alive = false;
       session.health = 0;
       session.regenAt = null;
-      session.combat = { gun: null, triggerHeld: false, reloadHeld: false, aimHeld: false, grenadeHeld: false };
+      session.combat = { melee:createMeleeState(), gun: null, triggerHeld: false, reloadHeld: false, aimHeld: false, grenadeHeld: false };
       session.weapon = null;
       session.grenades = 0;
       if (!session.death || Date.now() >= session.death.respawnAt) session.death = null;
@@ -574,6 +591,7 @@ export class PublicRoom extends DurableObject<Bindings> {
           e.controller.position.y + MOVEMENT.stepHeight + .01) >= e.controller.position.y + MOVEMENT.standHeight))
       || e.controller.sliding || e.controller.slideCooldown > 0
       || e.gun?.simulating
+      || e.session.combat.melee && !['hidden','ready'].includes(e.session.combat.melee.phase)
       || e.session.regenAt !== null
       || e.session.comboCount > 0
       || Math.hypot(e.controller.velocity.x, e.controller.velocity.y, e.controller.velocity.z) > 0.001));
@@ -652,7 +670,7 @@ export class PublicRoom extends DurableObject<Bindings> {
       e.session.lastPlayedRound = this.round.id;
       e.session.lastPlayedTeam = e.session.team;
       e.gun = new Weapon(WEAPONS.find((w) => w.id === message.weapon)!);
-      e.session.combat = { gun: e.gun.capture(), triggerHeld: false, reloadHeld: false, aimHeld: false, grenadeHeld: false };
+      e.session.combat = { melee:createMeleeState(), gun: e.gun.capture(), triggerHeld: false, reloadHeld: false, aimHeld: false, grenadeHeld: false };
       this.contributions.clear(e.session.id);
       e.session.life++;
       e.session.activityAt=Date.now();e.session.activitySignature=undefined;
@@ -705,7 +723,7 @@ export class PublicRoom extends DurableObject<Bindings> {
       if (this.players.size >= (this.config?.maxPlayers??10)) { this.error(socket, 'room_full', 'Room capacity reached', true); return; }
       const controller = new PlayerController(this.activeMap.world);
       e = this.entry({ id: crypto.randomUUID(), name, token: token(), generation: 0, revision: 0, grenades: 0, motion: controller.capture(), ack: 0,
-        roundId: this.round.id, alive: false, health: 0, regenAt: null, assists:0, team: this.chooseTeam(), combat: { gun: null, triggerHeld: false, reloadHeld: false, aimHeld: false, grenadeHeld: false },
+        roundId: this.round.id, alive: false, health: 0, regenAt: null, assists:0, team: this.chooseTeam(), combat: { melee:createMeleeState(), gun: null, triggerHeld: false, reloadHeld: false, aimHeld: false, grenadeHeld: false },
         life: 0, weapon: null, kills: 0, deaths: 0, death: null, score: 0, comboCount: 0, comboUntil: null,
         lastPlayedRound: null, lastPlayedTeam: null, lastSeen: Date.now(), expiresAt: 0 });
       this.players.set(e.session.id, e);
@@ -766,18 +784,20 @@ export class PublicRoom extends DurableObject<Bindings> {
       name: e.session.name, motion: e.controller.capture(), ack: e.session.ack, alive: e.session.alive, life: e.session.life,
       health: e.session.health, combat: { ...e.session.combat, gun: e.gun?.capture() ?? null },
       ...(e.session.weapon?{cosmeticId:compatibleCosmetic(e.session.equipment?.[e.session.weapon],e.session.weapon)?e.session.equipment![e.session.weapon]:defaultCosmetic(e.session.weapon)}:{}),
-      weapon: e.session.weapon, kills: e.session.kills, deaths: e.session.deaths, assists:e.session.assists, afkDeadline:e.session.alive?this.afkDeadline(e):null, team: e.session.team, death: e.session.death }));
-    return { ...(full?{environment:this.environmentFrame(true)}:{}),grenades: this.grenades, explosions: this.explosions, result: this.lastResult, room: this.roomId, ...(this.config?{roomInfo:this.roomStatus()??undefined}:{}), mapId: this.round.mapId, roundId: this.round.id, mapVersion: this.activeMap.revision, serverTime: Date.now(), players,
+      meleeCosmeticId:e.session.equipment?.melee??defaultCosmetic('melee'), weapon: e.session.weapon, kills: e.session.kills, deaths: e.session.deaths, assists:e.session.assists, afkDeadline:e.session.alive?this.afkDeadline(e):null, team: e.session.team, death: e.session.death }));
+    const result=this.lastResult&&this.confirmedMatchGems?.roundId===this.lastResult.roundId?{...this.lastResult,gemRewards:{matchId:this.confirmedMatchGems.matchId,awards:this.confirmedMatchGems.awards}}:this.lastResult;
+    return { ...(full?{environment:this.environmentFrame(true)}:{}),grenades: this.grenades, explosions: this.explosions, result, room: this.roomId, ...(this.config?{roomInfo:this.roomStatus()??undefined}:{}), mapId: this.round.mapId, roundId: this.round.id, mapVersion: this.activeMap.revision, serverTime: Date.now(), players,
       match: { mode: this.mode, endsAt: this.round.endsAt, teamScores: this.mode === 'teams' ? { blue: this.scores.blue, red: this.scores.red } : null } };
   }
 
-  private emptyLedger(): RoundLedger {
-    return { roundId: this.round.id, mapId: this.round.mapId, mode: this.mode, endsAt: this.round.endsAt, players: {} };
+  private emptyLedger(): MatchLedger {
+    return { roundId: this.round.id, mapId: this.round.mapId, mode: this.mode, endsAt: this.round.endsAt, players: {},rewardStartedAt:this.round.endsAt-600000,rewardParticipants:{} };
   }
   private recordStanding(e: Entry): void {
     const s = e.session;
     if (s.lastPlayedRound !== this.round.id) return;
     this.ledger.players[s.id] = { id: s.id, name: s.name, team: s.lastPlayedTeam, score: s.score, kills: s.kills, deaths: s.deaths, assists: s.assists, weapon: s.weapon };
+    if(s.profileId&&s.participation?.roundId===this.round.id){const participants=this.ledger.rewardParticipants??={};participants[s.id]={identity:s.profileId,name:s.name,firstSpawn:s.participation.firstSpawn,abandoned:participants[s.id]?.abandoned??false};}
   }
 
   /** One canonical persisted schedule; clients never choose the public map. */
@@ -788,6 +808,7 @@ export class PublicRoom extends DurableObject<Bindings> {
     this.lastResult = finalizeRound(this.ledger, this.scores);
     this.contributions.clear();
     this.finishCareerRound(this.lastResult);
+    this.finishMatchGems(this.lastResult,this.ledger);
     this.round = next;
     this.ledger = this.emptyLedger();
     this.activeMap = WORLDS[next.mapId];
@@ -801,7 +822,7 @@ export class PublicRoom extends DurableObject<Bindings> {
       e.session.alive = false; e.grenadeCharge?.reset();
       e.session.health = 0;
       e.session.regenAt = null;
-      e.session.combat = { gun: null, triggerHeld: false, reloadHeld: false, aimHeld: false, grenadeHeld: false };
+      e.session.combat = { melee:createMeleeState(), gun: null, triggerHeld: false, reloadHeld: false, aimHeld: false, grenadeHeld: false };
       e.gun = null;
       e.session.weapon = null;
       e.session.grenades = 0;
@@ -843,10 +864,10 @@ export class PublicRoom extends DurableObject<Bindings> {
     for (const e of this.connected()) this.send(e.socket!, message);
   }
 
-  private eliminate(victim: Entry, killer: Entry | null, head = false, direction: { x: number; y: number; z: number } | null = null, weapon?: 'grenade'): void {
+  private eliminate(victim: Entry, killer: Entry | null, head = false, direction: { x: number; y: number; z: number } | null = null, weapon?: 'grenade'|'melee'): void {
     if (!victim.session.alive) return;
     const eliminationId=crypto.randomUUID();
-    victim.session.alive = false; victim.grenadeCharge?.reset();
+    victim.session.alive = false; victim.session.combat.melee=createMeleeState(); victim.grenadeCharge?.reset();
     victim.session.health = 0;
     victim.session.regenAt = null;
     resetCombo(victim.session);
@@ -885,6 +906,22 @@ export class PublicRoom extends DurableObject<Bindings> {
       killerTeam: killer?.session.team ?? null, victimTeam: victim.session.team };
     victim.session.death = elimination;
     this.publish({ v: PROTOCOL_VERSION, type: 'elimination', elimination });
+  }
+
+  private meleeAttack(e:Entry,stage:1|2|3,sequence:number,at:number):void {
+    if(!e.session.alive)return;
+    const event:import('../../shared/protocol').MeleeResult={id:`melee:${e.session.id}:${e.session.life}:${sequence}`,roundId:this.round.id,shooterId:e.session.id,life:e.session.life,at:Math.floor(at),stage,hits:[]};
+    const found=traceMelee(this.activeMap.world,e.controller.capture(),this.connected().filter(t=>t!==e&&t.session.alive).map(t=>({value:t,motion:t.controller.capture()})));
+    if(found&&!teammates(this.mode,e.session.team,found.target.session.team)){
+      const target=found.target,hit=found.hit;let amount=0;
+      this.damage.tryApply({id:e.session.id,position:()=>e.controller.position},{id:target.session.id,alive:target.session.alive,position:()=>target.controller.position,applyDamage:damage=>{
+        amount=Math.min(target.session.health,damage);this.contributions.damage(target.session.id,target.session.life,this.round.id,e.session.id,e.session.life,amount,at);
+        target.session.health-=amount;target.session.regenAt=at+REGEN_DELAY_MS;
+        if(target.session.health===0)this.eliminate(target,e,false,hit.direction,'melee');
+      }},{bodyDamage:MELEE.damage,zone:'body',point:hit.point,weapon:'melee'});
+      event.hits.push({id:target.session.id,life:target.session.life,amount,health:target.session.health,head:false,killed:!target.session.alive,direction:hit.direction});
+    }
+    e.session.activityAt=at;this.publish({v:PROTOCOL_VERSION,type:'melee',event});
   }
 
   private fire(e: Entry, spread: number, control: InputFrame['combat']): boolean {
@@ -956,7 +993,7 @@ export class PublicRoom extends DurableObject<Bindings> {
       const owner=this.players.get(g.ownerId);
       const event:GrenadeExplosion={id:`blast:${g.id}`,grenadeId:g.id,ownerId:g.ownerId,ownerLife:g.ownerLife,roundId:g.roundId,at:now,position:{...g.position},hits:[]};
       for(const victim of this.connected()) {
-        if(!victim.session.alive||(victim!==owner&&teammates(this.mode,owner?.session.team??null,victim.session.team)))continue;
+        if(!victim.session.alive||victim.session.id===g.ownerId||teammates(this.mode,owner?.session.team??null,victim.session.team))continue;
         const amount=blastDamage(this.activeMap.world,g.position,victim.controller.capture());
         if(amount<=0)continue;
         const p=victim.controller.position, dx=p.x-g.position.x,dy=p.y+victim.controller.eyeHeight-g.position.y,dz=p.z-g.position.z,len=Math.hypot(dx,dy,dz)||1;
@@ -967,7 +1004,8 @@ export class PublicRoom extends DurableObject<Bindings> {
           victim.session.health-=appliedDamage;victim.session.regenAt=now+REGEN_DELAY_MS;
           if(victim.session.health===0)this.eliminate(victim,owner??null,false,direction,'grenade');
         }},{bodyDamage:amount,zone:'body',point:p,weapon:'grenade'});
-        event.hits.push({id:victim.session.id,life:victim.session.life,amount:appliedDamage,health:victim.session.health,killed:!victim.session.alive,direction});
+        if(appliedDamage>0&&victim.session.alive)grenadeKnockback(victim.controller,g.position,appliedDamage);
+        if(appliedDamage>0)event.hits.push({id:victim.session.id,life:victim.session.life,amount:appliedDamage,health:victim.session.health,killed:!victim.session.alive,direction});
       }
       // Posthumous kills still score, but dead sessions must never retain a live combo timer.
       if(owner&&!owner.session.alive)resetCombo(owner.session);
@@ -996,7 +1034,7 @@ export class PublicRoom extends DurableObject<Bindings> {
         const frame = e.queue.shift();
         frames.set(e, frame);
         if (frame) { e.controller.yaw = frame.yaw; e.controller.pitch = frame.pitch; e.session.ack = frame.seq; e.leanHeld = frame.intent.lean ?? 0; e.crouchHeld=frame.intent.crouch??false; }
-        e.controller.weaponClearance = e.session.weapon;
+        e.controller.weaponClearance = meleeBlocked(e.session.combat.melee)?null:e.session.weapon;
         const grounded=e.controller.grounded;
         e.controller.fixedUpdate(FIXED_DT, frame?.intent ?? { ...NO_INTENT, slide: e.controller.slideHeld, lean: e.leanHeld, crouch:e.crouchHeld });
         if(frame?.intent.jumpPressed&&grounded&&!e.controller.grounded)e.session.activityAt=now;
@@ -1023,14 +1061,19 @@ export class PublicRoom extends DurableObject<Bindings> {
         if (!e.session.alive || !e.gun) continue;
         const intent = frame?.combat ?? NO_COMBAT;
         const combat = e.session.combat;
+        combat.melee ??= createMeleeState();
+        const contact=stepMelee(combat.melee,now,frame?.combat,e.gun.action==='idle');
+        if(contact){this.meleeAttack(e,contact.stage,contact.sequence,now);eliminated=true;}
+        const blocked=meleeBlocked(combat.melee);
+        if(blocked)e.grenadeCharge?.reset();
         e.grenadeCharge ??= new GrenadeCharge();
         const strength = e.grenadeCharge.update(frame ? !!intent.grenade : undefined, now, FIXED_DT,
-          e.session.grenades > 0 && e.gun.action === 'idle' && !e.controller.sliding, !!intent.grenadeCancel);
+          !blocked && e.session.grenades > 0 && e.gun.action === 'idle' && !e.controller.sliding, !!intent.grenadeCancel);
         if (strength !== null) this.launchGrenade(e, now, strength);
         const beforeAction=e.gun.action;
-        const events = e.gun.update(FIXED_DT, { trigger: intent.trigger,
-          triggerPressed: intent.trigger && !combat.triggerHeld, reloadPressed: intent.reload && !combat.reloadHeld,
-          aim: frame?.intent.aim ?? combat.aimHeld, moveFactor: e.controller.horizontalSpeed / MOVEMENT.weaponMoveReference,
+        const events = e.gun.update(FIXED_DT, { trigger: !blocked&&intent.trigger,
+          triggerPressed: !blocked&&intent.trigger && !combat.triggerHeld, reloadPressed: !blocked&&intent.reload && !combat.reloadHeld,
+          aim: !blocked&&(frame?.intent.aim ?? combat.aimHeld), moveFactor: e.controller.horizontalSpeed / MOVEMENT.weaponMoveReference,
           airborne: !e.controller.grounded, sprinting: false });
         if(frame)this.activity(e,frame,now,events.some(event=>event.type==='fire')||beforeAction==='idle'&&e.gun.action.startsWith('reload')&&frame.combat.reload&&!combat.reloadHeld||strength!==null||e.grenadeCharge.active&&!combat.grenadeHeld);
         if (frame) { combat.triggerHeld = intent.trigger; combat.reloadHeld = intent.reload; combat.aimHeld = frame.intent.aim; combat.grenadeHeld=!!intent.grenade; }
@@ -1074,6 +1117,10 @@ export class PublicRoom extends DurableObject<Bindings> {
     if (!e) return;
     this.trace('disconnect', { id: e.session.id, intentional: forget, lastSeen: e.lastSeen });
     this.attach(e);
+    // Placement rewards survive a transport interruption; explicit Leave and
+    // AFK removal forfeit them. Existing challenge abandonment stays unchanged.
+    this.recordStanding(e);
+    if(forget&&this.ledger.rewardParticipants?.[e.session.id])this.ledger.rewardParticipants[e.session.id].abandoned=true;
     if (e.session.participation?.roundId === this.round.id) {
       e.session.participation.abandoned = true;
       const profile=e.session.profileId?this.careers.profiles.get(e.session.profileId):null;
@@ -1121,8 +1168,18 @@ export class PublicRoom extends DurableObject<Bindings> {
     }
     const views = this.careers.views(Date.now()), pending = this.careers.capture(), stats=this.statistics.capture(), contributions=this.contributions.capture();
     const rewards=structuredClone(this.rewardState);
-    return this.ctx.storage.put({ ...(this.config?{'room-config':this.config,'room-rewards':rewards}:{}),...pending.records, ...stats.records, 'damage-contributions':contributions.data, environment:{roundId:this.round.id,mapVersion:this.activeMap.revision,seq:this.environmentSeq,states:this.environment.capture()},grenades:this.grenades,explosions:this.explosions,'team-scores': this.scores, 'round-ledger': this.ledger, 'round-result': this.lastResult,
-      sessions: [...this.players.values()].map((e) => e.session) }).then(() => { this.contributions.committed(contributions.revision); this.ctx.waitUntil(this.statistics.project()); this.careers.committed(pending.versions); this.statistics.committed(stats.versions,new Set([...this.players.values()].flatMap(e=>e.session.profileId?[e.session.profileId]:[]))); if(!this.config)this.sendCareerViews(views);this.rewardSaved=Math.max(this.rewardSaved,rewards.next);if(this.config&&this.rewardState.events.length)this.ctx.waitUntil(this.flushRewards().catch(()=>this.scheduleCleanup())); });
+    const gemState={pending:structuredClone(this.pendingMatchGems),confirmed:structuredClone(!this.config||this.pendingMatchGems&&Object.keys(this.pendingMatchGems.identities).length===0?this.pendingMatchGems:this.confirmedMatchGems)};
+    return this.ctx.storage.put({ 'round-gem-state':gemState,...(this.config?{'room-config':this.config,'room-rewards':rewards}:{}),...pending.records, ...stats.records, 'damage-contributions':contributions.data, environment:{roundId:this.round.id,mapVersion:this.activeMap.revision,seq:this.environmentSeq,states:this.environment.capture()},grenades:this.grenades,explosions:this.explosions,'team-scores': this.scores, 'round-ledger': this.ledger, 'round-result': this.lastResult,
+      sessions: [...this.players.values()].map((e) => e.session) }).then(() => { const notify=gemState.confirmed?.matchId!==this.confirmedMatchGems?.matchId;this.confirmedMatchGems=gemState.confirmed;if(notify)this.broadcast();this.contributions.committed(contributions.revision); this.ctx.waitUntil(this.statistics.project()); this.careers.committed(pending.versions); this.statistics.committed(stats.versions,new Set([...this.players.values()].flatMap(e=>e.session.profileId?[e.session.profileId]:[]))); if(!this.config)this.sendCareerViews(views);this.rewardSaved=Math.max(this.rewardSaved,rewards.next);if(this.config&&this.rewardState.events.length)this.ctx.waitUntil(this.flushRewards().catch(()=>this.scheduleCleanup())); });
+  }
+  private finishMatchGems(result:RoundResult,ledger:MatchLedger):void{
+    const requests=matchRewardRequests(this.roomId,result,ledger),presentation:RewardPresentation={roundId:result.roundId,matchId:matchIdentity(this.roomId,result.roundId),awards:Object.fromEntries((result.players??[]).map(p=>[p.id,0])),identities:{}};
+    for(const [session,request]of requests){const participant=ledger.rewardParticipants![session],profile=this.careers.profiles.get(participant.identity);if(!profile)continue;
+      presentation.identities[session]=participant.identity;
+      if(this.config)this.recordStatistics(participant.identity,{kind:'match_reward',id:request.matchId+':gems',at:result.endedAt},request);
+      else{const gems=payMatchGems(profile,this.roomId,request);this.careers.mark(participant.identity);this.recordStatistics(participant.identity,{kind:'match_reward',id:request.matchId+':gems',at:result.endedAt,gems});const receipt=profile.matchRewards![this.roomId];presentation.awards[session]=receipt.matchId===request.matchId?receipt.gems:0;}
+    }
+    this.pendingMatchGems=presentation;
   }
   private advanceCareer(e: Entry, event: ChallengeEvent, at: number): number {
     const id = e.session.profileId, profile = id ? this.careers.profiles.get(id) : null;

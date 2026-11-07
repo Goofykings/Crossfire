@@ -17,7 +17,7 @@ export function createStatistics(id: string, name: string, at: number, existingG
     weekly:{start:periodStart('weekly',at),kills:0,points:0,wins:0}, recent:[], lastRound:-1 };
 }
 export type StatisticsEvent = { id: string; at: number; gems?: number } & (
-  { kind:'kill'; points:number } | {kind:'assist'; points:50} | {kind:'death'} | {kind:'round'; round:number; complete:boolean; won:boolean});
+  { kind:'kill'; points:number } | {kind:'assist'; points:50} | {kind:'death'} | {kind:'match_reward'} | {kind:'round'; round:number; complete:boolean; won:boolean});
 /** No client claims. Called with authoritative elimination IDs / finalized round IDs. */
 export function advanceStatistics(p: StatisticsRecord, event: StatisticsEvent): boolean {
   if (p.recent.includes(event.id) || (event.kind==='round' && event.round<=p.lastRound)) return false;

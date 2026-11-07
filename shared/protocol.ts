@@ -1,3 +1,4 @@
+import {validMelee, type MeleeState} from './melee';
 import { validCosmeticReference } from './cosmetics';
 import { roomId, validRoomView, type RoomView } from './rooms';
 import { normalizeUsername } from './username';
@@ -10,7 +11,7 @@ import type { CombatIntent } from './combat';
 import { pointsOrder, type ScoreAward, type RoundResult, type RoundStanding } from './scoring';
 import { GRENADE, type GrenadeState, type GrenadeEvent, type GrenadeExplosion } from './grenades';
 
-export const PROTOCOL_VERSION = 19;
+export const PROTOCOL_VERSION = 20;
 export const validWeapon = (x: unknown): x is WeaponId => x === 'rifle' || x === 'shotgun' || x === 'sniper' || x === 'smg';
 export const PUBLIC_ROOM = 'public-main';
 export const INPUT_BATCH_LIMIT = 12;
@@ -27,22 +28,24 @@ export interface InputFrame {
   intent: MoveIntent;
   combat: CombatIntent;
 }
-export interface CombatState { gun: WeaponState | null; triggerHeld: boolean; reloadHeld: boolean; aimHeld: boolean; grenadeHeld: boolean }
+export interface CombatState { melee?:MeleeState; gun: WeaponState | null; triggerHeld: boolean; reloadHeld: boolean; aimHeld: boolean; grenadeHeld: boolean }
 export interface ShotResult {
   id: string; roundId: number; shooterId: string; weapon: WeaponId; traces?: { from: Vec3; to: Vec3 }[];
   hits: { id: string; life: number; amount: number; health: number; head: boolean; killed: boolean; direction: Vec3 }[];
 }
+export interface MeleeResult { id:string;roundId:number;shooterId:string;life:number;at:number;stage:1|2|3;hits:ShotResult['hits'] }
 export interface Elimination {
   assists?: {id:string;name:string;points:50}[];
   award: ScoreAward | null;
   id: string; victimLife: number; direction: Vec3 | null;
   roundId: number; victimId: string; victimName: string; killerId: string | null;
-  killerName: string | null; weapon: WeaponId | 'grenade' | null; head: boolean;
+  killerName: string | null; weapon: WeaponId | 'grenade' | 'melee' | null; head: boolean;
   at: number; respawnAt: number; killerTeam: 'blue' | 'red' | null; victimTeam: 'blue' | 'red' | null;
 }
 export interface PlayerState {
   /** Additive visual metadata; absent on older v19 snapshots. Never a combat input. */
   cosmeticId?:string;
+  meleeCosmeticId?:string;
   grenades: number;
   score: number;
   comboCount: number;
@@ -94,6 +97,7 @@ export type ServerMessage =
   | { v:typeof PROTOCOL_VERSION;type:'environment';frame:EnvironmentFrame }
   | { v: typeof PROTOCOL_VERSION; type: 'grenade'; event: GrenadeEvent }
   | { v: typeof PROTOCOL_VERSION; type: 'chat'; id: string; name: string; text: string }
+  | { v: typeof PROTOCOL_VERSION; type: 'melee'; event: MeleeResult }
   | { v: typeof PROTOCOL_VERSION; type: 'shot'; shot: ShotResult }
   | { v: typeof PROTOCOL_VERSION; type: 'elimination'; elimination: Elimination }
   | { v: typeof PROTOCOL_VERSION; type: 'welcome'; selfId: string; resumeToken: string; resumed: boolean; snapshot: Snapshot }
@@ -116,6 +120,7 @@ function validStanding(x: unknown): boolean {
     && (x.weapon === undefined || x.weapon === null || validWeapon(x.weapon));
 }
 export function validResult(x: unknown): x is RoundResult {
+  if(record(x)&&x.gemRewards!==undefined){const r=x.gemRewards;if(!record(r)||!keys(r,['matchId','awards'])||typeof r.matchId!=='string'||r.matchId.length===0||r.matchId.length>96||!record(r.awards)||Object.keys(r.awards).length>256||!Object.entries(r.awards).every(([id,gems])=>id.length>0&&id.length<=64&&natural(gems)&&gems<=32&&Array.isArray(x.players)&&x.players.some(p=>record(p)&&p.id===id)))return false;}
   if (!record(x) || !natural(x.roundId) || !validMap(x.mapId) || !['ffa', 'teams'].includes(x.mode as string)
     || !natural(x.endedAt) || typeof x.draw !== 'boolean' || !team(x.winningTeam)
     || !(x.winner === null || validStanding(x.winner)) || !(x.mvp === null || validStanding(x.mvp))) return false;
@@ -146,8 +151,8 @@ export function validElimination(e: unknown): e is Elimination {
     && Number.isSafeInteger(e.victimLife) && (e.victimLife as number) > 0 && (e.direction === null || direction(e.direction))
     && Number.isSafeInteger(e.roundId) && (e.roundId as number) >= 0 && typeof e.victimId === 'string' && typeof e.victimName === 'string'
     && (e.killerId === null || typeof e.killerId === 'string') && (e.killerName === null || typeof e.killerName === 'string')
-    && (e.weapon === null || validWeapon(e.weapon) || e.weapon === 'grenade') && typeof e.head === 'boolean'
-    && (!['grenade'].includes(e.weapon as string) || e.head === false)
+    && (e.weapon === null || validWeapon(e.weapon) || e.weapon === 'grenade' || e.weapon === 'melee') && typeof e.head === 'boolean'
+    && (!['grenade','melee'].includes(e.weapon as string) || e.head === false)
     && Number.isSafeInteger(e.at) && (e.at as number) >= 0 && e.respawnAt === (e.at as number) + RESPAWN_DELAY_MS
     && (e.assists===undefined || Array.isArray(e.assists)&&e.assists.length<=14&&e.assists.every(a=>record(a)&&keys(a,['id','name','points'])
       &&typeof a.id==='string'&&a.id!==e.killerId&&a.id!==e.victimId&&typeof a.name==='string'&&a.name.length<=24&&a.points===50)
@@ -158,7 +163,7 @@ export function validElimination(e: unknown): e is Elimination {
 
 export function validFrame(x: unknown): x is InputFrame {
   if (!record(x) || !keys(x, ['seq', 'yaw', 'pitch', 'intent', 'combat'])) return false;
-  if (!record(x.combat) || !keys(x.combat, ['trigger', 'reload', 'grenade', 'grenadeCancel', 'aimYaw', 'aimPitch'])
+  if (!record(x.combat) || !keys(x.combat, ['trigger', 'reload', 'grenade', 'grenadeCancel', 'melee', 'aimYaw', 'aimPitch'])
     || typeof x.combat.trigger !== 'boolean' || typeof x.combat.reload !== 'boolean') return false;
   if (!Number.isSafeInteger(x.seq) || (x.seq as number) < 1 || !finite(x.yaw) || Math.abs(x.yaw) > Math.PI
     || !finite(x.pitch) || Math.abs(x.pitch) > Math.PI / 2 || !record(x.intent)) return false;
@@ -169,7 +174,7 @@ export function validFrame(x: unknown): x is InputFrame {
       || Math.abs(Math.atan2(Math.sin(c.aimYaw - x.yaw), Math.cos(c.aimYaw - x.yaw))) > .35
       || Math.abs(c.aimPitch - x.pitch) > .35) return false;
   }
-  return (c.grenadeCancel === undefined || typeof c.grenadeCancel === 'boolean') && !(c.grenadeCancel && c.grenade)
+  return (c.melee===undefined||typeof c.melee==='boolean') && (c.grenadeCancel === undefined || typeof c.grenadeCancel === 'boolean') && !(c.grenadeCancel && c.grenade)
     && (c.grenade === undefined || typeof c.grenade === 'boolean') && (i.crouch === undefined || typeof i.crouch === 'boolean')
     && keys(i, ['x', 'z', 'slide', 'crouch', 'aim', 'jumpPressed', 'lean']) && finite(i.x) && Math.abs(i.x) <= 1
     && (i.lean === undefined || i.lean === -1 || i.lean === 0 || i.lean === 1)
@@ -244,6 +249,7 @@ export function parseServerMessage(text: string): ServerMessage | null {
   if (x.type === 'chat') return keys(x, ['v', 'type', 'id', 'name', 'text']) && typeof x.id === 'string' && x.id.length <= 64
     && typeof x.name === 'string' && x.name.length <= 24 && typeof x.text === 'string' && x.text.length > 0 && x.text.length <= 200
     && !/[\u0000-\u001f\u007f]/.test(x.text) ? x as unknown as ServerMessage : null;
+  if(x.type==='melee'){const e=x.event;return keys(x,['v','type','event'])&&record(e)&&keys(e,['id','roundId','shooterId','life','at','stage','hits'])&&identifier(e.id)&&identifier(e.shooterId)&&natural(e.roundId)&&natural(e.at)&&natural(e.life)&&e.life>0&&[1,2,3].includes(e.stage as number)&&Array.isArray(e.hits)&&e.hits.length<=1&&e.hits.every(h=>record(h)&&keys(h,['id','life','amount','health','head','killed','direction'])&&identifier(h.id)&&natural(h.life)&&h.life>0&&finite(h.amount)&&h.amount>0&&h.amount<=35&&finite(h.health)&&h.health>=0&&h.health<=100&&h.head===false&&typeof h.killed==='boolean'&&direction(h.direction))?x as unknown as ServerMessage:null;}
   if (x.type === 'shot') {
     const s = x.shot;
     return record(s) && typeof s.id === 'string' && typeof s.shooterId === 'string' && validWeapon(s.weapon)
@@ -280,6 +286,8 @@ export function parseServerMessage(text: string): ServerMessage | null {
       && record(p.combat) && typeof p.combat.triggerHeld === 'boolean' && typeof p.combat.reloadHeld === 'boolean'
       && typeof p.combat.aimHeld === 'boolean'
       && typeof p.combat.grenadeHeld === 'boolean'
+      && (p.combat.melee===undefined||validMelee(p.combat.melee))
+      && (p.meleeCosmeticId===undefined||validCosmeticReference(p.meleeCosmeticId,'melee'))
       && (p.combat.gun === null ? !p.alive : validGun(p.combat.gun))
       && (p.cosmeticId===undefined||validCosmeticReference(p.cosmeticId,p.weapon))
       && (p.weapon === null || validWeapon(p.weapon)) && (!p.alive || p.weapon !== null)
@@ -306,6 +314,6 @@ export function validExplosion(x: unknown): x is GrenadeExplosion {
   return record(x)&&keys(x,['kind','id','grenadeId','ownerId','ownerLife','roundId','at','position','hits'])&&identifier(x.id)&&identifier(x.grenadeId)&&x.id===`blast:${x.grenadeId}`&&identifier(x.ownerId)
     && natural(x.ownerLife)&&x.ownerLife>0&&natural(x.roundId)&&natural(x.at)&&vector(x.position)
     && Array.isArray(x.hits)&&x.hits.length<=16&&x.hits.every(h=>record(h)&&identifier(h.id)&&natural(h.life)&&h.life>0
-      && finite(h.amount)&&h.amount>0&&h.amount<=GRENADE.damage&&finite(h.health)&&h.health>=0&&h.health<=100
+      && finite(h.amount)&&h.amount>0&&h.amount<=Math.min(100,GRENADE.damage)&&finite(h.health)&&h.health>=0&&h.health<=100
       && typeof h.killed==='boolean'&&h.killed===(h.health===0)&&direction(h.direction))&&new Set(x.hits.map(h=>h.id)).size===x.hits.length;
 }

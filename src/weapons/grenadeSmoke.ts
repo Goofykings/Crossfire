@@ -1,12 +1,12 @@
-import { GRENADE_SMOKE_MS, GRENADE_SMOKE_DENSE_MS } from '../../shared/grenades';
+import { GRENADE_SMOKE_MS, GRENADE_SMOKE_DENSE_MS, GRENADE_FX } from '../../shared/grenades';
 /** Age comes from the authoritative explosion clock, including late joins. */
 export function smokeEnvelope(ageMs: number): number {
   if (ageMs < 0 || ageMs >= GRENADE_SMOKE_MS) return 0;
   const expand = Math.min(1, ageMs / 300);
   const fade = Math.max(0, (ageMs - GRENADE_SMOKE_DENSE_MS) / (GRENADE_SMOKE_MS - GRENADE_SMOKE_DENSE_MS));
-  return expand * (1 - fade * fade * (3 - 2 * fade));
+  return GRENADE_FX.smokeDensity * expand * (1 - fade * fade * (3 - 2 * fade));
 }
-export function smokeRadius(ageMs: number): number { return 2.8 + Math.min(1, Math.max(0, ageMs) / 1500) * 1.4; }
+export function smokeRadius(ageMs: number): number { return (2.8 + Math.min(1, Math.max(0, ageMs) / 1500) * 1.4)*Math.cbrt(GRENADE_FX.smokeVolume); }
 export function smokeInterior(distance: number, ageMs: number): number {
   const t = Math.max(0, Math.min(1, (smokeRadius(ageMs) - distance) / 1.4));
   return t * t * (3 - 2 * t) * smokeEnvelope(ageMs);

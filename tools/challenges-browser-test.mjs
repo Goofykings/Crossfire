@@ -207,7 +207,7 @@ try{
     await a.screenshot({path:`${out}/leaderboard-${width}x${height}.png`});await a.keyboard.press('Escape');
   }
   await a.setViewport({width:1280,height:720});
-  await a.click('.leaderboard-heading > .btn');check(await a.$('#menu.visible'),'Back returns home');
+  await a.$eval('.home-nav button:first-child',b=>b.click());check(await a.$('#menu.visible'),'persistent Play navigation returns home');
   check(await a.evaluate(n=>window.__sockets.length===n,sockets),'leaderboard and stats requests create no additional gameplay sockets');
   check(errors.length===0,`no browser, HTTP or asset failures: ${errors.join(', ')}`);
 

@@ -58,18 +58,23 @@ try{
   await page.goto(base+'?quality=high&scale=1',{waitUntil:'domcontentloaded',timeout:240000});await completeGuestProfile(page,'Crate Tester');
   await nav('Shop');await visible('#shop');
   credential=await page.waitForFunction(()=>localStorage.getItem(Object.keys(localStorage).find(k=>k.startsWith('crossfire.career.v1:'))??''),{timeout:60000}).then(v=>v.jsonValue());assert.match(credential,/^[a-f0-9]{64}$/);
-  await page.waitForFunction(()=>document.querySelector('.shop-balance')?.textContent==='0 GEMS',{timeout:60000});
+  await page.waitForFunction(()=>document.querySelector('.home-gems span')?.textContent==='0',{timeout:60000});
   check(await page.$eval('.shop-crate',n=>n.complete&&n.naturalWidth>0&&n.src.includes('/crossfire/assets/cosmetics/crate/reward-crate/')),'new crate thumbnail loads at the GitHub Pages subpath');
   check(await page.$eval('.shop-open',n=>n.disabled),'Open disabled with 0 gems');
   check((await page.$$eval('.crate-collection',n=>n.map(r=>r.dataset.collection))).join()==='green-camo,blue-camo,red-camo,marble,rainbow-glow,rich','all six collections listed as crate contents');
   check((await page.$$eval('.crate-distribution span',n=>n.map(s=>s.textContent))).join('|')==='UNCOMMON — 55%|RARE — 40%|LEGENDARY — 5%','odds shown');
   await shot('shop-0-gems');
   await h.central.legacyWalletForStatisticsTest(credential,900);await nav('Locker');await visible('#locker');await nav('Shop');await visible('#shop');
-  await page.waitForFunction(()=>document.querySelector('.shop-balance')?.textContent==='900 GEMS'&&!document.querySelector('.shop-open').disabled,{timeout:60000});
+  await page.waitForFunction(()=>document.querySelector('.home-gems span')?.textContent==='900'&&!document.querySelector('.shop-open').disabled,{timeout:60000});
   check(true,'Open enabled with 900 gems');await shot('shop-900-gems');
   // --- Uncommon reveal with drag/spring and equip ----------------------------------------
   const hero=await openForced(id=>id.startsWith('green-camo-'),'uncommon');
   check(hero.background.toLowerCase()==='#39e57a','uncommon reveal background is green');
+  await page.$eval('.crate-reveal',e=>e.querySelector('button:not(:disabled):not([hidden])').focus());
+  await page.keyboard.down('Shift');await page.keyboard.press('Tab');await page.keyboard.up('Shift');
+  check(await page.$eval('.crate-reveal',e=>{const b=[...e.querySelectorAll('button:not(:disabled):not([hidden])')];return document.activeElement===b.at(-1);}), 'reveal Shift+Tab wraps to its last enabled control');
+  await page.keyboard.press('Tab');
+  check(await page.$eval('.crate-reveal',e=>document.activeElement===e.querySelector('button:not(:disabled):not([hidden])')), 'reveal Tab wraps forward without reaching background menus');
   const box=await page.$eval('.crate-reveal canvas',c=>{const r=c.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};});
   await page.mouse.move(box.x,box.y);await page.mouse.down();for(let i=1;i<=12;i++){await page.mouse.move(box.x+i*22,box.y+i*4);await delay(16);}
   const dragged=(await reveal()).hero;check(Math.abs(dragged.offset)>1.5,`drag rotates the weapon (offset ${dragged.offset} rad)`);await shot('uncommon-dragged');
@@ -83,6 +88,7 @@ try{
   check((await page.evaluate(()=>window.__crossfire.cosmetics().view.equipped))[weapon]===item,`equip from the reveal persists ${item} on the server`);
   check((await h.api('/profile',credential)).data.profile.gems===600,'server spent exactly 300 gems');
   await clickText('.reveal-controls','CONTINUE');await page.waitForFunction(()=>document.querySelector('.crate-reveal').hidden);check(true,'Continue closes the reveal and returns to the Shop');
+  check(await page.$eval('.crate-reveal',e=>e.inert)&&await page.$eval('.shop-open',e=>document.activeElement===e),'closing reveal inerts old controls and restores Shop focus');
   if(only==='all'){
     const rare=await openForced(id=>id.startsWith('marble-')||id.startsWith('rainbow-glow-'),'rare');check(rare.background.toLowerCase()==='#4d8dff','rare reveal background is blue');
     await clickText('.reveal-controls','CONTINUE');await page.waitForFunction(()=>document.querySelector('.crate-reveal').hidden);

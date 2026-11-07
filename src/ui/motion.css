@@ -1,0 +1,159 @@
+/* Shared interaction vocabulary. State changes and actions never wait for an animation. */
+:root {
+  --motion-hover: 160ms;
+  --motion-press: 90ms;
+  --motion-selection: 190ms;
+  --motion-open: 250ms;
+  --motion-close: 180ms;
+  --motion-page: 260ms;
+  --motion-ease: cubic-bezier(.2,.75,.25,1);
+  --motion-travel: 5px;
+  --motion-hover-scale: 1.02;
+  --motion-press-scale: .98;
+}
+
+/* Individual scale does not overwrite transforms used by positioned controls. */
+:is(#ui, .crate-reveal) button, :is(#ui, .crate-reveal) [role='option'], :is(#ui, .crate-reveal) summary {
+  transition: background-color var(--motion-hover) var(--motion-ease),
+    color var(--motion-hover) var(--motion-ease), border-color var(--motion-selection) var(--motion-ease),
+    box-shadow var(--motion-selection) var(--motion-ease), opacity var(--motion-hover) var(--motion-ease),
+    scale var(--motion-hover) var(--motion-ease), filter var(--motion-hover) var(--motion-ease);
+}
+:is(#ui, .crate-reveal) button:not(:disabled):not([aria-disabled='true']):hover,
+:is(#ui, .crate-reveal) summary:hover { scale: var(--motion-hover-scale); filter: brightness(1.08); }
+/* Replace the older 1.035 hover transform; cards keep their grid measurements. */
+:is(#ui, .crate-reveal) .btn:hover, :is(#ui, .crate-reveal) .btn:focus-visible { transform: none; }
+:is(#ui, .crate-reveal) button:not(:disabled):not([aria-disabled='true']):active,
+:is(#ui, .crate-reveal) summary:active, :is(#ui, .crate-reveal) [role='option']:active {
+  scale: var(--motion-press-scale); filter: brightness(.92); box-shadow: none;
+  transition-duration: var(--motion-press);
+}
+:is(#ui, .crate-reveal) button:disabled, :is(#ui, .crate-reveal) button[aria-disabled='true'] {
+  scale: 1; transform: none; filter: none; cursor: not-allowed; transition: none;
+  /* Existing disabled colors/opacity remain authoritative, even under :hover. */
+  pointer-events: none;
+}
+:is(#ui, .crate-reveal) :is(button, summary, input, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent-2); outline-offset: 3px;
+}
+:is(#ui, .crate-reveal) button:is(.selected, [aria-pressed='true'], [aria-selected='true']) {
+  box-shadow: inset 0 -2px var(--accent-2), 0 0 12px #4e8dff12;
+}
+:is(#ui, .crate-reveal) .home-nav button[aria-current='page']::before { opacity: 1; background: #dce4ed22; }
+:is(#ui, .crate-reveal) .dropdown-option { transition: background-color var(--motion-selection), color var(--motion-hover); }
+:is(#ui, .crate-reveal) .dropdown-option[aria-selected='true'] { background: #4e8dff30; box-shadow: inset 2px 0 var(--accent-2); }
+
+/* Discrete display transitions retain outgoing pixels, never outgoing interaction.
+ * Older browsers fall back to immediate hiding. No duplicate screens or JS loops. */
+:is(#ui, .crate-reveal) .screen { opacity: 0; pointer-events: none; transition: opacity var(--motion-close) var(--motion-ease), display var(--motion-close) allow-discrete; }
+:is(#ui, .crate-reveal) .screen.visible { opacity: 1; pointer-events: auto; transition-duration: var(--motion-page); animation: none; }
+:is(#ui, .crate-reveal) .screen[inert] { pointer-events: none; }
+/* Animate content, not full-screen backgrounds, the home model or persistent header. */
+:is(#ui, .crate-reveal) .screen > :is(.room-shell, .practice-shell, .settings-shell, .leaderboard-content, .locker-layout, .shop-content, .weapon-grid, .card, .prespawn) {
+  translate: 0 var(--motion-travel);
+  transition: translate var(--motion-close) var(--motion-ease);
+}
+:is(#ui, .crate-reveal) .screen.visible > :is(.room-shell, .practice-shell, .settings-shell, .leaderboard-content, .locker-layout, .shop-content, .weapon-grid, .card, .prespawn) {
+  translate: 0 0; transition-duration: var(--motion-page);
+}
+@starting-style {
+  :is(#ui, .crate-reveal) .screen.visible { opacity: 0; }
+  :is(#ui, .crate-reveal) .screen.visible > :is(.room-shell, .practice-shell, .settings-shell, .leaderboard-content, .locker-layout, .shop-content, .weapon-grid, .card, .prespawn) { translate: 0 var(--motion-travel); }
+}
+
+:is(#ui, .crate-reveal) :is(.dropdown-list, .personal-stats, .scoreboard, .match-chat) {
+  opacity: 1;
+  transition: opacity var(--motion-open) var(--motion-ease), display var(--motion-close) allow-discrete;
+}
+:is(#ui, .crate-reveal) :is(.dropdown-list, .personal-stats, .scoreboard, .match-chat)[hidden] {
+  opacity: 0; pointer-events: none;
+}
+@starting-style { :is(#ui, .crate-reveal) :is(.dropdown-list, .personal-stats, .scoreboard, .match-chat):not([hidden]) { opacity: 0; } }
+/* Native dialogs keep their focus trap, Escape behavior and restore-focus semantics.
+ * overlay retains the top layer during the visual close, without delaying close(). */
+:is(#ui, .crate-reveal) dialog {
+  opacity: 0; translate: 0 var(--motion-travel);
+  transition: opacity var(--motion-close) var(--motion-ease), translate var(--motion-close) var(--motion-ease),
+    display var(--motion-close) allow-discrete, overlay var(--motion-close) allow-discrete;
+}
+:is(#ui, .crate-reveal) dialog[open] { opacity: 1; translate: 0 0; transition-duration: var(--motion-open); }
+:is(#ui, .crate-reveal) dialog:not([open]) { pointer-events: none; }
+:is(#ui, .crate-reveal) dialog::backdrop { transition: opacity var(--motion-close), display var(--motion-close) allow-discrete, overlay var(--motion-close) allow-discrete; opacity: 0; }
+:is(#ui, .crate-reveal) dialog[open]::backdrop { opacity: 1; }
+@starting-style { :is(#ui, .crate-reveal) dialog[open] { opacity: 0; translate: 0 var(--motion-travel); } :is(#ui, .crate-reveal) dialog[open]::backdrop { opacity: 0; } }
+
+:is(#ui, .crate-reveal) :is(input:not([type='range']), textarea, select) {
+  transition: border-color var(--motion-hover), background-color var(--motion-selection), box-shadow var(--motion-hover);
+}
+:is(#ui, .crate-reveal) :is(input:not([type='range']), textarea, select):focus-visible { box-shadow: 0 0 0 3px #4e8dff20; }
+:is(#ui, .crate-reveal) input[type='range']::-webkit-slider-thumb { transition: transform var(--motion-hover), background-color var(--motion-hover), box-shadow var(--motion-hover); }
+:is(#ui, .crate-reveal) input[type='range']::-moz-range-thumb { transition: transform var(--motion-hover), background-color var(--motion-hover), box-shadow var(--motion-hover); }
+:is(#ui, .crate-reveal) input[type='range']:not(:disabled):hover::-moz-range-thumb { transform: scale(1.12); }
+/* Switch travel uses a compositor transform rather than animating left/layout. */
+:is(#ui, .crate-reveal) .setting input.switch::after { left: .2em; transform: translateY(-50%) translateX(0); transition: transform var(--motion-selection) var(--motion-ease), background-color var(--motion-selection); }
+:is(#ui, .crate-reveal) .setting input.switch:checked::after { left: .2em; transform: translateY(-50%) translateX(1.25em); }
+:is(#ui, .crate-reveal) input[type='checkbox']:not(.switch) { accent-color: var(--accent); }
+:is(#ui, .crate-reveal) input[type='checkbox']:not(.switch):checked { animation: ui-check var(--motion-selection) var(--motion-ease); }
+@keyframes ui-check { from { opacity: .55; } to { opacity: 1; } }
+:is(#ui, .crate-reveal) .settings-panels { display: grid; grid-template-rows: minmax(0, 1fr); }
+:is(#ui, .crate-reveal) .settings-tabs { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+:is(#ui, .crate-reveal) .settings-panel {
+  grid-area: 1 / 1; min-height: 0; opacity: 1; translate: 0 0; animation: none;
+  transition: opacity var(--motion-open) var(--motion-ease), translate var(--motion-open) var(--motion-ease), display var(--motion-close) allow-discrete;
+}
+:is(#ui, .crate-reveal) .settings-panel[hidden] { opacity: 0; translate: 0 var(--motion-travel); pointer-events: none; }
+@starting-style { :is(#ui, .crate-reveal) .settings-panel:not([hidden]) { opacity: 0; translate: 0 var(--motion-travel); } }
+:is(#ui, .crate-reveal) .settings-status.ok, :is(#ui, .crate-reveal) .room-copy[data-copied='true'] { animation: ui-confirm 400ms var(--motion-ease); }
+@keyframes ui-confirm { from { text-shadow: 0 0 9px #a9ceff99; } to { text-shadow: 0 0 0 transparent; } }
+:is(#ui, .crate-reveal) .weapon-slots span { transition: color var(--motion-selection), opacity var(--motion-selection), background-color var(--motion-selection); }
+:is(#ui, .crate-reveal) .health .bar > div { transition: width 120ms ease-out; }
+/* Combat HUD becomes readable immediately; only optional panels fade. */
+:is(#ui, .crate-reveal) #hud { opacity: 1; transition: none; }
+.crate-reveal { transition: opacity var(--motion-close) var(--motion-ease), display var(--motion-close) allow-discrete; }
+.crate-reveal.visible { transition-duration: var(--motion-open); }
+.crate-reveal[hidden] { opacity: 0; pointer-events: none; }
+
+/* Lower-cost profile follows the saved setting live, including the home screen. */
+body[data-ui-light='true'] { --motion-hover: 120ms; --motion-open: 200ms; --motion-page: 220ms; --motion-travel: 0px; --motion-hover-scale: 1.01; }
+body[data-ui-light='true'] :is(#ui, .crate-reveal) button { filter: none; }
+body[data-ui-light='true'] :is(#ui, .crate-reveal) .home-backdrop { animation: none; }
+
+/* Home uses two distinct Play controls: the large action and the active nav tab. */
+#ui #menu .home-actions .btn.primary { position:relative; isolation:isolate; border:0; background:#4c78ae55; box-shadow:none; }
+#ui .home-nav .nav-button:first-child[aria-current='page'] { background:#4c78ae36; box-shadow:none; }
+#ui .home-nav .nav-button:first-child[aria-current='page']::before { background:#568bd226; }
+#ui #menu .home-actions .btn.primary:hover { background:#4c83c46d; box-shadow:none; }
+#ui .home-nav .nav-button:hover { text-shadow:0 0 9px #9bc5ff5c; }
+#ui .home-nav .nav-button:hover::before { background:#dce4ed30; }
+#ui .home-nav .nav-button[aria-current='page']:hover::before { background:#dce4ed3a; }
+#ui #menu .home-actions .btn.primary, #ui .home-nav .nav-button {
+  transition:background-color var(--motion-hover) var(--motion-ease),color var(--motion-hover) var(--motion-ease),
+    border-color var(--motion-selection) var(--motion-ease),box-shadow var(--motion-selection) var(--motion-ease),
+    opacity var(--motion-hover) var(--motion-ease),scale var(--motion-hover) var(--motion-ease),filter var(--motion-hover) var(--motion-ease),text-shadow var(--motion-hover) var(--motion-ease);
+}
+
+/* An overshooting transition can reverse smoothly even if the pointer leaves
+ * before it settles. Individual scale does not move neighboring controls. */
+@media (hover:hover) and (prefers-reduced-motion:no-preference) {
+  #ui #menu .home-actions .btn.primary:not(:disabled):hover,
+  #ui .home-nav .nav-button:not(:disabled):hover,
+  #ui .cosmetic-categories .btn:not(:disabled):hover {
+    scale:1.03;
+    transition-duration:var(--motion-hover),var(--motion-hover),var(--motion-selection),var(--motion-selection),var(--motion-hover),360ms,var(--motion-hover);
+    transition-timing-function:var(--motion-ease),var(--motion-ease),var(--motion-ease),var(--motion-ease),var(--motion-ease),cubic-bezier(.2,5.4,.4,1),var(--motion-ease);
+  }
+  #ui #menu .home-actions .btn.primary:not(:disabled):hover:active,
+  #ui .home-nav .nav-button:not(:disabled):hover:active,
+  #ui .cosmetic-categories .btn:not(:disabled):hover:active { scale:var(--motion-press-scale); transition-duration:var(--motion-press); transition-timing-function:var(--motion-ease); }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root { --motion-travel: 0px; --motion-hover-scale: 1; --motion-press-scale: 1; --motion-open: 120ms; --motion-page: 120ms; --motion-close: 100ms; }
+  :is(#ui, .crate-reveal) *, :is(#ui, .crate-reveal) *::before, :is(#ui, .crate-reveal) *::after { animation: none !important; }
+  :is(#ui, .crate-reveal) button, :is(#ui, .crate-reveal) summary { scale: 1 !important; transform: none !important; }
+  :is(#ui, .crate-reveal) .screen, :is(#ui, .crate-reveal) :is(.dropdown-list, .personal-stats, .scoreboard, .match-chat), :is(#ui, .crate-reveal) dialog {
+    transition: opacity 120ms ease-out, display 120ms allow-discrete, overlay 120ms allow-discrete !important;
+  }
+  :is(#ui, .crate-reveal) .screen > *, :is(#ui, .crate-reveal) dialog { translate: none !important; }
+  :is(#ui, .crate-reveal) .settings-panel { translate: none; transition: opacity 120ms ease-out, display 120ms allow-discrete !important; }
+  :is(#ui, .crate-reveal) .setting input.switch::after { transition: background-color 120ms; }
+}

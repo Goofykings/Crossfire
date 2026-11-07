@@ -1,14 +1,28 @@
 import { MOVEMENT } from '../src/config/constants';
 import type { Collider, CollisionWorld } from '../src/physics/CollisionWorld';
-import type { ControllerState, Vec3 } from '../src/player/PlayerController';
+import type { ControllerState, Vec3, PlayerController } from '../src/player/PlayerController';
 
 /** Metres, seconds and HP. One shared balance definition for server and HUD. */
 export const GRENADE = Object.freeze({ perLife: 1, radius: .065, fuseMs: 2000, speed: 15.6,
-  lift: 1.5, gravity: MOVEMENT.gravity, restitution: .42, friction: .68, damage: 100, damageRadius: 4.2, lethalRadius: .65, falloffPower: 1.15,
-  chargeMs: 1500, minSpeed: 3.2, maxSpeed: 24.5 });
+  lift: 1.5, gravity: MOVEMENT.gravity, restitution: .42, friction: .68, damage: 200, damageRadius: 5.2, lethalRadius: .65, falloffPower: 1.15,
+  chargeMs: 1100, minSpeed: 3.2, maxSpeed: 24.5,
+  knockbackSpeed: 8, knockbackLift: 3, maxKnockbackSpeed: 12 });
 /** Presentation/history only; independent of blast damage and physics. */
 export const GRENADE_SMOKE_MS = 7000;
 export const GRENADE_SMOKE_DENSE_MS = 5000;
+/** Cosmetics only: 25% less cloud volume/density, three times the old 18 dirt puffs. */
+export const GRENADE_FX=Object.freeze({smokeVolume:.75,smokeDensity:.75,debris:54,reducedDebris:27,chromebookDebris:12,particleBudget:256});
+
+/** Applied only after confirmed damage. Normal controller substeps, wall sliding,
+ * floors, ceilings and snapshot reconciliation handle the resulting velocity. */
+export function grenadeKnockback(player:PlayerController,origin:Vec3,damage:number):void{
+ if(!Number.isFinite(damage)||damage<=0)return;
+ const strength=Math.min(1,damage/100),dx=player.position.x-origin.x,dz=player.position.z-origin.z,n=Math.hypot(dx,dz);
+ const v=player.velocity;if(n>.001){v.x+=dx/n*GRENADE.knockbackSpeed*strength;v.z+=dz/n*GRENADE.knockbackSpeed*strength;}
+ const speed=Math.hypot(v.x,v.z);if(speed>GRENADE.maxKnockbackSpeed){v.x*=GRENADE.maxKnockbackSpeed/speed;v.z*=GRENADE.maxKnockbackSpeed/speed;}
+ v.y=Math.min(player.cfg.jumpSpeed,Math.max(0,v.y)+GRENADE.knockbackLift*strength);player.grounded=false;
+ if(player.sliding){player.slideRemaining=0;player.slideCooldown=player.cfg.slideCooldown;}
+}
 export interface GrenadeState {
   id: string; ownerId: string; ownerLife: number; roundId: number;
   at: number; explodeAt: number; updatedAt: number; position: Vec3; velocity: Vec3;

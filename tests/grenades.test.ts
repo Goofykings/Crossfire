@@ -39,7 +39,7 @@ describe('continuous shared grenade physics', () => {
     const g=throwGrenade(w,eye,eye,d,zero,data);expect(g === null || g.position.z>-.12).toBe(true);
     expect(throwGrenade(w,{...eye,z:-.4},eye,d,zero,data)).toBeNull();
   });
-  it.each([0, -.2, -.45])('roughly doubles practical throw range at pitch %s without changing blast balance', pitch => {
+  it.each([0, -.2, -.45])('preserves the increased ordinary throw range at pitch %s with the new blast tuning', pitch => {
     const eye={x:0,y:1.64,z:0},direction={x:0,y:-Math.sin(pitch),z:-Math.cos(pitch)};
     const g=throwGrenade(floor(),eye,eye,direction,{x:0,y:0,z:0},{id:'g',ownerId:'a',ownerLife:1,roundId:0,at:1000})!;
     const old=structuredClone(g);
@@ -47,7 +47,7 @@ describe('continuous shared grenade physics', () => {
     advanceGrenade(g,g.explodeAt,floor());advanceGrenade(old,old.explodeAt,floor());
     const ratio=(Math.abs(g.position.z)-.38)/(Math.abs(old.position.z)-.38);
     expect(ratio).toBeGreaterThan(1.8);expect(ratio).toBeLessThan(2.8);
-    expect(GRENADE.damage).toBe(100);expect(GRENADE.damageRadius).toBe(4.2);expect(GRENADE.fuseMs).toBe(2000);
+    expect(GRENADE.damage).toBe(200);expect(GRENADE.damageRadius).toBe(5.2);expect(GRENADE.fuseMs).toBe(2000);
   });
 });
 it('emits bounce cues only at confirmed swept impacts, without changing the trajectory',()=>{
@@ -59,18 +59,18 @@ it('emits bounce cues only at confirmed swept impacts, without changing the traj
 describe('authoritative radial damage', () => {
   it('has a lethal center, smooth falloff and zero damage at the main cloud boundary', () => {
     const w=floor(),motion=new PlayerController(w).capture(),at={x:0,y:.065,z:0};
-    expect(blastDamage(w,at,motion)).toBe(100);
-    motion.position.x=1e-14;expect(blastDamage(w,at,motion)).toBe(100);
-    motion.position.x=GRENADE.lethalRadius;expect(blastDamage(w,at,motion)).toBe(100);
-    let previous=100;
+    expect(blastDamage(w,at,motion)).toBe(200);
+    motion.position.x=1e-14;expect(blastDamage(w,at,motion)).toBe(200);
+    motion.position.x=GRENADE.lethalRadius;expect(blastDamage(w,at,motion)).toBe(200);
+    let previous=200;
     for(const x of [.7,1,2,3,4,4.19]){motion.position.x=x;const hp=blastDamage(w,at,motion);expect(hp).toBeLessThan(previous);expect(hp).toBeGreaterThan(0);previous=hp;}
-    motion.position.x=4.2;expect(blastDamage(w,at,motion)).toBe(0);
+    motion.position.x=GRENADE.damageRadius;expect(blastDamage(w,at,motion)).toBe(0);
   });
   it('uses actual lowered/airborne body extents and solid occlusion', () => {
     const w=floor(),m=new PlayerController(w).capture();m.position.x=1;
     expect(blastDamage(w,{x:0,y:.1,z:0},m)).toBeGreaterThan(0);
     w.add({c:[.5,1,0],h:[.015,1,1]});expect(blastDamage(w,{x:0,y:.1,z:0},m)).toBe(0);
-    m.position={x:0,y:5,z:0};expect(blastDamage(floor(),{x:0,y:.1,z:0},m)).toBe(0);
+    m.position={x:0,y:5.5,z:0};expect(blastDamage(floor(),{x:0,y:.1,z:0},m)).toBe(0);
     m.position.y=0;m.crouch=1;expect(blastDamage(floor(),{x:0,y:2.7,z:0},m)).toBeLessThan(blastDamage(floor(),{x:0,y:2.7,z:0},{...m,crouch:0}));
   });
 });

@@ -6,7 +6,7 @@ import { assetUrl } from '../core/assets';
 import { loadContainer } from '../core/loadContainer';
 import type { MaterialLibrary } from '../rendering/MaterialLibrary';
 import { advanceGrenade, type GrenadeExplosion, type GrenadeState } from '../../shared/grenades';
-import { GRENADE_SMOKE_MS } from '../../shared/grenades';
+import { GRENADE_SMOKE_MS, GRENADE_FX } from '../../shared/grenades';
 import { smokeEnvelope, smokeRadius, smokeInterior, smokeObscures } from './grenadeSmoke';
 import type { CollisionWorld } from '../physics/CollisionWorld';
 
@@ -18,7 +18,7 @@ export class GrenadeView {
   private readonly objects = new Map<string, { root: TransformNode; state: GrenadeState; smoke: number; authority: number }>();
   private readonly particles: SolidParticleSystem;
   private readonly material: StandardMaterial;
-  private readonly lives = Array.from({ length: 128 }, () => ({ age: 0, born: 0, life: 0, size: 0, flash: false, debris: false, velocity: Vector3.Zero() }));
+  private readonly lives = Array.from({ length: GRENADE_FX.particleBudget }, () => ({ age: 0, born: 0, life: 0, size: 0, flash: false, debris: false, velocity: Vector3.Zero() }));
   private cursor = 0;
   private reduced = false;
   private readonly clouds = new Map<string, GrenadeExplosion>();
@@ -108,21 +108,20 @@ export class GrenadeView {
     // Expand the brief flash/burst separately from the seven-second smoke;
     // presentation sizes never change the authoritative blast radius.
     this.burst.explode(event, serverTime);
-    this.ground.explode(event, serverTime, this.reduced);
+    this.ground.explode(event, serverTime, this.reduced||this.chromebook);
     if (serverTime - event.at > 300) return; // Do not replay expired flash/debris on resume.
-    const scale = 4;
-
-    for (let i = 0; i < 18; i++) {
-      const flash = false; // The dedicated additive burst owns the flash.
-      this.emit(event.position, flash ? .19 : .55 + Math.random() * .25, (flash ? .75 : .16) * scale,
-        flash, new Vector3((Math.random() - .5) * 3, Math.random() * 2, (Math.random() - .5) * 3).scaleInPlace(scale));
+    const count=this.chromebook?GRENADE_FX.chromebookDebris:this.reduced?GRENADE_FX.reducedDebris:GRENADE_FX.debris;
+    for (let i = 0; i < count; i++) {
+      const angle=Math.random()*Math.PI*2,speed=4+Math.random()*9,dirt=i%3!==0;
+      this.emit(event.position,.35+Math.random()*.4,dirt?.04+Math.random()*.07:.25+Math.random()*.2,
+        false,new Vector3(Math.cos(angle)*speed,2+Math.random()*5,Math.sin(angle)*speed),true);
     }
   }
   private emit(at: { x: number; y: number; z: number }, life: number, size: number, flash: boolean, velocity: Vector3, debris = false): void {
     const index = this.cursor++ % this.lives.length, p = this.particles.particles[index], data = this.lives[index];
     Object.assign(data, { age: 0, born: performance.now() / 1000, life, size, flash, velocity, debris });
     p.position.copyFromFloats(at.x, at.y, at.z); p.scaling.setAll(size);
-    p.color!.set(flash ? 1 : .35, flash ? .72 : .36, flash ? .25 : .37, flash ? .8 : .24);
+    p.color!.set(flash ? 1 : debris?.32:.35, flash ? .72 : debris?.24:.36, flash ? .25 : debris?.16:.37, flash ? .8 : debris?.7:.24);
   }
   update(dt: number, serverTime: number, world: CollisionWorld): void {
     for (const object of this.objects.values()) {
@@ -144,14 +143,14 @@ export class GrenadeView {
       data.age = Math.max(0, now - data.born);
       const elapsed = data.age - previousAge;
       if (data.age >= data.life) { data.life = 0; p.scaling.setAll(0); p.color!.a = 0; continue; }
-      if (data.debris) data.velocity.y -= 20 * elapsed;
+      if (data.debris) {data.velocity.y-=20*elapsed;p.rotation.z+=elapsed*8;}
       p.position.addInPlaceFromFloats(data.velocity.x * elapsed, data.velocity.y * elapsed, data.velocity.z * elapsed);
       const t = data.age / data.life;
       p.scaling.setAll(data.size * (1 + t * (data.flash ? .6 : data.debris ? 0 : 2)));
-      p.color!.a = (data.flash ? .8 : .24) * (1 - t) ** 2;
+      p.color!.a = (data.flash ? .8 : data.debris?.7:.24) * (1 - t) ** 2;
     }
     this.particles.setParticles();
-    this.burst.update(serverTime, this.reduced, !this.chromebook);
+    this.burst.update(serverTime, this.reduced||this.chromebook, !this.chromebook);
     this.ground.update(serverTime, world);
     this.serverTime = serverTime;
     this.inside = 0;
@@ -171,8 +170,9 @@ export class GrenadeView {
       for (let i = 0; i < count; i++) {
         const p = this.cloudParticles.particles[slot++], angle = phase + i * 2.399963;
         const r = radius * Math.sqrt((i + .5) / count) * .76;
-        p.position.set(cloud.position.x + Math.cos(angle) * r, cloud.position.y + .5 + (i % 5) * .42 + Math.max(0, age) * (.00008 + (i % 7) * .000015), cloud.position.z + Math.sin(angle) * r);
-        p.scaling.setAll((.85 + .3 * Math.abs(Math.sin(phase + i * 13.7))) * (this.reduced ? 3.8 : 2.9) * (.55 + .45 * Math.min(1, age / 500)));
+        const scale=Math.cbrt(GRENADE_FX.smokeVolume);
+        p.position.set(cloud.position.x + Math.cos(angle) * r, cloud.position.y + .5 + (i % 5) * .42*scale + Math.max(0, age) * (.00008 + (i % 7) * .000015), cloud.position.z + Math.sin(angle) * r);
+        p.scaling.setAll(scale*(.85 + .3 * Math.abs(Math.sin(phase + i * 13.7))) * (this.reduced ? 3.8 : 2.9) * (.55 + .45 * Math.min(1, age / 500)));
         p.color!.set(.43, .45, .47, opacity * (.85 + .15 * Math.abs(Math.sin(phase + i * 9.1))) * (this.reduced ? .9 : .78));
       }
     }
@@ -184,7 +184,7 @@ export class GrenadeView {
   }
   inspect() {
     const mesh=this.particles.mesh;
-    return { ground: this.ground.inspect(), burst: this.burst.inspect(this.serverTime), clouds: [...this.clouds.values()].map(c => ({ id:c.id, age:this.serverTime-c.at, opacity:smokeEnvelope(this.serverTime-c.at), position:c.position })), inside:this.inside, reduced:this.reduced, cloudBudget:this.cloudParticles.nbParticles, projectiles: this.objects.size, particles: this.lives.filter((p) => p.life > 0).length,
+    return { ground: this.ground.inspect(), burst: this.burst.inspect(this.serverTime), clouds: [...this.clouds.values()].map(c => ({ id:c.id, age:this.serverTime-c.at, opacity:smokeEnvelope(this.serverTime-c.at), position:c.position })), inside:this.inside, reduced:this.reduced, cloudBudget:this.cloudParticles.nbParticles, projectiles: this.objects.size, particles: this.lives.filter((p) => p.life > 0).length,debris:this.lives.filter(p=>p.life>0&&p.debris).length,particleBudget:this.lives.length,
       rendering: { active:this.scene.getActiveMeshes().data.includes(mesh),enabled:mesh.isEnabled(),visible:mesh.isVisible,
         ready:mesh.isReady(),alpha:mesh.hasVertexAlpha,texture:this.material.diffuseTexture?.isReady(),disposed:mesh.isDisposed(),
         blending:this.material.needAlphaBlendingForMesh(mesh),vertices:mesh.getTotalVertices() },

@@ -4,6 +4,7 @@ import { PlayerController, NO_INTENT } from '../src/player/PlayerController';
 import { CollisionWorld } from '../src/physics/CollisionWorld';
 import { Weapon, WEAPONS } from '../src/weapons/Weapon';
 import { PROTOCOL_VERSION, type PlayerState, type Snapshot } from '../shared/protocol';
+import { createMeleeState } from '../shared/melee';
 
 // Explicit transport unit fixture. Operational multiplayer is tested separately
 // with actual Worker/TCP sockets and independent browsers.
@@ -44,6 +45,23 @@ async function connect(documentFixture?: object) {
   return { socket, p, client };
 }
 const frames = (s: SocketFixture) => s.sent.filter((m) => m.type === 'input').flatMap((m) => m.frames!);
+it('replays melee movement clearance per tick without restarting a pending equip animation',async()=>{
+  const {client,p,socket}=await connect();p.combat.melee=createMeleeState();p.combat.gun!.action='idle';
+  socket.receive({v:PROTOCOL_VERSION,type:'snapshot',snapshot:snapshot(p)});
+  const startedAt=Date.now();
+  client.fixedInput(controller,{...NO_INTENT,z:1},{trigger:false,reload:false,melee:true});
+  vi.advanceTimersByTime(8);
+  client.fixedInput(controller,{...NO_INTENT,z:1},{trigger:false,reload:false,melee:false});
+  vi.advanceTimersByTime(8);
+  client.fixedInput(controller,{...NO_INTENT,z:1},{trigger:false,reload:false,melee:false});
+  vi.advanceTimersByTime(200);
+  const clearance:(string|null)[]=[],tick=vi.spyOn(controller,'fixedUpdate').mockImplementation(()=>{clearance.push(controller.weaponClearance);});
+  try{
+    client.reconcile(controller,snapshot(p),new Weapon(WEAPONS[0]));
+    expect(clearance).toEqual(['rifle',null,null]);
+    expect(client.melee.phase).toBe('equipping');expect(client.melee.startedAt).toBe(startedAt);
+  }finally{tick.mockRestore();}
+});
 it('merges prop deltas once, rejects stale/foreign rounds and restores authoritative props on resume',async()=>{
   const {socket,p,client}=await connect();
   const state=(id:string,x:number)=>({id,position:{x,y:1,z:0},velocity:{x:0,y:0,z:0},yaw:0,spin:0,angle:0,angularVelocity:0,asleep:true});

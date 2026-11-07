@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {harness,until,self,frames,ack,origin} from './room-harness.mjs';
-const defaults=['default-rifle','default-smg','default-sniper','default-shotgun'];
+const defaults=['default-rifle','default-smg','default-sniper','default-shotgun','default-melee'];
 
 test('cosmetics: real capability inventory, starter migration, strict equip, unaffordable crate, wallet/statistics preservation',{timeout:30000},async t=>{
  const h=await harness(t),token=await h.profile();await h.central.legacyWalletForStatisticsTest(token,37);
  const request=async(path='/cosmetics',body,credential=token)=>{const r=await fetch(new URL(path,h.base),{method:body?'POST':'GET',headers:{Origin:origin,Authorization:'Bearer '+credential,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,data:r.headers.get('Content-Type')?.includes('application/json')?await r.json():await r.text()};};
  const career=(await h.api('/profile',token)).data.profile,stats=(await h.api('/stats',token)).data.totals;
- const a=await request();assert.equal(a.status,200);assert.deepEqual(a.data.owned,defaults);assert.equal(a.data.version,1);assert.equal(Object.keys(a.data.equipped).length,4);
+ const a=await request();assert.equal(a.status,200);assert.deepEqual(a.data.owned,defaults);assert.equal(a.data.version,1);assert.equal(Object.keys(a.data.equipped).length,5);
  assert.equal((await request('/cosmetics',undefined,'b'.repeat(64))).status,401);
  for(const [body,status]of [[{version:1,id:'not-owned'},403],[{version:1,id:'default-rifle',owned:['gold']},400],[{version:1,id:'default-rifle',gems:100000},400],[{version:2,id:'default-rifle'},400]])assert.equal((await request('/cosmetics/equip',body)).status,status);
  const results=await Promise.all(defaults.map(id=>request('/cosmetics/equip',{version:1,id})));assert.ok(results.every(r=>r.status===200));assert.deepEqual((await request()).data.equipped,a.data.equipped);
@@ -36,10 +36,10 @@ test('cosmetics: server crate spends gems and grants one unowned item atomically
  for(const body of [{version:1,id:'rich-rifle'},{version:1,rarity:'legendary'},{version:2},{version:1,gems:0}])assert.equal((await request('/cosmetics/open',body)).status,400,JSON.stringify(body));
  const opened=[];
  for(const left of [350,50]){const r=await request('/cosmetics/open',{version:1});assert.equal(r.status,200);assert.equal(r.data.gems,left);
-  assert.match(r.data.item,/^(green-camo|blue-camo|red-camo|marble|rainbow-glow|rich)-(rifle|smg|sniper|shotgun)$/);assert.ok(!opened.includes(r.data.item),'no duplicate');opened.push(r.data.item);
+  assert.match(r.data.item,/^(green-camo|blue-camo|red-camo|marble|rainbow-glow|rich)-(rifle|smg|sniper|shotgun|melee)$/);assert.ok(!opened.includes(r.data.item),'no duplicate');opened.push(r.data.item);
   assert.ok(r.data.inventory.owned.includes(r.data.item));assert.equal(r.data.inventory.version,1);}
  const broke=await request('/cosmetics/open',{version:1});assert.equal(broke.status,409);
- const inv=await request('/cosmetics');for(const id of opened)assert.ok(inv.data.owned.includes(id));assert.equal(inv.data.owned.length,6);
+ const inv=await request('/cosmetics');for(const id of opened)assert.ok(inv.data.owned.includes(id));assert.equal(inv.data.owned.length,7);
  assert.equal((await h.api('/profile',token)).data.profile.gems,50);assert.deepEqual((await h.api('/stats',token)).data.totals,stats,'spending never changes lifetime earned statistics');
  const item=opened[0],weapon=item.split('-').pop();const eq=await request('/cosmetics/equip',{version:1,id:item});assert.equal(eq.status,200);assert.equal(eq.data.equipped[weapon],item);
  await h.restart();const restored=await request('/cosmetics');for(const id of opened)assert.ok(restored.data.owned.includes(id));assert.equal(restored.data.equipped[weapon],item);assert.equal((await h.api('/profile',token)).data.profile.gems,50);

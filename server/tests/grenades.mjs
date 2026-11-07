@@ -123,6 +123,10 @@ for (const mode of ['ffa','teams']) test(`grenades and held crouch: inventory, r
     const second=await until(()=>b.snapshot.grenades[0]);await room.fallForTest(b.id);
     await until(()=>!self(b).alive);await until(()=>Date.now()-second.at>1400);
     const settled=(await room.snapshotForTest()).grenades[0];
+    // The expanded, stronger blast can now also eliminate the otherwise unrelated
+    // third peer at the old 2.2m staging point. Isolate this posthumous-credit case
+    // outside the actual radius; retain the exact one-kill/100-point assertions.
+    if(self(c).alive)await room.placeForCombatTest(c.id,await room.smokeObservationForTest(settled.position));
     await room.placeForCombatTest(a.id,[settled.position.x,arena.center[1],settled.position.z]);
     await until(()=>!self(a).alive&&self(b).kills===1);
     assert.equal(self(b).grenades,1,'posthumous kill rewards exactly once');

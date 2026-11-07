@@ -1,3 +1,5 @@
+import {botThrow} from '../src/practice/botGrenades';
+import {DIFFICULTIES,BOT_GRENADES,loadDifficulty,saveDifficulty,validPractice} from '../src/practice/config';
 import {expect,it,vi,afterEach} from 'vitest';
 import {PracticeSimulation} from '../src/practice/PracticeSimulation';
 import {PracticeNavigation} from '../src/practice/Navigation';
@@ -44,7 +46,7 @@ it('solid walls and teammates block real rays and do not award points',()=>{
 it('bot difficulty changes reactions, aim error and sliding without changing gun rules',()=>{
  expect(DIFFICULTY.absurd.error).toBe(0);expect(DIFFICULTY.absurd.reaction).toBeLessThan(DIFFICULTY.advanced.reaction);expect(DIFFICULTY.advanced.reaction).toBeLessThan(DIFFICULTY.beginner.reaction);expect(DIFFICULTY.beginner.speed).toBeLessThan(DIFFICULTY.advanced.speed);
  const data=arena(),nav=new PracticeNavigation(data.world,data.layout);
- for(const difficulty of ['beginner','advanced','absurd'] as const){const sim=new PracticeSimulation({...DEFAULT_PRACTICE,bots:3,difficulty},data,'Local',{now:0,seed:123,navigation:nav});sim.spawnHuman('rifle');advance(sim,45);expect(sim.actors.slice(1).reduce((n,a)=>n+a.state.kills,0),difficulty+' actual bot eliminations').toBeGreaterThan(0);expect(sim.actors.some(a=>(a.brain?.distanceTravelled??0)>30),difficulty+' moving bots').toBe(true);expect(sim.actors.some(a=>a.state.life>1),difficulty+' respawn').toBe(true);}
+ for(const difficulty of DIFFICULTIES){const sim=new PracticeSimulation({...DEFAULT_PRACTICE,bots:3,difficulty},data,'Local',{now:0,seed:123,navigation:nav});sim.spawnHuman('rifle');advance(sim,45);expect(sim.actors.slice(1).reduce((n,a)=>n+a.state.kills,0),difficulty+' actual bot eliminations').toBeGreaterThan(0);expect(sim.actors.some(a=>(a.brain?.distanceTravelled??0)>30),difficulty+' moving bots').toBe(true);expect(sim.actors.some(a=>a.state.life>1),difficulty+' respawn').toBe(true);}
 },30000);
 
 it.each(MAP_IDS)('real armed bots traverse %s without entering solids or unsafe space',id=>{
@@ -127,3 +129,44 @@ it.each(MAP_IDS)('%s navigation connects real spawns and includes reachable stai
  const invalid=nav.nodes.filter(n=>n.component===start.component&&data.world.overlapsCylinder(n.x,n.z,.34,n.y+.44,n.y+1.8));expect(invalid).toHaveLength(0);
  console.log(id,nav.inspect());
 },30000);
+
+it('Intermediate progresses between Beginner and Advanced and persists without requiring storage',()=>{
+ expect(DIFFICULTIES).toEqual(['beginner','intermediate','advanced','absurd']);
+ for(const key of ['reaction','error','decision','slide'] as const){expect(DIFFICULTY.intermediate[key]).toBeLessThan(DIFFICULTY.beginner[key]);expect(DIFFICULTY.intermediate[key]).toBeGreaterThan(DIFFICULTY.advanced[key]);}
+ for(const key of ['speed','turn','retreat','cover'] as const){expect(DIFFICULTY.intermediate[key]).toBeGreaterThan(DIFFICULTY.beginner[key]);expect(DIFFICULTY.intermediate[key]).toBeLessThan(DIFFICULTY.advanced[key]);}
+ for(let i=1;i<DIFFICULTIES.length;i++){expect(BOT_GRENADES[DIFFICULTIES[i]].chance).toBeGreaterThan(BOT_GRENADES[DIFFICULTIES[i-1]].chance);expect(BOT_GRENADES[DIFFICULTIES[i]].cooldown).toBeLessThan(BOT_GRENADES[DIFFICULTIES[i-1]].cooldown);}
+ const entries=new Map<string,string>();vi.stubGlobal('localStorage',{getItem:(k:string)=>entries.get(k),setItem:(k:string,v:string)=>entries.set(k,v)});
+ expect(loadDifficulty()).toBe('advanced');saveDifficulty('intermediate');expect(loadDifficulty()).toBe('intermediate');expect(validPractice({...DEFAULT_PRACTICE,difficulty:loadDifficulty()})).toBe(true);
+ vi.stubGlobal('localStorage',{getItem:()=>{throw Error();},setItem:()=>{throw Error();}});expect(loadDifficulty()).toBe('advanced');expect(()=>saveDifficulty('intermediate')).not.toThrow();
+});
+it('grenade planning rejects walls, overhead obstacles and unsuitable ranges',()=>{
+ const data=arena(),eye={x:0,y:1.65,z:6},target={x:0,y:0,z:-6};expect(botThrow(data.world,eye,target)).not.toBeNull();
+ expect(botThrow(data.world,eye,{x:0,y:0,z:5})).toBeNull();expect(botThrow(data.world,eye,{x:0,y:0,z:-30})).toBeNull();
+ data.world.add({c:[0,2,0],h:[3,2,.2]});expect(botThrow(data.world,eye,target)).toBeNull();
+ const roof=arena();roof.world.add({c:[0,2.2,0],h:[5,.2,10]});expect(botThrow(roof.world,eye,target)).toBeNull();
+});
+it('a real bot charges, consumes one grenade, explodes with normal damage and cannot refill without kills',()=>{
+ const sim=new PracticeSimulation({...DEFAULT_PRACTICE,bots:1,difficulty:'intermediate'},arena(),'Local',{now:0});sim.spawnHuman('rifle');const [human,bot]=sim.actors;
+ human.controller.teleport({x:0,y:0,z:-6},0);bot.controller.teleport({x:0,y:0,z:6},0);bot.brain!.reset(0);vi.spyOn(sim.random,'next').mockReturnValue(0);
+ // Isolate grenade decisions from bullets and locomotion, retaining the real brain,
+ // charge, launch, sweep/bounce, explosion, damage and inventory pipeline.
+ vi.spyOn(bot.gun!,'update').mockReturnValue([]);vi.spyOn(bot.controller,'fixedUpdate').mockImplementation(()=>{});
+ let thrown=false,charged=false;
+ for(let i=0;i<120*8;i++){sim.step();charged ||= bot.charge.active;if(sim.events.some(e=>e.type==='grenade'&&e.event.kind==='throw')){thrown=true;break;}}
+ expect(charged).toBe(true);expect(thrown).toBe(true);expect(bot.state.grenades).toBe(0);
+ human.state.health=100;human.controller.teleport({...sim.grenades[0].position,y:0},0);
+ // Follow the projectile to test the actual confirmed blast damage deterministically.
+ while(sim.grenades.length){human.controller.teleport({...sim.grenades[0].position,y:0},0);sim.step();}
+ expect(sim.events.some(e=>e.type==='grenade'&&e.event.kind==='explode'&&e.event.hits.some(h=>h.id===human.state.id&&h.amount>0))).toBe(true);
+ expect(bot.state.health).toBe(100);expect(sim.policy.persistStatistics).toBe(false);expect(sim.policy.uploadResults).toBe(false);
+ const throws=sim.events.filter(e=>e.type==='grenade'&&e.event.kind==='throw').length;
+ bot.state.grenades=0;advance(sim,25);expect(sim.events.filter(e=>e.type==='grenade'&&e.event.kind==='throw')).toHaveLength(throws);
+});
+it('multiple bots space grenade attempts and cancel a charge when a wall blocks the opponent',()=>{
+ const data=arena(),sim=new PracticeSimulation({...DEFAULT_PRACTICE,bots:3,difficulty:'absurd',mode:'teams'},data,'Local',{now:0});sim.spawnHuman('rifle');vi.spyOn(sim.random,'next').mockReturnValue(0);
+ sim.actors[0].controller.teleport({x:0,y:0,z:-7},0);
+ for(const [i,bot]of sim.actors.slice(1).entries()){bot.state.team='red';bot.controller.teleport({x:i*2,y:0,z:7},0);bot.brain!.reset(0);vi.spyOn(bot.gun!,'update').mockReturnValue([]);vi.spyOn(bot.controller,'fixedUpdate').mockImplementation(()=>{});}
+ for(let i=0;i<120*8&&!sim.actors.some(a=>a.charge.active);i++)sim.step();expect(sim.actors.filter(a=>a.charge.active).length).toBe(1);
+ data.world.add({c:[0,3,0],h:[12,3,.2]});advance(sim,1);expect(sim.actors.some(a=>a.charge.active)).toBe(false);expect(sim.events.filter(e=>e.type==='grenade'&&e.event.kind==='throw')).toHaveLength(0);
+ expect(sim.actors.slice(1).map(a=>a.state.grenades)).toEqual([1,1,1]);
+});

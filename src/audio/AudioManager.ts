@@ -1,6 +1,7 @@
 import { assetUrl } from '../core/assets';
 
 export type SoundName =
+  | 'melee_equip' | 'melee_flourish' | 'melee_swing1' | 'melee_swing2' | 'melee_swing3'
   | 'grenade_explosion'
   | 'rifle_shot'
   | 'smg_shot'
@@ -34,6 +35,7 @@ export type SoundName =
   | 'ui_hover';
 
 const FILES: Record<SoundName, string> = {
+  melee_equip:'melee_equip.wav',melee_flourish:'melee_flourish.wav',melee_swing1:'melee_swing1.wav',melee_swing2:'melee_swing2.wav',melee_swing3:'melee_swing3.wav',
   grenade_explosion: 'grenade_explosion.wav',
   rifle_shot: 'rifle_shot.wav',
   smg_shot: 'smg_shot.wav',
@@ -77,6 +79,27 @@ export class AudioManager {
   private master: GainNode | null = null;
   private sfx: GainNode | null = null;
   private effectsVolume = 1;
+  private readonly uiVoices=new Set<AudioBufferSourceNode>();
+  private lastUI=-Infinity;
+  /** Warm 45/55 ms ticks, synthesized once so the first click needs no fetch. */
+  private uiBuffers=new Map<string,AudioBuffer>();
+  playUI(kind:'hover'|'click'|'tick',rate=1):void {
+    const ctx=this.ctx;if(!ctx||!this.sfx||ctx.state!=='running')return;
+    if(kind!=='click'&&ctx.currentTime-this.lastUI<.025)return;
+    this.lastUI=ctx.currentTime;
+    let buffer=this.uiBuffers.get(kind);
+    if(!buffer){
+      const duration=kind==='click'?.055:.045;buffer=ctx.createBuffer(1,Math.ceil(ctx.sampleRate*duration),ctx.sampleRate);
+      const data=buffer.getChannelData(0),frequency=kind==='click'?360:560;
+      for(let i=0;i<data.length;i++){const t=i/ctx.sampleRate,envelope=Math.sin(Math.PI*t/duration)*Math.exp(-t*85);data[i]=(Math.sin(2*Math.PI*frequency*t)+.18*Math.sin(2*Math.PI*frequency*1.5*t))*envelope;}
+      this.uiBuffers.set(kind,buffer);
+    }
+    // A hard voice budget bounds even pathological pointer/input streams.
+    if(this.uiVoices.size>=3){const old=this.uiVoices.values().next().value!;old.stop();this.uiVoices.delete(old);}
+    const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=buffer;source.playbackRate.value=rate;
+    gain.gain.value=kind==='click'?.22:kind==='tick'?.09:.065;source.connect(gain);gain.connect(this.sfx);
+    this.uiVoices.add(source);source.onended=()=>{this.uiVoices.delete(source);source.disconnect();gain.disconnect();};source.start();
+  }
   private readonly buffers = new Map<SoundName, AudioBuffer>();
   private volume = 0.7;
   private readonly spatialVoices = new Map<AudioBufferSourceNode, GainNode>();

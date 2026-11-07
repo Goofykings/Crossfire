@@ -6,7 +6,7 @@ import { NO_INTENT } from '../src/player/PlayerController';
 import { parseClientMessage, PROTOCOL_VERSION } from '../shared/protocol';
 
 describe('server-clock grenade charging',()=>{
-  it('releases a quick tap once, caps at 1.5 seconds, and does not throw while held',()=>{
+  it('releases a quick tap once, caps at 1.1 seconds, and does not throw while held',()=>{
     const c=new GrenadeCharge();
     expect(c.update(true,1000,1/120,true)).toBeNull();
     expect(c.update(false,1008,1/120,true)).toBe(0);

@@ -70,10 +70,10 @@ body[data-home-page='play'] #game, body[data-home-page='settings'] #game { visib
 
 /* One persistent header keeps navigation aligned across home pages. */
 :root {
-  --home-top: clamp(28px, 5vh, 60px);
-  --logo-size: clamp(30px, 6.8vw, 92px);
-  --nav-gap: clamp(22px, 4vh, 36px);
-  --home-content-top: calc(var(--home-top) + var(--logo-size) * 1.1 + var(--nav-gap) + 74px);
+  --home-top: clamp(10px, 1.8vh, 20px);
+  --logo-size: clamp(30px, 5vw, 68px);
+  --nav-gap: 6px;
+  --home-content-top: calc(var(--home-top) + var(--logo-size) * 1.1 + var(--nav-gap) + 86px);
 }
 #menu {
   isolation: isolate; background: #171c22; align-items: center; justify-content: flex-end;
@@ -222,7 +222,7 @@ button:disabled { cursor: default; opacity: 0.45; }
 .match-team { min-width: 3.5em; text-align: center; padding: .45em .9em; font-size: 1.35em; font-weight: 700; }
 .match-team.blue { color: #a8ceff; background: linear-gradient(90deg, transparent, #3477b544); }
 .match-team.red { color: #ffacac; background: linear-gradient(90deg, #b7474744, transparent); }
-#results { align-items: center; justify-content: center; padding: 18px 24px; overflow-y: auto; background: #080e18c9; backdrop-filter: blur(5px); }
+#results { align-items: center; justify-content: center; padding: 18px 24px; overflow-y: auto; background: #080e18a8; backdrop-filter: blur(5px); }
 .round-results { --result-color: #c0c8d4; text-align: center; width: min(1080px, 100%); max-height: 100%; }
 .round-results[data-outcome="victory"] { --result-color: #83b8ff; }
 .round-results[data-outcome="defeat"] { --result-color: #ff8d92; }
@@ -312,7 +312,7 @@ button:disabled { cursor: default; opacity: 0.45; }
   padding: 0.85em 1.1em;
   border-radius: 6px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.03);
   text-align: left;
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -333,7 +333,7 @@ button:disabled { cursor: default; opacity: 0.45; }
 }
 
 .btn.primary {
-  background: #2464bac9;
+  background: #2464bab0;
   color: #fff;
   border-color: transparent;
   font-size: 1.15em;
@@ -1555,20 +1555,21 @@ button:disabled { cursor: default; opacity: 0.45; }
   .challenge-track i,.challenge-tabs button { transition:none; }
 }
 
-body[data-home-page='settings'] .challenges-panel, body[data-home-page='settings'] .home-account { visibility:hidden; pointer-events:none; }
+body[data-home-page='settings'] .challenges-panel { visibility:hidden; pointer-events:none; }
 
 .chat-system { color: #a9adb3; font-weight: 400; }
 .chat-system strong { color: #c5c8cc; font-weight: 500; }
 
 /* Small clockwise throw meter; the reticle remains completely clear. */
-.grenade-charge { position:absolute; width:48px; height:48px; left:50%; top:50%; transform:translate(-50%,-50%); pointer-events:none; opacity:0; transition:opacity 80ms ease; }
+.grenade-charge { position:absolute; width:48px; height:48px; left:50%; top:50%; transform:translate(-50%,-50%); pointer-events:none; opacity:0; filter:drop-shadow(0 1px 2px #000); }
 .grenade-charge.visible { opacity:.85; }
 .grenade-charge svg { width:100%; height:100%; transform:rotate(-90deg); }
-.grenade-charge circle { fill:none; stroke:#edf5ff; stroke-width:1.6; stroke-linecap:round; stroke-dasharray:100; stroke-dashoffset:calc(100 * (1 - var(--charge,0))); }
+.grenade-charge circle { fill:none; stroke:#edf5ff; stroke-width:2.2; stroke-linecap:round; stroke-dasharray:100; stroke-dashoffset:calc(100 * (1 - var(--charge,0))); }
+.grenade-charge circle.charge-track{stroke:#07101abd;stroke-width:3.8;stroke-dasharray:none;stroke-dashoffset:0}
 
 /* Global rankings retain the home backdrop; only the table area scrolls. */
 body[data-home-page='leaderboard'] #game { visibility: hidden; }
-#menu .btn.primary { background: #4c78ae55; box-shadow: none; border-color: transparent; transition: background 180ms ease, transform 180ms ease; }
+#menu .btn.primary { background: #4c78ae46; box-shadow: none; border-color: transparent; transition: background 180ms ease, transform 180ms ease; }
 #menu .btn.primary:hover { background: #285e9a99; box-shadow: none; }
 #leaderboard { isolation: isolate; background: #171c22; padding: clamp(16px, 3vh, 32px) clamp(14px, 4vw, 60px); flex-direction: column; gap: 16px; }
 #leaderboard::before { content: ''; position: absolute; inset: 0; background: #0c142966; z-index: -1; pointer-events: none; }
@@ -1650,7 +1651,7 @@ body[data-practice='true'] .chat-hint{display:none;}
 
 /* Shop and Locker use the existing home backdrop and five equal navigation tabs. */
 .home-nav {width:min(740px,100%);}
-.home-nav .btn.nav-button {min-width:0;font-size:clamp(10px,1.2vw,14px);letter-spacing:.06em;padding:12px 6px;}
+.home-nav .btn.nav-button {min-width:0;font-size:clamp(11px,1.32vw,15.4px);letter-spacing:.06em;padding:12px 6px;}
 .home-nav .btn[aria-current='page']::before {opacity:1;background:#dce4ed20;}
 body[data-home-page='shop'] #game,body[data-home-page='locker'] #game,body[data-screen='cosmetic-preview'] #game {visibility:hidden;}
 .cosmetic-page {isolation:isolate;flex-direction:column;padding:var(--home-content-top) clamp(16px,4vw,60px) 22px;background:#161c25;gap:16px;animation:room-enter 180ms ease;}
@@ -1663,10 +1664,13 @@ body[data-home-page='shop'] #game,body[data-home-page='locker'] #game,body[data-
 .cosmetic-categories .btn {flex:none;border:0;border-radius:8px;background:#b7c1ce18;padding:13px 8px;font-size:12px;text-align:center;}
 .cosmetic-categories .btn:hover {background:#17212baa;}.cosmetic-categories .btn[aria-pressed='true'] {background:#b6c8df30;box-shadow:inset 0 -2px #b8c8dc;}
 .cosmetic-inventory {min-height:0;overflow:auto;}.cosmetic-status {color:#c0cbd7;font-size:12px;line-height:1.5;min-height:1.5em;margin:0 0 8px;}
-.cosmetic-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:14px;}
-.cosmetic-card.btn {position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0;min-height:176px;padding:12px;background:linear-gradient(145deg,#cbd4dd22,#7b889516);border:0;box-shadow:inset 0 -2px var(--rarity);}
-.cosmetic-card strong {font-size:16px;color:var(--rarity);}.cosmetic-card span,.cosmetic-card small {font-size:10px;letter-spacing:.05em;color:#c5cfdb;}.cosmetic-card small:not(.cosmetic-is-equipped){color:var(--rarity);}
-.cosmetic-card .cosmetic-is-equipped {position:absolute;right:10px;bottom:12px;font-size:9px;color:#bbc8d7;}
+.cosmetic-grid {display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,110px),132px));gap:12px;}
+.cosmetic-card.btn {position:relative;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:2px;min-width:0;min-height:0;aspect-ratio:1;padding:9px;background:linear-gradient(145deg,#cbd4dd22,#7b889516);border:0;box-shadow:inset 0 -2px var(--rarity);}
+.cosmetic-card strong {max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;color:var(--rarity);}.cosmetic-card span,.cosmetic-card small {font-size:9px;letter-spacing:.04em;color:#c5cfdb;}.cosmetic-card small:not(.cosmetic-is-equipped){color:var(--rarity);}
+.cosmetic-card .cosmetic-is-equipped {position:absolute;right:8px;bottom:8px;font-size:8px;color:#bbc8d7;}
+.cosmetic-card .cosmetic-thumbnail {height:50%;min-height:0;object-fit:contain;object-position:center;}
+.cosmetic-card[data-cosmetic='default-melee'] strong {font-size:11px;letter-spacing:.02em;}
+#hud[data-melee='true'] .ammo, #hud[data-melee='true'] .reload-bar {display:none;}
 .cosmetic-thumbnail {width:100%;height:85px;object-fit:contain;filter:drop-shadow(0 10px 9px #0005);pointer-events:none;}
 .cosmetic-equipped {padding:16px 12px;border-radius:10px;background:#bbc9d418;overflow:auto;}.cosmetic-equipped h2 {font-size:12px;letter-spacing:.12em;margin:0 0 12px;}
 .equipped-item.btn {display:grid;grid-template-columns:76px minmax(0,1fr);gap:8px;align-items:center;border:0;background:#ffffff09;padding:8px;border-radius:7px;margin-bottom:8px;font-size:10px;white-space:normal;}
@@ -1679,9 +1683,9 @@ body[data-home-page='shop'] #game,body[data-home-page='locker'] #game,body[data-
 .shop-crate {width:100%;height:min(40vh,340px);object-fit:contain;filter:drop-shadow(0 25px 30px #0008);}.shop-offer h2 {color:#c9d4df;letter-spacing:.15em;font-size:clamp(20px,3vw,34px);}
 .shop-open.btn:disabled {background:#aab5c31b;color:#a4afba;border:0;opacity:.65;cursor:not-allowed;transform:none;box-shadow:none;}.shop-balance {font-size:14px;font-weight:500;color:#d4dfec;}
 .crate-distribution {grid-column:1/-1;display:flex;flex-wrap:wrap;justify-content:center;gap:14px 26px;padding:14px 0;}.crate-distribution p {width:100%;text-align:center;color:#9cabbc;font-size:12px;margin:0 0 4px;}.crate-distribution span {font-size:12px;}
-@media(max-width:850px){.locker-layout{grid-template-columns:72px minmax(0,1fr) 170px;gap:10px;}.cosmetic-grid{grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:9px;}.equipped-item.btn{grid-template-columns:60px minmax(0,1fr);padding:5px;}.cosmetic-equipped{padding:12px 8px;}}
+@media(max-width:850px){.locker-layout{grid-template-columns:72px minmax(0,1fr) 170px;gap:10px;}.cosmetic-grid{gap:9px;}.equipped-item.btn{grid-template-columns:60px minmax(0,1fr);padding:5px;}.cosmetic-equipped{padding:12px 8px;}}
 @media(max-height:650px){.cosmetic-equipped{padding:10px 8px;}.cosmetic-equipped h2{margin-bottom:8px;}.equipped-item.btn{padding:4px;margin-bottom:5px;min-height:32px;}.equipped-item .cosmetic-thumbnail{height:28px;}}
-@media(max-width:560px){.locker-layout{grid-template-columns:65px minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;}.cosmetic-equipped{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:4px;max-height:155px;}.cosmetic-equipped h2{grid-column:1/-1;margin:0;}.equipped-item.btn{margin:0;}.shop-content{grid-template-columns:1fr;gap:5px;text-align:center;}.shop-crate{height:180px;}.crate-distribution{gap:10px;font-size:10px;}.home-nav{gap:3px;}.home-nav .btn.nav-button{font-size:9px;letter-spacing:0;padding:12px 3px;}}
+@media(max-width:560px){.locker-layout{grid-template-columns:65px minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;}.cosmetic-categories .btn{font-size:10px;letter-spacing:.02em;padding:12px 3px;}.cosmetic-equipped{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:4px;max-height:155px;}.cosmetic-equipped h2{grid-column:1/-1;margin:0;}.equipped-item.btn{margin:0;}.shop-content{grid-template-columns:1fr;gap:5px;text-align:center;}.shop-crate{height:180px;}.crate-distribution{gap:10px;font-size:10px;}.home-nav{gap:3px;}.home-nav .btn.nav-button{font-size:9.9px;letter-spacing:0;padding:12px 3px;}}
 @media(prefers-reduced-motion:reduce){.cosmetic-page{animation:none;}}
 .practice-debug{position:fixed;z-index:100;right:12px;top:12px;width:min(420px,45vw);max-height:calc(100vh - 24px);object-fit:contain;object-position:top;background:#101d28ec;border-radius:8px;pointer-events:none}
 
@@ -1738,3 +1742,29 @@ body[data-home-page='shop'] #game,body[data-home-page='locker'] #game,body[data-
 @media(prefers-reduced-motion:reduce){.shop-crate{animation:none;}.reveal-rarity-bg{transition-duration:.2s;}.crate-reveal.burst .reveal-flash{animation:none;}}
 .crate-reveal .btn[hidden] {display:none;}
 .crate-reveal:focus {outline:none;}
+.remote-player-name{display:block;overflow:hidden;text-overflow:ellipsis}
+.remote-player-health{display:block;height:3px;min-width:38px;margin:3px 0 1px;background:#08101db0;border-radius:3px;overflow:hidden;box-shadow:0 1px 2px #0006}
+.remote-player-health>span{display:block;width:100%;height:100%;background:#75b6ff;transform-origin:left center;border-radius:inherit}
+.scoreboard[data-mode='ffa'] td.score-name-friendly,.scoreboard[data-mode='ffa'] td.score-name-opponent,
+.round-results[data-mode='ffa'] .score-name-friendly,.round-results[data-mode='ffa'] .score-name-opponent{color:#d3d6dc}
+.scoreboard[data-mode='ffa'] tr.local,.round-results[data-mode='ffa'] tr.local{background:#c4c9d516;box-shadow:inset 2px 0 #c8ced8}
+.round-results[data-mode='ffa'] .result-rank{color:#aeb6c1}
+body[data-home-page] .home-header::before{content:'';position:absolute;z-index:-1;top:calc(-1 * var(--home-top));left:-24px;right:-24px;bottom:-12px;background:linear-gradient(to bottom,#151a21a8 0%,#151a2180 48%,#151a2140 75%,#151a2100 100%);pointer-events:none}
+.home-nav .btn.nav-button[aria-current='page']{color:#fff;box-shadow:none}
+.home-nav .btn.nav-button[aria-current='page']::before{opacity:1;background:#dce4ed26}
+.home-nav .btn.nav-button:hover::before{opacity:1;background:#dce4ed17}
+.home-nav .btn.nav-button[aria-current='page']:hover::before{background:#dce4ed32}
+#leaderboard{top:var(--home-content-top);padding-top:12px;background:#10192394;backdrop-filter:blur(15px);border-radius:16px 16px 0 0}
+#leaderboard>.leaderboard-backdrop{position:fixed;inset:0;z-index:-2;filter:blur(12px)}
+body[data-home-page='leaderboard'] #ui{background:#10192366}
+.leaderboard-content{width:min(820px,100%)}
+.leaderboard-tabs{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);width:min(430px,100%);margin:0 auto 12px;gap:10px}
+.leaderboard-tabs .btn{min-width:0;width:100%}
+.leaderboard-page .personal-stats{max-height:calc(100dvh - var(--home-content-top) - 90px)}
+.room-shell{background:linear-gradient(130deg,#a4aeb81a,#5261710d)}
+.cosmetic-page{background-color:#14202c91}
+#settings.home-settings{background:#151d27b8;backdrop-filter:blur(16px)}
+.result-gems{display:flex;justify-content:center;align-items:center;gap:8px;margin:12px 0 0;color:#f0d28e;font-size:13px;letter-spacing:.1em;animation:gem-award-in 650ms ease-out both}
+.result-gems .gem-icon{width:20px;height:20px}.result-gems.practice{color:#aebcca;font-size:11px}
+@keyframes gem-award-in{from{opacity:0;transform:translateY(5px);filter:drop-shadow(0 0 8px #e8c579)}to{opacity:1;transform:none;filter:none}}
+@media(prefers-reduced-motion:reduce){.result-gems{animation:none}}

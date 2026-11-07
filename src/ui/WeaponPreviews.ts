@@ -9,7 +9,7 @@ import type { WeaponId } from '../weapons/Weapon';
 
 const cached=new Map<string,string>();
 export async function weaponPreviews(onPreview:(id:WeaponId,url:string)=>Promise<void>,signal?:AbortSignal):Promise<void>{
-  return cosmeticThumbnails(COSMETICS.filter(c=>c.ownership==='starter'),(item,url)=>onPreview(item.weapon,url),signal);
+  return cosmeticThumbnails(COSMETICS.filter(c=>c.ownership==='starter'&&c.weapon!=='melee'),(item,url)=>onPreview(item.weapon as WeaponId,url),signal);
 }
 /** Render actual owned assets; successful snapshots are shared with loadout cards. */
 export async function cosmeticThumbnails(items:readonly CosmeticDefinition[],onPreview:(item:CosmeticDefinition,url:string)=>Promise<void>,signal?:AbortSignal): Promise<void> {

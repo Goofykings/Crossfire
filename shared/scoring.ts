@@ -7,6 +7,8 @@ export interface ScoreState { score: number; comboCount: number; comboUntil: num
 export interface ScoreAward { base: number; headshot: number; combo: number; comboCount: number; total: number }
 export interface RoundStanding { id: string; name: string; team: PlayerTeam; score: number; kills: number; deaths: number; assists?: number; weapon?: WeaponId | null }
 export interface RoundResult {
+  /** Present only after the server has durably confirmed these awards. Additive v19 metadata. */
+  gemRewards?:{matchId:string;awards:Record<string,number>};
   roundId: number; mapId: MapId; mode: MatchMode; endedAt: number;
   draw: boolean; winner: RoundStanding | null; winningTeam: PlayerTeam;
   mvp: RoundStanding | null; teamScores: { blue: number; red: number } | null;

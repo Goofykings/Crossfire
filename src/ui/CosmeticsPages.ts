@@ -1,6 +1,5 @@
-import { COSMETICS, COLLECTIONS, CATEGORY_NAMES, WEAPON_CATEGORIES, RARITIES, CRATE, cosmetic, crateItems, collectionCosmetic, type CosmeticDefinition, type InventoryView } from '../../shared/cosmetics';
+import { COSMETICS, COLLECTIONS, CATEGORY_NAMES, WEAPON_CATEGORIES, RARITIES, CRATE, cosmetic, crateItems, collectionCosmetic, type CosmeticCategory, type CosmeticDefinition, type InventoryView } from '../../shared/cosmetics';
 import { CrateReveal } from './CrateReveal';
-import type { WeaponId } from '../weapons/Weapon';
 import type { CosmeticsClient } from '../network/CosmeticsClient';
 import { assetUrl } from '../core/assets';
 import { CosmeticPreview } from './CosmeticPreview';
@@ -10,11 +9,11 @@ export class CosmeticsPages {
   client:CosmeticsClient|null=null;
   onRefreshAccount:()=>void=()=>{};
   private readonly grid=node('div','cosmetic-grid');private readonly equipped=node('aside','cosmetic-equipped');
-  private readonly status=node('p','cosmetic-status');private readonly balance=node('strong','shop-balance','— GEMS');
+  private readonly status=node('p','cosmetic-status');
   private readonly previewHost=node('div','cosmetic-model');private readonly previewTitle=node('h1');private readonly previewCategory=node('p');
   private readonly equipButton=node('button','btn primary','EQUIP');private readonly previewStatus=node('p','cosmetic-status');
   private readonly preview=new CosmeticPreview();private request:AbortController|null=null;private thumbnails:AbortController|null=null;private thumbnailIds=new Set<string>();
-  private category:WeaponId|'all'='all';private inventory:InventoryView|null=null;private item:CosmeticDefinition|null=null;
+  private category:CosmeticCategory|'all'='all';private inventory:InventoryView|null=null;private item:CosmeticDefinition|null=null;
   private images=new Map<string,string>();private selected='';private pending=false;private buttons:HTMLButtonElement[]=[];
   private previewScreen:HTMLElement;
   private readonly openButton=node('button','btn primary shop-open');private readonly shopStatus=node('p','cosmetic-status');
@@ -22,11 +21,11 @@ export class CosmeticsPages {
   constructor(screen:(id:'shop'|'locker'|'cosmetic-preview')=>HTMLElement,navigate:(id:'menu'|'locker')=>void){
     const shop=screen('shop'),locker=screen('locker');this.previewScreen=screen('cosmetic-preview');
     for(const page of [shop,locker]){page.classList.add('cosmetic-page');const bg=node('img','cosmetic-background');bg.src=assetUrl('assets/ui/town-plaza.webp');bg.alt='';page.append(bg);}
-    const heading=node('header','cosmetic-heading');heading.append(node('h1','','LOCKER'),this.button('Back',()=>navigate('menu')));
+    const heading=node('header','cosmetic-heading');heading.append(node('h1','','LOCKER'));
     const layout=node('div','locker-layout'),categories=node('nav','cosmetic-categories');categories.setAttribute('aria-label','Weapon categories');
-    for(const category of ['all',...['smg','rifle','sniper','shotgun'] as WeaponId[]] as const){const b=this.button(category==='all'?'ALL':CATEGORY_NAMES[category],()=>{this.category=category;this.render();});b.dataset.category=category;this.buttons.push(b);categories.append(b);}
+    for(const category of ['all',...['smg','rifle','sniper','shotgun','melee'] as CosmeticCategory[]] as const){const b=this.button(category==='all'?'ALL':CATEGORY_NAMES[category],()=>{this.category=category;this.render();});b.dataset.category=category;this.buttons.push(b);categories.append(b);}
     const inventory=node('section','cosmetic-inventory');this.status.setAttribute('role','status');const retry=this.button('Refresh',()=>this.load());retry.classList.add('cosmetic-refresh');inventory.append(this.status,this.grid,retry);layout.append(categories,inventory,this.equipped);locker.append(heading,layout);
-    const shopHeading=node('header','cosmetic-heading');shopHeading.append(node('h1','','SHOP'),this.balance,this.button('Back',()=>navigate('menu')));
+    const shopHeading=node('header','cosmetic-heading');shopHeading.append(node('h1','','SHOP'));
     const content=node('div','shop-content'),stage=node('div','shop-crate-stage'),crate=node('img','shop-crate');crate.src=assetUrl('assets/cosmetics/crate/reward-crate/thumbnail.png');crate.alt='Crossfire reward crate';stage.append(crate);
     const offer=node('section','shop-offer');this.openButton.type='button';this.openButton.onclick=()=>this.openCrate();this.shopStatus.setAttribute('role','status');
     offer.append(node('h2','','REWARD CRATE'),node('p','shop-offer-copy','One weapon skin per crate. You never get a duplicate.'),this.openButton,this.shopStatus);
@@ -38,7 +37,7 @@ export class CosmeticsPages {
     this.previewScreen.addEventListener('keydown',e=>{if(e.key==='Escape'){e.stopPropagation();navigate('locker');}});
   }
   private button(text:string,click:()=>void){const b=node('button','btn',text);b.type='button';b.onclick=click;return b;}
-  setBalance(gems:number|null){this.gems=gems;this.balance.textContent=gems===null?'— GEMS':`${gems.toLocaleString()} GEMS`;this.renderShop();}
+  setBalance(gems:number|null){this.gems=gems;this.renderShop();}
   private canOpen(){return !!this.client&&this.gems!==null&&this.gems>=CRATE.price&&!!this.inventory&&crateItems().some(c=>!this.inventory!.owned.includes(c.id));}
   private renderShop(){
     const left=this.inventory?crateItems().filter(c=>!this.inventory!.owned.includes(c.id)).length:null;

@@ -13,7 +13,7 @@ it('projects bounded scorch marks onto actual nearby floors, never onto distant 
     ground.explode({...event,position:{x:0,y:2,z:0}},1000,false);ground.update(1000,world);
     expect(ground.inspect().marks).toBe(0);
     for(let i=0;i<30;i++){ground.explode({...event,id:`blast:${i}`},1000,false);ground.update(1000,world);}
-    expect(ground.inspect().marks).toBe(24);expect(ground.inspect().rocks).toBe(48);
+    expect(ground.inspect().marks).toBe(24);expect(ground.inspect().rocks).toBe(144);
     expect(ground.inspect().markArea/ground.inspect().bulletArea).toBeCloseTo(10.124,2);
     for(let t=1010;t<=2700;t+=10)ground.update(t,world);
     const rocks=scene.getMeshByName('blast-rocks-batch')!; rocks.refreshBoundingInfo({});

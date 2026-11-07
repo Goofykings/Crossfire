@@ -1,5 +1,5 @@
 import { assetUrl } from '../core/assets';
-import { PERIODS, METRICS, statRatios, type StatsPeriod, type StatsMetric, type LeaderboardView, type PersonalStats } from '../../shared/statistics';
+import { PERIODS, statRatios, type StatsPeriod, type StatsMetric, type LeaderboardView, type PersonalStats } from '../../shared/statistics';
 const node=<K extends keyof HTMLElementTagNameMap>(tag:K,cls='',text='')=>{const e=document.createElement(tag);e.className=cls;e.textContent=text;return e;};
 const number=new Intl.NumberFormat('en-US');
 export class LeaderboardPage {
@@ -14,14 +14,14 @@ export class LeaderboardPage {
   constructor(readonly root:HTMLElement,back:()=>void){
     root.classList.add('leaderboard-page');root.setAttribute('aria-label','Global leaderboards');
     const background=node('img','home-backdrop leaderboard-backdrop');background.src=assetUrl('assets/ui/town-plaza.webp');background.alt='';
-    const header=node('div','leaderboard-heading'),backButton=node('button','btn','Back');backButton.addEventListener('click',back);
+    const header=node('div','leaderboard-heading');
     const stats=node('div','stats-dropdown');this.panel.hidden=true;this.panel.id='personal-statistics';
     this.panel.setAttribute('role','region');this.panel.setAttribute('aria-label','My lifetime statistics');
     this.statsButton.setAttribute('aria-expanded','false');this.statsButton.setAttribute('aria-controls',this.panel.id);
     this.statsButton.addEventListener('click',()=>this.toggleStats(!!this.panel.hidden));
-    stats.append(this.statsButton,this.panel);header.append(backButton,node('h2','','LEADERBOARD'),stats);
+    stats.append(this.statsButton,this.panel);header.append(node('h2','','LEADERBOARD'),stats);
     const content=node('div','leaderboard-content');
-    for(const [kind,items]of [['period',PERIODS],['metric',METRICS]] as const){
+    for(const [kind,items]of [['period',PERIODS],['metric',['kills','wins'] as const]] as const){
       const group=node('div','leaderboard-tabs');group.setAttribute('role','group');group.setAttribute('aria-label',kind==='period'?'Time period':'Statistic');
       for(const item of items){const b=node('button','btn',item.toUpperCase());b.dataset[kind]=item;
         b.addEventListener('click',()=>{if(kind==='period')this.period=item as StatsPeriod;else this.metric=item as StatsMetric;this.refreshSelection();void this.load();});
@@ -37,7 +37,7 @@ export class LeaderboardPage {
     root.addEventListener('keydown',event=>{if(event.key==='Escape'){event.stopPropagation();if(!this.panel.hidden){this.toggleStats(false);this.statsButton.focus();}else back();}});
     this.refreshSelection();
   }
-  private toggleStats(open:boolean):void{this.panel.hidden=!open;this.statsButton.setAttribute('aria-expanded',String(open));this.renderPersonal();}
+  private toggleStats(open:boolean):void{this.panel.hidden=!open;this.panel.inert=!open;this.statsButton.setAttribute('aria-expanded',String(open));this.renderPersonal();}
   private refreshSelection():void{for(const b of this.buttons)b.setAttribute('aria-pressed',String(b.dataset.period?b.dataset.period===this.period:b.dataset.metric===this.metric));}
   show():void{if(this.opened)return;this.opened=true;void this.load();this.timer=setInterval(()=>{if(!this.controller)void this.load();},5000);}
   hide():void{this.opened=false;this.controller?.abort();this.controller=null;if(this.timer)clearInterval(this.timer);this.timer=null;this.toggleStats(false);}

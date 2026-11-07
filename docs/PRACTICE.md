@@ -72,6 +72,7 @@ navigation is used.
 | Difficulty | Reaction | AI aim error | Movement | Slide attempt interval |
 |---|---:|---:|---:|---:|
 | Beginner | 950 ms | ±5° | 62% normal | 8 s |
+| Intermediate | 600 ms | ?2.8? | 82% normal | 5.5 s |
 | Advanced | 320 ms | ±1.3° | normal | 3.5 s |
 | Absurd | 65 ms | zero | normal | 150 ms, constrained by real cooldown |
 
@@ -160,3 +161,9 @@ are unchanged. Publish the frontend assets for users to see Practice; the shared
 hitscan extraction also belongs in the next matching authorized Worker/Pages CI
 release. No new secrets, bindings, API endpoints or deployment are needed to run
 Practice locally. Nothing was committed, pushed or deployed automatically.
+
+## UI sound and bot-grenade follow-up
+
+See [UI_SOUNDS_BOTS.md](UI_SOUNDS_BOTS.md) for Intermediate persistence, shared
+magnetic sliders and sound routing, bounded bot grenade decisions and regression
+commands. Grenades use the existing local inventory, charge and authority pipeline.

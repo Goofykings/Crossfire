@@ -1,3 +1,49 @@
+## UI sounds, configurable magnets and Practice AI (2026-11-07)
+
+See docs/UI_SOUNDS_BOTS.md. UISounds owns delegated body-level audio (including
+crate overlays); do not restore per-button click sounds. AudioManager.playUI uses
+short cached buffers through SFX/master, gesture unlock and bounded voices.
+MagneticSlider is configurable, with index-based spring physics and discrete
+magnetic-snap events; Practice uses 0-5 and lobby shared ROOM_LIMITS 2-10.
+Intermediate uses existing BotBrain states; only its preference is saved. Bot
+throws use normal local held grenade input/charge/inventory, swept arc checks and
+per-bot plus shared cooldowns. Practice remains non-rewarding. Worker/protocol
+unchanged; no commit/push/deploy.
+
+## Unified menu header and magnetic slider (2026-11-07)
+
+See docs/MENU_HEADER_SLIDER.md. Keep one persistent UI.homeHeader and mount the real
+ChallengesPanel.account in it across Play/Shop/Locker/home Settings/Leaderboard.
+Do not duplicate gem/account state or restore page-specific header overlays/Back
+buttons. menu.css loads after motion.css; narrow navigation scrolls horizontally
+without shrinking its font. MagneticSlider keeps native integer range semantics
+with a separate spring-driven visual thumb, no idle RAF, and pointer/blur/navigation
+cleanup. Preserve ordinary panel scrolling and animation/focus breathing room.
+No combat, backend or purchase-rule changes. No commit/push/deploy.
+
+## Dual daggers gameplay integration (2026-11-06)
+
+See docs/MELEE_GAMEPLAY.md and the newest PROGRESS.md entry. The presentation-only
+handoff below is historical: gameplay, V binding, shared authoritative combat,
+Practice bots, network state/events, paired Locker skins and retry-safe crate grants
+are now implemented. Shared WebSocket protocol is v20; cosmetics HTTP remains v1.
+Preserve the original GLBs/clips, existing CharacterWeapon IK/blending and scoring
+pipeline. Timing compatibility is checked against daggers.json. No deployment.
+
+## Dual daggers (presentation, 2026-11-06)
+
+See docs/DUAL_DAGGERS.md. blender/melee/dagger_design.py is the single source: models,
+hold, clip keys and timing; generate_daggers.py writes public/assets/models/shared/melee/
+(two dagger GLBs, first-person arms cut from the player mesh on the same 26-joint rig,
+dagger_clips.glb of animated empties, daggers.json with timing and checkpoints). Hand
+poses are authored as position + blade hint + elbow + cock; knuckles derive from the
+runtime two-bone IK, so do not author knuckle directions. CharacterWeapon stays the only
+third-person pose system (melee layer via weapon.melee); MeleeView renders first person.
+Daggers are parented to hand bones via the inverse grip. No damage, input, sync,
+inventory or crate wiring exists; the combat layer (Codex) drives
+equip/attack/unequip from daggers.json contact/chainFrom. Protocol v19 unchanged.
+Test: tests/melee*.test.ts, tools/melee-browser-test.mjs, assets:verify. No commit/push/deploy.
+
 ## Reward crate and crate skins (2026-11-05)
 
 See docs/CRATE_REVEAL.md. This supersedes the "Grants and functional crates are NOT

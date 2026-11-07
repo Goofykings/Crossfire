@@ -58,6 +58,22 @@
       ]
     },
     {
+      "id": "default-melee",
+      "name": "Default Daggers",
+      "weapon": "melee",
+      "rarity": "common",
+      "asset": {
+        "model": "assets/models/shared/melee/dagger_r.glb",
+        "secondaryModel": "assets/models/shared/melee/dagger_l.glb",
+        "binding": "embedded"
+      },
+      "preview": "assets/models/shared/melee/daggers-thumbnail.png",
+      "ownership": "starter",
+      "compatibleWith": [
+        "melee"
+      ]
+    },
+    {
       "id": "green-camo-rifle",
       "name": "Green Camo",
       "weapon": "rifle",
@@ -170,6 +186,40 @@
       "ownership": "grant",
       "compatibleWith": [
         "shotgun"
+      ],
+      "collection": "green-camo"
+    },
+    {
+      "id": "green-camo-melee",
+      "name": "Green Camo",
+      "weapon": "melee",
+      "rarity": "uncommon",
+      "asset": {
+        "model": "assets/models/shared/melee/dagger_r.glb",
+        "secondaryModel": "assets/models/shared/melee/dagger_l.glb",
+        "binding": "embedded",
+        "materials": {
+          "dagger_coat": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/green-camo/albedo.jpg",
+            "orm": "assets/cosmetics/skins/green-camo/orm.png",
+            "tile": 0.34,
+            "metallic": 1,
+            "roughness": 1
+          },
+          "dagger_steel": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/green-camo/albedo.jpg",
+            "orm": "assets/cosmetics/skins/green-camo/orm.png",
+            "tile": 0.34,
+            "metallic": 1,
+            "roughness": 1
+          }
+        }
+      },
+      "ownership": "grant",
+      "compatibleWith": [
+        "melee"
       ],
       "collection": "green-camo"
     },
@@ -290,6 +340,40 @@
       "collection": "blue-camo"
     },
     {
+      "id": "blue-camo-melee",
+      "name": "Blue Camo",
+      "weapon": "melee",
+      "rarity": "uncommon",
+      "asset": {
+        "model": "assets/models/shared/melee/dagger_r.glb",
+        "secondaryModel": "assets/models/shared/melee/dagger_l.glb",
+        "binding": "embedded",
+        "materials": {
+          "dagger_coat": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/blue-camo/albedo.jpg",
+            "orm": "assets/cosmetics/skins/blue-camo/orm.png",
+            "tile": 0.34,
+            "metallic": 1,
+            "roughness": 1
+          },
+          "dagger_steel": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/blue-camo/albedo.jpg",
+            "orm": "assets/cosmetics/skins/blue-camo/orm.png",
+            "tile": 0.34,
+            "metallic": 1,
+            "roughness": 1
+          }
+        }
+      },
+      "ownership": "grant",
+      "compatibleWith": [
+        "melee"
+      ],
+      "collection": "blue-camo"
+    },
+    {
       "id": "red-camo-rifle",
       "name": "Red Camo",
       "weapon": "rifle",
@@ -402,6 +486,40 @@
       "ownership": "grant",
       "compatibleWith": [
         "shotgun"
+      ],
+      "collection": "red-camo"
+    },
+    {
+      "id": "red-camo-melee",
+      "name": "Red Camo",
+      "weapon": "melee",
+      "rarity": "uncommon",
+      "asset": {
+        "model": "assets/models/shared/melee/dagger_r.glb",
+        "secondaryModel": "assets/models/shared/melee/dagger_l.glb",
+        "binding": "embedded",
+        "materials": {
+          "dagger_coat": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/red-camo/albedo.jpg",
+            "orm": "assets/cosmetics/skins/red-camo/orm.png",
+            "tile": 0.34,
+            "metallic": 1,
+            "roughness": 1
+          },
+          "dagger_steel": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/red-camo/albedo.jpg",
+            "orm": "assets/cosmetics/skins/red-camo/orm.png",
+            "tile": 0.34,
+            "metallic": 1,
+            "roughness": 1
+          }
+        }
+      },
+      "ownership": "grant",
+      "compatibleWith": [
+        "melee"
       ],
       "collection": "red-camo"
     },
@@ -584,6 +702,38 @@
       "collection": "marble"
     },
     {
+      "id": "marble-melee",
+      "name": "Marble",
+      "weapon": "melee",
+      "rarity": "rare",
+      "asset": {
+        "model": "assets/models/shared/melee/dagger_r.glb",
+        "secondaryModel": "assets/models/shared/melee/dagger_l.glb",
+        "binding": "embedded",
+        "materials": {
+          "dagger_coat": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/marble/white-albedo.jpg",
+            "orm": "assets/cosmetics/skins/marble/orm.png",
+            "tile": 0.3,
+            "metallic": 1,
+            "roughness": 1,
+            "clearcoat": 0.6
+          },
+          "dagger_steel": {
+            "color": "#e6dfd2",
+            "metallic": 1,
+            "roughness": 0.24
+          }
+        }
+      },
+      "ownership": "grant",
+      "compatibleWith": [
+        "melee"
+      ],
+      "collection": "marble"
+    },
+    {
       "id": "rainbow-glow-rifle",
       "name": "Rainbow Glow",
       "weapon": "rifle",
@@ -752,6 +902,52 @@
       "ownership": "grant",
       "compatibleWith": [
         "shotgun"
+      ],
+      "collection": "rainbow-glow"
+    },
+    {
+      "id": "rainbow-glow-melee",
+      "name": "Rainbow Glow",
+      "weapon": "melee",
+      "rarity": "rare",
+      "asset": {
+        "model": "assets/models/shared/melee/dagger_r.glb",
+        "secondaryModel": "assets/models/shared/melee/dagger_l.glb",
+        "binding": "embedded",
+        "materials": {
+          "dagger_coat": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/rainbow-glow/albedo.jpg",
+            "orm": "assets/cosmetics/skins/rainbow-glow/orm.png",
+            "emissive": "assets/cosmetics/skins/rainbow-glow/emissive.jpg",
+            "emissiveColor": "#ffffff",
+            "scroll": [
+              0.16,
+              0
+            ],
+            "tile": 0.5,
+            "metallic": 1,
+            "roughness": 1
+          },
+          "dagger_steel": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/rainbow-glow/albedo.jpg",
+            "orm": "assets/cosmetics/skins/rainbow-glow/orm.png",
+            "emissive": "assets/cosmetics/skins/rainbow-glow/emissive.jpg",
+            "emissiveColor": "#ffffff",
+            "scroll": [
+              0.16,
+              0
+            ],
+            "tile": 0.5,
+            "metallic": 1,
+            "roughness": 1
+          }
+        }
+      },
+      "ownership": "grant",
+      "compatibleWith": [
+        "melee"
       ],
       "collection": "rainbow-glow"
     },
@@ -936,6 +1132,39 @@
       "ownership": "grant",
       "compatibleWith": [
         "shotgun"
+      ],
+      "collection": "rich"
+    },
+    {
+      "id": "rich-melee",
+      "name": "Rich",
+      "weapon": "melee",
+      "rarity": "legendary",
+      "asset": {
+        "model": "assets/models/shared/melee/dagger_r.glb",
+        "secondaryModel": "assets/models/shared/melee/dagger_l.glb",
+        "binding": "embedded",
+        "materials": {
+          "dagger_coat": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/rich/gold-albedo.jpg",
+            "normal": "assets/cosmetics/skins/rich/gold-normal.png",
+            "orm": "assets/cosmetics/skins/rich/gold-orm.png",
+            "tile": 0.12,
+            "metallic": 1,
+            "roughness": 1,
+            "clearcoat": 0.35
+          },
+          "dagger_steel": {
+            "color": "#f5b040",
+            "metallic": 1,
+            "roughness": 0.3
+          }
+        }
+      },
+      "ownership": "grant",
+      "compatibleWith": [
+        "melee"
       ],
       "collection": "rich"
     }

@@ -29,16 +29,16 @@ it('weights the actual incoming ray against current camera yaw/pitch for directi
   }
 });
 
-it('falls along the world-space incoming ray and fades completely in half a second', () => {
+it('keeps death bodies visible during the fall and fades before the existing respawn deadline', () => {
   for (const dir of [{ x: 1, y: -.2, z: 0 }, { x: -1, y: 0, z: 0 }, { x: 0, y: 0, z: 1 }, { x: 0, y: 0, z: -1 }]) {
-    const start = deathPose(0, dir), mid = deathPose(.25, dir), end = deathPose(.5, dir);
+    const start = deathPose(0, dir), mid = deathPose(.8, dir), end = deathPose(2.2, dir);
     expect(start.opacity).toBe(1); expect(start.tip).toBe(0);
-    expect(mid.opacity).toBeCloseTo(.5); expect(mid.tip).toBeGreaterThan(1);
+    expect(mid.opacity).toBe(1); expect(mid.tip).toBeGreaterThan(1);
     expect(mid.fall.x).toBe(dir.x); expect(mid.fall.z).toBe(dir.z);
     expect(mid.lift).toBeGreaterThanOrEqual(0);
     expect(end.done).toBe(true); expect(end.opacity).toBe(0);
   }
-  expect(deathPose(2, null).opacity).toBe(0);
+  expect(deathPose(2.2, null).opacity).toBe(0);
 });
 const elimination = { award: { base: 100, headshot: 0, combo: 0, comboCount: 1, total: 100 }, id: 'death-unit', victimLife: 2, direction: { x: 0, y: 0, z: 1 }, roundId: 1,
   victimId: 'victim', victimName: 'Victim', killerId: 'killer', killerName: 'Killer', weapon: 'rifle', head: false,

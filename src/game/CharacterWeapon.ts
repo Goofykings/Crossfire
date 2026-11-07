@@ -7,6 +7,8 @@ import type { MaterialLibrary } from '../rendering/MaterialLibrary';
 import type { WeaponAction, WeaponId } from '../weapons/Weapon';
 import { actionPose, type ActionAnchor, type ActionPose, type BodyPoint } from './CharacterActions';
 import type { CharacterInstance } from './CharacterAsset';
+import { WRIST_TO_PALM, type CharacterMelee, type HandAxes } from './melee/MeleeAssets';
+import { shoulderReach } from './melee/MeleeAnimation';
 
 type V3 = readonly [number, number, number];
 type Shoulders = readonly [number, number, number, number];
@@ -41,9 +43,6 @@ export interface WeaponHold {
 }
 
 const WEAPON_SCALE = .85;
-// Centre of the handle enclosed by the gripping glove (char_geometry.py finger curl):
-// along the hand from the wrist, and toward the palm side.
-const WRIST_TO_PALM = .08;
 /** Each of three cascaded stages; the step response reaches 95% at ~6.3 time constants. */
 const ADS_STAGE_TIME = .024;
 /** Right eye centre in the bind pose (char_geometry.py EYE_X/EYE_Z on the head surface), glTF metres. */
@@ -165,6 +164,13 @@ const solveScratch = {
   axis: Vector3.Zero(), projected: Vector3.Zero(), tmp: Vector3.Zero(), spin: new Quaternion(), fingers: Vector3.Zero(),
   back: Vector3.Zero(), wrist: Vector3.Zero(), hint: Vector3.Zero(), pole: Vector3.Zero(),
 };
+/** Dagger targets: the socket in character-root space and the resulting hand frame. */
+const meleeScratch = {
+  q: new Quaternion(), position: Vector3.Zero(), fingers: Vector3.Zero(), back: Vector3.Zero(), wrist: Vector3.Zero(),
+  pole: Vector3.Zero(), tmp: Vector3.Zero(), hold: [Vector3.Zero(), Vector3.Zero(), Vector3.Zero(), Vector3.Zero()],
+  body: new Quaternion(), euler: Vector3.Zero(),
+};
+const easeMelee = (x: number) => { const c = Math.max(0, Math.min(1, x)); return c * c * (3 - 2 * c); };
 /** Per-solve temporaries for the arm chains (the solve is synchronous and never re-entered). */
 const arm = {
   shoulder: Vector3.Zero(), direction: Vector3.Zero(), bend: Vector3.Zero(), elbow: Vector3.Zero(), target: Vector3.Zero(),
@@ -241,6 +247,8 @@ export class ArmChain {
     return { fingers: Vector3.TransformNormal(this.handAxis, world).normalize(), back: Vector3.TransformNormal(this.handBack, world).normalize() };
   }
   restAxes() { return { upper: this.upperAxis.asArray(), forearm: this.foreAxis.asArray(), hand: this.handAxis.asArray() }; }
+  /** Bone-local hand axes that `solve` maps onto the wanted fingers/back directions. */
+  handAxes(): HandAxes { return { fingers: this.handAxis.clone(), back: this.handBack.clone() }; }
   /** Positions the wrist at `wrist`, bends toward `pole` (world point) and orients the hand. */
   solve(wrist: Vector3, pole: Vector3, fingers: Vector3, back: Vector3): void {
     const { shoulder, direction, bend, elbow, target, upperDir, foreDir, hinge, tmp } = arm;
@@ -402,6 +410,13 @@ export class CharacterWeapon {
   private readonly chestAt = Vector3.Zero();
   /** Disabled only when the instance cannot be seen; smoothing still advances. */
   posing = true;
+  /** This character's daggers (owned by the caller, shared across gun swaps). While its pose
+   * has hands > 0 the arms follow the dagger sockets and the gun lowers and hides. */
+  melee: CharacterMelee | null = null;
+  /** Shoulder midpoint in character-root space for this solve (dagger sockets are relative to it). */
+  private readonly centreLocal = Vector3.Zero();
+  /** Home-preview only: keep normal gameplay breathing unchanged. */
+  idleAmplitude=1;
   /** Solve every Nth posed frame (distant players); other frames reuse the last solve. */
   solveEvery = 1;
   private frame = 0;
@@ -499,9 +514,11 @@ export class CharacterWeapon {
     const fk = 1 - Math.exp(-dt / .06), index = this.hold.index, want = this.fingerTarget;
     // Working the bolt, the index closes around the knob with the other fingers (modelled curl).
     for (let i = 0; i < 4; i++) want[i] = (index.off[i] + (index.on[i] - index.off[i]) * this.onTrigger) * (1 - this.action.bolt);
+    const dagger = this.melee?.pose.hands ?? 0;
+    for (let i = 0; i < 4; i++) want[i] *= 1 - dagger;
     trigger?.follow(want, fk);
     // The support index wraps whatever the hand is holding when it leaves the fore-end.
-    for (let i = 0; i < 4; i++) want[i] = index.support[i] * (1 - this.action.support);
+    for (let i = 0; i < 4; i++) want[i] = index.support[i] * (1 - this.action.support) * (1 - dagger);
     support?.follow(want, fk);
   }
   restore(): void {
@@ -515,6 +532,14 @@ export class CharacterWeapon {
   }
   /** Apply after the engine evaluates the locomotion clips this frame. */
   update(): void {
+    // Gun/dagger visibility follows the melee state even off screen (shadows, re-entry); the
+    // IK below only runs when the character can be seen.
+    if (this.melee) {
+      const [right, left] = this.arms;
+      if (!this.melee.pair.bound && right && left) this.melee.pair.bind([right.hand, left.hand], [right.handAxes(), left.handAxes()]);
+      if (this.root.isEnabled() !== this.melee.pose.gunVisible) this.root.setEnabled(this.melee.pose.gunVisible);
+      if (!this.posing) this.melee.pair.update(this.melee.pose);
+    }
     if (!this.chest || !this.posing) return;
     for (const node of this.posed) this.save(node);
     if (this.solveEvery > 1 && this.cachedRoot.valid && ++this.frame % this.solveEvery !== 0) { this.reuse(); return; }
@@ -559,15 +584,21 @@ export class CharacterWeapon {
     // Bladed stance: the support shoulder turns toward the fore-end (more in ADS) while the
     // head counter-turns to keep facing the look; the torso follows the look pitch, ADS
     // leans in and recoil is absorbed by the chest. Rotations are about the root's axes.
-    const twist = this.hold.twist[0] * ready + this.hold.twist[1] * ads;
-    turn(this.spine, up, -twist * .4);
-    turn(this.spine, right, pitch * .18);
+    const melee = this.melee?.pose ?? null, hands = melee?.hands ?? 0;
+    const twist = (this.hold.twist[0] * ready + this.hold.twist[1] * ads) * (1 - hands);
+    // Dagger torso channel (yaw left, pitch up, roll): the attacks drive the chest; the head
+    // counter-turns so the look stays where the player aims.
+    const body = melee && hands > 0 ? melee.body.toEulerAnglesToRef(meleeScratch.euler).scaleInPlace(hands) : null;
+    turn(this.spine, up, -twist * .4 + (body ? body.y * .4 : 0));
+    turn(this.spine, right, pitch * .18 + (body ? body.x * .45 : 0));
     this.spine?.computeWorldMatrix(true);
-    turn(this.chest, up, -twist * .6);
-    turn(this.chest, right, pitch * .2 - ads * .07 + recoil * this.hold.recoil.torso);
+    turn(this.chest, up, -twist * .6 + (body ? body.y * .6 : 0));
+    turn(this.chest, right, pitch * .2 - ads * .07 + recoil * this.hold.recoil.torso + (body ? body.x * .55 : 0));
+    if (body) turn(this.chest, forward, body.z);
     this.chest!.computeWorldMatrix(true);
     this.neck?.computeWorldMatrix(true);
-    turn(this.head, up, twist);
+    turn(this.head, up, twist - (body ? body.y : 0));
+    if (body) turn(this.head, right, -body.x * .8);
     // The head turns by the whole look pitch (spine + chest + head = 1); the cheek weld
     // below adds the drop onto the stock and a slight tilt toward it.
     turn(this.head, right, pitch * .62);
@@ -580,12 +611,18 @@ export class CharacterWeapon {
     refresh(this.shoulderJoints);
     const centre = Vector3.TransformCoordinatesToRef(rightArm.upper.getAbsolutePosition(), inverse, t.centre);
     centre.addInPlace(Vector3.TransformCoordinatesToRef(leftArm.upper.getAbsolutePosition(), inverse, t.tmp)).scaleInPlace(.5);
+    this.centreLocal.copyFrom(centre);
     const torso = this.torsoFrame(inverse, this.torso);
     Vector3.TransformCoordinatesToRef(this.chest!.getAbsolutePosition(), inverse, this.chestAt);
     // Shoulders: support reach, ADS lift into the stock, recoil pushes the firing side back.
     const base = this.shoulders;
     for (let i = 0; i < 4; i++) base[i] = SHOULDERS_READY[i] * ready + SHOULDERS_ADS[i] * ads + action.clavicles[i];
     base[0] += recoil * .03; base[1] -= recoil * .06;
+    if (melee && hands > 0) for (let i = 0; i < 2; i++) {
+      // Reaching forward protracts a shoulder, raising the hand lifts it.
+      const [lift, reach] = shoulderReach(melee.sockets[i].position);
+      base[i * 2] += (lift - base[i * 2]) * hands; base[i * 2 + 1] += (reach - base[i * 2 + 1]) * hands;
+    }
     const elevate = Vector3.TransformNormalToRef(t.tmp.set(0, 0, 1).applyRotationQuaternionInPlace(torso), world, t.elevate).normalize();
     const protract = Vector3.TransformNormalToRef(t.tmp.set(0, 1, 0).applyRotationQuaternionInPlace(torso), world, t.protract).normalize();
     for (let i = 0; i < 2; i++) {
@@ -611,29 +648,40 @@ export class CharacterWeapon {
     const w = action.weapon;
     position.addInPlace(t.tmp.set(w[0], w[1], w[2]).applyRotationQuaternionInPlace(aim));
     rotation.multiplyInPlace(Quaternion.RotationYawPitchRollToRef(w[3], w[4], w[5], t.turn));
-    const motion = 1 - .75 * ads;
+    const motion = (1 - .75 * ads)*this.idleAmplitude;
     rotation.multiplyInPlace(Quaternion.RotationYawPitchRollToRef(drift * .008 * motion, sway * .01 * motion + recoil * this.hold.recoil.rise, 0, t.turn));
     position.y += sway * .003 * motion + this.landing.value * .05;
     // Recoil drives the weapon straight back along its own bore.
     position.addInPlace(t.tmp.set(0, 0, recoil * this.hold.recoil.kick).applyRotationQuaternionInPlace(rotation));
+    if (melee) {
+      // Switching to daggers: the hands carry the gun down (muzzle low, canted) before it is
+      // put away; switching back it rises out of the same lowered pose.
+      const lower = easeMelee(melee.gunLower);
+      if (lower > 0) {
+        position.addInPlace(t.tmp.set(.02 * lower, -.2 * lower, .05 * lower).applyRotationQuaternionInPlace(aim));
+        rotation.multiplyInPlace(Quaternion.RotationYawPitchRollToRef(.25 * lower, -1.05 * lower, .4 * lower, t.turn));
+      }
+      if (this.root.isEnabled() !== melee.gunVisible) this.root.setEnabled(melee.gunVisible);
+    } else if (!this.root.isEnabled()) this.root.setEnabled(true);
     this.animateParts();
     this.slide = 0;
     this.solveArms(ready, ads, aim, true);
     // ADS: an out-of-reach support hand slides back along the fore-end; anything left over
     // pulls the whole weapon toward the shoulders (along the bore in ADS), never a hand off.
-    if (leftArm.reach > .002 && ads > .01 && action.support < .5) {
+    if (hands < .5 && leftArm.reach > .002 && ads > .01 && action.support < .5) {
       this.slide = Math.min(.09, leftArm.reach + .004) * ads;
       this.solveArms(ready, ads, aim, false);
     }
     const overreach = Math.max(rightArm.reach, leftArm.reach);
-    if (overreach > .002) {
+    if (hands < .5 && overreach > .002) {
       const toCentre = centre.subtractToRef(position, t.tmp).normalize();
       const back = t.tmp2.set(0, 0, 1).applyRotationQuaternionInPlace(rotation);
       position.addInPlace(Vector3.LerpToRef(toCentre, back, ads, t.tmp).normalize().scaleInPlace(overreach + .004));
       this.solveArms(ready, ads, aim, false);
     }
-    this.cheekWeld(ads);
-    for (let i = 0; i < this.fingers.length; i++) this.fingers[i].apply(i === 0 ? this.pull * .32 : 0);
+    this.cheekWeld(ads * (1 - hands));
+    for (let i = 0; i < this.fingers.length; i++) this.fingers[i].apply(i === 0 ? this.pull * .32 * (1 - hands) : 0);
+    this.melee?.pair.update(this.melee.pose);
   }
   /** Magazine, pump, bolt and shell follow the action (unscaled weapon coordinates); the
    * magazine and the loose shell travel with the support hand's actual target. */
@@ -720,6 +768,14 @@ export class CharacterWeapon {
   private solveArms(ready: number, ads: number, aim: Quaternion, ease: boolean): void {
     this.root.computeWorldMatrix(true);
     const rootWorld = this.character.root.getWorldMatrix(), t = solveScratch;
+    const melee = this.melee?.pose, hands = melee?.hands ?? 0;
+    if (melee && hands >= 1) {
+      for (let index = 0; index < this.arms.length; index++) {
+        const m = this.meleeTarget(index, aim, rootWorld);
+        this.arms[index].solve(m.wrist, m.pole, m.fingers, m.back);
+      }
+      return;
+    }
     const targets = this.targets();
     for (let index = 0; index < this.arms.length; index++) {
       const arm = this.arms[index], { point, fingers: preferred, back: backPreferred, hold: hand } = targets[index];
@@ -740,8 +796,53 @@ export class CharacterWeapon {
       const hintA = this.hold.ready.elbows[index], hintB = this.hold.ads.elbows[index];
       t.hint.set(hintA[0] * ready + hintB[0] * ads, hintA[1] * ready + hintB[1] * ads, hintA[2] * ready + hintB[2] * ads).applyRotationQuaternionInPlace(aim);
       const pole = t.pole.copyFrom(arm.upper.getAbsolutePosition()).addInPlace(Vector3.TransformNormalToRef(t.hint, rootWorld, t.tmp));
+      if (melee && hands > 0) {
+        // Leaving or returning to the gun: hand frame and elbow travel between both targets.
+        const m = this.meleeTarget(index, aim, rootWorld), k = easeMelee(hands);
+        Vector3.LerpToRef(wrist, m.wrist, k, wrist); Vector3.LerpToRef(pole, m.pole, k, pole);
+        Vector3.LerpToRef(fingers, m.fingers, k, fingers).normalize(); Vector3.LerpToRef(back, m.back, k, back).normalize();
+      }
       arm.solve(wrist, pole, fingers, back);
     }
+  }
+  /** World wrist, hand frame and elbow pole for a dagger socket: aim frame relative to the
+   * shoulder midpoint, turned by the clip's torso channel, then the grip (fingers/back/depth). */
+  private meleeTarget(index: number, aim: Quaternion, rootWorld: Matrix) {
+    const m = meleeScratch, pose = this.melee!.pose, socket = pose.sockets[index];
+    const hold = this.melee!.pair.meta.hold[index ? 'l' : 'r'];
+    const q = aim.multiplyToRef(pose.body, m.body).multiplyToRef(socket.rotation, m.q);
+    socket.position.applyRotationQuaternionToRef(m.body, m.tmp).addInPlace(this.centreLocal);
+    Vector3.TransformCoordinatesToRef(m.tmp, rootWorld, m.position);
+    Vector3.TransformNormalToRef(m.hold[0].set(hold.fingers[0], hold.fingers[1], hold.fingers[2]).applyRotationQuaternionInPlace(q), rootWorld, m.fingers).normalize();
+    Vector3.TransformNormalToRef(m.hold[1].set(hold.back[0], hold.back[1], hold.back[2]).applyRotationQuaternionInPlace(q), rootWorld, m.back).normalize();
+    m.wrist.copyFrom(m.position).addInPlace(m.back.scaleToRef(hold.depth, m.tmp)).subtractInPlace(m.fingers.scaleToRef(WRIST_TO_PALM, m.tmp));
+    pose.poles[index].applyRotationQuaternionToRef(m.body, m.hold[2]);
+    Vector3.TransformNormalToRef(m.hold[2], rootWorld, m.tmp);
+    m.pole.copyFrom(this.arms[index].upper.getAbsolutePosition()).addInPlace(m.tmp);
+    return m;
+  }
+  /** Dagger fit: each solved hand's enclosed handle centre against its socket, wrist bends
+   * and the dagger tips (character-root space). */
+  inspectMelee() {
+    const melee = this.melee;
+    if (!melee) return null;
+    const rootWorld = this.character.root.getWorldMatrix(), inverse = Matrix.Invert(rootWorld);
+    const aim = Quaternion.RotationAxis(Vector3.RightReadOnly, clamp(this.state.pitch, -1.25, 1.25) * .72);
+    const hands = this.arms.map((arm, index) => {
+      const hold = melee.pair.meta.hold[index ? 'l' : 'r'], frame = arm.handFrame();
+      const contact = arm.hand.getAbsolutePosition().add(frame.fingers.scale(WRIST_TO_PALM)).subtractInPlace(frame.back.scale(hold.depth));
+      const target = this.meleeTarget(index, aim, rootWorld).position.clone();
+      const forearm = arm.hand.getAbsolutePosition().subtract(arm.forearm.getAbsolutePosition()).normalize();
+      const upper = arm.forearm.getAbsolutePosition().subtract(arm.upper.getAbsolutePosition()).normalize();
+      return { gap: Vector3.Distance(contact, target), reach: arm.reach,
+        wristBend: Math.acos(clamp(Vector3.Dot(forearm, frame.fingers), -1, 1)),
+        elbowBend: Math.acos(clamp(Vector3.Dot(upper, forearm), -1, 1)),
+        hand: Vector3.TransformCoordinates(contact, inverse).asArray().map((v) => +v.toFixed(3)) };
+    });
+    const tips = melee.pair.anchor('tip').map((p) => this.local(p));
+    const grips = melee.pair.anchor('grip').map((p) => this.local(p));
+    return { ...melee.animator.inspect(), hands: melee.pose.hands, gunLower: melee.pose.gunLower, gunVisible: this.root.isEnabled(),
+      daggersVisible: melee.pair.roots.map((r) => r.isEnabled()), scale: [...melee.pose.scale], fit: hands, tips, grips };
   }
   inspect() {
     const weaponWorld = this.root.getWorldMatrix();
@@ -788,5 +889,9 @@ export class CharacterWeapon {
   }
   stopFiring():void{this.flash.update(Infinity);}
   muzzleWorld(): Vector3 { return Vector3.TransformCoordinates(this.anchors.muzzle,this.root.computeWorldMatrix(true)); }
-  dispose(): void { this.flash.dispose(); this.restore(); this.entries.dispose(); this.root.dispose(); }
+  dispose(): void {
+    // The daggers belong to the character: detach them from this rig's hand nodes' lifetime.
+    this.melee = null;
+    this.flash.dispose(); this.restore(); this.entries.dispose(); this.root.dispose();
+  }
 }

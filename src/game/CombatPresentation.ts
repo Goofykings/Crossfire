@@ -13,11 +13,12 @@ export function damageHaze(incoming: Vec3, yaw: number, pitch = 0) {
     top: clamp(.55 * front + .3 * rear + Math.max(0, up)), bottom: clamp(rear + Math.max(0, -up)) };
 }
 export function deathPose(elapsed: number, incoming: Vec3 | null) {
-  const t = Math.max(0, Math.min(1, elapsed / COMBAT_EFFECT_SECONDS));
+  const t = Math.max(0, Math.min(1, elapsed / 1.1));
   const length = Math.hypot(incoming?.x ?? 0, incoming?.z ?? 0);
   const fall = length > .001 ? { x: incoming!.x / length, z: incoming!.z / length } : { x: 0, z: 1 };
   const tip = (1 - (1 - t) ** 2) * Math.PI * .47;
-  return { fall, tip, lift: Math.sin(tip) * .1, opacity: 1 - t * t * (3 - 2 * t), done: t >= 1 };
+  const fade=Math.max(0,Math.min(1,(elapsed-1.55)/.65));
+  return { fall, tip, lift: Math.sin(tip) * .1, opacity: 1 - fade * fade * (3 - 2 * fade), done: elapsed >= 2.2 };
 }
 
 /** Angle of a right-facing chevron toward the attacker, using the current camera yaw. */

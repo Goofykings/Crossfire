@@ -275,6 +275,7 @@ for (const mode of (process.env.CROSSFIRE_SCORING_ONLY ? ['ffa'] : ['ffa', 'team
       const sniper = await open('sniper'), victim = await open();
       await place(sniper, victim); await aim(sniper, victim, 1.6);
       const mark = victim.messages.length;
+      const shooterMark = sniper.messages.length;
       const teamBefore = mode === 'teams' ? sniper.snapshot.match.teamScores[me(sniper).team] : null;
       const killed = await shot(sniper, victim, 1.6);
       assert.equal(killed.hits[0].health, 0); assert.equal(killed.hits[0].killed, true); assert.equal(killed.hits[0].head, true);
@@ -286,6 +287,11 @@ for (const mode of (process.env.CROSSFIRE_SCORING_ONLY ? ['ffa'] : ['ffa', 'team
       assert.deepEqual(elimination.elimination.direction, killed.hits[0].direction);
       assert.equal(elimination.elimination.respawnAt - elimination.elimination.at, 3000);
       await wait(victim, (m) => m.type === 'snapshot' && m.snapshot.players.some((p) => p.id === victim.id && p.deaths === 1));
+      // Independent sockets may deliver the victim's death before the shooter's
+      // score snapshot. A shot/elimination event is not a snapshot acknowledgment.
+      await wait(sniper, (m) => m.type === 'snapshot'
+        && m.snapshot.players.some((p) => p.id === sniper.id && p.kills === 1 && p.score === 150)
+        && (mode !== 'teams' || m.snapshot.match.teamScores[me(sniper).team] === teamBefore + 1), shooterMark);
       assert.equal(me(sniper).kills, 1); assert.equal(me(victim).deaths, 1); assert.equal(me(victim).alive, false);
       if (mode === 'teams') assert.equal(sniper.snapshot.match.teamScores[me(sniper).team], teamBefore + 1);
       const invalid = victim.messages.length;

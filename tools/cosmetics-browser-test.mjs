@@ -20,36 +20,38 @@ try{
   const real=window.fetch;window.fetch=(input,init)=>{const url=new URL(String(input),location.href);if(/assets\/maps\/.*\.glb/.test(url.pathname))window.__mapRequests.push(url.pathname);if(url.pathname.startsWith('/cosmetics'))window.__cosmeticRequests.push({path:url.pathname,method:init?.method??'GET'});return real(['/presence','/profile','/stats','/leaderboard','/rooms','/rooms/join','/cosmetics','/cosmetics/equip','/cosmetics/open'].includes(url.pathname)?new URL(url.pathname+url.search,server):input,init);};
  },h.base);
  await page.goto(base+'?quality=low&shadows=off&scale=0.5',{waitUntil:'domcontentloaded',timeout:240000});await completeGuestProfile(page,'Cosmetic Guest');
- await nav('Locker');await visible('#locker');await page.waitForFunction(()=>window.__crossfire.cosmetics().view?.owned.length===4,{timeout:120000});
+ await nav('Locker');await visible('#locker');await page.waitForFunction(()=>window.__crossfire.cosmetics().view?.owned.length===5,{timeout:120000});
  check((await page.$$eval('.home-nav button',nodes=>nodes.map(n=>n.textContent.trim().toUpperCase()))).join('|')==='PLAY|SHOP|LOCKER|SETTINGS|LEADERBOARD','five tabs in requested order');
  const credential=await page.evaluate(()=>localStorage.getItem(Object.keys(localStorage).find(k=>k.startsWith('crossfire.career.v1:'))));assert.match(credential,/^[a-f0-9]{64}$/);
  await h.central.legacyWalletForStatisticsTest(credential,37);
- await nav('Shop');await visible('#shop');await page.waitForFunction(()=>document.querySelector('.shop-balance')?.textContent==='37 GEMS');
+ await nav('Shop');await visible('#shop');await page.waitForFunction(()=>document.querySelector('.home-gems span')?.textContent==='37');
  check(await page.$eval('.shop-crate',n=>n.complete&&n.naturalWidth>0),'reward crate asset loads at GitHub Pages subpath');
  check(await page.$eval('.shop-open',n=>n.disabled&&n.textContent.includes('300')),'crate Open disabled below 300 gems');
  check((await page.$$eval('.crate-distribution span',nodes=>nodes.map(n=>n.textContent.match(/\d+%/)[0]))).join(',')==='55%,40%,5%','crate odds displayed correctly');
  const requests=await page.evaluate(()=>window.__cosmeticRequests.length);await page.$eval('.shop-open',b=>b.click());await delay(100);
  check(await page.evaluate(n=>!window.__cosmeticRequests.slice(n).some(r=>r.path==='/cosmetics/open'),requests),'disabled crate makes no purchase request');await page.screenshot({path:out+'/shop-1000.png'});
- await nav('Locker');await visible('#locker');await page.waitForFunction(()=>document.querySelectorAll('.cosmetic-card').length===4&&[...document.querySelectorAll('.cosmetic-thumbnail')].every(i=>i.complete&&i.naturalWidth>0),{timeout:240000});
- check(await page.$$eval('.cosmetic-card',cards=>cards.every(c=>c.querySelector('strong').textContent==='Default'&&c.textContent.includes('Common'))),'four actual-model Default Common cards');
- check(await page.$$eval('.equipped-item',n=>n.length===4),'equipped panel includes four categories');await page.screenshot({path:out+'/locker-1000.png'});
- for(const weapon of ['smg','rifle','sniper','shotgun']){
+ await nav('Locker');await visible('#locker');await page.waitForFunction(()=>document.querySelectorAll('.cosmetic-card').length===5&&[...document.querySelectorAll('.cosmetic-thumbnail')].every(i=>i.complete&&i.naturalWidth>0),{timeout:240000});
+ check(await page.$$eval('.cosmetic-card',cards=>cards.every(c=>c.querySelector('strong').textContent===(c.dataset.cosmetic==='default-melee'?'Default Daggers':'Default')&&c.textContent.includes('Common'))),'five actual-model Default Common cards including the dagger pair');
+ check(await page.$$eval('.equipped-item',n=>n.length===5),'equipped panel includes five categories');await page.screenshot({path:out+'/locker-1000.png'});
+ for(const weapon of ['smg','rifle','sniper','shotgun','melee']){
   await page.click('.cosmetic-categories [data-category="'+weapon+'"]');check(await page.$$eval('.cosmetic-card',n=>n.length===1),'category filter '+weapon);
   await page.click('.cosmetic-card');await visible('#cosmetic-preview');await page.waitForFunction(()=>window.__crossfire.cosmetics().page.preview.meshes>0&&document.querySelector('#cosmetic-preview>.cosmetic-status').textContent==='',{timeout:120000});
   check(await page.$eval('#cosmetic-preview footer button',b=>b.disabled&&b.textContent==='EQUIPPED'),'owned '+weapon+' preview rendered and already equipped');
   await page.screenshot({path:out+'/preview-'+weapon+'.png'});await clickText('#cosmetic-preview','Back');await visible('#locker');check(!(await page.evaluate(()=>window.__crossfire.cosmetics().page.preview.active)),'Back disposes '+weapon+' preview');
  }
  await page.click('.cosmetic-categories [data-category="all"]');await page.setViewport({width:640,height:480});await delay(200);await page.screenshot({path:out+'/locker-640.png'});
- check(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth&&[...document.querySelectorAll('.equipped-item')].every(n=>{const r=n.getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight;})),'640x480 has no horizontal overflow and all four equipped rows visible');
+ await page.$eval('.equipped-item:last-child',e=>e.focus());
+ check(await page.evaluate(()=>{const p=document.querySelector('.cosmetic-equipped').getBoundingClientRect(),r=document.querySelector('.equipped-item:last-child').getBoundingClientRect();return document.documentElement.scrollWidth<=innerWidth&&p.top>=0&&p.bottom<=innerHeight&&r.top>=p.top&&r.bottom<=p.bottom;}),'640x480 has no horizontal overflow and keyboard scrolling reaches the fifth equipped slot');
  await page.setViewport({width:480,height:480});await delay(200);await page.screenshot({path:out+'/locker-480.png'});
- check(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth&&[...document.querySelectorAll('.equipped-item')].every(n=>n.getBoundingClientRect().bottom<=innerHeight)),'480x480 stacked equipped panel remains visible');
+ await page.$eval('.equipped-item:last-child',e=>{e.blur();e.focus();});
+ check(await page.evaluate(()=>{const p=document.querySelector('.cosmetic-equipped').getBoundingClientRect(),r=document.querySelector('.equipped-item:last-child').getBoundingClientRect();return document.documentElement.scrollWidth<=innerWidth&&p.bottom<=innerHeight&&r.top>=p.top&&r.bottom<=p.bottom;}),'480x480 stacked equipped panel remains visible and scrollable');
  await page.setViewport({width:1000,height:700});
  check(await page.evaluate(()=>window.__socketCount===0&&window.__mapRequests.length===0),'Shop/Locker allocate no gameplay socket or full map');
  const request=async(id)=>{const r=await fetch(new URL('/cosmetics/equip',h.base),{method:'POST',headers:{Origin:origin,Authorization:'Bearer '+credential,'Content-Type':'application/json'},body:JSON.stringify({version:1,id})});return r.status;};
  check(await request('default-rifle')===200&&await request('unowned-rifle')===403,'authoritative idempotent equip accepted, unowned rejected');
  check((await h.api('/profile',credential)).data.profile.gems===37,'wallet unchanged by browsing or equip');
  await nav('Settings');await visible('#settings');await clickText('#settings','Back');await nav('Leaderboard');await visible('#leaderboard');await nav('Play');await visible('#menu');
- await page.reload({waitUntil:'domcontentloaded',timeout:240000});await nav('Locker');await visible('#locker');await page.waitForFunction(()=>window.__crossfire?.cosmetics().view?.owned.length===4,{timeout:120000});
+ await page.reload({waitUntil:'domcontentloaded',timeout:240000});await nav('Locker');await visible('#locker');await page.waitForFunction(()=>window.__crossfire?.cosmetics().view?.owned.length===5,{timeout:120000});
  check((await page.evaluate(()=>window.__crossfire.cosmetics().view.equipped)).rifle==='default-rifle','server equipment restored after browser refresh');
  await nav('Play');await visible('#menu');await page.waitForFunction(()=>window.__crossfire.homeCharacter().weapon?.cosmeticId==='default-rifle',{timeout:240000});check(true,'home character keeps actual equipped Default rifle');
  await page.click('#menu .home-actions .primary');await visible('#modes');await clickText('#modes','Create Server');await visible('#create-room');await clickText('#create-room','CREATE');await visible('#weapons');await page.click('#weapons [data-weapon="rifle"]');await page.waitForFunction(()=>window.__crossfire.ready(),{timeout:120000});
@@ -58,7 +60,7 @@ try{
  check(true,'real second client sniper cosmetic renders on remote character');
  const before=self(peer).motion.position;frames(peer,{x:1});await ack(peer);await page.waitForFunction(id=>window.__crossfire.network().snapshot.players.some(p=>p.id===id&&p.cosmeticId==='default-sniper'),{},peer.id);check(JSON.stringify(self(peer).motion.position)!==JSON.stringify(before),'real peer movement remains authoritative');
  await page.bringToFront();await page.evaluate(()=>window.__crossfire.hold('fire',true));await delay(160);await page.evaluate(()=>window.__crossfire.hold('fire',false));await page.waitForFunction(()=>{const n=window.__crossfire.network();return n.snapshot.players.find(p=>p.id===n.selfId).combat.gun.ammo<30;},{timeout:10000});check(true,'browser rifle firing still consumes server ammunition');
- await h.leave(peer);await page.evaluate(()=>window.__crossfire.networkLeave());await visible('#menu');check(await page.evaluate(()=>window.__crossfire.cosmetics().view.owned.length===4),'leaving match preserves inventory');
+ await h.leave(peer);await page.evaluate(()=>window.__crossfire.networkLeave());await visible('#menu');check(await page.evaluate(()=>window.__crossfire.cosmetics().view.owned.length===5),'leaving match preserves inventory');
  check(errors.length===0,'no browser exceptions or missing assets');fs.writeFileSync(out+'/report.json',JSON.stringify({checks,errors},null,2));
 }catch(error){if(page)await page.screenshot({path:out+'/failure.png'}).catch(()=>{});fs.writeFileSync(out+'/failure.json',JSON.stringify({message:String(error),checks,errors,text:await page?.evaluate(()=>document.body.innerText).catch(()=>null)},null,2));throw error;}
 finally{await browser?.close();await cleanup();}

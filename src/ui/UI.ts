@@ -1,5 +1,7 @@
+import { feedback, screenVisibility } from './motion';
 import { CosmeticsPages } from './CosmeticsPages';
 import { PracticeMenu } from './PracticeMenu';
+import { UISounds } from './UISounds';
 import { ROOM_LIMITS } from '../../shared/rooms';
 import { RoomMenus } from './RoomMenus';
 import { LeaderboardPage } from './LeaderboardPage';
@@ -23,7 +25,7 @@ import { CombatFeed } from './CombatFeed';
 import { weaponIcon } from './WeaponIcons';
 import { MatchHud } from './MatchHud';
 import type { RoundResult } from '../../shared/scoring';
-import { createRoundResults } from './RoundResults';
+import { createRoundResults,updateResultGems } from './RoundResults';
 import type { PlayerTeam } from '../../shared/combat';
 
 export type Screen = 'practice-setup' | 'shop'|'locker'|'cosmetic-preview' | 'modes' | 'create-room' | 'menu' | 'leaderboard' | 'loading' | 'start' | 'spectate' | 'results' | 'weapons' | 'hud' | 'pause' | 'settings' | 'error';
@@ -140,7 +142,7 @@ export class UI {
   private spectateWeapon!: HTMLElement;
   private spectateError!: HTMLElement;
   private spectateKiller: string | null | undefined;
-  private spectateObservedWeapon: WeaponId | null | undefined;
+  private spectateObservedWeapon: WeaponId | 'melee' | null | undefined;
   private spectateConnectionLost = false;
   private spectateBusy = false;
   private weaponSelectionReturn: 'start' | 'spectate' = 'start';
@@ -148,7 +150,7 @@ export class UI {
   private pendingWeapon: WeaponId = 'rifle';
   private readonly previews = new Map<WeaponId, string>();
   private readonly weaponCards = new Map<WeaponId, HTMLButtonElement>();
-  private readonly labels: Record<WeaponId, string> = { smg: 'SMG', rifle: 'Assault Rifle', shotgun: 'Shotgun', sniper: 'Sniper Rifle' };
+  private readonly labels: Record<WeaponId | 'melee', string> = { melee:'Dual Daggers',smg: 'SMG', rifle: 'Assault Rifle', shotgun: 'Shotgun', sniper: 'Sniper Rifle' };
   currentScreen: Screen = 'menu';
   readonly scoreboard: Scoreboard;
   readonly damage: DamageFeedback;
@@ -164,10 +166,14 @@ export class UI {
   constructor(
     private readonly root: HTMLElement,
     settings: SettingsStore,
-    private readonly audio: AudioManager,
+    audio: AudioManager,
     private readonly profile: GuestProfileStore,
   ) {
     this.draft = new SettingsDraft(settings);
+    new UISounds(document.body,audio);
+    const syncMotion = () => { document.body.dataset.uiLight = String(settings.value.chromebookMode); };
+    syncMotion();
+    settings.onChange(syncMotion);
     this.usernameDraft = profile.value.username;
     this.buildMenu();
     this.rooms=new RoomMenus(name=>this.screen(name),name=>this.show(name),()=>this.profile.value.username,this.root);
@@ -175,7 +181,7 @@ export class UI {
     this.root.append(el('div','practice-indicator','PRACTICE · RESULTS NOT SAVED'));
     this.cosmetics=new CosmeticsPages(name=>this.screen(name),name=>this.show(name));this.cosmetics.onPreview=()=>this.show('cosmetic-preview');
     this.challenges = new ChallengesPanel(this.screens.get('menu')!);
-    this.root.appendChild(this.challenges.account);
+    this.homeHeader.appendChild(this.challenges.account);
     this.leaderboard = new LeaderboardPage(this.screen('leaderboard'), () => this.show('menu'));
     this.buildLoading();
     try { const saved = localStorage.getItem('crossfire.pending-weapon'); if (validWeapon(saved)) this.pendingWeapon = saved; } catch { /* Optional preference. */ }
@@ -197,6 +203,8 @@ export class UI {
 
   private screen(id: Screen, cls = ''): HTMLElement {
     const s = el('div', `screen ${cls}`);
+    s.inert = true;
+    s.setAttribute('aria-hidden', 'true');
     s.id = id;
     this.root.appendChild(s);
     this.screens.set(id, s);
@@ -207,12 +215,11 @@ export class UI {
     this.resultBody.replaceChildren(createRoundResults(result, selfId, team, next, home,practice)); this.show('results');
   }
   setPractice(active:boolean){document.body.dataset.practice=String(active);}
+  updateResultGems(result:RoundResult,selfId:string){const panel=this.resultBody.querySelector<HTMLElement>('.round-results');if(panel)updateResultGems(panel,result,selfId);}
 
   private button(label: string, sub: string, cls: string, onClick: () => void): HTMLButtonElement {
     const b = el('button', `btn ${cls}`, `<span>${label}</span>${sub ? `<span class="sub">${sub}</span>` : ''}`);
     b.addEventListener('click', () => {
-      this.audio.unlock();
-      this.audio.play('ui_click');
       onClick();
     });
     return b;
@@ -411,7 +418,7 @@ export class UI {
     this.refreshSelection();
   }
 
-  setSpectate(name: string | null, remainingMs: number, connected: boolean, weapon: WeaponId | null = null): void {
+  setSpectate(name: string | null, remainingMs: number, connected: boolean, weapon: WeaponId | 'melee' | null = null): void {
     if (name !== this.spectateKiller || weapon !== this.spectateObservedWeapon) {
       this.spectateKiller = name;
       this.spectateObservedWeapon = weapon;
@@ -476,7 +483,7 @@ export class UI {
     const ch = el('div', 'crosshair', '<i class="h l"></i><i class="h r"></i><i class="v t"></i><i class="v b"></i><i class="dot"></i>');
     this.crosshair = ch;
     s.appendChild(ch);
-    this.chargeRing = el('div', 'grenade-charge', '<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="17" pathLength="100"/></svg>');
+    this.chargeRing = el('div', 'grenade-charge', '<svg viewBox="0 0 40 40"><circle class="charge-track" cx="20" cy="20" r="17"/><circle cx="20" cy="20" r="17" pathLength="100"/></svg>');
     this.chargeRing.setAttribute('aria-hidden', 'true'); s.appendChild(this.chargeRing);
     this.hitmarker = el('div', 'hitmarker', '<i></i><i></i><i></i><i></i>');
     s.appendChild(this.hitmarker);
@@ -682,6 +689,7 @@ export class UI {
         rows: [
           ['mouseSensitivity', this.rangeRow('mouseSensitivity', 'Mouse sensitivity', 0.05, (x) => x.toFixed(2))],
           ['invertY', this.toggleRow('invertY', 'Invert vertical look')],
+          ['aimAssist', this.toggleRow('aimAssist', 'Aim assist (subtle, manual input only)')],
           ['fov', this.rangeRow('fov', 'Field of view', 1, (x) => `${Math.round(x)}°`)],
         ],
       },
@@ -847,6 +855,7 @@ export class UI {
       t.tab.tabIndex = on ? 0 : -1;
       t.tab.classList.toggle('selected', on);
       t.panel.hidden = !on;
+      t.panel.inert = !on;
       if (on && focus) t.tab.focus();
     });
   }
@@ -927,7 +936,7 @@ export class UI {
     return row;
   }
 
-  private toggleRow(key: 'invertY' | 'showFps' | 'reducedEffects' | 'chromebookMode', label: string): HTMLElement {
+  private toggleRow(key: 'invertY' | 'aimAssist' | 'showFps' | 'reducedEffects' | 'chromebookMode', label: string): HTMLElement {
     const id = `set-${key}`;
     const { row, lab } = this.settingRow(label, id);
     const input = el('input', 'switch');
@@ -970,6 +979,12 @@ export class UI {
 
   // ---------------------------------------------------------------------------------------------
   show(screen: Screen, overlayHud = false): void {
+    const previousFocus = document.activeElement;
+    // Close a custom combobox before its page becomes inert; reopening settings
+    // must not leave an old popup expanded or its active descendant stale.
+    for (const [id, page] of this.screens) if (id !== screen) {
+      page.querySelectorAll<HTMLElement>('.dropdown.open [role="combobox"]').forEach(button => button.blur());
+    }
     if (screen !== 'hud') {
       this.setSlideEffect(false, 0, 0);
       this.chatOpen = false; this.chatBox.hidden = true; this.chatInput.blur();
@@ -980,6 +995,7 @@ export class UI {
       this.chatLog.replaceChildren(); this.chatFeed.replaceChildren();
     }
     this.currentScreen = screen;
+    if(screen!=='practice-setup')this.practice.hide();
     document.body.dataset.screen = screen;
     const homeSettings = screen === 'settings' && this.settingsReturn === 'menu';
     const ranking = screen === 'leaderboard',cosmetics=screen==='shop'||screen==='locker';
@@ -988,20 +1004,32 @@ export class UI {
     const home = screen === 'menu' || homeSettings;
     document.body.dataset.roomPage=String(['modes','create-room','practice-setup'].includes(screen));
     document.body.dataset.homePage = cosmetics ? screen : ranking ? 'leaderboard' : homeSettings ? 'settings' : home ? 'play' : '';
-    this.homeHeader.hidden = !(home||cosmetics);
-    this.challenges.account.hidden = screen !== 'menu';
+    this.homeHeader.hidden = !(home||cosmetics||ranking);
+    this.challenges.account.hidden = !(home||cosmetics||ranking);
     this.homeHeader.dataset.page = ranking ? 'leaderboard' : homeSettings ? 'settings' : 'play';
     this.homeTabs.forEach((tab, i) => {
       if (i === (ranking ? 4 : homeSettings ? 3 : screen==='shop'?1:screen==='locker'?2:0)) tab.setAttribute('aria-current', 'page');
       else tab.removeAttribute('aria-current');
     });
+    const selectedTab=this.homeTabs.find(tab=>tab.hasAttribute('aria-current'));
+    const navigation=selectedTab?.parentElement;
+    if(navigation&&navigation.scrollWidth>navigation.clientWidth&&selectedTab){
+      navigation.scrollLeft=Math.max(0,selectedTab.offsetLeft-(navigation.clientWidth-selectedTab.offsetWidth)/2);
+    }
     if (ranking) this.leaderboard.show(); else this.leaderboard.hide();
     this.screens.get('settings')!.classList.toggle('home-settings', homeSettings);
     this.screens.get('menu')!.inert = homeSettings;
     this.screens.get('menu')!.setAttribute('aria-hidden', String(homeSettings || !home));
     this.scoreboard?.setVisible(false);
     for (const [id, s] of this.screens) {
-      s.classList.toggle('visible', id === screen || (overlayHud && id === 'hud') || (homeSettings && id === 'menu'));
+      const visible = id === screen || (overlayHud && id === 'hud') || (homeSettings && id === 'menu');
+      screenVisibility(s, visible, id === screen);
+    }
+    if (previousFocus instanceof HTMLElement && previousFocus.closest('.screen[inert]')) {
+      previousFocus.blur();
+      if (screen !== 'hud' && screen !== 'loading') {
+        this.screens.get(screen)?.querySelector<HTMLElement>('button:not(:disabled), input:not(:disabled), [tabindex="0"]')?.focus({preventScroll: true});
+      }
     }
     if (screen === 'hud') for (const message of this.pendingChat.splice(0)) this.displayChat(message);
     if (screen === 'settings') this.syncSettings();
@@ -1044,6 +1072,7 @@ export class UI {
   }
 
   setWeaponName(name: string): void {
+    if (this.weaponName.textContent !== name) feedback(this.weaponName);
     this.weaponName.textContent = name;
   }
 
@@ -1089,9 +1118,9 @@ export class UI {
     window.setTimeout(() => popup.remove(), 800);
   }
 
-  setGrenadeCharge(progress: number): void {
+  setGrenadeCharge(progress: number,active=progress>0): void {
     if (!this.chargeRing) return;
-    this.chargeRing.classList.toggle('visible', progress > .065);
+    this.chargeRing.classList.toggle('visible', active);
     this.chargeRing.style.setProperty('--charge', String(Math.max(0, Math.min(1, progress))));
   }
   setGrenades(count: number): void {
@@ -1101,7 +1130,9 @@ export class UI {
     this.grenadeButton.title = `Throw grenade: ${bindingName(this.draft.value.keyBindings.grenade[0])}`;
   }
 
+  setMeleeEquipped(value:boolean):void {this.screens.get('hud')!.dataset.melee=String(value);}
   setAmmo(ammo: number, reserve: number, magazine: number, reloading: boolean, progress: number): void {
+    if (this.ammoValue.textContent !== String(ammo)) feedback(this.ammoValue);
     this.ammoValue.textContent = String(ammo);
     this.ammoReserve.innerHTML = Number.isFinite(reserve) ? `/ ${reserve}` : '/ &infin;';
     this.ammoBox.classList.toggle('low', ammo <= Math.floor(magazine * 0.2));

@@ -2,7 +2,7 @@ import { Quaternion } from '@babylonjs/core';
 import type { RenderContext } from '../rendering/RenderContext';
 import type { PlayerController, Vec3 } from './PlayerController';
 import { LEAN_ANGLE, LEAN_OFFSET, leanOffset } from '../../shared/lean';
-import { GRENADE } from '../../shared/grenades';
+import { BlastShake } from './BlastShake';
 import { DampedSpring } from '../core/DampedSpring';
 
 const DEG = Math.PI / 180;
@@ -22,7 +22,7 @@ export class PlayerCamera {
   private readonly dip = new DampedSpring(Math.sqrt(120), 14 / (2 * Math.sqrt(120)));
   private readonly kickPitch = new DampedSpring(Math.sqrt(260), 22 / (2 * Math.sqrt(260)));
   private kickYaw = 0;
-  private readonly blastRoll = new DampedSpring(39, .26);
+  private readonly blast = new BlastShake();
   private fov = 90;
   private swayTime = 0;
   private readonly tmp: Vec3 = { x: 0, y: 0, z: 0 };
@@ -54,11 +54,10 @@ export class PlayerCamera {
     this.player.yaw += yawDeg * DEG * 0.25 * (Math.random() - 0.5);
   }
 
-  /** Cosmetic roll about the optical axis: the center aim/ray never changes. */
-  explosion(distance: number): void {
-    const t = Math.max(0, 1 - Math.max(0, distance) / GRENADE.damageRadius);
-    this.blastRoll.velocity = Math.min(2.6, this.blastRoll.velocity + 2.4 * t * t);
-  }
+  /** Only confirmed damage triggers bounded, cosmetic translation/optical roll. */
+  explosion(damage: number): void {this.blast.hit(damage);}
+  blastState(){return this.blast.inspect();}
+  get recoiling():boolean{return Math.abs(this.kickPitch.value)>.0002||Math.abs(this.kickPitch.velocity)>.001||Math.abs(this.kickYaw)>.0002;}
 
   /** Called once per fixed tick with the controller's snap/landing info. */
   onTick(): void {
@@ -67,7 +66,7 @@ export class PlayerCamera {
 
   resetMotion(): void {
     this.groundY = null; this.wasGrounded = false;
-    this.dip.reset(); this.blastRoll.reset(); this.kickPitch.reset(); this.kickYaw = 0;
+    this.dip.reset(); this.blast.reset(); this.kickPitch.reset(); this.kickYaw = 0;
     this.bobWeight = this.bobX = this.bobY = 0;
   }
 
@@ -116,16 +115,17 @@ export class PlayerCamera {
     this.kickYaw *= Math.exp(-dt * 12);
 
     const cam = this.ctx.camera;
+    const shake=this.blast.update(dt,reducedMotion);
     const heightBlend = p.prevCrouch + (p.crouch - p.prevCrouch) * alpha;
     const desiredEye = (p.cfg.standEye + (p.cfg.crouchEye - p.cfg.standEye) * heightBlend)
-      + this.groundY - pos.y + this.bobY + this.dip.value * .1 * cosmetic;
+      + this.groundY - pos.y + this.bobY + shake.y + this.dip.value * .1 * cosmetic;
     const eye = p.safeViewEye(pos, desiredEye);
     const lean = p.prevLean + (p.lean - p.prevLean) * alpha;
     // Include bob in the sweep so visual motion cannot nudge the camera through a wall.
-    const safe = p.safeViewLean(pos, lean + this.bobX / LEAN_OFFSET, eye);
+    const safe = p.safeViewLean(pos, lean + (this.bobX+shake.x) / LEAN_OFFSET, eye);
     const offset = leanOffset(p.yaw, safe);
     cam.position.set(pos.x + offset.x, pos.y + eye, pos.z + offset.z);
-    const roll = this.bobX * 0.35 - lean * LEAN_ANGLE + this.blastRoll.update(dt) * cosmetic;
+    const roll = this.bobX * 0.35 - lean * LEAN_ANGLE + shake.roll;
     cam.rotationQuaternion ??= Quaternion.Identity();
     this.swayTime += dt;
     const aim = this.aimAngles(scopeSway);

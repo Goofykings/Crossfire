@@ -8,6 +8,8 @@ export interface Settings {
   /** Multiplier on the base look speed (1 = default). */
   mouseSensitivity: number;
   invertY: boolean;
+  /** Explicit opt-in; never enabled automatically for mouse/keyboard. */
+  aimAssist: boolean;
   /** Horizontal field of view in degrees. */
   fov: number;
   /** 0..1 */
@@ -26,6 +28,7 @@ export interface Settings {
 export const DEFAULT_SETTINGS: Settings = {
   mouseSensitivity: 1,
   invertY: false,
+  aimAssist: false,
   fov: 90,
   masterVolume: 0.7,
   sfxVolume: 1,
@@ -71,6 +74,7 @@ export function sanitizeSettings(raw: unknown): Settings {
   num('sfxVolume');
   num('resolutionScale');
   if (typeof r.invertY === 'boolean') s.invertY = r.invertY;
+  if (typeof r.aimAssist === 'boolean') s.aimAssist = r.aimAssist;
   if (typeof r.chromebookMode === 'boolean') s.chromebookMode = r.chromebookMode;
   if (typeof r.reducedEffects === 'boolean') s.reducedEffects = r.reducedEffects;
   if (typeof r.showFps === 'boolean') s.showFps = r.showFps;

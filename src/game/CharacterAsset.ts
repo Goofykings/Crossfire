@@ -29,6 +29,7 @@ export interface CharacterInstance {
   setLean(amount: number): void;
   restoreLean(): void;
   applyLean(): void;
+  poseDeath(elapsed:number):void;
   visibilityPoints(): Vector3[];
   headPosition(): Vector3 | undefined;
   inspect(): ReturnType<PlayerAnimator['inspect']> & { geometry: number[]; materials: number[]; bones: number;
@@ -145,8 +146,19 @@ export class CharacterAssetLibrary {
       if (node) return node.getAbsolutePosition().clone();
       return bone?.getAbsolutePosition(meshes[0]);
     };
+    const deathBases=new Map<TransformNode,Quaternion>();
+    const poseDeath=(elapsed:number)=>{
+      if(!deathBases.size){for(const group of entries.animationGroups)group.pause();for(const name of ['upper_arm_l','upper_arm_r','forearm_l','forearm_r','thigh_l','thigh_r','shin_l','shin_r']){const node=byName.get(name)?.getTransformNode();if(node?.rotationQuaternion)deathBases.set(node,node.rotationQuaternion.clone());}}
+      const pulse=Math.sin(elapsed*11)*Math.exp(-elapsed*2.8),fold=1-Math.exp(-elapsed*5);
+      for(const [node,base]of deathBases){node.rotationQuaternion!.copyFrom(base);const side=node.name.endsWith('_l')?1:-1;
+       if(node.name.includes('upper_arm'))node.rotate(Vector3.Forward(),side*(.18*fold+pulse*.23),Space.LOCAL);
+       else if(node.name.includes('forearm'))node.rotate(Vector3.RightReadOnly,.22*fold+pulse*.2*side,Space.LOCAL);
+       else if(node.name.includes('thigh'))node.rotate(Vector3.RightReadOnly,(side>0?.32:.13)*fold+pulse*.12*side,Space.LOCAL);
+       else node.rotate(Vector3.RightReadOnly,-.42*fold+pulse*.1*side,Space.LOCAL);
+      }
+    };
     return { root, meshes, entries, update: (motion, dt) => animator.update(motion, dt),
-      setLean: (amount) => { lean = Math.max(-1, Math.min(1, amount)); }, restoreLean, applyLean,
+      setLean: (amount) => { lean = Math.max(-1, Math.min(1, amount)); }, restoreLean, applyLean,poseDeath,
       visibilityPoints: () => ['head', 'chest', 'pelvis', 'upper_arm_l', 'upper_arm_r', 'hand_l', 'hand_r', 'foot_l', 'foot_r']
         .map(point).filter((p): p is Vector3 => !!p),
       headPosition: () => point('head')?.addInPlace(new Vector3(0, .28, 0)),

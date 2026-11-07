@@ -15,7 +15,7 @@ describe('bounded explosion presentation', () => {
     expect(burstEnvelope(250).fire).toBeLessThan(burstEnvelope(120).fire);
     expect(burstEnvelope(450).fire).toBe(0);
     expect(burstEnvelope(550).sparks).toBe(0);
-    expect(GRENADE.damageRadius).toBe(4.2);
+    expect(GRENADE.damageRadius).toBe(5.2);
   });
   it('keeps every opacity bounded, including clock skew and stale history', () => {
     for (const age of [-100, 0, 30, 60, 120, 250, 450, 550, 7000]) {

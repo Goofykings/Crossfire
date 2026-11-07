@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { texturesReady } from '../src/core/assetReadiness';
-import { smokeEnvelope, smokeInterior, smokeObscures } from '../src/weapons/grenadeSmoke';
+import { smokeEnvelope, smokeInterior, smokeObscures, smokeRadius } from '../src/weapons/grenadeSmoke';
 import { displayTeam, playerColor, teamOrder } from '../src/ui/teamColors';
 import { DEFAULT_SETTINGS, sanitizeSettings, SettingsStore } from '../src/config/settings';
 import { GRENADE } from '../shared/grenades';
@@ -30,10 +30,10 @@ describe('required texture readiness', () => {
 describe('authoritative smoke timing and spatial density',()=>{
   it('remains dense for five seconds then smoothly fades over two',()=>{
     expect(smokeEnvelope(-1)).toBe(0); expect(smokeEnvelope(0)).toBe(0);
-    for(const age of [300,1000,4999,5000])expect(smokeEnvelope(age)).toBe(1);
-    expect(smokeEnvelope(6000)).toBeCloseTo(.5);expect(smokeEnvelope(6999)).toBeLessThan(.001);
+    for(const age of [300,1000,4999,5000])expect(smokeEnvelope(age)).toBe(.75);
+    expect(smokeEnvelope(6000)).toBeCloseTo(.375);expect(smokeEnvelope(6999)).toBeLessThan(.001);
     expect(smokeEnvelope(7000)).toBe(0);expect(smokeEnvelope(9000)).toBe(0);
-    expect(GRENADE.damageRadius).toBe(4.2);expect(GRENADE.damage).toBe(100);
+    expect(GRENADE.damageRadius).toBe(5.2);expect(GRENADE.damage).toBe(200);expect((smokeRadius(5000)/4.2)**3).toBeCloseTo(.75);
   });
   it('hides revealing presentation across smoke without blocking unrelated sightlines',()=>{
     const cloud={x:0,y:0,z:0},from={x:-6,y:1,z:0},to={x:6,y:1,z:0};
@@ -42,9 +42,9 @@ describe('authoritative smoke timing and spatial density',()=>{
     expect(smokeObscures(from,to,cloud,7000)).toBe(false);
   });
   it('blends the boundary and restores visibility outside and after expiration',()=>{
-    expect(smokeInterior(0,4000)).toBe(1);expect(smokeInterior(3.5,4000)).toBeCloseTo(.5);
+    expect(smokeInterior(0,4000)).toBe(.75);expect(smokeInterior(smokeRadius(4000)-.7,4000)).toBeCloseTo(.375);
     expect(smokeInterior(4.2,4000)).toBe(0);expect(smokeInterior(5,4000)).toBe(0);
-    expect(smokeInterior(0,6000)).toBe(.5);expect(smokeInterior(0,7000)).toBe(0);
+    expect(smokeInterior(0,6000)).toBe(.375);expect(smokeInterior(0,7000)).toBe(0);
   });
 });
 describe('single player-relative presentation mapping',()=>{

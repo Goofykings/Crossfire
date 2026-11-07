@@ -3,6 +3,7 @@ import type { CareerClient } from './CareerClient';
 import { presenceEndpoint } from './endpoint';
 export class CosmeticsClient {
   view:InventoryView|null=null;
+  private crateRequestId:string|null=null;
   onChange:()=>void=()=>{};
   constructor(private endpoint:string,private career:CareerClient){}
   private async request(signal:AbortSignal,id?:string):Promise<InventoryView>{
@@ -20,10 +21,14 @@ export class CosmeticsClient {
     if(!this.career.joinCredential())await this.career.ensure();signal.throwIfAborted();const token=this.career.joinCredential();
     if(!token)throw Error('Guest inventory unavailable. Please retry.');
     const url=presenceEndpoint(this.endpoint);url.pathname='/cosmetics/open';
+    const requestId=this.crateRequestId??=crypto.randomUUID();
     // No client timeout abort here: a purchase in flight must report its real outcome.
-    const response=await fetch(url,{method:'POST',cache:'no-store',signal,headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({version:COSMETICS_API_VERSION})});
-    const data=await response.json().catch(()=>null);if(!response.ok)throw Error(typeof data?.error==='string'?data.error:'Crate unavailable. Update the multiplayer server and retry.');
+    const response=await fetch(url,{method:'POST',cache:'no-store',signal,headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({version:COSMETICS_API_VERSION,requestId})});
+    // A 5xx can arrive after a committed purchase. Preserve its receipt ID just
+    // as for a lost connection; only a definite client rejection starts fresh.
+    const data=await response.json().catch(()=>null);if(!response.ok){if(response.status<500)this.crateRequestId=null;throw Error(typeof data?.error==='string'?data.error:'Crate unavailable. Update the multiplayer server and retry.');}
     if(!validCrateResult(data))throw Error('Crate response is incompatible. Refresh after the server update.');
+    this.crateRequestId=null;
     if(!this.view||data.inventory.revision>=this.view.revision){this.view=data.inventory;this.onChange();}return data;
   }
   load(signal:AbortSignal){return this.request(signal);}

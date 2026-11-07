@@ -36,6 +36,7 @@ export class Dropdown {
     this.list.className = 'dropdown-list';
     this.list.setAttribute('role', 'listbox');
     this.list.hidden = true;
+    this.list.inert = true;
     options.forEach(([value, text], i) => {
       const li = document.createElement('li');
       li.id = `${uid}-opt-${i}`;
@@ -80,6 +81,7 @@ export class Dropdown {
     if (this.isOpen) return;
     this.isOpen = true;
     this.list.hidden = false;
+    this.list.inert = false;
     this.root.classList.add('open');
     this.button.setAttribute('aria-expanded', 'true');
     this.setActive(this.options.findIndex(([val]) => val === this.current));
@@ -89,6 +91,7 @@ export class Dropdown {
     if (!this.isOpen) return;
     this.isOpen = false;
     this.list.hidden = true;
+    this.list.inert = true;
     this.root.classList.remove('open');
     this.button.setAttribute('aria-expanded', 'false');
     this.button.removeAttribute('aria-activedescendant');
@@ -101,6 +104,7 @@ export class Dropdown {
   }
 
   private choose(i: number): void {
+    this.root.dispatchEvent(new CustomEvent('ui-activate',{bubbles:true}));
     const [value] = this.options[i];
     this.close();
     if (value === this.current) return;
@@ -114,6 +118,7 @@ export class Dropdown {
       if (k === 'Enter' || k === ' ' || k === 'ArrowDown' || k === 'ArrowUp') {
         e.preventDefault();
         this.open();
+        this.root.dispatchEvent(new CustomEvent('ui-activate',{bubbles:true}));
       }
       return;
     }

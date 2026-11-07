@@ -1,3 +1,4 @@
+import {meleeBlocked,meleeClip,createMeleeState,stepMelee,MELEE} from '../../shared/melee';
 import { CosmeticsClient } from '../network/CosmeticsClient';
 import { PracticeClient,type MatchSession } from '../practice/PracticeClient';
 import {EnvironmentSimulation} from '../../shared/environment';
@@ -24,6 +25,7 @@ import { Input } from '../core/Input';
 import { MapManager, type LoadedMap } from '../maps/MapManager';
 import { DEFAULT_MAP_ID, getMap, MAPS } from '../maps/registry';
 import { PlayerCamera } from '../player/PlayerCamera';
+import { AimAssist } from '../player/AimAssist';
 import { NO_INTENT, PlayerController, type MoveIntent } from '../player/PlayerController';
 import { MaterialLibrary } from '../rendering/MaterialLibrary';
 import { PostFX } from '../rendering/PostFX';
@@ -35,6 +37,8 @@ import { GrenadeView } from '../weapons/GrenadeView';
 import { GRENADE, advanceGrenade, throwGrenade, blastDamage, sweepSphere, type GrenadeEvent, type GrenadeState } from '../../shared/grenades';
 import { applySpread, damageAt, Loadout, WEAPONS, Weapon, type WeaponEvent } from '../weapons/Weapon';
 import { RIG_CONFIGS, WEAPON_RENDER_GROUP, WeaponView } from '../weapons/WeaponView';
+import { MeleeView } from '../weapons/MeleeView';
+import type { MeleeClipName, MeleeStage } from './melee/MeleeAnimation';
 import { DamageSystem, type Attacker, type HitZone } from './Damage';
 import { TeammateRegistry, type RemotePlayer } from './Teammates';
 import { MultiplayerClient } from '../network/MultiplayerClient';
@@ -94,9 +98,18 @@ export class Game {
   map: LoadedMap | null = null;
   player: PlayerController | null = null;
   private cameraRig: PlayerCamera | null = null;
+  private readonly aimAssist=new AimAssist();
   /** Rifle, shotgun, sniper and SMG (slots 1-4); infinite reserve ammunition, limited magazines. */
   readonly loadout = new Loadout(WEAPONS);
   private weaponView: WeaponView | null = null;
+  /** First-person dual daggers (presentation; the combat layer drives equip/attack/unequip). */
+  private meleeView: MeleeView | null = null;
+  private localMelee=createMeleeState();
+  private meleeDebug=false;
+  private meleeSoundSequence=-1;
+  private meleeFlourishKey='';
+  private meleeTogglePending=false;
+  private meleeShown = false;
   private moneyView: MoneyBurst | null = null;
   private moneyWorld: MoneyBurst | null = null;
   private effects: Effects | null = null;
@@ -213,7 +226,7 @@ export class Game {
     this.settings.onChange((v, changed) => this.applySettings(v, changed));
 
     // Public Play has no silent practice fallback.
-    this.input.onClear = () => this.cancelGrenadeCharge();
+    this.input.onClear = () => {this.meleeTogglePending=false;this.cancelGrenadeCharge();};
     this.ui.onGrenade = (held, cancel) => {
       if (cancel) { this.cancelGrenadeCharge(); return; }
       if (this.state !== 'playing') return;
@@ -339,6 +352,7 @@ export class Game {
     if (this.gameAssets) return abortable(this.gameAssets, signal);
     let effects: Effects | null = null;
     let view: WeaponView | null = null;
+    let melee: MeleeView | null = null;
     let grenades: GrenadeView | null = null;
     const work = (async () => {
       await this.materials.load(undefined, signal);
@@ -352,10 +366,13 @@ export class Game {
       view = new WeaponView(this.ctx, this.materials, effects);
       this.weaponView = view;
       view.setVisible(false);
+      melee = new MeleeView(this.ctx, this.remotePlayers.meleeLibrary); this.meleeView = melee;
       grenades = new GrenadeView(this.ctx.scene); this.grenadeView = grenades;
       this.remotePlayers.setSmokeVisibility((from, to) => this.grenadeView?.obscures(from, to) ?? false);
       this.ui.setLoading(0, 'Loading weapons and character');
       await Promise.all([grenades.load(this.materials, signal), view.load(signal), effects.loadCasings(this.materials, signal), this.remotePlayers.prepare(signal)]);
+      await melee.load(signal);
+      await melee.setCosmetic(this.cosmetics?.view?.equipped.melee);
       signal?.throwIfAborted();
       this.ui.setLoading(0, 'Loading weapon materials');
       await this.materials.ready(signal);
@@ -367,6 +384,8 @@ export class Game {
       grenades?.dispose();
       if (this.grenadeView === grenades) this.grenadeView = null;
       view?.dispose();
+      melee?.dispose();
+      if (this.meleeView === melee) this.meleeView = null;
       effects?.dispose();
       if (this.weaponView === view) this.weaponView = null;
       if (this.effects === effects) this.effects = null;
@@ -403,7 +422,7 @@ export class Game {
   private excludeViewFromSun(map: LoadedMap): void {
     if (!this.weaponView) return;
     const list = map.environment.sun.excludedMeshes;
-    const add = this.weaponView.meshes.filter((m) => !list.includes(m));
+    const add = [...this.weaponView.meshes, ...(this.meleeView?.meshes ?? [])].filter((m) => !list.includes(m));
     const bad = add.filter((m) => typeof (m as unknown as { _resyncLightSource?: unknown })._resyncLightSource !== 'function');
     if (bad.length) console.warn('[crossfire] not meshes:', bad.map((m) => `${m.name}:${m.getClassName?.()}`).join(', '));
     list.push(...add.filter((m) => !bad.includes(m)));
@@ -422,7 +441,7 @@ export class Game {
     }, signal);
     signal?.throwIfAborted();
     this.map = map;
-    if (this.options.multiplayer) this.remotePlayers.prepareVisibility();
+    if (this.options.multiplayer) this.remotePlayers.prepareVisibility(map.world);
     this.player = new PlayerController(map.world);
     this.cameraRig = new PlayerCamera(this.ctx, this.player);
     const s = effectiveSettings(this.settings.value);
@@ -515,6 +534,13 @@ export class Game {
             hits: shot.hits.length, damage: shot.hits.reduce((n, h) => n + h.amount, 0), head, target: shot.hits[0].id };
         };
         network.onEnvironment=(frame)=>{if(!signal.aborted&&this.network===network&&this.networkReady&&frame.roundId===this.loadedRound)this.map?.props.sync(frame);};
+        network.onMelee=(event)=>{
+          if(signal.aborted||this.network!==network)return;
+          const selfId=network.selfId;
+          if(event.shooterId!==selfId){const p=network.latest?.players.find(p=>p.id===event.shooterId);if(p)this.audio.playSpatial('melee_swing'+event.stage as SoundName,p.motion.position,.32);}
+          if(event.hits.length&&event.shooterId===selfId){this.ui.hitMarker(false);this.sound('hit',.45);}
+          for(const hit of event.hits)if(hit.id===selfId&&hit.life===this.networkLife){this.ui.damage.hit(hit.direction,hit.amount);}
+        };
         network.onGrenade = (event) => {
           if (!signal.aborted && this.network === network && this.networkReady) this.presentGrenade(event);
         };
@@ -629,7 +655,7 @@ export class Game {
   private killEffect(event: Elimination, snapshot: Snapshot, selfId: string | null): void {
     if (!event.killerId || event.killerId === event.victimId) return;
     const killer = snapshot.players.find((p) => p.id === event.killerId);
-    if (!killer?.weapon || killEffect(visualCosmetic(killer.weapon, killer.cosmeticId).id) !== 'money') return;
+    if (!killer?.weapon || killEffect(event.weapon==='melee'?killer.meleeCosmeticId:visualCosmetic(killer.weapon, killer.cosmeticId).id) !== 'money') return;
     if (event.killerId === selfId) { this.emitMoney(null); return; }
     const at = this.remotePlayers.muzzle(event.killerId);
     if (at && at.subtract(this.ctx.camera.globalPosition).length() < 45) this.emitMoney(at);
@@ -676,6 +702,7 @@ export class Game {
     this.remotePlayers.snapshot(snapshot, this.network.selfId);
     if (!self) return;
     this.grenadeCount = self.grenades; this.ui.setGrenades(self.grenades);
+    if(!self.alive){this.network.melee=createMeleeState();this.meleeDebug=false;}
     this.health = self.health;
     this.ui.setHealth(self.health, PLAYER_MAX_HEALTH);
     if (self.alive) {
@@ -688,6 +715,8 @@ export class Game {
         this.player.restore(self.motion);
         this.loadout.reset(WEAPONS.findIndex((w) => w.id === self.weapon), true);
         this.weaponView?.select(self.weapon);
+        this.network.melee=structuredClone(self.combat.melee??createMeleeState());this.localMelee=createMeleeState();this.meleeDebug=false;this.meleeSoundSequence=-1;
+        this.meleeView?.reset();
         this.weaponView?.motion.reset();
         this.cameraRig?.resetMotion();
         this.ui.setWeaponName(this.weapon.stats.name);
@@ -718,7 +747,7 @@ export class Game {
     let dismissed = this.dismissedResults.has(key);
     try { dismissed ||= sessionStorage.getItem(key) === 'dismissed'; } catch { /* Optional persistence. */ }
     if (dismissed) return false;
-    if (this.shownResult === key && this.state === 'results') return true;
+    if (this.shownResult === key && this.state === 'results') {this.ui.updateResultGems(result,network.selfId);return true;}
     this.grenadeView?.clear();
     this.shownResult = key;
     this.networkReady = false; this.state = 'results'; this.tabHeld = false;
@@ -738,6 +767,7 @@ export class Game {
   }
 
   private beginSpectating(death: Elimination): void {
+    this.meleeView?.reset();
     this.spectatingDeath = death;
     this.state = 'spectating';
     this.spectatorWeapon = null;
@@ -752,6 +782,7 @@ export class Game {
   }
 
   private showPreSpawn(): void {
+    this.meleeView?.reset();
     this.spectatingDeath = null; this.remotePlayers.setSpectated(null);
     this.state = 'start';
     this.tabHeld = false;
@@ -785,6 +816,8 @@ export class Game {
       } else {
         this.spawn();
         this.loadout.reset(WEAPONS.findIndex((w) => w.id === this.ui.selectedWeapon), !this.options.autoplay);
+        this.localMelee=createMeleeState();this.meleeDebug=false;this.meleeSoundSequence=-1;
+        this.meleeView?.reset();
         this.lastUsedWeapon.remember(this.weapon.stats.id);
         this.weaponView?.select(this.weapon.stats.id);
         this.ui.setWeaponName(this.weapon.stats.name);
@@ -846,6 +879,7 @@ export class Game {
     }
     this.loadout.reset();
     this.weaponView?.select(this.weapon.stats.id);
+    this.meleeView?.reset();
     this.grenadeCount = GRENADE.perLife; this.practiceGrenades = []; this.grenadeHeld = false;
     this.grenadeView?.clear(); this.ui.setGrenades(this.grenadeCount);
     this.health = PLAYER_MAX_HEALTH;
@@ -970,6 +1004,7 @@ export class Game {
     this.homeCharacter.setWeapon(this.lastUsedWeapon.value ?? this.ui.selectedWeapon);
     this.homeCharacter.setName(this.guestProfile.value.username);
     this.homeCharacter.setVisible(this.state === 'menu' && this.ui.currentScreen === 'menu' && !this.options.autoplay);
+    if(this.state!=='playing')this.aimAssist.reset();
     if (this.grenadeCharge.active && (this.state !== 'playing' || !this.input.enabled
       || (this.options.multiplayer && this.network?.state !== 'connected'))) this.cancelGrenadeCharge();
     if (this.state === 'menu') { this.ui.update(rawDt); this.input.endFrame(); return; }
@@ -1013,6 +1048,10 @@ export class Game {
         this.spectatorFov += (targetFov - this.spectatorFov) * (1 - Math.exp(-dt * 18));
         this.ctx.setFov(this.spectatorFov);
         const scope = w.stats.scope ? Math.max(0, Math.min(1, (w.ads - .72) / .22)) : 0;
+        this.meleeView?.sync(pose.melee??createMeleeState(),Date.now()+(this.network?.clockOffset??0));
+        this.meleeView?.setCosmetic(pose.meleeCosmeticId);this.meleeView?.advance(dt);
+        this.weaponView?.setMelee(this.meleeView?.gunLower??0,this.meleeView?.gunVisible??true);
+        if(this.meleeView&&this.weaponView){this.meleeView.setVisible(this.ui.currentScreen==='spectate');this.meleeView.update(this.weaponView.motion.pose);this.meleeShown=true;}
         spectatorScoped = scope > .98 && this.ui.currentScreen === 'spectate';
         this.weaponView?.update(dt, w, { sprinting: false, speed: pose.speed, grounded: pose.grounded,
           verticalSpeed: pose.verticalSpeed, sliding: pose.sliding, crouch: pose.crouch, reducedMotion: this.reducedMotion.matches });
@@ -1026,7 +1065,7 @@ export class Game {
         this.weaponView?.setVisible(false);
         this.ui.setScope(0);
       }
-      this.ui.setSpectate(death.killerName, Math.max(0, death.respawnAt - (Date.now() + (this.network?.clockOffset ?? 0))), this.network?.state === 'connected', pose?.weapon ?? null);
+      this.ui.setSpectate(death.killerName, Math.max(0, death.respawnAt - (Date.now() + (this.network?.clockOffset ?? 0))), this.network?.state === 'connected', pose&&meleeBlocked(pose.melee)?'melee':pose?.weapon ?? null);
     }
     this.remotePlayers.setSpectatorScope(spectatorScoped);
     this.effects?.setReduced(this.settings.value.chromebookMode);
@@ -1047,6 +1086,9 @@ export class Game {
       this.ui.currentScreen === 'hud' || this.ui.currentScreen === 'spectate', this.network?.selfId);
     this.audio.setListener(this.ctx.camera.globalPosition,this.ctx.camera.getDirection(Vector3.Forward(true)),this.ctx.camera.getDirection(Vector3.Up()));
     this.trails.update();
+    // The first-person daggers only show while this player is simulated (not spectating/menus).
+    if (!this.meleeShown && this.meleeView?.root.isEnabled()) { this.meleeView.setVisible(false); this.meleeView.update(this.weaponView?.motion.pose ?? { x: 0, y: 0, z: 0, pitch: 0, yaw: 0, roll: 0 }); }
+    this.meleeShown = false;
     this.ctx.scene.render();
     this.input.endFrame();
   }
@@ -1117,17 +1159,29 @@ export class Game {
     const input = this.input;
     this.weaponView?.setVisible(true);
 
+    const meleeState=this.network?.melee??this.localMelee;
+    // A render frame can be shorter than one physics tick. Keep this press until
+    // it is sent once; blur, menus and rebinding clear it through Input.onClear.
+    this.meleeTogglePending ||= input.wasPressed('melee');
+    if(this.meleeTogglePending)this.meleeDebug=false;
+    const blockedMelee=meleeBlocked(meleeState);
     const zoom = 1 + (this.weapon.stats.adsFovScale - 1) * this.weapon.ads;
     const events: WeaponEvent[] = [];
     // weapon switching: number keys and mouse wheel
     for (let k = 0; k < this.loadout.weapons.length; k++) {
-      if (input.wasPressed(`weapon${k + 1}` as 'weapon1')) this.loadout.select(k, events);
+      if (!blockedMelee && input.wasPressed(`weapon${k + 1}` as 'weapon1')) this.loadout.select(k, events);
     }
-    if (input.wasPressed('lastWeapon')) this.loadout.selectPrevious(events);
-    if (input.wasPressed('nextWeapon')) this.loadout.cycle(1, events);
-    if (input.wasPressed('prevWeapon')) this.loadout.cycle(-1, events);
+    if (!blockedMelee && input.wasPressed('lastWeapon')) this.loadout.selectPrevious(events);
+    if (!blockedMelee && input.wasPressed('nextWeapon')) this.loadout.cycle(1, events);
+    if (!blockedMelee && input.wasPressed('prevWeapon')) this.loadout.cycle(-1, events);
     const look = input.takeMouseDelta();
+    const manualYaw=player.yaw,manualPitch=player.pitch;
     rig.applyLook(look.dx, look.dy, s.mouseSensitivity, s.invertY, zoom);
+    if(s.aimAssist&&!blockedMelee){const eye=player.leanEye(),now=performance.now(),assist=this.aimAssist.step({enabled:true,now,dt,yaw:player.yaw,pitch:player.pitch,
+      inputYaw:Math.atan2(Math.sin(player.yaw-manualYaw),Math.cos(player.yaw-manualYaw)),inputPitch:player.pitch-manualPitch,eye,
+      targets:s.aimAssist?this.remotePlayers.aimTargets():[],canSee:target=>this.remotePlayers.aimVisible(target,eye),firing:input.isDown('fire')||input.wasPressed('fire'),recoiling:rig.recoiling||this.weapon.capture().cooldown>0});
+    player.yaw=Math.atan2(Math.sin(player.yaw+assist.yaw),Math.cos(player.yaw+assist.yaw));player.pitch=Math.max(-88*Math.PI/180,Math.min(88*Math.PI/180,player.pitch+assist.pitch));
+    }else this.aimAssist.reset();
     this.weaponView?.addSway(look.dx, look.dy);
 
     const it = this.intent;
@@ -1138,7 +1192,7 @@ export class Game {
     // Preserve a quick physical release/repress even when both events fall between
     // fixed ticks. Send a neutral release tick before the new held press.
     if (input.wasPressed('slide') && player.slideHeld) this.slideReleasePending = true;
-    it.aim = input.isDown('aim');
+    it.aim = !blockedMelee&&input.isDown('aim');
     it.lean = ((input.isDown('leanRight') ? 1 : 0) - (input.isDown('leanLeft') ? 1 : 0)) as -1 | 0 | 1;
     let jumpEdge = input.wasPressed('jump');
     let fireEdge = input.wasPressed('fire');
@@ -1152,14 +1206,17 @@ export class Game {
       this.slideReleasePending = false;
       it.jumpPressed = jumpEdge;
       const wasGrounded = player.grounded;
-      player.weaponClearance = this.weapon.stats.id;
+      player.weaponClearance = meleeBlocked(meleeState)?null:this.weapon.stats.id;
       player.fixedUpdate(FIXED_DT, it);
-      const throwing = input.isDown('grenade') || grenadeEdge || this.grenadeClick || this.grenadePointerHeld;
+      const toggle=this.meleeTogglePending;this.meleeTogglePending=false;
+      const combat={trigger:input.isDown('fire')||fireEdge,reload:input.isDown('reload')||reloadEdge,melee:toggle};
+      if(!this.network)stepMelee(this.localMelee,Date.now(),combat,this.weapon.action==='idle');
+      const throwing = !meleeBlocked(meleeState)&&(input.isDown('grenade') || grenadeEdge || this.grenadeClick || this.grenadePointerHeld);
       // A quick key tap can be released between render frames. Forward its
       // press edge as one authoritative input tick instead of losing the action.
-      this.network?.fixedInput(player, it, { trigger: input.isDown('fire'), reload: input.isDown('reload') || reloadEdge, grenade: throwing, ...rig.aimAngles(this.scope) });
+      this.network?.fixedInput(player, it, { ...combat, grenade: throwing, ...rig.aimAngles(this.scope) });
       const charge = this.grenadeCharge.update(throwing, Date.now(), FIXED_DT,
-        this.grenadeCount > 0 && this.weapon.action === 'idle' && !player.sliding);
+        !meleeBlocked(meleeState)&&this.grenadeCount > 0 && this.weapon.action === 'idle' && !player.sliding);
       if (!this.options.multiplayer && charge !== null) {
         const projectile = throwGrenade(map.world, player.leanEye(), { x: player.position.x, y: player.position.y + player.eyeHeight, z: player.position.z },
           player.lookDirection(), player.velocity, { id: crypto.randomUUID(), ownerId: 'player', ownerLife: 1, roundId: 0, at: Date.now() }, charge);
@@ -1175,10 +1232,10 @@ export class Game {
       this.loadout.update(
         FIXED_DT,
         {
-          trigger: input.isDown('fire'),
-          triggerPressed: fireEdge,
-          reloadPressed: reloadEdge,
-          aim: it.aim,
+          trigger: !meleeBlocked(meleeState)&&input.isDown('fire'),
+          triggerPressed: !meleeBlocked(meleeState)&&fireEdge,
+          reloadPressed: !meleeBlocked(meleeState)&&reloadEdge,
+          aim: !meleeBlocked(meleeState)&&it.aim,
           moveFactor: player.horizontalSpeed / MOVEMENT.weaponMoveReference,
           airborne: !player.grounded,
           sprinting: false,
@@ -1198,8 +1255,25 @@ export class Game {
     this.scope = w.stats.scope ? Math.max(0, Math.min(1, (w.ads - 0.72) / 0.22)) : 0;
     rig.update(dt, alpha, s.fov, zoom, this.scope, this.reducedMotion.matches);
     const shown = this.viewOverride ? ({ ...this.viewOverride, stats: w.stats } as unknown as Weapon) : w;
+    if(!this.meleeDebug){
+      const clip=this.meleeView?.sync(this.network?.melee??this.localMelee,Date.now()+(this.network?.clockOffset??0));
+      if(clip==='equip'||clip==='unequip')this.sound('melee_equip',.25);
+      const state=this.network?.melee??this.localMelee;
+      const activeClip=meleeClip(state),flourish=activeClip&&this.remotePlayers.meleeLibrary.meta?.clips[activeClip as MeleeClipName].flourish;
+      const elapsed=(Date.now()+(this.network?.clockOffset??0)-state.startedAt)/1000,key=`${activeClip}:${state.startedAt}:${state.sequence}`;
+      if(flourish&&elapsed>=flourish[0]&&elapsed<=flourish[1]&&this.meleeFlourishKey!==key){this.meleeFlourishKey=key;this.sound('melee_flourish',.18);}
+      if(state.phase==='attacking'&&state.sequence!==this.meleeSoundSequence&&Date.now()+(this.network?.clockOffset??0)-state.startedAt>=MELEE.attacks[state.stage-1].contact-50){this.meleeSoundSequence=state.sequence;this.sound(('melee_swing'+state.stage) as SoundName,.35);}
+      this.meleeView?.setCosmetic(this.network?.latest?.players.find(p=>p.id===this.network?.selfId)?.meleeCosmeticId??this.cosmetics?.view?.equipped.melee);
+    }
+    this.meleeView?.advance(dt);
+    this.weaponView?.setMelee(this.meleeView?.gunLower ?? 0, this.meleeView?.gunVisible ?? true);
     this.weaponView?.update(dt, shown, { sprinting: false, speed: player.horizontalSpeed,
       grounded: player.grounded, verticalSpeed: player.velocity.y, sliding: player.sliding, crouch: player.crouch, reducedMotion: this.reducedMotion.matches });
+    if (this.meleeView && this.weaponView) {
+      this.meleeView.setVisible(true);
+      this.meleeView.update(this.weaponView.motion.pose);
+      this.meleeShown = true;
+    }
     this.weaponView?.setHidden(this.scope > 0.98);
     this.ui.setScope(this.scope);
 
@@ -1210,10 +1284,12 @@ export class Game {
     // render pixels -> CSS pixels; hidden while aimed (the sight has its own reticle) or switching
     const crosshair = w.ads < 0.6 && (w.action === 'idle' || w.action === 'cycle' || w.reloading);
     this.ui.setCrosshairSpread(px * this.ctx.engine.getHardwareScalingLevel(), crosshair, dt);
+    this.ui.setWeaponName(meleeBlocked(this.network?.melee??this.localMelee)?'Dual Daggers':w.stats.name);
+    this.ui.setMeleeEquipped(meleeBlocked(this.network?.melee??this.localMelee));
     this.ui.setAmmo(w.ammo, w.reserve, w.stats.magazine, w.reloading, w.reloadProgress);
-    this.ui.setWeaponSlots(this.options.multiplayer ? [w.stats.name] : this.loadout.weapons.map((x) => x.stats.name), this.options.multiplayer ? 0 : this.loadout.switchingTo ?? this.loadout.currentIndex);
+    this.ui.setWeaponSlots(meleeBlocked(this.network?.melee??this.localMelee)?['Dual Daggers']:this.options.multiplayer ? [w.stats.name] : this.loadout.weapons.map((x) => x.stats.name), this.options.multiplayer ? 0 : this.loadout.switchingTo ?? this.loadout.currentIndex);
     this.ui.setGrenades(this.grenadeCount);
-    this.ui.setGrenadeCharge(this.grenadeCharge.progress(Date.now()));
+    this.ui.setGrenadeCharge(this.grenadeCharge.presentationProgress(Date.now()),this.grenadeCharge.active);
     this.ui.setHealth(this.health, PLAYER_MAX_HEALTH);
     this.ui.setSlideEffect(player.sliding, player.horizontalSpeed, player.slideRemaining / MOVEMENT.slideDuration);
   }
@@ -1235,14 +1311,11 @@ export class Game {
     }
     const now = Date.now() + (this.network?.clockOffset ?? 0);
     this.grenadeView?.explode(event, now);
-    if (now - event.at < 300 && this.state === 'playing' && this.player) {
-      this.cameraRig?.explosion(Math.hypot(this.player.position.x - event.position.x, this.player.position.y - event.position.y, this.player.position.z - event.position.z));
-    }
     if (now - event.at > 600) return; // History restores smoke, never old sound or hit feedback.
     this.audio.playSpatial('grenade_explosion',event.position,.8);
     const self = this.network?.latest?.players.find((p) => p.id === this.network?.selfId);
     const received = event.hits.find((h) => h.id === self?.id && h.life === self.life);
-    if (received) this.ui.damage.hit(received.direction, received.amount);
+    if (received) {this.ui.damage.hit(received.direction, received.amount);if(event.ownerId!==self?.id&&now-event.at<300&&this.state==='playing')this.cameraRig?.explosion(received.amount);}
     if (event.ownerId === this.network?.selfId && event.hits.some((h) => h.id !== event.ownerId)) {
       this.stats.grenadeHits++; this.ui.hitMarker(false); this.sound('hit', .5);
     }
@@ -1269,6 +1342,7 @@ export class Game {
   private onWeaponEvent(e: WeaponEvent): void {
     switch (e.type) {
       case 'fire':
+        this.aimAssist.suppress(performance.now());
         this.fireShot(e.spread);
         break;
       case 'empty':
@@ -1489,6 +1563,28 @@ export class Game {
       homeCharacter: () => this.homeCharacter.inspect(),
       /** Pose lab on the isolated home preview (same rig as remote players); null restores it. */
       characterLab: (options: CharacterLabOptions | null) => this.homeCharacter.characterLab(options),
+      /** Dual-dagger presentation hooks (the combat layer wires real input/authority):
+       * 'equip' | 'unequip' | 'attack' (optional stage) | 'reset', or 'freeze' with a clip and
+       * time for repeatable screenshots ('freeze' with no clip resumes); 'pause'/'step'/'resume'
+       * advance real transitions by exact steps. */
+      melee: (command: 'equip' | 'unequip' | 'attack' | 'reset' | 'freeze' | 'pause' | 'resume' | 'step', arg?: MeleeStage | MeleeClipName | number, time?: number) => {
+        this.meleeDebug=true;
+        const view = this.meleeView;
+        if (!view) return null;
+        if (command === 'pause' || command === 'resume') view.pause(command === 'pause');
+        else if (command === 'step') view.step(Number(arg ?? 1 / 60));
+        else if (command === 'equip') view.equip();
+        else if (command === 'unequip') view.unequip();
+        else if (command === 'attack') return view.attack(arg as MeleeStage | undefined);
+        else if (command === 'reset') view.reset();
+        else view.freeze((arg as MeleeClipName | undefined) ?? null, time ?? 0);
+        return view.inspect();
+      },
+      meleeInspect: () => this.meleeView?.inspect() ?? null,
+      /** Same commands for remote players and practice bots (third person); id null = all. */
+      meleeRemote: (command: 'equip' | 'unequip' | 'attack' | 'reset', stage?: MeleeStage, id: string | null = null) => this.remotePlayers.presentMelee(id, command, stage),
+      meleeRemoteSync: (id: string, clip: MeleeClipName, elapsed: number) => this.remotePlayers.syncMelee(id, clip, elapsed),
+      meleeRemoteInspect: (id?: string) => this.remotePlayers.inspectMelee(id),
       characterPerf: (count: number, frames?: number) => this.homeCharacter.characterPerf(count, frames),
       silhouetteStats: () => this.remotePlayers.silhouetteStats(),
       silhouetteInterior: () => this.remotePlayers.silhouetteInterior(),
@@ -1598,7 +1694,9 @@ export class Game {
       spatialSounds: () => [...this.audio.recentSpatial],
       environmentProps:()=>this.map?.props.inspect(),
       environmentState:()=>this.network?.environment,
-      grenades: () => ({ count: this.grenadeCount, ...this.grenadeView?.inspect(), lower: this.weaponView?.debug.lower }),
+      grenades: () => ({ count: this.grenadeCount, charge:this.grenadeCharge.presentationProgress(Date.now()),charging:this.grenadeCharge.active,shake:this.cameraRig?.blastState(), ...this.grenadeView?.inspect(), lower: this.weaponView?.debug.lower }),
+      aimAssist:()=>({enabled:this.settings.value.aimAssist,...this.aimAssist.inspect()}),
+      mouseInput:(dx:number,dy:number)=>this.input.injectMouse(dx,dy),
       trails: () => this.trails.inspect(),
       spatialAudio: () => this.audio.inspectSpatial(),
       /** Turn the view toward a world point (tests aim at a target's head or body). */

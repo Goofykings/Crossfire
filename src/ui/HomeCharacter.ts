@@ -6,6 +6,8 @@ import { CharacterAssetLibrary, type CharacterInstance } from '../game/Character
 import { CharacterWeaponLibrary, type CharacterWeapon } from '../game/CharacterWeapon';
 import type { CharacterMotion } from '../game/PlayerAnimation';
 import { MaterialLibrary } from '../rendering/MaterialLibrary';
+import { MeleeLibrary, type CharacterMelee } from '../game/melee/MeleeAssets';
+import type { MeleeClipName } from '../game/melee/MeleeAnimation';
 import type { WeaponAction, WeaponId } from '../weapons/Weapon';
 
 /** Test-only pose lab: the same rig and weapon holds under explicit, repeatable inputs. */
@@ -20,6 +22,8 @@ export interface CharacterLabOptions {
     focus?: 'grip_r' | 'grip_l' };
   /** Seconds of animation and blending to advance before capturing. */
   advance?: number;
+  /** Dual daggers: hold `clip` at `time` (seconds), or play from there when `play` is set. */
+  melee?: { clip: MeleeClipName; time: number; play?: boolean };
 }
 
 /** Test-only performance probe: extra armed characters in the isolated preview scene. */
@@ -56,7 +60,11 @@ export class HomeCharacter {
   private headNode: TransformNode | null = null;
   private readonly animatedHead = Quaternion.Identity();
   private hasHeadPose = false;
+  private idleTime=0;
   private lab: CharacterLabOptions | null = null;
+  /** Test-only dual daggers on the preview character (pose lab); never shown otherwise. */
+  private meleeLibrary: MeleeLibrary | null = null;
+  private melee: CharacterMelee | null = null;
   private readonly reduced = matchMedia('(prefers-reduced-motion: reduce)');
   private readonly move = (e: MouseEvent) => {
     this.target = Math.max(-1, Math.min(1, (e.clientX / innerWidth - .5) * 2)) * Math.PI / 12;
@@ -186,11 +194,36 @@ export class HomeCharacter {
   }
   /** Advance the shared animation and weapon-hold layers by elapsed seconds. */
   private step(dt: number): void {
+    this.idleTime+=dt;
+    if(!this.lab&&this.character){const pivot=this.character.root.parent as TransformNode;pivot.position.y=Math.sin(this.idleTime*1.25)*.018;pivot.rotation.z=Math.sin(this.idleTime*.8+.7)*.009;}
+    if(this.weapon)this.weapon.idleAmplitude=this.lab||this.reduced.matches?1:2.4;
     const motion: CharacterMotion = { velocity: { x: 0, y: 0, z: 0 }, grounded: true, crouch: 0, slideRemaining: 0, ...this.lab?.motion };
     this.character?.update(motion, dt);
     this.weapon?.setState({ pitch: this.lab?.pitch ?? 0, ads: this.lab?.ads ?? 0, airborne: !motion.grounded,
       action: this.lab?.action ?? 'idle', progress: this.lab?.progress ?? 0 });
+    if (this.melee) {
+      this.melee.advance(this.lab?.melee?.play ? dt : 0);
+      if (this.weapon && this.weapon.melee !== this.melee) this.weapon.melee = this.melee;
+    }
     this.weapon?.advance(dt);
+  }
+  /** Pose lab daggers: load once for this preview scene, then hold or play the requested clip. */
+  private async labMelee(options: CharacterLabOptions['melee']): Promise<void> {
+    if (!options) {
+      if (this.melee) { this.melee.animator.reset(); this.melee.advance(0); this.melee.pair.update(this.melee.pose); }
+      if (this.weapon) this.weapon.melee = null;
+      this.melee?.dispose(); this.melee = null;
+      return;
+    }
+    if (!this.scene || !this.character) return;
+    this.meleeLibrary ??= new MeleeLibrary(this.scene);
+    await this.meleeLibrary.load();
+    await this.meleeLibrary.whenReady();
+    this.melee ??= this.meleeLibrary.createCharacterMelee('home-melee');
+    // Reset first: play() would otherwise crossfade from the previous lab pose.
+    this.melee?.animator.reset();
+    this.melee?.animator.play(options.clip, options.time);
+    this.melee?.advance(0);
   }
   /** Test hook: pose the preview with explicit inputs and return a rendered frame. The
    * render loop pauses and animation advances in fixed 1/60 s steps for repeatable shots. */
@@ -198,6 +231,7 @@ export class HomeCharacter {
     const engine = this.engine, scene = this.scene, canvas = this.canvas;
     if (!engine || !scene || !canvas) return null;
     if (!options) {
+      void this.labMelee(undefined);
       this.lab = null; scene.useConstantAnimationDeltaTime = false;
       if (this.selectedWeapon !== this.preferredWeapon) { this.selectedWeapon = this.preferredWeapon; this.syncWeapon(); }
       canvas.style.removeProperty('width'); canvas.style.removeProperty('height'); canvas.style.removeProperty('mask-image');
@@ -208,6 +242,7 @@ export class HomeCharacter {
     const start = performance.now();
     while ((!this.character || this.weapon?.id !== this.selectedWeapon) && performance.now() - start < 30000) await new Promise((r) => setTimeout(r, 50));
     if (!this.character || !this.weapon) return null;
+    await this.labMelee(options.melee);
     // Parallel shader compilation needs event-loop turns; synchronous renders skip unready meshes.
     await scene.whenReadyAsync();
     engine.stopRenderLoop();
@@ -216,6 +251,7 @@ export class HomeCharacter {
     scene.useConstantAnimationDeltaTime = true; scene.animationsEnabled = true;
     const pivot = this.character.root.parent as TransformNode;
     pivot.rotation.set(0, 0, 0);
+    pivot.position.set(0,0,0);
     this.yaw = this.pitch = this.headYaw = this.headPitch = 0;
     const camera = scene.activeCamera as FreeCamera, view = options.camera ?? { heading: 0, pitch: 0, distance: 3.2, height: 1.05 };
     const h = view.heading * Math.PI / 180, p = view.pitch * Math.PI / 180;
@@ -309,11 +345,14 @@ export class HomeCharacter {
     headRotation: this.headNode?.rotationQuaternion?.asArray() ?? null,
     animatedHeadRotation: this.hasHeadPose ? this.animatedHead.asArray() : null,
     reducedMotion: this.reduced.matches, character: this.character?.inspect() ?? null, weapon: this.weapon?.inspect() ?? null,
+    melee: this.weapon?.inspectMelee() ?? null,
+    idleTime:this.idleTime,idleOffset:(this.character?.root.parent as TransformNode|undefined)?.position.y??0,
     meshes: this.scene?.meshes.length ?? 0, library: this.library?.inspect() ?? null }; }
   dispose(): void {
     this.abort?.abort(); this.abort = null;
     window.removeEventListener('mousemove', this.move); window.removeEventListener('mouseout', this.leave);
     window.removeEventListener('blur', this.leave); window.removeEventListener('resize', this.resize);
+    this.melee?.dispose(); this.melee = null; this.meleeLibrary?.dispose(); this.meleeLibrary = null;
     this.engine?.stopRenderLoop(); this.weapon?.dispose(); this.weapon = null; this.character?.dispose(); this.character = null;
     this.scene?.dispose(); this.engine?.dispose(); this.scene = null; this.engine = null;
     this.library = null; this.weapons = null; this.loadingWeapon = null; this.headNode = null; this.hasHeadPose = false; this.canvas?.remove(); this.canvas = null;

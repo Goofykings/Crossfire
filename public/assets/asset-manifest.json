@@ -728,6 +728,54 @@
    "triangles": 46
   },
   {
+   "path": "assets/models/shared/melee/dagger_clips.glb",
+   "kind": "melee-clips",
+   "bytes": 170392,
+   "description": "Six melee clips on animated empties (hand sockets, spins, elbows, torso)",
+   "script": "blender/melee/generate_daggers.py"
+  },
+  {
+   "path": "assets/models/shared/melee/dagger_l.glb",
+   "kind": "melee-weapon",
+   "bytes": 196156,
+   "description": "Left dagger: recurved blade, jimping, spike pommel, anchors",
+   "script": "blender/melee/generate_daggers.py",
+   "triangles": 3440,
+   "embeddedMaterials": true
+  },
+  {
+   "path": "assets/models/shared/melee/dagger_r.glb",
+   "kind": "melee-weapon",
+   "bytes": 197268,
+   "description": "Right dagger: ring pommel, two-tone saber-ground blade, anchors",
+   "script": "blender/melee/generate_daggers.py",
+   "triangles": 3812,
+   "embeddedMaterials": true
+  },
+  {
+   "path": "assets/models/shared/melee/daggers-thumbnail.png",
+   "kind": "melee-thumbnail",
+   "bytes": 116791,
+   "description": "Transparent 512px render of the dagger pair",
+   "script": "blender/melee/generate_daggers.py"
+  },
+  {
+   "path": "assets/models/shared/melee/daggers.json",
+   "kind": "melee-metadata",
+   "bytes": 14613,
+   "description": "Attachment, clip timing, combo and checkpoint metadata",
+   "script": "blender/melee/generate_daggers.py"
+  },
+  {
+   "path": "assets/models/shared/melee/melee_arms.glb",
+   "kind": "melee-arms",
+   "bytes": 122800,
+   "description": "First-person arms and gloves from the player character, unchanged 26-joint rig",
+   "script": "blender/melee/generate_daggers.py",
+   "triangles": 1632,
+   "embeddedMaterials": true
+  },
+  {
    "path": "assets/models/shared/props/ac_condenser.glb",
    "kind": "prop",
    "bytes": 14552,
@@ -1507,6 +1555,13 @@
    "bytes": 1246054,
    "description": "Editable source: catalogue of the 8 building types x 2 variants",
    "script": "blender/scripts/generate_all.py"
+  },
+  {
+   "path": "blender/source/daggers.blend",
+   "kind": "melee-source",
+   "bytes": 403230,
+   "description": "Editable dagger pair, first-person arms, clip rig and six melee actions",
+   "script": "blender/melee/generate_daggers.py"
   },
   {
    "path": "blender/source/environment.blend",

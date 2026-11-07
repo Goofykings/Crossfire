@@ -1,12 +1,11 @@
-import { Color3, PBRMaterial, Texture, type Scene, type AssetContainer, type Material } from '@babylonjs/core';
-import { cosmetic, defaultCosmetic, type CosmeticDefinition } from '../../shared/cosmetics';
-import type { WeaponId } from '../weapons/Weapon';
+import { Color3, TransformNode, PBRMaterial, Texture, type Scene, type AssetContainer, type Material } from '@babylonjs/core';
+import { cosmetic, defaultCosmetic, type CosmeticDefinition, type CosmeticCategory } from '../../shared/cosmetics';
 import { loadContainer } from '../core/loadContainer';
 import { assetUrl } from '../core/assets';
 import { texturesReady } from '../core/assetReadiness';
 import type { MaterialLibrary } from './MaterialLibrary';
 
-export function visualCosmetic(weapon:WeaponId,id?:string):CosmeticDefinition {
+export function visualCosmetic(weapon:CosmeticCategory,id?:string):CosmeticDefinition {
   const item=cosmetic(id);return item?.weapon===weapon&&item.compatibleWith.includes(weapon)?item:cosmetic(defaultCosmetic(weapon))!;
 }
 /** Shared by first person, armed characters and isolated previews. Cosmetic-only;
@@ -14,6 +13,20 @@ export function visualCosmetic(weapon:WeaponId,id?:string):CosmeticDefinition {
 export async function loadCosmeticAsset(item:CosmeticDefinition,scene:Scene,materials:MaterialLibrary,signal?:AbortSignal):Promise<AssetContainer>{
   const c=await loadContainer(assetUrl(item.asset.model),scene,signal);
   try {
+    if(item.asset.secondaryModel){
+      const other=await loadContainer(assetUrl(item.asset.secondaryModel),scene,signal);
+      const pair=new TransformNode('cosmetic-dagger-pair',scene);
+      for(const n of c.rootNodes){n.parent=pair;(n as TransformNode).position.x=.12;(n as TransformNode).rotation.z=-.18;}
+      for(const n of other.rootNodes){n.parent=pair;(n as TransformNode).position.x=-.12;(n as TransformNode).rotation.z=.18;}
+      for(const key of ['meshes','transformNodes','materials','textures','skeletons','animationGroups'] as const)(c[key] as unknown[]).push(...other[key]);
+      c.transformNodes.push(pair);c.rootNodes=[pair];
+    }
+    await patchCosmetic(c,item,scene,materials,signal);
+    await Promise.all([materials.ready(signal),texturesReady(c.textures,signal)]);return c;
+  } catch(error){c.dispose();throw error;}
+}
+
+export async function patchCosmetic(c:Pick<AssetContainer,'meshes'|'materials'|'textures'>,item:CosmeticDefinition,scene:Scene,materials:MaterialLibrary,signal?:AbortSignal):Promise<void>{
     const copies=new Map<Material,Material>();
     for(const mesh of c.meshes){
       if(!mesh.material)continue;const name=mesh.material.name;
@@ -48,6 +61,5 @@ export async function loadCosmeticAsset(item:CosmeticDefinition,scene:Scene,mate
       }
       mesh.material=copy;
     }
-    await Promise.all([materials.ready(signal),texturesReady(c.textures,signal)]);return c;
-  } catch(error){c.dispose();throw error;}
+    await texturesReady(c.textures,signal);
 }

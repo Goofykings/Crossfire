@@ -14,6 +14,7 @@ export type Action =
   | 'slide'
   | 'crouch'
   | 'grenade'
+  | 'melee'
   | 'jump'
   | 'reload'
   | 'fire'

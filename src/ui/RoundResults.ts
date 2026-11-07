@@ -3,6 +3,17 @@ import { type PlayerTeam } from '../../shared/combat';
 import { pointsOrder, resultOutcome, type RoundResult, type RoundStanding } from '../../shared/scoring';
 import { formatScore } from './matchFormatting';
 import { weaponIcon } from './WeaponIcons';
+import {GEM_ICON} from './ChallengesPanel';
+
+/** Only render a confirmed server receipt; Practice has an explicit no-reward label. */
+export function updateResultGems(panel:HTMLElement,result:RoundResult,selfId:string,practice=false):void{
+ let reward=panel.querySelector<HTMLElement>('.result-gems');
+ const amount=result.gemRewards?.awards[selfId];
+ if(!practice&&amount===undefined){reward?.remove();return;}
+ if(!reward){reward=document.createElement('div');reward.className='result-gems';reward.setAttribute('role','status');panel.querySelector('.result-banner')!.append(reward);}
+ const text=practice?'PRACTICE — NO GEMS EARNED':`+${amount} GEMS EARNED`;if(reward.textContent===text)return;
+ reward.replaceChildren();const icon=document.createElement('span');icon.innerHTML=GEM_ICON;reward.append(icon,document.createTextNode(text));reward.dataset.confirmed=String(!practice);reward.classList.toggle('practice',practice);
+}
 
 export function resultGroups(result: RoundResult, selfTeam: PlayerTeam = null): { team: PlayerTeam; players: RoundStanding[] }[] {
   const players = [...(result.players ?? [])].sort(pointsOrder);
@@ -18,11 +29,13 @@ function node<K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', text = ''
 export function createRoundResults(result: RoundResult, selfId: string, team: PlayerTeam, next: () => void, home: () => void,practice?:{settings:()=>void}): HTMLElement {
   const outcome = resultOutcome(result, selfId, team);
   const panel = node('div', 'round-results'); panel.dataset.outcome = outcome.toLowerCase();
+  panel.dataset.mode=result.mode;
   const banner = node('header', 'result-banner');
   banner.append(node('small', 'result-mode', practice?'PRACTICE — RESULTS NOT SAVED':result.mode === 'teams' ? 'TEAMS · MATCH COMPLETE' : 'FREE FOR ALL · MATCH COMPLETE'), node('h1', 'result-title', outcome));
   const winner = node('p', 'result-winner', result.draw ? 'Match drawn' : result.mode === 'teams'
     ? `${displayTeam(result.winningTeam, team)?.toUpperCase()} TEAM WINS` : `${result.winner?.name} wins`);
   banner.append(winner); panel.append(banner);
+  updateResultGems(panel,result,selfId,!!practice);
   const boards = node('div', 'result-boards'); boards.dataset.mode = result.mode;
   if (!result.players) boards.append(node('p', 'result-unavailable', 'Detailed results unavailable for this earlier round.'));
   else for (const group of resultGroups(result, team)) {

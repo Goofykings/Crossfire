@@ -24,9 +24,11 @@ export const CHALLENGES: readonly ChallengeDefinition[] = (['daily', 'weekly'] a
 export const challengeDefinition = (id: string): ChallengeDefinition | undefined => CHALLENGES.find(d => d.id === id);
 export interface ChallengeProgress { id: string; progress: number; completedAt: number | null }
 export interface ChallengePeriod { start: number; endsAt: number; challenges: ChallengeProgress[] }
-export interface CareerProfile { revision: number; gems: number; daily: ChallengePeriod; weekly: ChallengePeriod; lastMatchRound: number; abandonedRound: number }
+export interface CareerProfile { revision: number; gems: number; daily: ChallengePeriod; weekly: ChallengePeriod; lastMatchRound: number; abandonedRound: number;
+ /** Server-private receipts; never included in CareerView or accepted from clients. */
+ matchRewards?:Record<string,{matchId:string;roundId:number;gems:number}> }
 export interface CareerView { revision: number; gems: number; daily: ChallengePeriod; weekly: ChallengePeriod; serverTime: number }
-export type ChallengeEvent = { kind: 'kill'; weapon: WeaponId | 'grenade'; head: boolean; points: number }
+export type ChallengeEvent = { kind: 'kill'; weapon: WeaponId | 'grenade' | 'melee'; head: boolean; points: number }
   | { kind: 'points'; points:number }
   | { kind: 'round'; won: boolean; mvp: boolean; complete: boolean };
 const DAY = 86400000;

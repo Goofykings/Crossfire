@@ -35,7 +35,8 @@ for (const a of manifest.assets) {
   if (p.endsWith('.glb')) {
     try {
       const j = readGlbJson(p);
-      if (!j.meshes?.length) problems.push(`no meshes: ${a.path}`);
+      // Melee clips are animated empties only (hand sockets, spins, elbows, torso).
+      if (!j.meshes?.length && a.kind !== 'melee-clips') problems.push(`no meshes: ${a.path}`);
       for (const m of j.materials ?? []) {
         const name = m.name.replace(/\.\d{3}$/, '');
         if (!a.embeddedMaterials && !(name in materials)) problems.push(`${a.path}: material "${m.name}" not in materials.json`);
@@ -49,6 +50,32 @@ for (const a of manifest.assets) {
   }
 }
 ok.push(`${manifest.assets.length} manifest entries checked`);
+
+// Dual daggers: metadata references, both models' anchors, all six clips on every channel.
+{
+  const melee = JSON.parse(fs.readFileSync(path.join(pub, 'assets/models/shared/melee/daggers.json'), 'utf8'));
+  const clips = ['equip', 'idle', 'attack_cross', 'attack_forward', 'attack_finisher', 'unequip'];
+  for (const file of [melee.models.r.file, melee.models.l.file, melee.arms.file, melee.clipsFile]) {
+    if (!fs.existsSync(path.join(pub, file))) problems.push(`daggers.json: missing ${file}`);
+  }
+  for (const side of ['r', 'l']) {
+    const names = new Set(readGlbJson(path.join(pub, melee.models[side].file)).nodes.map((n) => n.name));
+    for (const anchor of ['grip', 'tip', 'edge', 'guard', 'pommel', 'spin_pivot']) if (!names.has(`${anchor}_${side}`)) problems.push(`dagger_${side}: missing anchor ${anchor}`);
+  }
+  const doc = readGlbJson(path.join(pub, melee.clipsFile));
+  const channels = ['socket', 'spin', 'twirl', 'carry', 'pole'].flatMap((k) => [`${k}_r`, `${k}_l`]).concat('body');
+  for (const name of clips) {
+    const anim = doc.animations?.find((a) => a.name === name);
+    if (!anim) { problems.push(`dagger_clips: missing clip ${name}`); continue; }
+    const targets = new Set(anim.channels.map((c) => doc.nodes[c.target.node].name));
+    for (const c of channels) if (!targets.has(c)) problems.push(`dagger_clips ${name}: missing channel ${c}`);
+    const meta = melee.clips[name];
+    if (!meta || !(meta.duration > 0)) problems.push(`daggers.json: bad timing for ${name}`);
+  }
+  const arms = readGlbJson(path.join(pub, melee.arms.file));
+  if (arms.skins?.[0]?.joints.length !== 26) problems.push('melee_arms: expected the 26-joint player rig');
+  ok.push(`dual daggers: 2 models, ${clips.length} clips, first-person arms checked`);
+}
 
 for (const [name, def] of Object.entries(materials)) {
   for (const k of ['albedo', 'normal', 'orm']) {

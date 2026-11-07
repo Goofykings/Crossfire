@@ -4,6 +4,11 @@
 import { PublicRoom as ProductionRoom } from '../dist/index.js';
 export { default } from '../dist/index.js';
 export class PublicRoom extends ProductionRoom {
+  async qualifyMatchGemsForTest(ids){
+    const now=Date.now();this.ledger.rewardStartedAt=now-600000;
+    for(const id of ids){const e=this.players.get(id);if(!e?.session.profileId||!e.session.participation||e.session.participation.abandoned)throw Error('Requires real participating profile');e.session.participation.firstSpawn=now-120000;}
+    await this.persist();
+  }
   async qualifyRoomRoundForTest(id){const e=this.players.get(id);if(!e?.session.participation||e.session.participation.abandoned)throw Error('Requires unabandoned spawned player');e.session.participation.firstSpawn=Date.now()-599000;await this.persist();}
   async expireRoomTicketForTest(ticket){const record=await this.ctx.storage.get('room-ticket:'+ticket);if(!record)throw Error('Requires issued ticket');record.until=0;await this.ctx.storage.put('room-ticket:'+ticket,record);}
   async ageRoomForTest(ms){if(!this.config)throw Error('Requires custom room');this.config.createdAt=Date.now()-ms;await this.persist();await this.scheduleCleanup();return this.roomStatus();}
@@ -152,6 +157,28 @@ export class PublicRoom extends ProductionRoom {
     }
     throw new Error('No clear four-direction sightline in actual map geometry');
   }
+  async meleeArenaForTest() {
+    const w=this.activeMap.world;
+    for(let x=-15;x<=15;x+=1)for(let z=-15;z<=15;z+=1){
+      const y=w.groundHeight(x,z,.34,3),a=[x,y,z],b=[x,w.groundHeight(x,z-1.4,.34,3),z-1.4];
+      if(![a,b].every(([px,py,pz])=>Number.isFinite(py)&&Math.abs(py-y)<.02&&!w.overlapsCylinder(px,pz,.34,py+.42,py+1.8)))continue;
+      if(!w.raycast(x,y+1.3,z,0,0,-1,1.4))return {attacker:a,victim:b};
+    }
+    throw Error('No actual-map melee test arena');
+  }
+  async meleeWallForTest() {
+    const world=this.activeMap.world;
+    for(const c of [...world.colliders.values()].filter(c=>c.solid&&c.shootable&&c.hy>.55)){
+      const alongX=c.hx<c.hz,nx=alongX?c.cos:c.sin,nz=alongX?-c.sin:c.cos,gap=(alongX?c.hx:c.hz)+.42;
+      if(gap*2>1.8)continue;
+      const tx=alongX?c.sin:c.cos,tz=alongX?c.cos:-c.sin,length=alongX?c.hz:c.hx;
+      for(const offset of [0,.25,-.25,.6,-.6])for(const limit of [.4,1.2,3]){
+        const pair=[-1,1].map(s=>{const x=c.cx+tx*length*offset+nx*gap*s,z=c.cz+tz*length*offset+nz*gap*s;return[x,world.groundHeight(x,z,.34,limit),z];});
+        if(pair.every(([x,y,z])=>Number.isFinite(y)&&c.minY<=y+.4&&c.maxY>=y+1.4&&!world.overlapsCylinder(x,z,.34,y+.42,y+1.8))&&Math.abs(pair[0][1]-pair[1][1])<.02)return {pair};
+      }
+    }
+    throw Error('No close real wall melee arena');
+  }
   async leanArenaForTest() {
     const w = this.activeMap.world;
     for (let x = -20; x <= 20; x += 2) for (let z = -20; z <= 18; z += 2) {
@@ -213,6 +240,11 @@ export class PublicRoom extends ProductionRoom {
     this.broadcast();
     return this.snapshot();
   }
+  async placeManyForCombatTest(placements) {
+    for(const {id,pos}of placements){const e=this.players.get(id),[x,y,z]=pos;if(!e?.session.alive||this.activeMap.world.overlapsCylinder(x,z,.34,y+.42,y+1.8))throw Error('Requires clear positions and actual spawned sessions');}
+    for(const {id,pos,heading=0}of placements){const e=this.players.get(id);e.controller.teleport({x:pos[0],y:pos[1],z:pos[2]},heading);}
+    this.start();await this.persist();for(const e of this.players.values())this.attach(e);this.broadcast();return this.snapshot();
+  }
   async smokeObservationForTest(position) {
     const w=this.activeMap.world;
     for(let distance=6;distance<=10;distance+=2)for(let i=0;i<16;i++){
@@ -222,6 +254,14 @@ export class PublicRoom extends ProductionRoom {
       if(!w.raycast(x,y+1.64,z,...delta.map(v=>v/length),length-.2))return [x,y,z];
     }
     throw new Error('No clear external smoke observation point');
+  }
+  async mediumBlastPositionForTest(origin){
+    const w=this.activeMap.world;
+    for(let i=0;i<32;i++){const a=i*Math.PI/16,x=origin.x+Math.cos(a)*3.4,z=origin.z+Math.sin(a)*3.4,y=w.groundHeight(x,z,.34,origin.y+1);
+      if(!Number.isFinite(y)||Math.abs(y-origin.y)>.2||[0,.5,1].some(t=>w.overlapsCylinder(x+Math.cos(a)*t,z+Math.sin(a)*t,.5,y+.01,y+1.8)))continue;
+      const d=[x-origin.x,y+.25-origin.y,z-origin.z],n=Math.hypot(...d);
+      if(!w.raycast(origin.x,origin.y,origin.z,...d.map(v=>v/n),n-.001,c=>c.solid))return[x,y,z];
+    }throw Error('No unobstructed medium-distance blast position in actual map');
   }
   async wallArenaForTest() {
     const world = this.activeMap.world;
