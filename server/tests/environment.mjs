@@ -1,3 +1,4 @@
+import { testRoom } from './test-rpc.mjs';
 import { PROTOCOL_VERSION } from '../../tools/protocol-version.mjs';
 /** Real workerd and TCP clients; test RPC places players only, never prop impulses. */
 import assert from 'node:assert/strict';
@@ -19,7 +20,7 @@ test('authoritative environmental hits, bounded deltas, sleep, resume and round 
   let mf=new Miniflare(options);
   const until=async(fn,label,ms=9000)=>{const end=Date.now()+ms;while(Date.now()<end){const v=await fn();if(v)return v;await delay(15);}throw new Error(label);};
   try{
-    let base=(await mf.ready).href,ns=await mf.getDurableObjectNamespace('ROOM'),room=ns.get(ns.idFromName('public-main'));
+    let base=(await mf.ready).href,room=testRoom(mf, 'public-main');
     let round=JSON.parse(JSON.stringify(await room.advanceMapForTest()));while(round.mapId!=='european-town')round=JSON.parse(JSON.stringify(await room.advanceMapForTest()));
     const self=c=>c.snapshot.players.find(p=>p.id===c.id);
     async function open(token){
@@ -77,13 +78,13 @@ test('authoritative environmental hits, bounded deltas, sleep, resume and round 
     const resumeToken=a.token;a.ws.close();b.ws.close();await until(()=>a.ws.readyState===WebSocket.CLOSED&&b.ws.readyState===WebSocket.CLOSED,'close before runtime reconstruction');
     await room.saveEnvironmentForTest();
     room[Symbol.dispose]?.();
-    await mf.dispose();mf=new Miniflare(options);base=(await mf.ready).href;ns=await mf.getDurableObjectNamespace('ROOM');
-    room=ns.get(ns.idFromName('public-main'));
+    await mf.dispose();mf=new Miniflare(options);base=(await mf.ready).href;
+    room=testRoom(mf, 'public-main');
     assert.deepEqual((await room.environmentForTest()).states,savedEnvironment,'matching map revision restores moved props after reconstruction');
     await room.saveEnvironmentForTest(true);
     room[Symbol.dispose]?.();
-    await mf.dispose();mf=new Miniflare(options);base=(await mf.ready).href;ns=await mf.getDurableObjectNamespace('ROOM');
-    room=ns.get(ns.idFromName('public-main'));
+    await mf.dispose();mf=new Miniflare(options);base=(await mf.ready).href;
+    room=testRoom(mf, 'public-main');
     const revised=await room.environmentForTest();
     for(const state of revised.states){const d=[...revised.definition.bodies,...revised.definition.signs,...revised.definition.lights].find(d=>d.id===state.id);
       assert.deepEqual(state.position,{x:d.position[0],y:d.position[1],z:d.position[2]},'obsolete map poses cannot float in revised baskets');}

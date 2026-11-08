@@ -1,3 +1,4 @@
+import { testRoom } from './test-rpc.mjs';
 import { PROTOCOL_VERSION } from '../../tools/protocol-version.mjs';
 /** Real player-to-player combat through TCP WebSockets and the actual Worker.
  * The test-only RPC positions real spawned sessions; it never applies damage or assigns scores.
@@ -22,15 +23,12 @@ for (const mode of (process.env.CROSSFIRE_SCORING_ONLY ? ['ffa'] : ['ffa', 'team
   });
   let mf = new Miniflare(options);
   let base = (await mf.ready).href;
-  let ns = await mf.getDurableObjectNamespace('ROOM');
-  let stub = ns.get(ns.idFromName('public-main'));
+  let stub = testRoom(mf, 'public-main');
   const clients = [];
   t.afterEach(async () => {
     for (const c of clients) if (c.ws.readyState === WebSocket.OPEN) c.send({ type: 'leave' });
     await delay(80);
   });
-  const snapshot = await stub.advanceMapForTest();
-  for (let i = 0, current = snapshot; current.mapId !== 'european-town' && i < 4; i++) current = await stub.advanceMapForTest();
   async function wait(c, predicate, mark = 0) {
     const until = Date.now() + 6000;
     while (Date.now() < until) {
@@ -101,6 +99,8 @@ for (const mode of (process.env.CROSSFIRE_SCORING_ONLY ? ['ffa'] : ['ffa', 'team
     return result;
   }
   try {
+    const snapshot = await stub.advanceMapForTest();
+    for (let i = 0, current = snapshot; current.mapId !== 'european-town' && i < 4; i++) current = await stub.advanceMapForTest();
     if (mode === 'ffa') await t.test('real headshot combos, duplicate protection, resume and frozen round results', async () => {
       let a = await open('sniper');
       const dead = [];
@@ -108,7 +108,9 @@ for (const mode of (process.env.CROSSFIRE_SCORING_ONLY ? ['ffa'] : ['ffa', 'team
         const b = await open(); dead.push(b);
         await place(a, b); await aim(a, b, 1.6);
         const mark = a.messages.length;
-        await shot(a, b, 1.6);
+        const hit = await shot(a, b, 1.6);
+        assert.ok(hit.hits.some(h => h.id === b.id && h.head && h.killed),
+          `Expected an authoritative lethal headshot before scoring: ${JSON.stringify(hit)}`);
         const e = (await wait(a, (m) => m.type === 'elimination' && m.elimination.victimId === b.id, mark)).elimination;
         assert.equal(e.award.total, 150 + 20 * i); assert.equal(e.award.comboCount, i + 1);
         const state = await stub.snapshotForTest();
@@ -141,8 +143,7 @@ for (const mode of (process.env.CROSSFIRE_SCORING_ONLY ? ['ffa'] : ['ffa', 'team
       await delay(100);
       stub[Symbol.dispose]?.();
       await mf.dispose(); mf = new Miniflare(options); base = (await mf.ready).href;
-      ns = await mf.getDurableObjectNamespace('ROOM');
-      stub = ns.get(ns.idFromName('public-main'));
+      stub = testRoom(mf, 'public-main');
       assert.deepEqual((await stub.snapshotForTest()).result, result);
       const resumed = await open('sniper', a.token, false);
       assert.deepEqual(resumed.snapshot.result, result); assert.equal(me(resumed).score, 0);

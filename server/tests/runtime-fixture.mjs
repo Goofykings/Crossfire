@@ -1,8 +1,35 @@
 // Local-test entry only. Production Wrangler always bundles src/index.ts.
 // Seed one real client's motion below the world to exercise the existing fall
 // boundary without adding a cheat/kill command to the public protocol.
-import { PublicRoom as ProductionRoom } from '../dist/index.js';
-export { default } from '../dist/index.js';
+import productionWorker, { PublicRoom as ProductionRoom } from '../dist/index.js';
+// Keep RPC in workerd, where its object-result disposers actually exist. The
+// Miniflare Node ProxyStub drops symbol properties and masks rejected RPCs with
+// an OP_RESULT_TYPE assertion. Only JSON data crosses that test-control boundary.
+export default {
+  async fetch(request, env, ctx) {
+    if (new URL(request.url).pathname !== '/__crossfire_test_rpc') return productionWorker.fetch(request, env, ctx);
+    if (request.method !== 'POST') return new Response(null, { status: 405 });
+    let room, method;
+    try {
+      const command = await request.json();
+      ({ room, method } = command);
+      const allowed = method === 'roomStatus' || Object.hasOwn(PublicRoom.prototype, method) && /Test$/.test(method);
+      if (typeof room !== 'string' || !Array.isArray(command.args) || !allowed) throw new Error('Invalid test RPC command');
+      const stub = env.ROOM.getByName(room);
+      const result = await stub[method](...command.args);
+      try {
+        // Serialize before disposal; no RPC capabilities escape into Node.
+        return Response.json({ ok: true, value: result }, {
+          headers: { 'X-Test-Rpc-Disposable': String(typeof result?.[Symbol.dispose] === 'function') },
+        });
+      } finally {
+        result?.[Symbol.dispose]?.();
+      }
+    } catch (error) {
+      return Response.json({ ok: false, error: { name: error.name, message: error.message, stack: error.stack }, room, method }, { status: 500 });
+    }
+  },
+};
 export class PublicRoom extends ProductionRoom {
   async qualifyMatchGemsForTest(ids){
     const now=Date.now();this.ledger.rewardStartedAt=now-600000;

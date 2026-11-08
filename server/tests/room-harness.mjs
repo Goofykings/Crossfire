@@ -1,4 +1,5 @@
-﻿import assert from 'node:assert/strict';
+import { testRoom } from './test-rpc.mjs';
+import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {setTimeout as delay} from 'node:timers/promises';
@@ -11,10 +12,10 @@ export async function harness(t,bindings={}){
  const options=convertV4MiniflareOptions({name:'rooms-test',modules:[{type:'ESModule',path:fileURLToPath(new URL('runtime-fixture.mjs',import.meta.url))},{type:'ESModule',path:fileURLToPath(new URL('../dist/index.js',import.meta.url))}],
  compatibilityDate:'2026-10-25',host:'127.0.0.1',port:0,resourcePersistencePath:fs.mkdtempSync(fileURLToPath(new URL('../.wrangler/rooms-',import.meta.url))),durableObjects:{ROOM:{className:'PublicRoom',useSQLite:true}},bindings:{ALLOWED_ORIGINS:origin,MATCH_MODE:'ffa',...bindings},log:new Log(LogLevel.ERROR)});
  let mf=new Miniflare(options);
- let base=(await mf.ready).href,ns=await mf.getDurableObjectNamespace('ROOM');const clients=[],stubs=[];
- const room=id=>{const r=ns.get(ns.idFromName(id==='public-main'?id:'room:'+id));stubs.push(r);return r;};
+ let base=(await mf.ready).href;const clients=[],stubs=[];
+ const room=id=>{const r=testRoom(mf, id==='public-main'?id:'room:'+id);stubs.push(r);return r;};
  let central=room('public-main');
- async function restart(){for(const c of clients){clearInterval(c.timer);if(c.ws.readyState===1){c.ws.close();await until(()=>c.ws.readyState===3,'transport close');}}for(const r of stubs)r[Symbol.dispose]?.();stubs.length=0;await mf.dispose();mf=new Miniflare(options);base=(await mf.ready).href;ns=await mf.getDurableObjectNamespace('ROOM');central=room('public-main');}
+ async function restart(){for(const c of clients){clearInterval(c.timer);if(c.ws.readyState===1){c.ws.close();await until(()=>c.ws.readyState===3,'transport close');}}for(const r of stubs)r[Symbol.dispose]?.();stubs.length=0;await mf.dispose();mf=new Miniflare(options);base=(await mf.ready).href;central=room('public-main');}
  t.after(async()=>{for(const c of clients){clearInterval(c.timer);c.ws.terminate();}for(const r of stubs)r[Symbol.dispose]?.();await mf.dispose();});
  async function api(path,token,body){const response=await fetch(new URL(path,base),{headers:{Origin:origin,...(token?{Authorization:'Bearer '+token}:{}),...(body?{'Content-Type':'application/json'}:{})},...(body?{method:'POST',body:JSON.stringify({v,...body})}:{})});return {status:response.status,data:await response.json()};}
  async function profile(){const r=await fetch(new URL('/profile',base),{method:'POST',headers:{Origin:origin}});assert.equal(r.status,201);return(await r.json()).credential;}

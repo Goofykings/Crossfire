@@ -1,3 +1,4 @@
+import { testRoom } from './test-rpc.mjs';
 import { PROTOCOL_VERSION } from '../../tools/protocol-version.mjs';
 /** Real workerd/TCP peers: only the initial arena position uses the test fixture. */
 import assert from 'node:assert/strict';
@@ -18,7 +19,7 @@ test('enclosed interiors: authoritative stair loops synchronize across two real 
   const until=async fn=>{const end=Date.now()+6000;while(Date.now()<end){const v=fn();if(v)return v;await delay(10);}throw Error('Interior peer timeout');};
   const me=c=>c.snapshot?.players.find(p=>p.id===c.id);
   try{
-    const base=(await mf.ready).href,ns=await mf.getDurableObjectNamespace('ROOM'),room=ns.get(ns.idFromName('public-main'));
+    const base=(await mf.ready).href,room=testRoom(mf, 'public-main');
     const health=await (await fetch(new URL('/health',base))).json(),v=health.protocol;
     assert.ok(Number.isInteger(v));
     async function open(token){
@@ -87,7 +88,7 @@ test('authoritative ladders: real movement, peer synchronization, release and re
     durableObjects:{ROOM:{className:'PublicRoom',useSQLite:true}},bindings:{ALLOWED_ORIGINS:origin},log:new Log(LogLevel.ERROR)}));
   const until=async (fn) => {const end=Date.now()+6000;while(Date.now()<end){const v=fn();if(v)return v;await delay(10);}throw new Error('Traversal message timeout');};
   try {
-    const base=(await mf.ready).href,ns=await mf.getDurableObjectNamespace('ROOM'),room=ns.get(ns.idFromName('public-main'));
+    const base=(await mf.ready).href,room=testRoom(mf, 'public-main');
     let round=await room.advanceMapForTest();while(round.mapId!=='industrial-complex')round=await room.advanceMapForTest();
     const me=c=>c.snapshot?.players.find(p=>p.id===c.id);
     async function open(token) {
@@ -149,7 +150,7 @@ test('swept wall movement and secondary recovery synchronize across real peers o
   const until=async fn=>{const end=Date.now()+6000;while(Date.now()<end){const v=fn();if(v)return v;await delay(10);}throw Error('Collision peer timeout');};
   const me=c=>c.snapshot?.players.find(p=>p.id===c.id);
   try{
-    const base=(await mf.ready).href,ns=await mf.getDurableObjectNamespace('ROOM'),room=ns.get(ns.idFromName('public-main'));
+    const base=(await mf.ready).href,room=testRoom(mf, 'public-main');
     const {protocol:v}=await (await fetch(new URL('/health',base))).json();
     async function open(token){
       const c={ws:new WebSocket(new URL('/ws',base).href.replace('http:','ws:'),{origin}),messages:[],seq:0};clients.push(c);

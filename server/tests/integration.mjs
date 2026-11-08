@@ -1,3 +1,4 @@
+import { testRoom } from './test-rpc.mjs';
 import { PROTOCOL_VERSION } from '../../tools/protocol-version.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -313,9 +314,8 @@ test('Public room: real Workers runtime and real WebSocket clients', { timeout: 
       const before = (await (await fetch(new URL('/presence', base))).json()).online;
       const c = await open();
       const id = c.welcome.selfId;
-      const ns = await mf.getDurableObjectNamespace('ROOM');
       const mark = c.messages.length;
-      const stub = ns.get(ns.idFromName('public-main'));
+      const stub = testRoom(mf, 'public-main');
       try { await stub.fallForTest(id); }
       finally { stub[Symbol.dispose]?.(); }
       const dead = await c.wait((m) => m.type === 'snapshot' && m.snapshot.players.some((p) => p.id === id && !p.alive), mark);
@@ -330,7 +330,7 @@ test('Public room: real Workers runtime and real WebSocket clients', { timeout: 
       const resumed = await open({ resumeToken: c.welcome.resumeToken, spawn: false });
       const retained = resumed.welcome.snapshot.players.find((p) => p.id === id);
       assert.deepEqual(retained.death, state.death);
-      const roundStub = ns.get(ns.idFromName('public-main'));
+      const roundStub = testRoom(mf, 'public-main');
       const nextRound = await roundStub.advanceMapForTest();
       roundStub[Symbol.dispose]?.();
       assert.deepEqual(nextRound.players.find((p) => p.id === id).death, state.death);
@@ -349,8 +349,7 @@ test('Public room: real Workers runtime and real WebSocket clients', { timeout: 
     await t.test('both real clients rotate through every map, approve all loadouts, reject old-round input and resume the current map', async () => {
       const c = await open({ spawn: false });
       const d = await open({ spawn: false });
-      const ns = await mf.getDurableObjectNamespace('ROOM');
-      const stub = ns.get(ns.idFromName('public-main'));
+      const stub = testRoom(mf, 'public-main');
       const seen = new Set();
       let current = c.welcome.snapshot;
       try {

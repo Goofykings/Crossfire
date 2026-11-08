@@ -1,3 +1,4 @@
+import { testRoom } from './test-rpc.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {fileURLToPath} from 'node:url';
@@ -14,7 +15,7 @@ test('persistent indexed rankings: all nine combinations, top ten, ties, auth, U
  const request=(path,credential,method='GET')=>fetch(new URL(path,base),{method,headers:{Origin:origin,...(credential?{Authorization:`Bearer ${credential}`}:{})}});
  const board=async(period,stat,credential)=>{const r=await request(`/leaderboard?period=${period}&stat=${stat}`,credential);assert.equal(r.status,200);return r.json();};
  try{
-  base=(await mf.ready).href;const ns=await mf.getDurableObjectNamespace('ROOM');room=ns.get(ns.idFromName('public-main'));
+  base=(await mf.ready).href;room=testRoom(mf, 'public-main');
   assert.equal((await request('/stats')).status,401);assert.equal((await request('/stats','f'.repeat(64))).status,401);
   assert.equal((await request('/leaderboard?period=all&stat=kills&extra=1')).status,400);
   assert.equal((await request('/leaderboard?period=all&stat=DROP_TABLE')).status,400);

@@ -1,3 +1,4 @@
+import { testRoom } from './test-rpc.mjs';
 /** Real Worker HTTP, private WebSockets and confirmed combat; RPC seeds explicit test preconditions only. */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -44,7 +45,7 @@ for(const mode of ['kills','eligible','late','abandoned'])test(`durable guest ch
     if(fire)a.send({type:'input',roundId:a.snapshot.roundId,mapVersion:a.snapshot.mapVersion,frames:[frame(true),frame(false)]});
   }
   try{
-    base=(await mf.ready).href;const ns=await mf.getDurableObjectNamespace('ROOM');room=ns.get(ns.idFromName('public-main'));
+    base=(await mf.ready).href;room=testRoom(mf, 'public-main');
     let round=await room.advanceMapForTest();while(round.mapId!=='european-town')round=await room.advanceMapForTest();
     assert.equal((await fetch(new URL('/profile',base),{method:'POST',headers:{Origin:'https://bad.example'}})).status,403);
     assert.equal((await http('GET','f'.repeat(64))).status,401);

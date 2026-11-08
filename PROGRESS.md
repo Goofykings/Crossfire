@@ -1,3 +1,96 @@
+# Miniflare test RPC lifecycle and masked CI exceptions (2026-11-07)
+
+Completed the test-transport fix and available verification. No production game,
+combat/scoring, protocol, dependencies, timeout/concurrency, Cloudflare settings or
+deployment workflow changes. No commit, push or deployment. See
+`docs/TEST_RPC.md` for mechanism, commands, environment comparison and CI follow-up.
+
+## Confirmed findings versus remaining uncertainty
+
+- The pinned Miniflare Node proxy strips symbol properties. Both the namespace
+  stub and a returned snapshot report `Symbol.dispose` as undefined in Node, so
+  the old optional cleanup calls do nothing there. Native object RPC results do
+  have disposers in workerd, verified by the new real-runtime regression.
+- Miniflare's core proxy sets its `rpcAwaited` flag only after a successful await.
+  A rejected RPC can therefore return without `MF-Op-Result-Type: Promise`; its
+  Node parser masks the original error with the exact CI assertion. Reproduced
+  before modifying the fixture: `placeForCombatTest` for a missing real session
+  produced `AssertionError: (typeHeader === "Promise")` instead of the intended
+  server-spawned-session error. Installed package files were not patched.
+- `placeForCombatTest` awaits persistence and returns a normal authoritative
+  snapshot, not a deliberately returned stub or unresolved nested promise. Tests
+  use isolated persistence and sequential files/subtests; runtime restart code
+  reacquires handles. No evidence justifies changing gameplay, sleeps or timeouts.
+- The exact exception/cancellation behind the original Ubuntu RPC failure remains
+  unknown because Miniflare masked it. A rejected fixture precondition or lifetime
+  cancellation from undisposed RPC results is the strongest remaining hypothesis,
+  not a confirmed Linux trace. Docker is absent and WSL is not installed. Public
+  Actions logs could not be retrieved in this session; Ubuntu CI must verify.
+
+## Fix
+
+- Test controls use an isolated JSON fetch bridge in the test-only Worker fixture.
+  The bridge invokes **real Durable Object RPC inside workerd**, awaits the result,
+  serializes it, then calls its native disposer in `finally`. Errors cross as
+  explicit failures with room/method context and their original name/message.
+  No Miniflare native proxies or RPC result capabilities escape into Node.
+- Node test handles have a real local disposer that invalidates them. Restarting
+  tests recreate handles for the replacement runtime. The old Node-side no-op
+  proxy symbol lookups are eliminated; native result disposal happens per call.
+- All existing direct fixture-RPC callers use this shared transport, including
+  public/private room, assist, grenade and persistence suites. Normal WebSocket
+  clients and production HTTP routes are unchanged. The control handler accepts
+  only test methods plus the existing read-only `roomStatus` and is not part of
+  Wrangler's production entry/bundle.
+- Added a warnings-enabled real-runtime lifecycle regression: native disposer
+  presence, 100 actual snapshot RPCs, original placement rejection, restricted
+  methods, invalidated handles, and persisted round state across restart. RPC
+  disposal warnings fail this test; logging was not disabled to hide them.
+- Combat map setup now sits inside its existing cleanup `try/finally`. The combo
+  test also asserts an actual lethal headshot before waiting for elimination, so
+  a failed hit reports the full confirmed shot rather than an opaque timeout.
+
+## Files created or modified
+
+- Created `server/tests/test-rpc.mjs`, `server/tests/rpc-lifecycle.mjs`,
+  `docs/TEST_RPC.md`.
+- Modified `server/tests/runtime-fixture.mjs`, `server/tests/room-harness.mjs`,
+  `server/tests/combat.mjs`, `server/tests/assists.mjs`,
+  `server/tests/challenges.mjs`, `server/tests/environment.mjs`,
+  `server/tests/grenades.mjs`, `server/tests/integration.mjs`,
+  `server/tests/statistics.mjs`, `server/tests/traversal.mjs`,
+  `server/package.json` (includes the regression in existing CI), `PROGRESS.md`.
+
+## Actual verification
+
+- Baseline unmodified combat suite: **30/30 passed** on Windows. Diagnostic native
+  rejection reproduced the exact CI parser assertion deterministically.
+- New lifecycle regression: **1/1 passed**, warnings enabled, with zero RPC
+  disposal warnings. It also passed again within the full backend run.
+- Final `npm.cmd test --prefix server`: **86/86 passed** (85 existing + new
+  lifecycle regression), including all 30 combat tests; Worker dry-run build
+  passed. Full run took approximately 373 seconds.
+- Affected FFA headshot/combo test: passed alone and **three additional consecutive
+  isolated runs** after the full suite. All original score, combo, grenade reward,
+  duplicate, resume and frozen-result assertions remain.
+- One intermediate combat run timed out waiting for an elimination (distinct
+  from the RPC parser failure). Subsequent isolated and final complete runs passed;
+  the stronger shot assertion now provides evidence if that separate flake recurs.
+- `npm.cmd test -- --maxWorkers=2`: **822 passed, 1 existing opt-in skip**.
+- `npm.cmd run test:protocol`: **1/1 passed**, using the real frontend transport and
+  production Worker messages; backend dry-run build passed again.
+- Frontend/backend typechecks, JavaScript syntax checks and `git diff --check`:
+  passed. The first backend build reported a nonfatal sandbox log-file permission
+  warning; later Wrangler checks used a workspace-local WRANGLER_LOG_PATH.
+- Local Node 24.20.0 / npm 11.19.0; CI Node 24 on Ubuntu. Installed Miniflare
+  5.20261019.2-beta, workerd 1.20261019.1 and Wrangler 4.152.0 match the committed
+  locks. CI's precise Node patch was not available; no dependency/workflow changes.
+
+No production redeployment is required for this test-only change. The existing
+GitHub Actions run still needs confirmation on Ubuntu after an authorized push.
+If it fails, investigate the original error now reported by the bridge rather
+than weakening assertions or adding arbitrary timeouts.
+
 # Farmstead: a new outdoor map with a storm shelter (2026-11-07)
 
 New playable map `farmstead` built from `references_images/Newoutdoormap.png`; see docs/FARMSTEAD.md.

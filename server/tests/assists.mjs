@@ -1,3 +1,4 @@
+import { testRoom } from './test-rpc.mjs';
 /** Real Worker eligibility expiry and storage migration. Test RPC only seeds retired storage or places players. */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -14,7 +15,7 @@ test('assist expiry, respawn cleanup and retired session migration in the real D
  resourcePersistencePath:fs.mkdtempSync(fileURLToPath(new URL('../.wrangler/assists-',import.meta.url))),durableObjects:{ROOM:{className:'PublicRoom',useSQLite:true}},
  bindings:{ALLOWED_ORIGINS:origin,MATCH_MODE:'ffa',ASSIST_WINDOW_MS:'400'},log:new Log(LogLevel.ERROR)});
  let mf=new Miniflare(options),room,base;
- const setup=async()=>{base=(await mf.ready).href;const ns=await mf.getDurableObjectNamespace('ROOM');room=ns.get(ns.idFromName('public-main'));};
+ const setup=async()=>{base=(await mf.ready).href;room=testRoom(mf, 'public-main');};
  const until=async(fn,label)=>{const end=Date.now()+6000;while(Date.now()<end){const result=await fn();if(result)return result;await delay(10);}throw Error('Assist timeout: '+label);};
  const self=c=>c.snapshot.players.find(p=>p.id===c.id);
  async function open(weapon='rifle',token){

@@ -1,3 +1,4 @@
+import { testRoom } from './test-rpc.mjs';
 import { PROTOCOL_VERSION } from '../../tools/protocol-version.mjs';
 /** Actual workerd, sockets, inventory, trajectories and damage; RPC only places real players. */
 import assert from 'node:assert/strict';
@@ -20,7 +21,7 @@ for (const mode of ['ffa','teams']) test(`grenades and held crouch: inventory, r
   const until=async(fn)=>{const end=Date.now()+6000;while(Date.now()<end){const v=await fn();if(v)return v;await delay(10);}throw new Error('Grenade state timeout');};
   const self=c=>c.snapshot.players.find(p=>p.id===c.id);
   try {
-    const base=(await mf.ready).href,ns=await mf.getDurableObjectNamespace('ROOM'),room=ns.get(ns.idFromName('public-main'));
+    const base=(await mf.ready).href,room=testRoom(mf, 'public-main');
     let round=await room.advanceMapForTest();while(round.mapId!=='european-town')round=await room.advanceMapForTest();
     async function open(token) {
       const c={ws:new WebSocket(new URL('/ws',base).href.replace('http:','ws:'),{origin}),messages:[],snapshot:null,seq:0,id:''};clients.push(c);
