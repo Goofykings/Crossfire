@@ -121,7 +121,9 @@ describe.each(MAP_IDS)('map %s: collision', (id) => {
           // Furniture tops are not additional ground-route cells.
           // Underground stairwells are traversed by tests/mapOverhaul.test.ts, not this street grid.
           if ((layout.underground ?? []).some((p) => p.entrances.some((e) => x >= e.rect[0] - .5 && x <= e.rect[2] + .5 && z >= e.rect[1] - .5 && z <= e.rect[3] + .5))) continue;
-          const y = terrain.groundHeight(x, z, r * 0.7, 2.0);
+          // The zone's own surface: up to its authored height plus a step. (A low solid such as the farmstead's
+          // 1.2 m fence is not ground to stand on, even though a fence top is below 2 m.)
+          const y = terrain.groundHeight(x, z, r * 0.7, Math.max(zn.height ?? 0, 0) + 1.0);
           if (y === -Infinity) continue;
           if (world.overlapsCylinder(x, z, r, y + MOVEMENT.stepHeight, y + height)) continue;
           cells.set(key(x, z), { x, z, y });

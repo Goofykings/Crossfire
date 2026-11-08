@@ -14,7 +14,8 @@ const additions: Record<string, string> = {
   'european-town': 'market_room', 'industrial-complex': 'goods_office', 'modern-city': 'west_arcade',
 };
 
-describe.each(MAP_IDS)('%s Phase 2 physical passages', (id) => {
+// (Street-block through-routes; the farmstead has its own passages in tests/farmstead.test.ts.)
+describe.each(MAP_IDS.filter((id) => id !== 'farmstead'))('%s Phase 2 physical passages', (id) => {
   const layout = JSON.parse(readFileSync(`src/maps/${id}/layout.json`, 'utf8')) as MapLayout;
   const collision = JSON.parse(readFileSync(`public/assets/models/${id}/collision.json`, 'utf8')) as CollisionFile;
   const world = createMapWorld(collision, layout, catalog);

@@ -1,0 +1,46 @@
+{
+ "version": 1,
+ "bodies": [
+  {
+   "id": "loose-0",
+   "asset": "loose_crate",
+   "position": [
+    -5.5,
+    0.161,
+    -13.5
+   ],
+   "radius": 0.23,
+   "halfHeight": 0.16,
+   "mass": 1.2,
+   "yaw": 0.0
+  },
+  {
+   "id": "loose-1",
+   "asset": "loose_barrel",
+   "position": [
+    15.5,
+    0.201,
+    -9.5
+   ],
+   "radius": 0.2,
+   "halfHeight": 0.2,
+   "mass": 2.5,
+   "yaw": 0.15
+  }
+ ],
+ "signs": [],
+ "lights": [
+  {
+   "id": "light-house",
+   "asset": "hanging_light",
+   "position": [
+    6.0,
+    3.1,
+    -4.5
+   ],
+   "yaw": 0
+  }
+ ],
+ "basins": [],
+ "replaceProps": []
+}

@@ -104,7 +104,8 @@ def map_data(layout, collision, catalog):
             lx,lz=dx*c-dz*s,dx*s+dz*c
             if max(abs(lx)-b['h'][0],0)**2+max(abs(lz)-b['h'][2],0)**2<r*r:return False
         return True
-    desired={'european-town':[(-18.3,-9.3),(10.4,12.3)],
+    desired={'farmstead':[(-5.5,-13.5),(15.5,-9.5)],
+             'european-town':[(-18.3,-9.3),(10.4,12.3)],
              'industrial-complex':[(-4.6,-9.6),(19.0,-0.5)],
              'modern-city':[(-19.0,2.0),(21.5,-12.5)]}
     for n,(x,z) in enumerate(desired[layout['id']]):
@@ -117,6 +118,10 @@ def map_data(layout, collision, catalog):
         solids.append({'c':[candidate[0],half,candidate[1]],'h':[radius,half,radius],'yaw':0})
     # One selected interior fixture per map; its plate remains in the static
     # ceiling mesh, while the chain/cage rotates about this actual suspension.
+    if layout['id']=='farmstead':
+        # the kitchen lamp: its plate is a ceiling fixture of the house (tools/farm_structures.py)
+        data['lights'].append({'id':'light-house','asset':'hanging_light','position':[6.0,3.1,-4.5],'yaw':0})
+        return data
     from circulation import point,dimensions
     b=next(b for b in layout['buildings'] if b.get('circulation'));w,d=dimensions(b)
     data['lights'].append({'id':'light-'+b['id'],'asset':'hanging_light',

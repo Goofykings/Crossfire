@@ -44,6 +44,11 @@ Files were downloaded by `tools/fetch_textures.py`, resized and re-encoded as JP
 | `asphalt_fine` | [Asphalt 01](https://polyhaven.com/a/asphalt_01) | Dario Barresi, Charlotte Baglioni | CC0 1.0 |
 | `roof_gravel` | [Tarred Gravel](https://polyhaven.com/a/tarred_gravel) | Dimitrios Savva | CC0 1.0 |
 | `granite` | [Granite Tile](https://polyhaven.com/a/granite_tile) | Charlotte Baglioni | CC0 1.0 |
+| `grass` | [Grass Ground](https://polyhaven.com/a/grass_ground) | Charlotte Baglioni | CC0 1.0 |
+| `dirt` | [Dirt Floor](https://polyhaven.com/a/dirt_floor) | eye-candy.xyz | CC0 1.0 |
+| `siding` | [Weathered Plank Siding](https://polyhaven.com/a/weathered_plank_siding) | Dimitrios Savva | CC0 1.0 |
+| `logs` | [Wood Plank Wall](https://polyhaven.com/a/wood_plank_wall) | Dimitrios Savva | CC0 1.0 |
+| `bark` | [Bark Brown 01](https://polyhaven.com/a/bark_brown_01) | Rob Tuytel | CC0 1.0 |
 | `sky_1k.hdr`, `sky_4k.jpg` | [Kloofendal 48d Partly Cloudy (Pure Sky)](https://polyhaven.com/a/kloofendal_48d_partly_cloudy_puresky) | Greg Zaal, Jarod Guest | CC0 1.0 |
 | `sky_industrial_1k.hdr`, `sky_industrial_4k.jpg` | [Kloppenheim 03 (Pure Sky)](https://polyhaven.com/a/kloppenheim_03_puresky) | Greg Zaal, Jarod Guest | CC0 1.0 |
 | `sky_city_1k.hdr`, `sky_city_4k.jpg` | [Qwantani Noon (Pure Sky)](https://polyhaven.com/a/qwantani_noon_puresky) | Greg Zaal, Jarod Guest | CC0 1.0 |

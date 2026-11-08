@@ -200,7 +200,7 @@ def underground_props(layout, catalog) -> list[dict]:
     must be a catalog prop and sit inside its passage's clear floor area."""
     out: list[dict] = []
     for p in layout.get('underground', []):
-        table = _METRO_PROPS if p['style'] == 'metro' else _CELLAR_PROPS
+        table = {'metro': _METRO_PROPS, 'cellar': _CELLAR_PROPS, 'farm': _FARM_PROPS}[p['style']]
         for kind, x, z, heading in table:
             assert kind in catalog, f"unknown prop {kind}"
             assert any(r[0] < x < r[2] and r[1] < z < r[3] for r in p['segments']), f"{kind} at {x},{z} is outside {p['id']}"
@@ -240,4 +240,98 @@ _CELLAR_PROPS = [
     # South-west store: a corner tasting table.
     ('table', -10.2, 8.0, 0), ('stool', -10.9, 7.2, 0), ('stool', -9.5, 7.2, 0), ('barrel', -7.6, 8.1, 0), ('barrel', -11.3, 5.8, 0),
     ('crate', -7.7, 5.8, 10),
+]
+
+
+# --------------------------------------------------------------------------------------------
+# Farmstead: the storm-shelter network (style 'farm', floor -3.2 m, 2.9 m clear)
+# --------------------------------------------------------------------------------------------
+def farm_underground():
+    """A loop of rooms under the farm: the Shelter Hall below the main house, a cold store, a generator
+    room, a pump room, a bunk room, a tool cellar, a junction room and the barn's root cellar, joined by
+    short tunnels and offset so no corridor is a long straight lane. Five surface entrances: the house
+    hall and the barn's first stall (open stairs), and three fieldstone storm-cellar portals.
+
+    Doglegs attach at their mouth edge and continue in the mouth's direction; straight stairs end at
+    their far edge. Rooms touch a tunnel rect, never each other (touching rects fuse)."""
+    A = [-9.0, 6.25, 6.0, 16.0]          # Shelter Hall (house stair from the north)
+    B = [-24.0, 4.8, -14.0, 15.5]        # Cold Store (south-west portal)
+    C = [7.0, 8.0, 16.0, 16.0]           # Generator Room (east portal)
+    D = [-22.0, -45.0, -12.0, -37.77]    # Barn Root Cellar (barn stall stair)
+    E = [-9.0, -22.1, 6.0, -13.0]        # Junction Room (north portal)
+    F = [12.0, -24.0, 21.0, -13.0]       # Bunk Room
+    G = [13.0, -5.0, 22.0, 2.0]          # Pump Room
+    H = [-12.0, -31.0, -4.5, -24.2]      # Tool Cellar
+    M = [-1.5, -4.5, 5.5, 1.5]           # Dry Store (below the house)
+    tunnels = [
+        [3.2, 1.5, 5.6, 6.25],           # dry store -> hall
+        [0.4, -13.0, 2.8, -4.5],         # junction -> dry store
+        [-14.0, 9.5, -9.0, 12.0],        # hall <-> cold store
+        [6.0, 10.5, 7.0, 13.0],          # hall <-> generator room
+        [14.0, 2.0, 16.4, 8.0],          # generator room -> pump room
+        [17.0, -13.0, 19.4, -5.0],       # pump room -> bunk room
+        [6.0, -19.5, 12.0, -17.0],       # junction <-> bunk room
+        [-12.0, -41.8, -7.0, -39.4],     # root cellar -> corridor
+        [-9.4, -39.4, -7.0, -31.0],      # corridor south
+        [-8.6, -24.2, -6.2, -22.1],      # tool cellar -> junction
+    ]
+    segments = [A, B, C, D, E, F, G, H, M] + tunnels
+    piers = [[x, z] for x in (-6.0, -1.5, 3.0) for z in (9.4, 13.6)]            # hall: 6
+    piers += [[x, z] for x in (-5.5, -1.5, 4.2) for z in (-20.4, -15.8)]         # junction: 6
+    piers += [[-19.0, 8.6], [-19.0, 12.2], [11.0, 9.8], [11.0, 14.0]]            # cold store, generator room
+    blocks = [
+        {'rect': [13.6, -3.4, 16.6, -1.0], 'h': 1.0, 'kind': 'tank'},               # pump room cistern
+        {'rect': [8.0, 13.3, 10.3, 14.1], 'h': 0.95, 'kind': 'counter'},            # generator workbench
+        {'rect': [-20.2, -43.6, -17.4, -43.0], 'h': 0.95, 'kind': 'counter'},       # cellar workbench
+    ]
+    return [{
+        'id': 'farm_shelter', 'style': 'farm', 'name': 'Storm shelter',
+        'purpose': 'Storm shelter and storage tunnels below the farm: close-quarters rooms joined by short offset tunnels',
+        'segments': segments, 'piers': piers, 'blocks': blocks, 'decor': [],
+        'entrances': [
+            {'id': 'house', 'type': 'straight', 'rect': [-4.2, -0.35, -2.2, 6.25], 'side': 'n'},
+            {'id': 'barn', 'type': 'straight', 'rect': [-17.4, -37.77, -15.4, -31.17], 'side': 's'},
+            {'id': 'north', 'type': 'dogleg', 'rect': [-1.9, -27.5, 2.1, -22.1], 'side': 's', 'hand': 'left'},
+            {'id': 'east', 'type': 'dogleg', 'rect': [16.0, 10.2, 21.4, 14.2], 'side': 'w', 'hand': 'left'},
+            {'id': 'southwest', 'type': 'dogleg', 'rect': [-22.0, -0.6, -18.0, 4.8], 'side': 's', 'hand': 'left'},
+        ],
+        'route': [[-3.2, 7.6], [-3.2, 11.2], [-9.5, 11.2], [-14.5, 11.2], [-16.8, 10.6], [-16.8, 7.4], [-19.1, 6.6]],
+        # Lanes through every room and tunnel (tests/mapOverhaul.test.ts walks each with a rifle and a sniper rifle).
+        'walks': [
+            [[-3.2, 7.6], [-3.2, 11.7], [6.5, 11.7], [13.0, 11.7], [15.0, 13.1]],
+            [[15.2, 10.0], [15.2, 3.0], [15.2, -0.2], [18.2, -0.2], [18.2, -4.6], [18.2, -12.0], [18.2, -16.0],
+             [14.0, -16.0], [11.5, -18.25], [6.5, -18.25], [3.0, -18.25]],
+            [[1.6, -12.0], [1.6, -1.0], [4.4, 0.9], [4.4, 5.5], [4.4, 7.2]],
+            [[-7.4, -20.0], [-7.4, -23.0], [-8.3, -25.0], [-8.3, -31.5], [-8.2, -38.5], [-8.2, -40.6], [-12.5, -40.6], [-16.4, -40.0], [-16.4, -38.6]],
+        ],
+    }]
+
+
+# Floor props of the shelter: (type, x, z, heading). Shelves and benches stand against walls, facing into the room.
+_FARM_PROPS = [
+    # Shelter Hall: bunks and shelves along the south wall, crates by the piers
+    ('bunk_bed', -7.9, 15.45, 0), ('bunk_bed', -5.5, 15.45, 0), ('storage_shelf', -2.9, 15.7, 0), ('storage_shelf', -0.7, 15.7, 0),
+    ('ibc_tank', 1.6, 15.2, 0), ('crate_stack', 5.0, 15.1, 0), ('barrel', -8.5, 13.4, 0), ('crate', -8.4, 14.35, 20),
+    # Dry Store under the house
+    ('storage_shelf', -1.2, -2.5, 90), ('storage_shelf', -1.2, -0.2, 90), ('crate_small', 5.0, -3.3, 10), ('barrel_group', 0.1, 0.8, 0), ('crate', 4.9, -2.2, 30),
+    # Cold Store: casks, wine racks, barrels
+    ('wine_rack', -22.9, 5.3, 180), ('wine_rack', -23.7, 8.0, 90), ('cask', -22.9, 14.6, 90), ('cask', -22.9, 12.9, 90),
+    ('barrel', -15.2, 14.9, 0), ('barrel', -15.2, 6.0, 0), ('crate_stack', -16.4, 14.7, 0), ('market_crate', -22.6, 6.6, 90),
+    # Generator Room: generator skid, drums, cable reel
+    ('transformer', 14.6, 15.0, 0), ('oil_drum', 8.0, 15.4, 0), ('oil_drum_red', 8.7, 15.4, 0), ('drum_group', 14.0, 9.1, 0),
+    ('cable_reel', 8.2, 8.9, 0), ('utility_box', 12.2, 8.5, 180),
+    # Barn Root Cellar
+    ('barrel_group', -21.0, -38.4, 0), ('crate_stack', -13.1, -38.3, 0), ('storage_shelf', -15.6, -44.65, 0), ('storage_shelf', -13.1, -44.65, 0),
+    ('crate', -21.1, -44.2, 15), ('barrel', -21.3, -41.5, 0), ('hay_bale', -13.0, -42.0, 90),
+    # Junction Room
+    ('crate_stack', -8.3, -13.6, 0), ('barrel', -8.4, -14.5, 0), ('storage_shelf', -3.0, -13.45, 0), ('bench', -3.0, -21.65, 180),
+    ('crate', 5.2, -13.6, 20), ('feed_sacks', 5.2, -21.4, 180),
+    # Bunk Room
+    ('bunk_bed', 13.1, -23.5, 0), ('bunk_bed', 15.3, -23.5, 0), ('bunk_bed', 20.0, -23.5, 0), ('bunk_bed', 13.1, -13.5, 180),
+    ('storage_shelf', 15.7, -13.55, 0), ('barrel', 20.4, -14.0, 0), ('table', 16.5, -19.0, 0), ('stool', 15.3, -19.0, 0), ('stool', 17.7, -19.0, 0),
+    # Pump Room
+    ('pump_skid', 18.5, 1.2, 0), ('barrel', 21.4, 1.3, 0), ('crate_stack', 15.4, -4.3, 0), ('utility_box', 13.6, -4.45, 180),
+    # Tool Cellar
+    ('workbench', -10.2, -30.45, 180), ('workbench', -6.4, -30.45, 180), ('tire_stack', -5.3, -26.0, 0), ('crate', -11.2, -25.2, 25),
+    ('barrel', -5.1, -30.4, 0), ('storage_shelf', -11.6, -27.9, 90),
 ]

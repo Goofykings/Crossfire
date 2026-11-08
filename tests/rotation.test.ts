@@ -22,13 +22,14 @@ describe('canonical public map schedule', () => {
       }
     }
   });
-  it('randomizes complete three-map bags, rather than hardcoding a single map', () => {
+  it('randomizes complete bags of every map, rather than hardcoding a single map', () => {
     const first = new Set<string>();
+    const n = MAP_IDS.length;
     for (let seed = 1; seed <= 100; seed++) {
       const schedule = { epoch: 1000, seed };
       first.add(mapRound(schedule, 1000).mapId);
       for (let bag = 0; bag < 10; bag++) {
-        expect(new Set([0, 1, 2].map((i) => mapRound(schedule, 1000 + (bag * 3 + i) * ROUND_MS).mapId))).toEqual(new Set(MAP_IDS));
+        expect(new Set(MAP_IDS.map((_, i) => mapRound(schedule, 1000 + (bag * n + i) * ROUND_MS).mapId))).toEqual(new Set(MAP_IDS));
       }
     }
     expect(first).toEqual(new Set(MAP_IDS));

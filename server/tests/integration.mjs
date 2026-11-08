@@ -354,9 +354,9 @@ test('Public room: real Workers runtime and real WebSocket clients', { timeout: 
       const seen = new Set();
       let current = c.welcome.snapshot;
       try {
-        // Earlier checks may leave us in the middle of a shuffle bag. Five
-        // consecutive rounds include a complete three-map bag from any offset.
-        for (let i = 0; i < 5 && seen.size < 3; i++) {
+        // Earlier checks may leave us in the middle of a shuffle bag. Seven
+        // consecutive rounds include a complete four-map bag from any offset.
+        for (let i = 0; i < 7 && seen.size < 4; i++) {
           if (i) {
             const before = current;
             current = await stub.advanceMapForTest();
@@ -390,7 +390,7 @@ test('Public room: real Workers runtime and real WebSocket clients', { timeout: 
           const moved = await d.wait((m) => m.type === 'snapshot' && m.snapshot.roundId === current.roundId && m.snapshot.players.some((p) => p.id === me.id && p.ack === last));
           assert.equal(moved.snapshot.players.find((p) => p.id === me.id).motion.pitch, 0.25);
         }
-        assert.deepEqual(seen, new Set(['european-town', 'industrial-complex', 'modern-city']));
+        assert.deepEqual(seen, new Set(['european-town', 'industrial-complex', 'modern-city', 'farmstead']));
       } finally { stub[Symbol.dispose]?.(); }
       const saved = { ...current };
       c.ws.close(); d.ws.close(); await delay(150);

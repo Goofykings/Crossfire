@@ -26,7 +26,8 @@ describe.each(MAP_IDS)('map %s assets', (id) => {
   const layout = JSON.parse(readFileSync(`src/maps/${id}/layout.json`, 'utf8'));
 
   it('ships every model the asset index lists, plus collision data', () => {
-    expect(idx.models.length).toBeGreaterThan(5);
+    // street maps ship a GLB per block of buildings; the farmstead's structures are part of its terrain GLB
+    expect(idx.models.length).toBeGreaterThan(id === 'farmstead' ? 0 : 5);
     for (const f of [...idx.models, idx.collision]) {
       expect(existsSync(`${dir}/${f}`), f).toBe(true);
       expect(statSync(`${dir}/${f}`).size, f).toBeGreaterThan(10_000);

@@ -60,7 +60,7 @@ def solids(p):
 
 def main() -> int:
     problems: list[str] = []
-    for fn in (L.city_underground, L.town_underground):
+    for fn in (L.city_underground, L.town_underground, L.farm_underground):
         for raw in fn():
             p = U.prepare(raw)
             pid = p['id']

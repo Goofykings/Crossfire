@@ -140,6 +140,28 @@ PROPS = {
     "car_black": {"size": [2.0, 1.42, 4.6], "collider": [1.8, 1.42, 4.5]},
     "car_white": {"size": [2.0, 1.42, 4.6], "collider": [1.8, 1.42, 4.5]},
     "van_white": {"size": [2.04, 2.25, 5.3], "collider": [1.98, 2.25, 5.25]},
+    # --- Farmstead (props_farm.py) ---
+    "tree_oak": {"size": [4.8, 7.4, 4.8], "collider": [0.62, 3.2, 0.62]},
+    "tree_oak_small": {"size": [3.6, 5.6, 3.6], "collider": [0.5, 2.4, 0.5]},
+    "tree_pine": {"size": [3.6, 8.0, 3.6], "collider": [0.5, 3.2, 0.5]},
+    "bush": {"size": [1.4, 0.95, 1.2], "collider": [0.9, 0.9, 0.9]},
+    "hay_bale": {"size": [1.1, 0.5, 0.55], "collider": [1.1, 0.5, 0.55]},
+    "hay_stack": {"size": [2.2, 1.0, 0.55], "collider": [2.2, 1.0, 0.55]},
+    "water_trough": {"size": [2.24, 0.66, 0.74], "collider": [2.24, 0.62, 0.74]},
+    "wheelbarrow": {"size": [1.7, 0.75, 0.6], "collider": [1.5, 0.55, 0.6]},
+    "firewood_stack": {"size": [1.8, 1.2, 0.6], "collider": [1.8, 1.2, 0.6]},
+    "sofa": {"size": [2.0, 0.85, 0.9], "collider": [2.0, 0.8, 0.9]},
+    "bed": {"size": [2.1, 0.95, 1.56], "collider": [2.0, 0.7, 1.5]},
+    "wardrobe": {"size": [1.26, 2.06, 0.66], "collider": [1.26, 2.06, 0.6]},
+    "bookshelf": {"size": [1.6, 1.9, 0.36], "collider": [1.6, 1.9, 0.36]},
+    "kitchen_counter": {"size": [2.44, 0.92, 0.68], "collider": [2.44, 0.92, 0.65]},
+    "fridge": {"size": [0.8, 1.8, 0.72], "collider": [0.8, 1.8, 0.72]},
+    "dining_table": {"size": [2.6, 0.9, 1.7], "collider": [2.5, 0.78, 1.0]},
+    "feed_sacks": {"size": [0.9, 0.5, 0.66], "collider": [0.9, 0.5, 0.66]},
+    "storage_shelf": {"size": [2.0, 1.9, 0.5], "collider": [2.0, 1.9, 0.5]},
+    "bunk_bed": {"size": [2.0, 1.9, 0.95], "collider": [2.0, 1.9, 0.95]},
+    "tractor": {"size": [2.0, 2.45, 3.7], "collider": [1.8, 1.7, 3.4]},
+    "hedge_long": {"size": [3.8, 2.9, 0.95], "collider": [3.8, 3.0, 0.85]},
 }
 
 # Modular kit pieces exported for future maps (not instanced by the European Town layout itself).

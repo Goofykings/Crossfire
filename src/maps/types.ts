@@ -92,7 +92,7 @@ export interface LightDef {
  * level, reached by stair entrances whose stairwells are the only openings in the street slab. */
 export interface UndergroundPassage {
   id: string;
-  style: 'cellar' | 'metro';
+  style: 'cellar' | 'metro' | 'farm';
   purpose?: string;
   floor: number;
   ceiling: number;
@@ -128,6 +128,15 @@ export interface MapLayout {
     coveredRoutes: { id: string; kind: string; rect: Rect }[];
     upperRoutes: { id: string; waypoints: Vec3Tuple[] }[];
     groundObstacles: { id: string; rect: Rect }[];
+  };
+  /** Farmstead only: buildings authored as wall/slab/stair elements (blender/scripts/lib/farmstead.py) and the gapped fence. */
+  farm?: {
+    structures: { id: string; name: string; rect: Rect; elements: Record<string, unknown>[] }[];
+    fences: { id: string; a: [number, number]; b: [number, number]; gaps: [number, number][] }[];
+    /** Street-level footprints of walls, posts and staircases (tactical map and tests). */
+    solids: { id: string; kind: string; rect: Rect }[];
+    /** Street to shelter-floor polylines of each underground entrance (tests, Practice debugging). */
+    entranceWalks: Record<string, [number, number, number][]>;
   };
   buildings: Building[];
   walls: { id: string; rect: Rect; height: number; style: string; gates: { rect: Rect }[] }[];

@@ -1,0 +1,11443 @@
+{
+ "id": "farmstead",
+ "name": "Farmstead",
+ "version": 1,
+ "units": "metres; +x east, +z south, +y up (glTF / Babylon right-handed). Rects are [x0, z0, x1, z1].",
+ "style": "farm",
+ "playArea": [
+  -37.0,
+  -47.0,
+  37.0,
+  45.0
+ ],
+ "outerLimit": 50,
+ "ground": {
+  "baseHeight": 0.0,
+  "zones": [
+   {
+    "id": "meadow",
+    "kind": "yard",
+    "rect": [
+     -33.0,
+     -43.0,
+     33.0,
+     40.5
+    ],
+    "height": 0.0,
+    "material": "grass"
+   },
+   {
+    "id": "north_gap",
+    "kind": "yard",
+    "rect": [
+     -1.5,
+     -47.0,
+     5.0,
+     -43.0
+    ],
+    "height": 0.0,
+    "material": "grass"
+   },
+   {
+    "id": "south_gap",
+    "kind": "yard",
+    "rect": [
+     -4.75,
+     40.5,
+     -0.5,
+     45.0
+    ],
+    "height": 0.0,
+    "material": "grass"
+   },
+   {
+    "id": "west_gap",
+    "kind": "yard",
+    "rect": [
+     -37.0,
+     -1.9,
+     -33.0,
+     4.75
+    ],
+    "height": 0.0,
+    "material": "grass"
+   },
+   {
+    "id": "east_gap_north",
+    "kind": "yard",
+    "rect": [
+     33.0,
+     -19.9,
+     37.0,
+     -13.4
+    ],
+    "height": 0.0,
+    "material": "grass"
+   },
+   {
+    "id": "east_gap_south",
+    "kind": "yard",
+    "rect": [
+     33.0,
+     17.25,
+     37.0,
+     23.75
+    ],
+    "height": 0.0,
+    "material": "grass"
+   },
+   {
+    "id": "south_gate_path",
+    "kind": "street",
+    "rect": [
+     -4.75,
+     8.0,
+     -0.6,
+     44.0
+    ],
+    "height": 0.0,
+    "material": "dirt"
+   },
+   {
+    "id": "garage_path",
+    "kind": "street",
+    "rect": [
+     -26.9,
+     28.1,
+     -4.75,
+     32.75
+    ],
+    "height": 0.0,
+    "material": "dirt"
+   },
+   {
+    "id": "barn_path",
+    "kind": "street",
+    "rect": [
+     -28.1,
+     -23.5,
+     -24.1,
+     -2.5
+    ],
+    "height": 0.0,
+    "material": "dirt"
+   },
+   {
+    "id": "barn_link",
+    "kind": "street",
+    "rect": [
+     -28.1,
+     -5.6,
+     -13.6,
+     -2.5
+    ],
+    "height": 0.0,
+    "material": "dirt"
+   },
+   {
+    "id": "cabin_link",
+    "kind": "street",
+    "rect": [
+     11.9,
+     -6.0,
+     23.25,
+     -2.9
+    ],
+    "height": 0.0,
+    "material": "dirt"
+   },
+   {
+    "id": "house_apron",
+    "kind": "street",
+    "rect": [
+     -3.4,
+     8.0,
+     1.6,
+     14.0
+    ],
+    "height": 0.0,
+    "material": "dirt"
+   },
+   {
+    "id": "cabin_path",
+    "kind": "street",
+    "rect": [
+     20.25,
+     -26.0,
+     23.25,
+     -2.5
+    ],
+    "height": 0.0,
+    "material": "dirt"
+   },
+   {
+    "id": "house_floor",
+    "kind": "court",
+    "rect": [
+     -13.65,
+     -8.15,
+     11.65,
+     7.65
+    ],
+    "height": 0.0,
+    "material": "interior_floor"
+   },
+   {
+    "id": "kitchen_floor",
+    "kind": "court",
+    "rect": [
+     -1.0,
+     -8.15,
+     11.65,
+     -0.85
+    ],
+    "height": 0.0,
+    "material": "slabs"
+   },
+   {
+    "id": "pantry_floor",
+    "kind": "court",
+    "rect": [
+     -13.65,
+     -0.65,
+     -6.6,
+     7.65
+    ],
+    "height": 0.0,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "dining_porch",
+    "kind": "court",
+    "rect": [
+     1.0,
+     8.0,
+     12.5,
+     14.0
+    ],
+    "height": 0.0,
+    "material": "slabs"
+   },
+   {
+    "id": "barn_floor",
+    "kind": "court",
+    "rect": [
+     -29.7,
+     -37.7,
+     -11.8,
+     -23.8
+    ],
+    "height": 0.0,
+    "material": "dirt_floor"
+   },
+   {
+    "id": "stall_floor",
+    "kind": "court",
+    "rect": [
+     -19.28,
+     -37.7,
+     -11.8,
+     -23.8
+    ],
+    "height": 0.0,
+    "material": "hay"
+   },
+   {
+    "id": "cabin_floor",
+    "kind": "court",
+    "rect": [
+     15.8,
+     -35.7,
+     28.2,
+     -26.3
+    ],
+    "height": 0.0,
+    "material": "interior_floor"
+   },
+   {
+    "id": "garage_floor",
+    "kind": "court",
+    "rect": [
+     -28.7,
+     18.55,
+     -19.3,
+     27.95
+    ],
+    "height": 0.0,
+    "material": "concrete_floor"
+   },
+   {
+    "id": "workshop_floor",
+    "kind": "court",
+    "rect": [
+     -19.1,
+     18.55,
+     -15.3,
+     27.95
+    ],
+    "height": 0.0,
+    "material": "interior_floor"
+   }
+  ],
+  "covered": [
+   {
+    "id": "house_living",
+    "kind": "interior",
+    "rect": [
+     -13.65,
+     -8.15,
+     -1.2,
+     -0.85
+    ]
+   },
+   {
+    "id": "house_kitchen",
+    "kind": "interior",
+    "rect": [
+     -1.0,
+     -8.15,
+     11.65,
+     -0.85
+    ]
+   },
+   {
+    "id": "house_hall",
+    "kind": "interior",
+    "rect": [
+     -6.4,
+     -0.65,
+     2.9,
+     7.65
+    ]
+   },
+   {
+    "id": "house_pantry",
+    "kind": "interior",
+    "rect": [
+     -13.65,
+     -0.65,
+     -6.6,
+     7.65
+    ]
+   },
+   {
+    "id": "house_dining",
+    "kind": "interior",
+    "rect": [
+     3.1,
+     4.6,
+     11.65,
+     7.65
+    ]
+   },
+   {
+    "id": "barn_bay",
+    "kind": "interior",
+    "rect": [
+     -29.7,
+     -37.7,
+     -22.6,
+     -23.8
+    ]
+   },
+   {
+    "id": "barn_stalls",
+    "kind": "interior",
+    "rect": [
+     -19.28,
+     -30.98,
+     -11.8,
+     -23.8
+    ]
+   },
+   {
+    "id": "cabin_west",
+    "kind": "interior",
+    "rect": [
+     15.8,
+     -35.7,
+     22.1,
+     -26.3
+    ]
+   },
+   {
+    "id": "cabin_east",
+    "kind": "interior",
+    "rect": [
+     22.3,
+     -35.7,
+     28.2,
+     -26.3
+    ]
+   },
+   {
+    "id": "garage_bay",
+    "kind": "interior",
+    "rect": [
+     -28.7,
+     18.55,
+     -19.3,
+     27.95
+    ]
+   },
+   {
+    "id": "garage_shop",
+    "kind": "interior",
+    "rect": [
+     -19.1,
+     18.55,
+     -15.3,
+     27.95
+    ]
+   }
+  ]
+ },
+ "terraces": [],
+ "buildings": [],
+ "walls": [],
+ "arches": [],
+ "upperRoutes": [],
+ "circulationRoutes": [],
+ "farm": {
+  "structures": [
+   {
+    "id": "house",
+    "name": "Main House",
+    "rect": [
+     -14.0,
+     -8.5,
+     14.5,
+     14.0
+    ],
+    "elements": [
+     {
+      "t": "wall",
+      "rect": [
+       -14.0,
+       -8.5,
+       0.0,
+       -8.15
+      ],
+      "y": [
+       0,
+       3.4
+      ],
+      "open": [
+       {
+        "a": [
+         -9.55,
+         -6.55
+        ],
+        "top": 2.5,
+        "kind": "door"
+       },
+       {
+        "a": [
+         -13.0,
+         -11.4
+        ],
+        "sill": 1.0,
+        "top": 2.3,
+        "kind": "window",
+        "shutters": "trim_green"
+       }
+      ],
+      "in": "wall_cream",
+      "out": "clapboard_cream",
+      "outside": "n",
+      "base": 0.55,
+      "base_mat": "stone_stacked",
+      "frame": "trim_white"
+     },
+     {
+      "t": "wall",
+      "rect": [
+       0.0,
+       -8.5,
+       12.0,
+       -8.15
+      ],
+      "y": [
+       0,
+       3.4
+      ],
+      "open": [
+       {
+        "a": [
+         3.9,
+         6.6
+        ],
+        "top": 2.5,
+        "kind": "door"
+       },
+       {
+        "a": [
+         8.6,
+         10.2
+        ],
+        "sill": 1.0,
+        "top": 2.3,
+        "kind": "window",
+        "shutters": "trim_green"
+       },
+       {
+        "a": [
+         1.0,
+         2.5
+        ],
+        "sill": 1.0,
+        "top": 2.3,
+        "kind": "window",
+        "shutters": "trim_green"
+       }
+      ],
+      "in": "wall_cream",
+      "out": "clapboard_cream",
+      "outside": "n",
+      "base": 0.55,
+      "base_mat": "stone_stacked",
+      "frame": "trim_white"
+     },
+     {
+      "t": "wall",
+      "rect": [
+       -14.0,
+       -8.15,
+       -13.65,
+       7.65
+      ],
+      "y": [
+       0,
+       3.4
+      ],
+      "open": [
+       {
+        "a": [
+         -7.4,
+         -6.2
+        ],
+        "sill": 1.0,
+        "top": 2.3,
+        "kind": "window",
+        "shutters": "trim_green"
+       },
+       {
+        "a": [
+         -5.15,
+         -2.6
+        ],
+        "top": 2.5,
+        "kind": "door"
+       },
+       {
+        "a": [
+         2.35,
+         4.85
+        ],
+        "top": 2.5,
+        "kind": "door"
+       }
+      ],
+      "in": "wall_cream",
+      "out": "clapboard_cream",
+      "outside": "w",
+      "base": 0.55,
+      "base_mat": "stone_stacked",
+      "frame": "trim_white"
+     },
+     {
+      "t": "wall",
+      "rect": [
+       11.65,
+       -8.15,
+       12.0,
+       7.65
+      ],
+      "y": [
+       0,
+       3.4
+      ],
+      "open": [
+       {
+        "a": [
+         -7.4,
+         -6.2
+        ],
+        "sill": 1.0,
+        "top": 2.3,
+        "kind": "window"
+       },
+       {
+        "a": [
+         -5.7,
+         -3.1
+        ],
+        "top": 2.5,
+        "kind": "door"
+       },
+       {
+        "a": [
+         2.3,
+         4.85
+        ],
+        "top": 2.5,
+        "kind": "door"
+       },
+       {
+        "a": [
+         5.8,
+         7.0
+        ],
+        "sill": 1.0,
+        "top": 2.3,
+        "kind": "window",
+        "shutters": "trim_green"
+       }
+      ],
+      "in": "wall_cream",
+      "out": "clapboard_cream",
+      "outside": "e",
+      "base": 0.55,
+      "base_mat": "stone_stacked",
+      "frame": "trim_white"
+     },
+     {
+      "t": "wall",
+      "rect": [
+       -14.0,
+       7.65,
+       12.0,
+       8.0
+      ],
+      "y": [
+       0,
+       3.4
+      ],
+      "open": [
+       {
+        "a": [
+         -11.6,
+         -8.6
+        ],
+        "top": 2.5,
+        "kind": "door"
+       },
+       {
+        "a": [
+         -1.9,
+         1.1
+        ],
+        "top": 2.5,
+        "kind": "door"
+       },
+       {
+        "a": [
+         5.4,
+         8.4
+        ],
+        "top": 2.5,
+        "kind": "door"
+       },
+       {
+        "a": [
+         9.6,
+         11.0
+        ],
+        "sill": 1.0,
+        "top": 2.3,
+        "kind": "window",
+        "shutters": "trim_green"
+       }
+      ],
+      "in": "wall_cream",
+      "out": "clapboard_cream",
+      "outside": "s",
+      "base": 0.55,
+      "base_mat": "stone_stacked",
+      "frame": "trim_white"
+     },
+     {
+      "t": "wall",
+      "rect": [
+       0.0,
+       -8.5,
+       12.0,
+       -8.15
+      ],
+      "y": [
+       3.4,
+       6.0
+      ],
+      "open": [
+       {
+        "a": [
+         1.2,
+         2.8
+        ],
+        "sill": 0.9,
+        "top": 2.1,
+        "kind": "window",
+        "shutters": "trim_green"
+       },
+       {
+        "a": [
+         3.8,
+         5.2
+        ],
+        "sill": 0.9,
+        "top": 2.1,
+        "kind": "window",
+        "shutters": "trim_green"
+       },
+       {
+        "a": [
+         7.2,
+         8.6
+        ],
+        "sill": 0.9,
+        "top": 2.1,
+        "kind": "window",
+        "shutters": "trim_green"
+       },
+       {
+        "a": [
+         9.6,
+         11.0
+        ],
+        "sill": 0.9,
+        "top": 2.1,
+        "kind": "window",
+        "shutters": "trim_green"
+       }
+      ],
+      "in": "wall_cream",
+      "out": "clapboard_cream",
+      "outside": "n",
+      "base": 0.0,
+      "base_mat": "stone_stacked",
+      "frame": "trim_white"
+     },
+     {
+      "t": "wall",
+      "rect": [
+       11.65,
+       -8.15,
+       12.0,
+       7.65
+      ],
+      "y": [
+       3.4,
+       6.0
+      ],
+      "open": [
+       {
+        "a": [
+         -6.8,
+         -5.4
+        ],
+        "sill": 0.9,
+        "top": 2.1,
+        "kind": "window",
+        "shutters": "trim_green"
+       },
+       {
+        "a": [
+         -3.6,
+         -2.2
+        ],
+        "sill": 0.9,
+        "top": 2.1,
+        "kind": "window",
+        "shutters": "trim_green"
+       },
+       {
+        "a": [
+         3.4,
+         4.8
+        ],
+        "sill": 0.9,
+        "top": 2.1,
+        "kind": "window",
+        "shutters": "trim_green"
+       }
+      ],
+      "in": "wall_cream",
+      "out": "clapboard_cream",
+      "outside": "e",
+      "base": 0.0,
+      "base_mat": "stone_stacked",
+      "frame": "trim_white"
+     },
+     {
+      "t": "wall",
+      "rect": [
+       0.0,
+       -8.15,
+       0.35,
+       7.65
+      ],
+      "y": [
+       3.4,
+       6.0
+      ],
+      "open": [
+       {
+        "a": [
+         -5.2,
+         -3.8
+        ],
+        "sill": 0.9,
+        "top": 2.1,
+        "kind": "window"
+       },
+       {
+        "a": [
+         3.0,
+         4.4
+        ],
+        "sill": 0.9,
+        "top": 2.1,
+        "kind": "window"
+       }
+      ],
+      "in": "wall_cream",
+      "out": "clapboard_cream",
+      "outside": "w",
+      "base": 0.0,
+      "base_mat": "stone_stacked",
+      "frame": "trim_white"
+     },
+     {
+      "t": "wall",
+      "rect": [
+       0.0,
+       7.65,
+       12.0,
+       8.0
+      ],
+      "y": [
+       3.4,
+       6.0
+      ],
+      "open": [
+       {
+        "a": [
+         1.6,
+         3.6
+        ],
+        "top": 2.15,
+        "kind": "door"
+       },
+       {
+        "a": [
+         7.2,
+         9.4
+        ],
+        "top": 2.15,
+        "kind": "door"
+       },
+       {
+        "a": [
+         10.3,
+         11.5
+        ],
+        "sill": 0.9,
+        "top": 2.1,
+        "kind": "window",
+        "shutters": "trim_green"
+       }
+      ],
+      "in": "wall_cream",
+      "out": "clapboard_cream",
+      "outside": "s",
+      "base": 0.0,
+      "base_mat": "stone_stacked",
+      "frame": "trim_white"
+     },
+     {
+      "t": "box",
+      "box": [
+       -0.04,
+       3.32,
+       -8.54,
+       12.04,
+       3.48,
+       -8.5
+      ],
+      "mat": "trim_white",
+      "kind": "trim",
+      "solid": false
+     },
+     {
+      "t": "box",
+      "box": [
+       12.0,
+       3.32,
+       -8.54,
+       12.04,
+       3.48,
+       8.04
+      ],
+      "mat": "trim_white",
+      "kind": "trim",
+      "solid": false
+     },
+     {
+      "t": "wall",
+      "rect": [
+       -13.65,
+       -0.85,
+       11.65,
+       -0.65
+      ],
+      "y": [
+       0,
+       3.1
+      ],
+      "open": [
+       {
+        "a": [
+         -11.5,
+         -8.75
+        ],
+        "top": 2.5,
+        "kind": "door"
+       },
+       {
+        "a": [
+         -5.6,
+         -2.2
+        ],
+        "top": 2.5,
+        "kind": "door"
+       },
+       {
+        "a": [
+         6.0,
+         8.75
+        ],
+        "top": 2.5,
+        "kind": "door"
+       }
+      ],
+      "in": "wall_cream",
+      "out": "wall_cream",
+      "outside": null
+     },
+     {
+      "t": "wall",
+      "rect": [
+       -1.2,
+       -8.15,
+       -1.0,
+       -0.85
+      ],
+      "y": [
+       0,
+       3.1
+      ],
+      "open": [
+       {
+        "a": [
+         -5.75,
+         -3.0
+        ],
+        "top": 2.5,
+        "kind": "door"
+       }
+      ],
+      "in": "wall_cream",
+      "out": "wall_cream",
+      "outside": null
+     },
+     {
+      "t": "wall",
+      "rect": [
+       -6.6,
+       -0.65,
+       -6.4,
+       7.65
+      ],
+      "y": [
+       0,
+       3.1
+      ],
+      "open": [
+       {
+        "a": [
+         3.25,
+         6.0
+        ],
+        "top": 2.5,
+        "kind": "door"
+       }
+      ],
+      "in": "wall_cream",
+      "out": "wall_cream",
+      "outside": null
+     },
+     {
+      "t": "wall",
+      "rect": [
+       2.9,
+       -0.65,
+       3.1,
+       7.65
+      ],
+      "y": [
+       0,
+       3.1
+      ],
+      "open": [
+       {
+        "a": [
+         4.9,
+         7.0
+        ],
+        "top": 2.5,
+        "kind": "door"
+       }
+      ],
+      "in": "wall_cream",
+      "out": "wall_cream",
+      "outside": null
+     },
+     {
+      "t": "slab",
+      "rect": [
+       -13.65,
+       -8.15,
+       11.65,
+       7.65
+      ],
+      "y": [
+       3.1,
+       3.4
+      ],
+      "mat": "interior_floor",
+      "under": "wall_cream",
+      "holes": [
+       [
+        1.4,
+        0.65,
+        2.9,
+        5.7
+       ]
+      ],
+      "kind": "floor"
+     },
+     {
+      "t": "slab",
+      "rect": [
+       0.35,
+       -8.15,
+       11.65,
+       7.65
+      ],
+      "y": [
+       5.7,
+       6.0
+      ],
+      "mat": "plaster",
+      "under": "wall_cream",
+      "holes": [],
+      "kind": "ceiling"
+     },
+     {
+      "t": "stairs",
+      "rect": [
+       1.5,
+       0.65,
+       2.9,
+       4.7
+      ],
+      "dir": "n",
+      "y0": 0.0,
+      "y1": 3.4,
+      "n": 16,
+      "mat": "wood_dark",
+      "guard": [
+       "l"
+      ],
+      "guard_mat": "trim_brown"
+     },
+     {
+      "t": "rail",
+      "a": [
+       1.4,
+       0.75
+      ],
+      "b": [
+       1.4,
+       5.7
+      ],
+      "y": 3.4,
+      "h": 1.0,
+      "gaps": [],
+      "mat": "trim_brown"
+     },
+     {
+      "t": "rail",
+      "a": [
+       2.92,
+       0.75
+      ],
+      "b": [
+       2.92,
+       5.7
+      ],
+      "y": 3.4,
+      "h": 1.0,
+      "gaps": [],
+      "mat": "trim_brown"
+     },
+     {
+      "t": "rail",
+      "a": [
+       1.4,
+       5.72
+      ],
+      "b": [
+       2.9,
+       5.72
+      ],
+      "y": 3.4,
+      "h": 1.0,
+      "gaps": [],
+      "mat": "trim_brown"
+     },
+     {
+      "t": "wall",
+      "rect": [
+       0.35,
+       -1.1,
+       11.65,
+       -0.9
+      ],
+      "y": [
+       3.4,
+       5.7
+      ],
+      "open": [
+       {
+        "a": [
+         1.4,
+         2.9
+        ],
+        "top": 2.3,
+        "kind": "door"
+       },
+       {
+        "a": [
+         8.0,
+         9.6
+        ],
+        "top": 2.3,
+        "kind": "door"
+       }
+      ],
+      "in": "wall_cream",
+      "out": "wall_cream",
+      "outside": null
+     },
+     {
+      "t": "wall",
+      "rect": [
+       5.9,
+       -8.15,
+       6.1,
+       -1.1
+      ],
+      "y": [
+       3.4,
+       5.7
+      ],
+      "open": [
+       {
+        "a": [
+         -5.5,
+         -3.5
+        ],
+        "top": 2.3,
+        "kind": "door"
+       }
+      ],
+      "in": "wall_cream",
+      "out": "wall_cream",
+      "outside": null
+     },
+     {
+      "t": "wall",
+      "rect": [
+       4.9,
+       2.5,
+       5.1,
+       7.65
+      ],
+      "y": [
+       3.4,
+       5.7
+      ],
+      "open": [
+       {
+        "a": [
+         4.0,
+         5.6
+        ],
+        "top": 2.3,
+        "kind": "door"
+       }
+      ],
+      "in": "wall_cream",
+      "out": "wall_cream",
+      "outside": null
+     },
+     {
+      "t": "wall",
+      "rect": [
+       5.0,
+       2.4,
+       11.65,
+       2.6
+      ],
+      "y": [
+       3.4,
+       5.7
+      ],
+      "open": [
+       {
+        "a": [
+         8.5,
+         10.0
+        ],
+        "top": 2.3,
+        "kind": "door"
+       }
+      ],
+      "in": "wall_cream",
+      "out": "wall_cream",
+      "outside": null
+     },
+     {
+      "t": "slab",
+      "rect": [
+       1.0,
+       8.0,
+       12.5,
+       14.0
+      ],
+      "y": [
+       3.15,
+       3.4
+      ],
+      "mat": "wood_weathered",
+      "under": "wood_dark",
+      "holes": [],
+      "kind": "deck"
+     },
+     {
+      "t": "post",
+      "at": [
+       1.15,
+       13.8
+      ],
+      "y": [
+       0,
+       3.15
+      ],
+      "size": 0.22,
+      "mat": "trim_white"
+     },
+     {
+      "t": "post",
+      "at": [
+       4.6,
+       13.8
+      ],
+      "y": [
+       0,
+       3.15
+      ],
+      "size": 0.22,
+      "mat": "trim_white"
+     },
+     {
+      "t": "post",
+      "at": [
+       8.05,
+       13.8
+      ],
+      "y": [
+       0,
+       3.15
+      ],
+      "size": 0.22,
+      "mat": "trim_white"
+     },
+     {
+      "t": "post",
+      "at": [
+       11.5,
+       13.8
+      ],
+      "y": [
+       0,
+       3.15
+      ],
+      "size": 0.22,
+      "mat": "trim_white"
+     },
+     {
+      "t": "post",
+      "at": [
+       12.35,
+       13.8
+      ],
+      "y": [
+       0,
+       3.15
+      ],
+      "size": 0.22,
+      "mat": "trim_white"
+     },
+     {
+      "t": "post",
+      "at": [
+       1.15,
+       10.9
+      ],
+      "y": [
+       0,
+       3.15
+      ],
+      "size": 0.22,
+      "mat": "trim_white"
+     },
+     {
+      "t": "post",
+      "at": [
+       6.75,
+       10.9
+      ],
+      "y": [
+       0,
+       3.15
+      ],
+      "size": 0.22,
+      "mat": "trim_white"
+     },
+     {
+      "t": "post",
+      "at": [
+       12.35,
+       10.9
+      ],
+      "y": [
+       0,
+       3.15
+      ],
+      "size": 0.22,
+      "mat": "trim_white"
+     },
+     {
+      "t": "box",
+      "box": [
+       1.0,
+       2.85,
+       13.68,
+       12.5,
+       3.15,
+       13.92
+      ],
+      "mat": "trim_white",
+      "kind": "beam",
+      "solid": true
+     },
+     {
+      "t": "box",
+      "box": [
+       1.0,
+       2.85,
+       10.78,
+       12.5,
+       3.15,
+       11.02
+      ],
+      "mat": "trim_white",
+      "kind": "beam",
+      "solid": true
+     },
+     {
+      "t": "rail",
+      "a": [
+       1.0,
+       13.96
+      ],
+      "b": [
+       12.5,
+       13.96
+      ],
+      "y": 3.4,
+      "h": 1.05,
+      "gaps": [
+       [
+        2.2,
+        3.6
+       ]
+      ],
+      "mat": "trim_white"
+     },
+     {
+      "t": "rail",
+      "a": [
+       1.04,
+       8.0
+      ],
+      "b": [
+       1.04,
+       14.0
+      ],
+      "y": 3.4,
+      "h": 1.05,
+      "gaps": [],
+      "mat": "trim_white"
+     },
+     {
+      "t": "rail",
+      "a": [
+       12.46,
+       8.0
+      ],
+      "b": [
+       12.46,
+       14.0
+      ],
+      "y": 3.4,
+      "h": 1.05,
+      "gaps": [],
+      "mat": "trim_white"
+     },
+     {
+      "t": "roof",
+      "kind": "gable",
+      "rect": [
+       0.0,
+       -8.5,
+       12.0,
+       8.0
+      ],
+      "eave": 6.0,
+      "axis": "z",
+      "pitch": 28,
+      "mat": "roof_shingle",
+      "over": 0.55,
+      "gable": "clapboard_cream",
+      "under": "trim_brown"
+     },
+     {
+      "t": "roof",
+      "kind": "gable",
+      "rect": [
+       -14.0,
+       -8.5,
+       0.0,
+       8.0
+      ],
+      "eave": 3.4,
+      "axis": "x",
+      "pitch": 16,
+      "mat": "roof_shingle",
+      "over": 0.55,
+      "gable": "clapboard_cream",
+      "under": "trim_brown",
+      "ends": {
+       "lo": true,
+       "hi": false
+      }
+     },
+     {
+      "t": "box",
+      "box": [
+       -8.6,
+       5.0,
+       -0.8,
+       -7.7,
+       7.3,
+       0.1
+      ],
+      "mat": "brick",
+      "kind": "chimney",
+      "solid": false
+     },
+     {
+      "t": "box",
+      "box": [
+       -8.7,
+       7.3,
+       -0.9,
+       -7.6,
+       7.42,
+       0.2
+      ],
+      "mat": "stone_trim",
+      "kind": "chimney",
+      "solid": false
+     },
+     {
+      "t": "box",
+      "box": [
+       5.9,
+       3.04,
+       -4.6,
+       6.1,
+       3.1,
+       -4.4
+      ],
+      "mat": "iron",
+      "kind": "fixture",
+      "solid": false
+     }
+    ]
+   },
+   {
+    "id": "barn",
+    "name": "Barn",
+    "rect": [
+     -30.5,
+     -38.5,
+     -11.0,
+     -18.5
+    ],
+    "elements": [
+     {
+      "t": "wall",
+      "rect": [
+       -30.0,
+       -38.0,
+       -11.5,
+       -37.7
+      ],
+      "y": [
+       0,
+       3.0
+      ],
+      "open": [
+       {
+        "a": [
+         -25.8,
+         -22.8
+        ],
+        "top": 3.0,
+        "kind": "door"
+       },
+       {
+        "a": [
+         -18.9,
+         -17.7
+        ],
+        "sill": 1.3,
+        "top": 2.4,
+        "kind": "window"
+       },
+       {
+        "a": [
+         -14.4,
+         -13.2
+        ],
+        "sill": 1.3,
+        "top": 2.4,
+        "kind": "window"
+       }
+      ],
+      "in": "siding_weathered",
+      "out": "siding_red",
+      "outside": "n",
+      "base": 0.45,
+      "base_mat": "stone_rubble",
+      "frame": "trim_white"
+     },
+     {
+      "t": "wall",
+      "rect": [
+       -30.0,
+       -37.7,
+       -29.7,
+       -23.8
+      ],
+      "y": [
+       0,
+       3.0
+      ],
+      "open": [
+       {
+        "a": [
+         -36.6,
+         -35.2
+        ],
+        "sill": 1.3,
+        "top": 2.4,
+        "kind": "window"
+       },
+       {
+        "a": [
+         -32.0,
+         -28.8
+        ],
+        "top": 3.0,
+        "kind": "door"
+       }
+      ],
+      "in": "siding_weathered",
+      "out": "siding_red",
+      "outside": "w",
+      "base": 0.45,
+      "base_mat": "stone_rubble",
+      "frame": "trim_white"
+     },
+     {
+      "t": "wall",
+      "rect": [
+       -11.8,
+       -37.7,
+       -11.5,
+       -23.8
+      ],
+      "y": [
+       0,
+       3.0
+      ],
+      "open": [
+       {
+        "a": [
+         -35.5,
+         -33.25
+        ],
+        "top": 2.6,
+        "kind": "door"
+       },
+       {
+        "a": [
+         -28.6,
+         -26.4
+        ],
+        "top": 2.6,
+        "kind": "door"
+       }
+      ],
+      "in": "siding_weathered",
+      "out": "siding_red",
+      "outside": "e",
+      "base": 0.45,
+      "base_mat": "stone_rubble",
+      "frame": "trim_white"
+     },
+     {
+      "t": "wall",
+      "rect": [
+       -30.0,
+       -23.8,
+       -11.5,
+       -23.5
+      ],
+      "y": [
+       0,
+       3.0
+      ],
+      "open": [
+       {
+        "a": [
+         -28.5,
+         -24.0
+        ],
+        "top": 2.6,
+        "kind": "door"
+       },
+       {
+        "a": [
+         -16.8,
+         -14.4
+        ],
+        "top": 2.6,
+        "kind": "door"
+       }
+      ],
+      "in": "siding_weathered",
+      "out": "siding_red",
+      "outside": "s",
+      "base": 0.45,
+      "base_mat": "stone_rubble",
+      "frame": "trim_white"
+     },
+     {
+      "t": "wall",
+      "rect": [
+       -30.0,
+       -38.0,
+       -11.5,
+       -37.7
+      ],
+      "y": [
+       3.0,
+       5.2
+      ],
+      "open": [
+       {
+        "a": [
+         -17.8,
+         -16.2
+        ],
+        "sill": 0.8,
+        "top": 1.8,
+        "kind": "window"
+       },
+       {
+        "a": [
+         -14.6,
+         -13.0
+        ],
+        "sill": 0.8,
+        "top": 1.8,
+        "kind": "window"
+       },
+       {
+        "a": [
+         -27.8,
+         -26.2
+        ],
+        "sill": 1.2,
+        "top": 1.8,
+        "kind": "window"
+       }
+      ],
+      "in": "siding_weathered",
+      "out": "siding_red",
+      "outside": "n",
+      "base": 0.0,
+      "base_mat": "stone_rubble",
+      "frame": "trim_white"
+     },
+     {
+      "t": "wall",
+      "rect": [
+       -30.0,
+       -37.7,
+       -29.7,
+       -23.8
+      ],
+      "y": [
+       3.0,
+       5.2
+      ],
+      "open": [
+       {
+        "a": [
+         -35.6,
+         -34.2
+        ],
+        "sill": 1.2,
+        "top": 1.8,
+        "kind": "window"
+       },
+       {
+        "a": [
+         -27.6,
+         -26.2
+        ],
+        "sill": 1.2,
+        "top": 1.8,
+        "kind": "window"
+       }
+      ],
+      "in": "siding_weathered",
+      "out": "siding_red",
+      "outside": "w",
+      "base": 0.0,
+      "base_mat": "stone_rubble",
+      "frame": "trim_white"
+     },
+     {
+      "t": "wall",
+      "rect": [
+       -11.8,
+       -37.7,
+       -11.5,
+       -23.8
+      ],
+      "y": [
+       3.0,
+       5.2
+      ],
+      "open": [
+       {
+        "a": [
+         -35.2,
+         -33.6
+        ],
+        "sill": 0.8,
+        "top": 1.8,
+        "kind": "window"
+       },
+       {
+        "a": [
+         -29.2,
+         -27.6
+        ],
+        "sill": 0.8,
+        "top": 1.8,
+        "kind": "window"
+       },
+       {
+        "a": [
+         -25.8,
+         -24.8
+        ],
+        "sill": 0.8,
+        "top": 1.8,
+        "kind": "window"
+       }
+      ],
+      "in": "siding_weathered",
+      "out": "siding_red",
+      "outside": "e",
+      "base": 0.0,
+      "base_mat": "stone_rubble",
+      "frame": "trim_white"
+     },
+     {
+      "t": "wall",
+      "rect": [
+       -30.0,
+       -23.8,
+       -11.5,
+       -23.5
+      ],
+      "y": [
+       3.0,
+       5.2
+      ],
+      "open": [
+       {
+        "a": [
+         -18.0,
+         -14.8
+        ],
+        "top": 1.85,
+        "kind": "door"
+       },
+       {
+        "a": [
+         -27.8,
+         -26.2
+        ],
+        "sill": 1.2,
+        "top": 1.8,
+        "kind": "window"
+       }
+      ],
+      "in": "siding_weathered",
+      "out": "siding_red",
+      "outside": "s",
+      "base": 0.0,
+      "base_mat": "stone_rubble",
+      "frame": "trim_white"
+     },
+     {
+      "t": "wall",
+      "rect": [
+       -19.52,
+       -37.7,
+       -19.28,
+       -23.8
+      ],
+      "y": [
+       0,
+       2.75
+      ],
+      "open": [
+       {
+        "a": [
+         -35.5,
+         -33.25
+        ],
+        "top": 2.6,
+        "kind": "door"
+       },
+       {
+        "a": [
+         -28.6,
+         -26.4
+        ],
+        "top": 2.6,
+        "kind": "door"
+       }
+      ],
+      "in": "siding_weathered",
+      "out": "siding_weathered",
+      "outside": null
+     },
+     {
+      "t": "wall",
+      "rect": [
+       -19.28,
+       -31.22,
+       -11.8,
+       -30.98
+      ],
+      "y": [
+       0,
+       2.75
+      ],
+      "open": [
+       {
+        "a": [
+         -17.4,
+         -15.1
+        ],
+        "top": 2.4,
+        "kind": "door"
+       }
+      ],
+      "in": "siding_weathered",
+      "out": "siding_weathered",
+      "outside": null
+     },
+     {
+      "t": "slab",
+      "rect": [
+       -22.6,
+       -37.7,
+       -11.8,
+       -23.8
+      ],
+      "y": [
+       2.75,
+       3.0
+      ],
+      "mat": "wood_weathered",
+      "under": "wood_dark",
+      "holes": [
+       [
+        -21.05,
+        -32.6,
+        -19.5,
+        -27.8
+       ]
+      ],
+      "kind": "loft"
+     },
+     {
+      "t": "stairs",
+      "rect": [
+       -21.0,
+       -32.6,
+       -19.52,
+       -28.8
+      ],
+      "dir": "n",
+      "y0": 0.0,
+      "y1": 3.0,
+      "n": 14,
+      "mat": "wood_weathered",
+      "guard": [
+       "l"
+      ],
+      "guard_mat": "wood_dark"
+     },
+     {
+      "t": "rail",
+      "a": [
+       -21.05,
+       -32.5
+      ],
+      "b": [
+       -21.05,
+       -27.8
+      ],
+      "y": 3.0,
+      "h": 1.0,
+      "gaps": [],
+      "mat": "wood_dark"
+     },
+     {
+      "t": "rail",
+      "a": [
+       -19.5,
+       -32.5
+      ],
+      "b": [
+       -19.5,
+       -27.8
+      ],
+      "y": 3.0,
+      "h": 1.0,
+      "gaps": [],
+      "mat": "wood_dark"
+     },
+     {
+      "t": "rail",
+      "a": [
+       -21.05,
+       -27.78
+      ],
+      "b": [
+       -19.5,
+       -27.78
+      ],
+      "y": 3.0,
+      "h": 1.0,
+      "gaps": [],
+      "mat": "wood_dark"
+     },
+     {
+      "t": "rail",
+      "a": [
+       -22.6,
+       -37.7
+      ],
+      "b": [
+       -22.6,
+       -23.8
+      ],
+      "y": 3.0,
+      "h": 1.05,
+      "gaps": [],
+      "mat": "wood_dark"
+     },
+     {
+      "t": "slab",
+      "rect": [
+       -29.7,
+       -37.7,
+       -11.8,
+       -23.8
+      ],
+      "y": [
+       5.0,
+       5.2
+      ],
+      "mat": "wood_dark",
+      "under": "wood_dark",
+      "holes": [],
+      "kind": "ceiling"
+     },
+     {
+      "t": "box",
+      "box": [
+       -28.529999999999998,
+       4.45,
+       -37.7,
+       -28.27,
+       4.8,
+       -23.8
+      ],
+      "mat": "wood_beam",
+      "kind": "beam",
+      "solid": false
+     },
+     {
+      "t": "box",
+      "box": [
+       -25.73,
+       4.45,
+       -37.7,
+       -25.470000000000002,
+       4.8,
+       -23.8
+      ],
+      "mat": "wood_beam",
+      "kind": "beam",
+      "solid": false
+     },
+     {
+      "t": "box",
+      "box": [
+       -23.529999999999998,
+       4.45,
+       -37.7,
+       -23.27,
+       4.8,
+       -23.8
+      ],
+      "mat": "wood_beam",
+      "kind": "beam",
+      "solid": false
+     },
+     {
+      "t": "slab",
+      "rect": [
+       -29.7,
+       -23.5,
+       -11.8,
+       -18.5
+      ],
+      "y": [
+       2.75,
+       3.0
+      ],
+      "mat": "wood_weathered",
+      "under": "wood_dark",
+      "holes": [],
+      "kind": "deck"
+     },
+     {
+      "t": "post",
+      "at": [
+       -29.5,
+       -18.7
+      ],
+      "y": [
+       0,
+       2.75
+      ],
+      "size": 0.3,
+      "mat": "wood_beam"
+     },
+     {
+      "t": "post",
+      "at": [
+       -22.4,
+       -18.7
+      ],
+      "y": [
+       0,
+       2.75
+      ],
+      "size": 0.3,
+      "mat": "wood_beam"
+     },
+     {
+      "t": "post",
+      "at": [
+       -16.6,
+       -18.7
+      ],
+      "y": [
+       0,
+       2.75
+      ],
+      "size": 0.3,
+      "mat": "wood_beam"
+     },
+     {
+      "t": "post",
+      "at": [
+       -12.0,
+       -18.7
+      ],
+      "y": [
+       0,
+       2.75
+      ],
+      "size": 0.3,
+      "mat": "wood_beam"
+     },
+     {
+      "t": "box",
+      "box": [
+       -29.7,
+       2.35,
+       -18.85,
+       -11.8,
+       2.75,
+       -18.55
+      ],
+      "mat": "wood_beam",
+      "kind": "beam",
+      "solid": true
+     },
+     {
+      "t": "rail",
+      "a": [
+       -29.7,
+       -18.54
+      ],
+      "b": [
+       -11.8,
+       -18.54
+      ],
+      "y": 3.0,
+      "h": 1.05,
+      "gaps": [
+       [
+        -21.4,
+        -19.8
+       ]
+      ],
+      "mat": "trim_white"
+     },
+     {
+      "t": "rail",
+      "a": [
+       -29.66,
+       -23.5
+      ],
+      "b": [
+       -29.66,
+       -18.5
+      ],
+      "y": 3.0,
+      "h": 1.05,
+      "gaps": [],
+      "mat": "trim_white"
+     },
+     {
+      "t": "rail",
+      "a": [
+       -11.84,
+       -23.5
+      ],
+      "b": [
+       -11.84,
+       -18.5
+      ],
+      "y": 3.0,
+      "h": 1.05,
+      "gaps": [],
+      "mat": "trim_white"
+     },
+     {
+      "t": "box",
+      "box": [
+       -25.66,
+       4.1,
+       -30.56,
+       -25.54,
+       4.45,
+       -30.44
+      ],
+      "mat": "iron",
+      "kind": "fixture",
+      "solid": false
+     },
+     {
+      "t": "box",
+      "box": [
+       -25.76,
+       3.55,
+       -30.66,
+       -25.44,
+       4.1,
+       -30.34
+      ],
+      "mat": "lantern_glass",
+      "kind": "fixture",
+      "solid": false
+     },
+     {
+      "t": "box",
+      "box": [
+       -25.8,
+       4.1,
+       -30.7,
+       -25.4,
+       4.16,
+       -30.3
+      ],
+      "mat": "iron",
+      "kind": "fixture",
+      "solid": false
+     },
+     {
+      "t": "roof",
+      "kind": "gable",
+      "rect": [
+       -30.0,
+       -38.0,
+       -11.5,
+       -23.5
+      ],
+      "eave": 5.2,
+      "axis": "x",
+      "pitch": 27,
+      "mat": "roof_barn",
+      "over": 0.6,
+      "gable": "siding_red",
+      "under": "siding_weathered",
+      "cap": "trim_white"
+     }
+    ]
+   },
+   {
+    "id": "cabin",
+    "name": "Cabin",
+    "rect": [
+     13.8,
+     -36.0,
+     30.4,
+     -22.0
+    ],
+    "elements": [
+     {
+      "t": "wall",
+      "rect": [
+       15.5,
+       -36.0,
+       28.5,
+       -35.7
+      ],
+      "y": [
+       0,
+       3.4
+      ],
+      "open": [
+       {
+        "a": [
+         17.7,
+         20.3
+        ],
+        "top": 2.5,
+        "kind": "door"
+       },
+       {
+        "a": [
+         23.0,
+         25.0
+        ],
+        "top": 2.5,
+        "kind": "door"
+       }
+      ],
+      "in": "wood_weathered",
+      "out": "logs",
+      "outside": "n",
+      "base": 0.4,
+      "base_mat": "stone_rubble",
+      "frame": "trim_brown"
+     },
+     {
+      "t": "wall",
+      "rect": [
+       15.5,
+       -35.7,
+       15.8,
+       -26.3
+      ],
+      "y": [
+       0,
+       3.4
+      ],
+      "open": [
+       {
+        "a": [
+         -35.0,
+         -33.6
+        ],
+        "sill": 1.0,
+        "top": 2.3,
+        "kind": "window",
+        "shutters": "trim_green"
+       },
+       {
+        "a": [
+         -32.4,
+         -29.8
+        ],
+        "top": 2.5,
+        "kind": "door"
+       },
+       {
+        "a": [
+         -28.4,
+         -27.0
+        ],
+        "sill": 1.0,
+        "top": 2.3,
+        "kind": "window",
+        "shutters": "trim_green"
+       }
+      ],
+      "in": "wood_weathered",
+      "out": "logs",
+      "outside": "w",
+      "base": 0.4,
+      "base_mat": "stone_rubble",
+      "frame": "trim_brown"
+     },
+     {
+      "t": "wall",
+      "rect": [
+       28.2,
+       -35.7,
+       28.5,
+       -26.3
+      ],
+      "y": [
+       0,
+       3.4
+      ],
+      "open": [
+       {
+        "a": [
+         -29.9,
+         -27.5
+        ],
+        "top": 2.5,
+        "kind": "door"
+       }
+      ],
+      "in": "wood_weathered",
+      "out": "logs",
+      "outside": "e",
+      "base": 0.4,
+      "base_mat": "stone_rubble",
+      "frame": "trim_brown"
+     },
+     {
+      "t": "wall",
+      "rect": [
+       15.5,
+       -26.3,
+       28.5,
+       -26.0
+      ],
+      "y": [
+       0,
+       3.4
+      ],
+      "open": [
+       {
+        "a": [
+         17.3,
+         19.9
+        ],
+        "top": 2.5,
+        "kind": "door"
+       },
+       {
+        "a": [
+         20.3,
+         21.8
+        ],
+        "sill": 1.0,
+        "top": 2.3,
+        "kind": "window"
+       },
+       {
+        "a": [
+         24.0,
+         26.6
+        ],
+        "top": 2.5,
+        "kind": "door"
+       }
+      ],
+      "in": "wood_weathered",
+      "out": "logs",
+      "outside": "s",
+      "base": 0.4,
+      "base_mat": "stone_rubble",
+      "frame": "trim_brown"
+     },
+     {
+      "t": "wall",
+      "rect": [
+       15.5,
+       -36.0,
+       28.5,
+       -35.7
+      ],
+      "y": [
+       3.4,
+       6.0
+      ],
+      "open": [
+       {
+        "a": [
+         17.4,
+         19.0
+        ],
+        "sill": 0.9,
+        "top": 2.1,
+        "kind": "window",
+        "shutters": "trim_green"
+       },
+       {
+        "a": [
+         20.2,
+         21.7
+        ],
+        "sill": 0.9,
+        "top": 2.1,
+        "kind": "window",
+        "shutters": "trim_green"
+       },
+       {
+        "a": [
+         24.0,
+         25.6
+        ],
+        "sill": 0.9,
+        "top": 2.1,
+        "kind": "window",
+        "shutters": "trim_green"
+       }
+      ],
+      "in": "wood_weathered",
+      "out": "logs",
+      "outside": "n",
+      "base": 0.0,
+      "base_mat": "stone_rubble",
+      "frame": "trim_brown"
+     },
+     {
+      "t": "wall",
+      "rect": [
+       15.5,
+       -35.7,
+       15.8,
+       -26.3
+      ],
+      "y": [
+       3.4,
+       6.0
+      ],
+      "open": [
+       {
+        "a": [
+         -35.0,
+         -33.6
+        ],
+        "sill": 0.9,
+        "top": 2.1,
+        "kind": "window"
+       },
+       {
+        "a": [
+         -32.4,
+         -29.8
+        ],
+        "top": 2.15,
+        "kind": "door"
+       },
+       {
+        "a": [
+         -28.4,
+         -27.0
+        ],
+        "sill": 0.9,
+        "top": 2.1,
+        "kind": "window"
+       }
+      ],
+      "in": "wood_weathered",
+      "out": "logs",
+      "outside": "w",
+      "base": 0.0,
+      "base_mat": "stone_rubble",
+      "frame": "trim_brown"
+     },
+     {
+      "t": "wall",
+      "rect": [
+       28.2,
+       -35.7,
+       28.5,
+       -26.3
+      ],
+      "y": [
+       3.4,
+       6.0
+      ],
+      "open": [
+       {
+        "a": [
+         -35.0,
+         -33.6
+        ],
+        "sill": 0.9,
+        "top": 2.1,
+        "kind": "window"
+       },
+       {
+        "a": [
+         -29.9,
+         -27.5
+        ],
+        "top": 2.15,
+        "kind": "door"
+       }
+      ],
+      "in": "wood_weathered",
+      "out": "logs",
+      "outside": "e",
+      "base": 0.0,
+      "base_mat": "stone_rubble",
+      "frame": "trim_brown"
+     },
+     {
+      "t": "wall",
+      "rect": [
+       15.5,
+       -26.3,
+       28.5,
+       -26.0
+      ],
+      "y": [
+       3.4,
+       6.0
+      ],
+      "open": [
+       {
+        "a": [
+         17.3,
+         19.9
+        ],
+        "top": 2.15,
+        "kind": "door"
+       },
+       {
+        "a": [
+         20.3,
+         21.8
+        ],
+        "sill": 0.9,
+        "top": 2.1,
+        "kind": "window"
+       },
+       {
+        "a": [
+         24.0,
+         26.6
+        ],
+        "top": 2.15,
+        "kind": "door"
+       }
+      ],
+      "in": "wood_weathered",
+      "out": "logs",
+      "outside": "s",
+      "base": 0.0,
+      "base_mat": "stone_rubble",
+      "frame": "trim_brown"
+     },
+     {
+      "t": "wall",
+      "rect": [
+       22.1,
+       -35.7,
+       22.3,
+       -26.3
+      ],
+      "y": [
+       0,
+       3.1
+      ],
+      "open": [
+       {
+        "a": [
+         -32.2,
+         -29.6
+        ],
+        "top": 2.5,
+        "kind": "door"
+       }
+      ],
+      "in": "wood_weathered",
+      "out": "wood_weathered",
+      "outside": null
+     },
+     {
+      "t": "wall",
+      "rect": [
+       22.1,
+       -35.7,
+       22.3,
+       -26.3
+      ],
+      "y": [
+       3.4,
+       5.7
+      ],
+      "open": [
+       {
+        "a": [
+         -32.2,
+         -29.6
+        ],
+        "top": 2.3,
+        "kind": "door"
+       }
+      ],
+      "in": "wood_weathered",
+      "out": "wood_weathered",
+      "outside": null
+     },
+     {
+      "t": "slab",
+      "rect": [
+       15.8,
+       -35.7,
+       28.2,
+       -26.3
+      ],
+      "y": [
+       3.1,
+       3.4
+      ],
+      "mat": "interior_floor",
+      "under": "wood_dark",
+      "holes": [
+       [
+        26.8,
+        -34.7,
+        28.2,
+        -29.5
+       ]
+      ],
+      "kind": "floor"
+     },
+     {
+      "t": "slab",
+      "rect": [
+       15.8,
+       -35.7,
+       28.2,
+       -26.3
+      ],
+      "y": [
+       5.7,
+       6.0
+      ],
+      "mat": "wood_dark",
+      "under": "wood_dark",
+      "holes": [],
+      "kind": "ceiling"
+     },
+     {
+      "t": "stairs",
+      "rect": [
+       26.8,
+       -34.7,
+       28.2,
+       -30.9
+      ],
+      "dir": "n",
+      "y0": 0.0,
+      "y1": 3.4,
+      "n": 14,
+      "mat": "wood_dark",
+      "guard": [
+       "l"
+      ],
+      "guard_mat": "trim_brown"
+     },
+     {
+      "t": "rail",
+      "a": [
+       26.78,
+       -34.4
+      ],
+      "b": [
+       26.78,
+       -29.5
+      ],
+      "y": 3.4,
+      "h": 1.0,
+      "gaps": [],
+      "mat": "trim_brown"
+     },
+     {
+      "t": "rail",
+      "a": [
+       26.8,
+       -29.48
+      ],
+      "b": [
+       28.2,
+       -29.48
+      ],
+      "y": 3.4,
+      "h": 1.0,
+      "gaps": [],
+      "mat": "trim_brown"
+     },
+     {
+      "t": "slab",
+      "rect": [
+       13.8,
+       -36.0,
+       15.5,
+       -22.0
+      ],
+      "y": [
+       3.15,
+       3.4
+      ],
+      "mat": "wood_weathered",
+      "under": "wood_dark",
+      "holes": [],
+      "kind": "deck"
+     },
+     {
+      "t": "slab",
+      "rect": [
+       15.5,
+       -26.0,
+       28.5,
+       -22.0
+      ],
+      "y": [
+       3.15,
+       3.4
+      ],
+      "mat": "wood_weathered",
+      "under": "wood_dark",
+      "holes": [],
+      "kind": "deck"
+     },
+     {
+      "t": "slab",
+      "rect": [
+       28.5,
+       -36.0,
+       30.4,
+       -22.0
+      ],
+      "y": [
+       3.15,
+       3.4
+      ],
+      "mat": "wood_weathered",
+      "under": "wood_dark",
+      "holes": [],
+      "kind": "deck"
+     },
+     {
+      "t": "post",
+      "at": [
+       13.950000000000001,
+       -22.15
+      ],
+      "y": [
+       0,
+       3.15
+      ],
+      "size": 0.22,
+      "mat": "trim_brown"
+     },
+     {
+      "t": "post",
+      "at": [
+       17.4,
+       -22.15
+      ],
+      "y": [
+       0,
+       3.15
+      ],
+      "size": 0.22,
+      "mat": "trim_brown"
+     },
+     {
+      "t": "post",
+      "at": [
+       20.8,
+       -22.15
+      ],
+      "y": [
+       0,
+       3.15
+      ],
+      "size": 0.22,
+      "mat": "trim_brown"
+     },
+     {
+      "t": "post",
+      "at": [
+       24.2,
+       -22.15
+      ],
+      "y": [
+       0,
+       3.15
+      ],
+      "size": 0.22,
+      "mat": "trim_brown"
+     },
+     {
+      "t": "post",
+      "at": [
+       27.6,
+       -22.15
+      ],
+      "y": [
+       0,
+       3.15
+      ],
+      "size": 0.22,
+      "mat": "trim_brown"
+     },
+     {
+      "t": "post",
+      "at": [
+       30.25,
+       -22.15
+      ],
+      "y": [
+       0,
+       3.15
+      ],
+      "size": 0.22,
+      "mat": "trim_brown"
+     },
+     {
+      "t": "post",
+      "at": [
+       13.950000000000001,
+       -35.85
+      ],
+      "y": [
+       0,
+       3.15
+      ],
+      "size": 0.22,
+      "mat": "trim_brown"
+     },
+     {
+      "t": "post",
+      "at": [
+       30.25,
+       -35.85
+      ],
+      "y": [
+       0,
+       3.15
+      ],
+      "size": 0.22,
+      "mat": "trim_brown"
+     },
+     {
+      "t": "post",
+      "at": [
+       13.950000000000001,
+       -31.5
+      ],
+      "y": [
+       0,
+       3.15
+      ],
+      "size": 0.22,
+      "mat": "trim_brown"
+     },
+     {
+      "t": "post",
+      "at": [
+       30.25,
+       -31.5
+      ],
+      "y": [
+       0,
+       3.15
+      ],
+      "size": 0.22,
+      "mat": "trim_brown"
+     },
+     {
+      "t": "post",
+      "at": [
+       13.950000000000001,
+       -27.2
+      ],
+      "y": [
+       0,
+       3.15
+      ],
+      "size": 0.22,
+      "mat": "trim_brown"
+     },
+     {
+      "t": "post",
+      "at": [
+       30.25,
+       -27.2
+      ],
+      "y": [
+       0,
+       3.15
+      ],
+      "size": 0.22,
+      "mat": "trim_brown"
+     },
+     {
+      "t": "box",
+      "box": [
+       13.8,
+       2.85,
+       -22.3,
+       30.4,
+       3.15,
+       -22.0
+      ],
+      "mat": "trim_brown",
+      "kind": "beam",
+      "solid": true
+     },
+     {
+      "t": "box",
+      "box": [
+       13.8,
+       2.85,
+       -36.0,
+       14.100000000000001,
+       3.15,
+       -22.3
+      ],
+      "mat": "trim_brown",
+      "kind": "beam",
+      "solid": true
+     },
+     {
+      "t": "box",
+      "box": [
+       30.099999999999998,
+       2.85,
+       -36.0,
+       30.4,
+       3.15,
+       -22.3
+      ],
+      "mat": "trim_brown",
+      "kind": "beam",
+      "solid": true
+     },
+     {
+      "t": "rail",
+      "a": [
+       13.8,
+       -22.04
+      ],
+      "b": [
+       30.4,
+       -22.04
+      ],
+      "y": 3.4,
+      "h": 1.05,
+      "gaps": [
+       [
+        21.2,
+        22.8
+       ]
+      ],
+      "mat": "trim_brown"
+     },
+     {
+      "t": "rail",
+      "a": [
+       13.84,
+       -36.0
+      ],
+      "b": [
+       13.84,
+       -22.0
+      ],
+      "y": 3.4,
+      "h": 1.05,
+      "gaps": [],
+      "mat": "trim_brown"
+     },
+     {
+      "t": "rail",
+      "a": [
+       30.36,
+       -36.0
+      ],
+      "b": [
+       30.36,
+       -22.0
+      ],
+      "y": 3.4,
+      "h": 1.05,
+      "gaps": [],
+      "mat": "trim_brown"
+     },
+     {
+      "t": "rail",
+      "a": [
+       13.8,
+       -35.96
+      ],
+      "b": [
+       15.5,
+       -35.96
+      ],
+      "y": 3.4,
+      "h": 1.05,
+      "gaps": [],
+      "mat": "trim_brown"
+     },
+     {
+      "t": "rail",
+      "a": [
+       28.5,
+       -35.96
+      ],
+      "b": [
+       30.4,
+       -35.96
+      ],
+      "y": 3.4,
+      "h": 1.05,
+      "gaps": [],
+      "mat": "trim_brown"
+     },
+     {
+      "t": "roof",
+      "kind": "gable",
+      "rect": [
+       15.5,
+       -36.0,
+       28.5,
+       -26.0
+      ],
+      "eave": 6.0,
+      "axis": "x",
+      "pitch": 26,
+      "mat": "roof_shingle",
+      "over": 0.7,
+      "gable": "logs",
+      "under": "trim_brown"
+     },
+     {
+      "t": "box",
+      "box": [
+       24.0,
+       6.0,
+       -33.4,
+       24.9,
+       8.9,
+       -32.5
+      ],
+      "mat": "stone_stacked",
+      "kind": "chimney",
+      "solid": false
+     }
+    ]
+   },
+   {
+    "id": "garage",
+    "name": "Garage",
+    "rect": [
+     -29.0,
+     18.25,
+     -15.0,
+     28.25
+    ],
+    "elements": [
+     {
+      "t": "wall",
+      "rect": [
+       -29.0,
+       18.25,
+       -15.0,
+       18.55
+      ],
+      "y": [
+       0,
+       3.6
+      ],
+      "open": [
+       {
+        "a": [
+         -25.6,
+         -22.6
+        ],
+        "top": 2.6,
+        "kind": "door"
+       },
+       {
+        "a": [
+         -18.0,
+         -16.4
+        ],
+        "sill": 1.1,
+        "top": 2.2,
+        "kind": "window"
+       }
+      ],
+      "in": "block_wall",
+      "out": "block_wall",
+      "outside": "n",
+      "base": 0.0,
+      "frame": "trim_green"
+     },
+     {
+      "t": "wall",
+      "rect": [
+       -29.0,
+       18.55,
+       -28.7,
+       27.95
+      ],
+      "y": [
+       0,
+       3.6
+      ],
+      "open": [
+       {
+        "a": [
+         19.4,
+         20.6
+        ],
+        "sill": 1.1,
+        "top": 2.2,
+        "kind": "window"
+       },
+       {
+        "a": [
+         21.9,
+         24.5
+        ],
+        "top": 2.6,
+        "kind": "door"
+       }
+      ],
+      "in": "block_wall",
+      "out": "block_wall",
+      "outside": "w",
+      "base": 0.0,
+      "frame": "trim_green"
+     },
+     {
+      "t": "wall",
+      "rect": [
+       -15.3,
+       18.55,
+       -15.0,
+       27.95
+      ],
+      "y": [
+       0,
+       3.6
+      ],
+      "open": [
+       {
+        "a": [
+         20.25,
+         22.4
+        ],
+        "top": 2.5,
+        "kind": "door"
+       },
+       {
+        "a": [
+         24.9,
+         26.6
+        ],
+        "top": 2.5,
+        "kind": "door"
+       }
+      ],
+      "in": "block_wall",
+      "out": "block_wall",
+      "outside": "e",
+      "base": 0.0,
+      "frame": "trim_green"
+     },
+     {
+      "t": "wall",
+      "rect": [
+       -29.0,
+       27.95,
+       -15.0,
+       28.25
+      ],
+      "y": [
+       0,
+       3.6
+      ],
+      "open": [
+       {
+        "a": [
+         -26.9,
+         -21.0
+        ],
+        "top": 3.15,
+        "kind": "door"
+       },
+       {
+        "a": [
+         -17.8,
+         -16.4
+        ],
+        "sill": 1.1,
+        "top": 2.2,
+        "kind": "window"
+       }
+      ],
+      "in": "block_wall",
+      "out": "block_wall",
+      "outside": "s",
+      "base": 0.0,
+      "frame": "trim_green"
+     },
+     {
+      "t": "wall",
+      "rect": [
+       -19.3,
+       18.55,
+       -19.1,
+       27.95
+      ],
+      "y": [
+       0,
+       3.4
+      ],
+      "open": [
+       {
+        "a": [
+         21.9,
+         24.5
+        ],
+        "top": 2.6,
+        "kind": "door"
+       }
+      ],
+      "in": "block_wall",
+      "out": "block_wall",
+      "outside": null
+     },
+     {
+      "t": "slab",
+      "rect": [
+       -28.7,
+       18.55,
+       -15.3,
+       27.95
+      ],
+      "y": [
+       3.4,
+       3.6
+      ],
+      "mat": "concrete_floor",
+      "under": "wood_dark",
+      "holes": [],
+      "kind": "ceiling"
+     },
+     {
+      "t": "roof",
+      "kind": "gable",
+      "rect": [
+       -29.0,
+       18.25,
+       -15.0,
+       28.25
+      ],
+      "eave": 3.6,
+      "axis": "x",
+      "pitch": 14,
+      "mat": "roof_barn",
+      "over": 0.5,
+      "gable": "block_wall",
+      "under": "wood_dark",
+      "cap": "trim_green"
+     },
+     {
+      "t": "box",
+      "box": [
+       -27.1,
+       3.2,
+       28.26,
+       -20.8,
+       3.55,
+       28.33
+      ],
+      "mat": "trim_green",
+      "kind": "trim",
+      "solid": false
+     }
+    ]
+   },
+   {
+    "id": "shack_1",
+    "name": "Market Shack",
+    "rect": [
+     -21.2,
+     -15.399999999999999,
+     -16.599999999999998,
+     -10.8
+    ],
+    "elements": [
+     {
+      "t": "slab",
+      "rect": [
+       -21.15,
+       -15.349999999999998,
+       -16.65,
+       -10.850000000000001
+      ],
+      "y": [
+       0.0,
+       0.22
+      ],
+      "mat": "wood_weathered",
+      "under": "wood_dark",
+      "holes": [],
+      "kind": "floor"
+     },
+     {
+      "t": "post",
+      "at": [
+       -20.98,
+       -15.179999999999998
+      ],
+      "y": [
+       0.22,
+       2.65
+      ],
+      "size": 0.28,
+      "mat": "wood_dark"
+     },
+     {
+      "t": "post",
+      "at": [
+       -20.98,
+       -11.020000000000001
+      ],
+      "y": [
+       0.22,
+       2.65
+      ],
+      "size": 0.28,
+      "mat": "wood_dark"
+     },
+     {
+      "t": "post",
+      "at": [
+       -16.819999999999997,
+       -15.179999999999998
+      ],
+      "y": [
+       0.22,
+       2.65
+      ],
+      "size": 0.28,
+      "mat": "wood_dark"
+     },
+     {
+      "t": "post",
+      "at": [
+       -16.819999999999997,
+       -11.020000000000001
+      ],
+      "y": [
+       0.22,
+       2.65
+      ],
+      "size": 0.28,
+      "mat": "wood_dark"
+     },
+     {
+      "t": "box",
+      "box": [
+       -21.12,
+       2.45,
+       -15.299999999999999,
+       -16.679999999999996,
+       2.65,
+       -15.059999999999999
+      ],
+      "mat": "wood_dark",
+      "kind": "plate",
+      "solid": false
+     },
+     {
+      "t": "box",
+      "box": [
+       -21.12,
+       2.45,
+       -11.14,
+       -16.679999999999996,
+       2.65,
+       -10.9
+      ],
+      "mat": "wood_dark",
+      "kind": "plate",
+      "solid": false
+     },
+     {
+      "t": "box",
+      "box": [
+       -21.099999999999998,
+       2.45,
+       -15.059999999999999,
+       -20.86,
+       2.65,
+       -11.14
+      ],
+      "mat": "wood_dark",
+      "kind": "plate",
+      "solid": false
+     },
+     {
+      "t": "box",
+      "box": [
+       -16.939999999999998,
+       2.45,
+       -15.059999999999999,
+       -16.7,
+       2.65,
+       -11.14
+      ],
+      "mat": "wood_dark",
+      "kind": "plate",
+      "solid": false
+     },
+     {
+      "t": "slab",
+      "rect": [
+       -21.15,
+       -15.349999999999998,
+       -16.65,
+       -10.850000000000001
+      ],
+      "y": [
+       2.65,
+       2.75
+      ],
+      "mat": "roof_shed",
+      "under": "wood_dark",
+      "holes": [],
+      "kind": "ceiling"
+     },
+     {
+      "t": "roof",
+      "kind": "shed",
+      "rect": [
+       -21.2,
+       -15.399999999999999,
+       -16.599999999999998,
+       -10.8
+      ],
+      "eave": 2.75,
+      "axis": "x",
+      "pitch": 9,
+      "mat": "roof_shed",
+      "over": 0.45,
+      "under": "wood_dark",
+      "high": "n",
+      "thick": 0.1
+     }
+    ]
+   },
+   {
+    "id": "shack_2",
+    "name": "Wood Shed",
+    "rect": [
+     24.45,
+     1.6,
+     29.05,
+     6.199999999999999
+    ],
+    "elements": [
+     {
+      "t": "slab",
+      "rect": [
+       24.5,
+       1.6500000000000001,
+       29.0,
+       6.1499999999999995
+      ],
+      "y": [
+       0.0,
+       0.22
+      ],
+      "mat": "wood_weathered",
+      "under": "wood_dark",
+      "holes": [],
+      "kind": "floor"
+     },
+     {
+      "t": "post",
+      "at": [
+       24.669999999999998,
+       1.82
+      ],
+      "y": [
+       0.22,
+       2.65
+      ],
+      "size": 0.28,
+      "mat": "wood_dark"
+     },
+     {
+      "t": "post",
+      "at": [
+       24.669999999999998,
+       5.9799999999999995
+      ],
+      "y": [
+       0.22,
+       2.65
+      ],
+      "size": 0.28,
+      "mat": "wood_dark"
+     },
+     {
+      "t": "post",
+      "at": [
+       28.830000000000002,
+       1.82
+      ],
+      "y": [
+       0.22,
+       2.65
+      ],
+      "size": 0.28,
+      "mat": "wood_dark"
+     },
+     {
+      "t": "post",
+      "at": [
+       28.830000000000002,
+       5.9799999999999995
+      ],
+      "y": [
+       0.22,
+       2.65
+      ],
+      "size": 0.28,
+      "mat": "wood_dark"
+     },
+     {
+      "t": "box",
+      "box": [
+       24.529999999999998,
+       2.45,
+       1.7000000000000002,
+       28.970000000000002,
+       2.65,
+       1.9400000000000002
+      ],
+      "mat": "wood_dark",
+      "kind": "plate",
+      "solid": false
+     },
+     {
+      "t": "box",
+      "box": [
+       24.529999999999998,
+       2.45,
+       5.859999999999999,
+       28.970000000000002,
+       2.65,
+       6.1
+      ],
+      "mat": "wood_dark",
+      "kind": "plate",
+      "solid": false
+     },
+     {
+      "t": "box",
+      "box": [
+       24.55,
+       2.45,
+       1.9400000000000002,
+       24.79,
+       2.65,
+       5.859999999999999
+      ],
+      "mat": "wood_dark",
+      "kind": "plate",
+      "solid": false
+     },
+     {
+      "t": "box",
+      "box": [
+       28.71,
+       2.45,
+       1.9400000000000002,
+       28.95,
+       2.65,
+       5.859999999999999
+      ],
+      "mat": "wood_dark",
+      "kind": "plate",
+      "solid": false
+     },
+     {
+      "t": "slab",
+      "rect": [
+       24.5,
+       1.6500000000000001,
+       29.0,
+       6.1499999999999995
+      ],
+      "y": [
+       2.65,
+       2.75
+      ],
+      "mat": "roof_shed",
+      "under": "wood_dark",
+      "holes": [],
+      "kind": "ceiling"
+     },
+     {
+      "t": "roof",
+      "kind": "shed",
+      "rect": [
+       24.45,
+       1.6,
+       29.05,
+       6.199999999999999
+      ],
+      "eave": 2.75,
+      "axis": "x",
+      "pitch": 9,
+      "mat": "roof_shed",
+      "over": 0.45,
+      "under": "wood_dark",
+      "high": "e",
+      "thick": 0.1
+     }
+    ]
+   },
+   {
+    "id": "shack_3",
+    "name": "Tool Shack",
+    "rect": [
+     19.7,
+     27.2,
+     24.3,
+     31.8
+    ],
+    "elements": [
+     {
+      "t": "slab",
+      "rect": [
+       19.75,
+       27.25,
+       24.25,
+       31.75
+      ],
+      "y": [
+       0.0,
+       0.22
+      ],
+      "mat": "wood_weathered",
+      "under": "wood_dark",
+      "holes": [],
+      "kind": "floor"
+     },
+     {
+      "t": "post",
+      "at": [
+       19.919999999999998,
+       27.419999999999998
+      ],
+      "y": [
+       0.22,
+       2.65
+      ],
+      "size": 0.28,
+      "mat": "wood_dark"
+     },
+     {
+      "t": "post",
+      "at": [
+       19.919999999999998,
+       31.580000000000002
+      ],
+      "y": [
+       0.22,
+       2.65
+      ],
+      "size": 0.28,
+      "mat": "wood_dark"
+     },
+     {
+      "t": "post",
+      "at": [
+       24.080000000000002,
+       27.419999999999998
+      ],
+      "y": [
+       0.22,
+       2.65
+      ],
+      "size": 0.28,
+      "mat": "wood_dark"
+     },
+     {
+      "t": "post",
+      "at": [
+       24.080000000000002,
+       31.580000000000002
+      ],
+      "y": [
+       0.22,
+       2.65
+      ],
+      "size": 0.28,
+      "mat": "wood_dark"
+     },
+     {
+      "t": "box",
+      "box": [
+       19.779999999999998,
+       2.45,
+       27.3,
+       24.220000000000002,
+       2.65,
+       27.54
+      ],
+      "mat": "wood_dark",
+      "kind": "plate",
+      "solid": false
+     },
+     {
+      "t": "box",
+      "box": [
+       19.779999999999998,
+       2.45,
+       31.46,
+       24.220000000000002,
+       2.65,
+       31.7
+      ],
+      "mat": "wood_dark",
+      "kind": "plate",
+      "solid": false
+     },
+     {
+      "t": "box",
+      "box": [
+       19.8,
+       2.45,
+       27.54,
+       20.04,
+       2.65,
+       31.46
+      ],
+      "mat": "wood_dark",
+      "kind": "plate",
+      "solid": false
+     },
+     {
+      "t": "box",
+      "box": [
+       23.96,
+       2.45,
+       27.54,
+       24.2,
+       2.65,
+       31.46
+      ],
+      "mat": "wood_dark",
+      "kind": "plate",
+      "solid": false
+     },
+     {
+      "t": "slab",
+      "rect": [
+       19.75,
+       27.25,
+       24.25,
+       31.75
+      ],
+      "y": [
+       2.65,
+       2.75
+      ],
+      "mat": "roof_shed",
+      "under": "wood_dark",
+      "holes": [],
+      "kind": "ceiling"
+     },
+     {
+      "t": "roof",
+      "kind": "shed",
+      "rect": [
+       19.7,
+       27.2,
+       24.3,
+       31.8
+      ],
+      "eave": 2.75,
+      "axis": "x",
+      "pitch": 9,
+      "mat": "roof_shed",
+      "over": 0.45,
+      "under": "wood_dark",
+      "high": "s",
+      "thick": 0.1
+     }
+    ]
+   },
+   {
+    "id": "shack_4",
+    "name": "Hay Shack",
+    "rect": [
+     -12.399999999999999,
+     34.95,
+     -7.8,
+     39.55
+    ],
+    "elements": [
+     {
+      "t": "slab",
+      "rect": [
+       -12.349999999999998,
+       35.0,
+       -7.85,
+       39.5
+      ],
+      "y": [
+       0.0,
+       0.22
+      ],
+      "mat": "wood_weathered",
+      "under": "wood_dark",
+      "holes": [],
+      "kind": "floor"
+     },
+     {
+      "t": "post",
+      "at": [
+       -12.179999999999998,
+       35.17
+      ],
+      "y": [
+       0.22,
+       2.65
+      ],
+      "size": 0.28,
+      "mat": "wood_dark"
+     },
+     {
+      "t": "post",
+      "at": [
+       -12.179999999999998,
+       39.33
+      ],
+      "y": [
+       0.22,
+       2.65
+      ],
+      "size": 0.28,
+      "mat": "wood_dark"
+     },
+     {
+      "t": "post",
+      "at": [
+       -8.02,
+       35.17
+      ],
+      "y": [
+       0.22,
+       2.65
+      ],
+      "size": 0.28,
+      "mat": "wood_dark"
+     },
+     {
+      "t": "post",
+      "at": [
+       -8.02,
+       39.33
+      ],
+      "y": [
+       0.22,
+       2.65
+      ],
+      "size": 0.28,
+      "mat": "wood_dark"
+     },
+     {
+      "t": "box",
+      "box": [
+       -12.319999999999999,
+       2.45,
+       35.050000000000004,
+       -7.88,
+       2.65,
+       35.290000000000006
+      ],
+      "mat": "wood_dark",
+      "kind": "plate",
+      "solid": false
+     },
+     {
+      "t": "box",
+      "box": [
+       -12.319999999999999,
+       2.45,
+       39.209999999999994,
+       -7.88,
+       2.65,
+       39.449999999999996
+      ],
+      "mat": "wood_dark",
+      "kind": "plate",
+      "solid": false
+     },
+     {
+      "t": "box",
+      "box": [
+       -12.299999999999999,
+       2.45,
+       35.290000000000006,
+       -12.059999999999999,
+       2.65,
+       39.209999999999994
+      ],
+      "mat": "wood_dark",
+      "kind": "plate",
+      "solid": false
+     },
+     {
+      "t": "box",
+      "box": [
+       -8.14,
+       2.45,
+       35.290000000000006,
+       -7.8999999999999995,
+       2.65,
+       39.209999999999994
+      ],
+      "mat": "wood_dark",
+      "kind": "plate",
+      "solid": false
+     },
+     {
+      "t": "slab",
+      "rect": [
+       -12.349999999999998,
+       35.0,
+       -7.85,
+       39.5
+      ],
+      "y": [
+       2.65,
+       2.75
+      ],
+      "mat": "roof_shed",
+      "under": "wood_dark",
+      "holes": [],
+      "kind": "ceiling"
+     },
+     {
+      "t": "roof",
+      "kind": "shed",
+      "rect": [
+       -12.399999999999999,
+       34.95,
+       -7.8,
+       39.55
+      ],
+      "eave": 2.75,
+      "axis": "x",
+      "pitch": 9,
+      "mat": "roof_shed",
+      "over": 0.45,
+      "under": "wood_dark",
+      "high": "w",
+      "thick": 0.1
+     }
+    ]
+   }
+  ],
+  "fences": [
+   {
+    "id": "north",
+    "a": [
+     -33.0,
+     -43.0
+    ],
+    "b": [
+     33.0,
+     -43.0
+    ],
+    "gaps": [
+     [
+      -1.5,
+      5.0
+     ]
+    ]
+   },
+   {
+    "id": "south",
+    "a": [
+     -33.0,
+     40.5
+    ],
+    "b": [
+     33.0,
+     40.5
+    ],
+    "gaps": [
+     [
+      -4.75,
+      -0.5
+     ]
+    ]
+   },
+   {
+    "id": "west",
+    "a": [
+     -33.0,
+     -43.0
+    ],
+    "b": [
+     -33.0,
+     40.5
+    ],
+    "gaps": [
+     [
+      -1.9,
+      4.75
+     ]
+    ]
+   },
+   {
+    "id": "east",
+    "a": [
+     33.0,
+     -43.0
+    ],
+    "b": [
+     33.0,
+     40.5
+    ],
+    "gaps": [
+     [
+      -19.9,
+      -13.4
+     ],
+     [
+      17.25,
+      23.75
+     ]
+    ]
+   }
+  ],
+  "solids": [
+   {
+    "id": "house",
+    "kind": "stairs",
+    "rect": [
+     1.5,
+     0.65,
+     2.9,
+     4.1938
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     -14.0,
+     -8.5,
+     -13.0,
+     -8.15
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     -14.0,
+     -8.5,
+     -13.0,
+     -8.15
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     -13.0,
+     -8.5,
+     -11.4,
+     -8.15
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     -13.0,
+     -8.5,
+     -11.4,
+     -8.15
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     -11.4,
+     -8.5,
+     -9.55,
+     -8.15
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     -11.4,
+     -8.5,
+     -9.55,
+     -8.15
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     -6.55,
+     -8.5,
+     0.0,
+     -8.15
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     -6.55,
+     -8.5,
+     0.0,
+     -8.15
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     0.0,
+     -8.5,
+     1.0,
+     -8.15
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     0.0,
+     -8.5,
+     1.0,
+     -8.15
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     1.0,
+     -8.5,
+     2.5,
+     -8.15
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     1.0,
+     -8.5,
+     2.5,
+     -8.15
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     2.5,
+     -8.5,
+     3.9,
+     -8.15
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     2.5,
+     -8.5,
+     3.9,
+     -8.15
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     6.6,
+     -8.5,
+     8.6,
+     -8.15
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     6.6,
+     -8.5,
+     8.6,
+     -8.15
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     8.6,
+     -8.5,
+     10.2,
+     -8.15
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     8.6,
+     -8.5,
+     10.2,
+     -8.15
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     10.2,
+     -8.5,
+     12.0,
+     -8.15
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     10.2,
+     -8.5,
+     12.0,
+     -8.15
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     -14.0,
+     -8.15,
+     -13.65,
+     -7.4
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     -14.0,
+     -8.15,
+     -13.65,
+     -7.4
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     -14.0,
+     -7.4,
+     -13.65,
+     -6.2
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     -14.0,
+     -7.4,
+     -13.65,
+     -6.2
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     -14.0,
+     -6.2,
+     -13.65,
+     -5.15
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     -14.0,
+     -6.2,
+     -13.65,
+     -5.15
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     -14.0,
+     -2.6,
+     -13.65,
+     2.35
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     -14.0,
+     -2.6,
+     -13.65,
+     2.35
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     -14.0,
+     4.85,
+     -13.65,
+     7.65
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     -14.0,
+     4.85,
+     -13.65,
+     7.65
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     11.65,
+     -8.15,
+     12.0,
+     -7.4
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     11.65,
+     -8.15,
+     12.0,
+     -7.4
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     11.65,
+     -7.4,
+     12.0,
+     -6.2
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     11.65,
+     -7.4,
+     12.0,
+     -6.2
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     11.65,
+     -6.2,
+     12.0,
+     -5.7
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     11.65,
+     -6.2,
+     12.0,
+     -5.7
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     11.65,
+     -3.1,
+     12.0,
+     2.3
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     11.65,
+     -3.1,
+     12.0,
+     2.3
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     11.65,
+     4.85,
+     12.0,
+     5.8
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     11.65,
+     4.85,
+     12.0,
+     5.8
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     11.65,
+     5.8,
+     12.0,
+     7.0
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     11.65,
+     5.8,
+     12.0,
+     7.0
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     11.65,
+     7.0,
+     12.0,
+     7.65
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     11.65,
+     7.0,
+     12.0,
+     7.65
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     -14.0,
+     7.65,
+     -11.6,
+     8.0
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     -14.0,
+     7.65,
+     -11.6,
+     8.0
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     -8.6,
+     7.65,
+     -1.9,
+     8.0
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     -8.6,
+     7.65,
+     -1.9,
+     8.0
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     1.1,
+     7.65,
+     5.4,
+     8.0
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     1.1,
+     7.65,
+     5.4,
+     8.0
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     8.4,
+     7.65,
+     9.6,
+     8.0
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     8.4,
+     7.65,
+     9.6,
+     8.0
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     9.6,
+     7.65,
+     11.0,
+     8.0
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     9.6,
+     7.65,
+     11.0,
+     8.0
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     11.0,
+     7.65,
+     12.0,
+     8.0
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     11.0,
+     7.65,
+     12.0,
+     8.0
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     -13.65,
+     -0.85,
+     -11.5,
+     -0.65
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     -8.75,
+     -0.85,
+     -5.6,
+     -0.65
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     -2.2,
+     -0.85,
+     6.0,
+     -0.65
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     8.75,
+     -0.85,
+     11.65,
+     -0.65
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     -1.2,
+     -8.15,
+     -1.0,
+     -5.75
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     -1.2,
+     -3.0,
+     -1.0,
+     -0.85
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     -6.6,
+     -0.65,
+     -6.4,
+     3.25
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     -6.6,
+     6.0,
+     -6.4,
+     7.65
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     2.9,
+     -0.65,
+     3.1,
+     4.9
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "wall",
+    "rect": [
+     2.9,
+     7.0,
+     3.1,
+     7.65
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "post",
+    "rect": [
+     1.04,
+     13.69,
+     1.26,
+     13.91
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "post",
+    "rect": [
+     4.49,
+     13.69,
+     4.71,
+     13.91
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "post",
+    "rect": [
+     7.94,
+     13.69,
+     8.16,
+     13.91
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "post",
+    "rect": [
+     11.39,
+     13.69,
+     11.61,
+     13.91
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "post",
+    "rect": [
+     12.24,
+     13.69,
+     12.46,
+     13.91
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "post",
+    "rect": [
+     1.04,
+     10.79,
+     1.26,
+     11.01
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "post",
+    "rect": [
+     6.64,
+     10.79,
+     6.86,
+     11.01
+    ]
+   },
+   {
+    "id": "house",
+    "kind": "post",
+    "rect": [
+     12.24,
+     10.79,
+     12.46,
+     11.01
+    ]
+   },
+   {
+    "id": "barn",
+    "kind": "stairs",
+    "rect": [
+     -21.0,
+     -32.6,
+     -19.52,
+     -29.3429
+    ]
+   },
+   {
+    "id": "barn",
+    "kind": "wall",
+    "rect": [
+     -30.0,
+     -38.0,
+     -25.8,
+     -37.7
+    ]
+   },
+   {
+    "id": "barn",
+    "kind": "wall",
+    "rect": [
+     -22.8,
+     -38.0,
+     -18.9,
+     -37.7
+    ]
+   },
+   {
+    "id": "barn",
+    "kind": "wall",
+    "rect": [
+     -18.9,
+     -38.0,
+     -17.7,
+     -37.7
+    ]
+   },
+   {
+    "id": "barn",
+    "kind": "wall",
+    "rect": [
+     -17.7,
+     -38.0,
+     -14.4,
+     -37.7
+    ]
+   },
+   {
+    "id": "barn",
+    "kind": "wall",
+    "rect": [
+     -14.4,
+     -38.0,
+     -13.2,
+     -37.7
+    ]
+   },
+   {
+    "id": "barn",
+    "kind": "wall",
+    "rect": [
+     -13.2,
+     -38.0,
+     -11.5,
+     -37.7
+    ]
+   },
+   {
+    "id": "barn",
+    "kind": "wall",
+    "rect": [
+     -30.0,
+     -37.7,
+     -29.7,
+     -36.6
+    ]
+   },
+   {
+    "id": "barn",
+    "kind": "wall",
+    "rect": [
+     -30.0,
+     -36.6,
+     -29.7,
+     -35.2
+    ]
+   },
+   {
+    "id": "barn",
+    "kind": "wall",
+    "rect": [
+     -30.0,
+     -35.2,
+     -29.7,
+     -32.0
+    ]
+   },
+   {
+    "id": "barn",
+    "kind": "wall",
+    "rect": [
+     -30.0,
+     -28.8,
+     -29.7,
+     -23.8
+    ]
+   },
+   {
+    "id": "barn",
+    "kind": "wall",
+    "rect": [
+     -11.8,
+     -37.7,
+     -11.5,
+     -35.5
+    ]
+   },
+   {
+    "id": "barn",
+    "kind": "wall",
+    "rect": [
+     -11.8,
+     -33.25,
+     -11.5,
+     -28.6
+    ]
+   },
+   {
+    "id": "barn",
+    "kind": "wall",
+    "rect": [
+     -11.8,
+     -26.4,
+     -11.5,
+     -23.8
+    ]
+   },
+   {
+    "id": "barn",
+    "kind": "wall",
+    "rect": [
+     -30.0,
+     -23.8,
+     -28.5,
+     -23.5
+    ]
+   },
+   {
+    "id": "barn",
+    "kind": "wall",
+    "rect": [
+     -24.0,
+     -23.8,
+     -16.8,
+     -23.5
+    ]
+   },
+   {
+    "id": "barn",
+    "kind": "wall",
+    "rect": [
+     -14.4,
+     -23.8,
+     -11.5,
+     -23.5
+    ]
+   },
+   {
+    "id": "barn",
+    "kind": "wall",
+    "rect": [
+     -19.52,
+     -37.7,
+     -19.28,
+     -35.5
+    ]
+   },
+   {
+    "id": "barn",
+    "kind": "wall",
+    "rect": [
+     -19.52,
+     -33.25,
+     -19.28,
+     -28.6
+    ]
+   },
+   {
+    "id": "barn",
+    "kind": "wall",
+    "rect": [
+     -19.52,
+     -26.4,
+     -19.28,
+     -23.8
+    ]
+   },
+   {
+    "id": "barn",
+    "kind": "wall",
+    "rect": [
+     -19.28,
+     -31.22,
+     -17.4,
+     -30.98
+    ]
+   },
+   {
+    "id": "barn",
+    "kind": "wall",
+    "rect": [
+     -15.1,
+     -31.22,
+     -11.8,
+     -30.98
+    ]
+   },
+   {
+    "id": "barn",
+    "kind": "post",
+    "rect": [
+     -29.65,
+     -18.85,
+     -29.35,
+     -18.55
+    ]
+   },
+   {
+    "id": "barn",
+    "kind": "post",
+    "rect": [
+     -22.55,
+     -18.85,
+     -22.25,
+     -18.55
+    ]
+   },
+   {
+    "id": "barn",
+    "kind": "post",
+    "rect": [
+     -16.75,
+     -18.85,
+     -16.45,
+     -18.55
+    ]
+   },
+   {
+    "id": "barn",
+    "kind": "post",
+    "rect": [
+     -12.15,
+     -18.85,
+     -11.85,
+     -18.55
+    ]
+   },
+   {
+    "id": "cabin",
+    "kind": "stairs",
+    "rect": [
+     26.8,
+     -34.7,
+     28.2,
+     -31.1714
+    ]
+   },
+   {
+    "id": "cabin",
+    "kind": "wall",
+    "rect": [
+     15.5,
+     -36.0,
+     17.7,
+     -35.7
+    ]
+   },
+   {
+    "id": "cabin",
+    "kind": "wall",
+    "rect": [
+     20.3,
+     -36.0,
+     23.0,
+     -35.7
+    ]
+   },
+   {
+    "id": "cabin",
+    "kind": "wall",
+    "rect": [
+     25.0,
+     -36.0,
+     28.5,
+     -35.7
+    ]
+   },
+   {
+    "id": "cabin",
+    "kind": "wall",
+    "rect": [
+     15.5,
+     -35.7,
+     15.8,
+     -35.0
+    ]
+   },
+   {
+    "id": "cabin",
+    "kind": "wall",
+    "rect": [
+     15.5,
+     -35.0,
+     15.8,
+     -33.6
+    ]
+   },
+   {
+    "id": "cabin",
+    "kind": "wall",
+    "rect": [
+     15.5,
+     -33.6,
+     15.8,
+     -32.4
+    ]
+   },
+   {
+    "id": "cabin",
+    "kind": "wall",
+    "rect": [
+     15.5,
+     -29.8,
+     15.8,
+     -28.4
+    ]
+   },
+   {
+    "id": "cabin",
+    "kind": "wall",
+    "rect": [
+     15.5,
+     -28.4,
+     15.8,
+     -27.0
+    ]
+   },
+   {
+    "id": "cabin",
+    "kind": "wall",
+    "rect": [
+     15.5,
+     -27.0,
+     15.8,
+     -26.3
+    ]
+   },
+   {
+    "id": "cabin",
+    "kind": "wall",
+    "rect": [
+     28.2,
+     -35.7,
+     28.5,
+     -29.9
+    ]
+   },
+   {
+    "id": "cabin",
+    "kind": "wall",
+    "rect": [
+     28.2,
+     -27.5,
+     28.5,
+     -26.3
+    ]
+   },
+   {
+    "id": "cabin",
+    "kind": "wall",
+    "rect": [
+     15.5,
+     -26.3,
+     17.3,
+     -26.0
+    ]
+   },
+   {
+    "id": "cabin",
+    "kind": "wall",
+    "rect": [
+     19.9,
+     -26.3,
+     20.3,
+     -26.0
+    ]
+   },
+   {
+    "id": "cabin",
+    "kind": "wall",
+    "rect": [
+     20.3,
+     -26.3,
+     21.8,
+     -26.0
+    ]
+   },
+   {
+    "id": "cabin",
+    "kind": "wall",
+    "rect": [
+     21.8,
+     -26.3,
+     24.0,
+     -26.0
+    ]
+   },
+   {
+    "id": "cabin",
+    "kind": "wall",
+    "rect": [
+     26.6,
+     -26.3,
+     28.5,
+     -26.0
+    ]
+   },
+   {
+    "id": "cabin",
+    "kind": "wall",
+    "rect": [
+     22.1,
+     -35.7,
+     22.3,
+     -32.2
+    ]
+   },
+   {
+    "id": "cabin",
+    "kind": "wall",
+    "rect": [
+     22.1,
+     -29.6,
+     22.3,
+     -26.3
+    ]
+   },
+   {
+    "id": "cabin",
+    "kind": "post",
+    "rect": [
+     13.84,
+     -22.26,
+     14.06,
+     -22.04
+    ]
+   },
+   {
+    "id": "cabin",
+    "kind": "post",
+    "rect": [
+     17.29,
+     -22.26,
+     17.51,
+     -22.04
+    ]
+   },
+   {
+    "id": "cabin",
+    "kind": "post",
+    "rect": [
+     20.69,
+     -22.26,
+     20.91,
+     -22.04
+    ]
+   },
+   {
+    "id": "cabin",
+    "kind": "post",
+    "rect": [
+     24.09,
+     -22.26,
+     24.31,
+     -22.04
+    ]
+   },
+   {
+    "id": "cabin",
+    "kind": "post",
+    "rect": [
+     27.49,
+     -22.26,
+     27.71,
+     -22.04
+    ]
+   },
+   {
+    "id": "cabin",
+    "kind": "post",
+    "rect": [
+     30.14,
+     -22.26,
+     30.36,
+     -22.04
+    ]
+   },
+   {
+    "id": "cabin",
+    "kind": "post",
+    "rect": [
+     13.84,
+     -35.96,
+     14.06,
+     -35.74
+    ]
+   },
+   {
+    "id": "cabin",
+    "kind": "post",
+    "rect": [
+     30.14,
+     -35.96,
+     30.36,
+     -35.74
+    ]
+   },
+   {
+    "id": "cabin",
+    "kind": "post",
+    "rect": [
+     13.84,
+     -31.61,
+     14.06,
+     -31.39
+    ]
+   },
+   {
+    "id": "cabin",
+    "kind": "post",
+    "rect": [
+     30.14,
+     -31.61,
+     30.36,
+     -31.39
+    ]
+   },
+   {
+    "id": "cabin",
+    "kind": "post",
+    "rect": [
+     13.84,
+     -27.31,
+     14.06,
+     -27.09
+    ]
+   },
+   {
+    "id": "cabin",
+    "kind": "post",
+    "rect": [
+     30.14,
+     -27.31,
+     30.36,
+     -27.09
+    ]
+   },
+   {
+    "id": "garage",
+    "kind": "wall",
+    "rect": [
+     -29.0,
+     18.25,
+     -25.6,
+     18.55
+    ]
+   },
+   {
+    "id": "garage",
+    "kind": "wall",
+    "rect": [
+     -22.6,
+     18.25,
+     -18.0,
+     18.55
+    ]
+   },
+   {
+    "id": "garage",
+    "kind": "wall",
+    "rect": [
+     -18.0,
+     18.25,
+     -16.4,
+     18.55
+    ]
+   },
+   {
+    "id": "garage",
+    "kind": "wall",
+    "rect": [
+     -16.4,
+     18.25,
+     -15.0,
+     18.55
+    ]
+   },
+   {
+    "id": "garage",
+    "kind": "wall",
+    "rect": [
+     -29.0,
+     18.55,
+     -28.7,
+     19.4
+    ]
+   },
+   {
+    "id": "garage",
+    "kind": "wall",
+    "rect": [
+     -29.0,
+     19.4,
+     -28.7,
+     20.6
+    ]
+   },
+   {
+    "id": "garage",
+    "kind": "wall",
+    "rect": [
+     -29.0,
+     20.6,
+     -28.7,
+     21.9
+    ]
+   },
+   {
+    "id": "garage",
+    "kind": "wall",
+    "rect": [
+     -29.0,
+     24.5,
+     -28.7,
+     27.95
+    ]
+   },
+   {
+    "id": "garage",
+    "kind": "wall",
+    "rect": [
+     -15.3,
+     18.55,
+     -15.0,
+     20.25
+    ]
+   },
+   {
+    "id": "garage",
+    "kind": "wall",
+    "rect": [
+     -15.3,
+     22.4,
+     -15.0,
+     24.9
+    ]
+   },
+   {
+    "id": "garage",
+    "kind": "wall",
+    "rect": [
+     -15.3,
+     26.6,
+     -15.0,
+     27.95
+    ]
+   },
+   {
+    "id": "garage",
+    "kind": "wall",
+    "rect": [
+     -29.0,
+     27.95,
+     -26.9,
+     28.25
+    ]
+   },
+   {
+    "id": "garage",
+    "kind": "wall",
+    "rect": [
+     -21.0,
+     27.95,
+     -17.8,
+     28.25
+    ]
+   },
+   {
+    "id": "garage",
+    "kind": "wall",
+    "rect": [
+     -17.8,
+     27.95,
+     -16.4,
+     28.25
+    ]
+   },
+   {
+    "id": "garage",
+    "kind": "wall",
+    "rect": [
+     -16.4,
+     27.95,
+     -15.0,
+     28.25
+    ]
+   },
+   {
+    "id": "garage",
+    "kind": "wall",
+    "rect": [
+     -19.3,
+     18.55,
+     -19.1,
+     21.9
+    ]
+   },
+   {
+    "id": "garage",
+    "kind": "wall",
+    "rect": [
+     -19.3,
+     24.5,
+     -19.1,
+     27.95
+    ]
+   },
+   {
+    "id": "shack_1",
+    "kind": "post",
+    "rect": [
+     -21.12,
+     -15.32,
+     -20.84,
+     -15.04
+    ]
+   },
+   {
+    "id": "shack_1",
+    "kind": "post",
+    "rect": [
+     -21.12,
+     -11.16,
+     -20.84,
+     -10.88
+    ]
+   },
+   {
+    "id": "shack_1",
+    "kind": "post",
+    "rect": [
+     -16.96,
+     -15.32,
+     -16.68,
+     -15.04
+    ]
+   },
+   {
+    "id": "shack_1",
+    "kind": "post",
+    "rect": [
+     -16.96,
+     -11.16,
+     -16.68,
+     -10.88
+    ]
+   },
+   {
+    "id": "shack_2",
+    "kind": "post",
+    "rect": [
+     24.53,
+     1.68,
+     24.81,
+     1.96
+    ]
+   },
+   {
+    "id": "shack_2",
+    "kind": "post",
+    "rect": [
+     24.53,
+     5.84,
+     24.81,
+     6.12
+    ]
+   },
+   {
+    "id": "shack_2",
+    "kind": "post",
+    "rect": [
+     28.69,
+     1.68,
+     28.97,
+     1.96
+    ]
+   },
+   {
+    "id": "shack_2",
+    "kind": "post",
+    "rect": [
+     28.69,
+     5.84,
+     28.97,
+     6.12
+    ]
+   },
+   {
+    "id": "shack_3",
+    "kind": "post",
+    "rect": [
+     19.78,
+     27.28,
+     20.06,
+     27.56
+    ]
+   },
+   {
+    "id": "shack_3",
+    "kind": "post",
+    "rect": [
+     19.78,
+     31.44,
+     20.06,
+     31.72
+    ]
+   },
+   {
+    "id": "shack_3",
+    "kind": "post",
+    "rect": [
+     23.94,
+     27.28,
+     24.22,
+     27.56
+    ]
+   },
+   {
+    "id": "shack_3",
+    "kind": "post",
+    "rect": [
+     23.94,
+     31.44,
+     24.22,
+     31.72
+    ]
+   },
+   {
+    "id": "shack_4",
+    "kind": "post",
+    "rect": [
+     -12.32,
+     35.03,
+     -12.04,
+     35.31
+    ]
+   },
+   {
+    "id": "shack_4",
+    "kind": "post",
+    "rect": [
+     -12.32,
+     39.19,
+     -12.04,
+     39.47
+    ]
+   },
+   {
+    "id": "shack_4",
+    "kind": "post",
+    "rect": [
+     -8.16,
+     35.03,
+     -7.88,
+     35.31
+    ]
+   },
+   {
+    "id": "shack_4",
+    "kind": "post",
+    "rect": [
+     -8.16,
+     39.19,
+     -7.88,
+     39.47
+    ]
+   },
+   {
+    "id": "underground:farm_shelter",
+    "kind": "entrance-guard",
+    "rect": [
+     -2.5,
+     -0.35,
+     -2.2,
+     6.25
+    ]
+   },
+   {
+    "id": "underground:farm_shelter",
+    "kind": "entrance-guard",
+    "rect": [
+     -4.2,
+     -0.35,
+     -3.9,
+     6.25
+    ]
+   },
+   {
+    "id": "underground:farm_shelter",
+    "kind": "entrance-guard",
+    "rect": [
+     -3.9,
+     5.95,
+     -2.5,
+     6.25
+    ]
+   },
+   {
+    "id": "underground:farm_shelter",
+    "kind": "entrance-guard",
+    "rect": [
+     -17.4,
+     -37.77,
+     -17.1,
+     -31.17
+    ]
+   },
+   {
+    "id": "underground:farm_shelter",
+    "kind": "entrance-guard",
+    "rect": [
+     -15.7,
+     -37.77,
+     -15.4,
+     -31.17
+    ]
+   },
+   {
+    "id": "underground:farm_shelter",
+    "kind": "entrance-guard",
+    "rect": [
+     -17.1,
+     -37.77,
+     -15.7,
+     -37.47
+    ]
+   },
+   {
+    "id": "underground:farm_shelter",
+    "kind": "entrance-divider",
+    "rect": [
+     0.0,
+     -25.4,
+     0.2,
+     -22.4
+    ]
+   },
+   {
+    "id": "underground:farm_shelter",
+    "kind": "entrance-wall",
+    "rect": [
+     0.0,
+     -22.4,
+     0.2,
+     -22.1
+    ]
+   },
+   {
+    "id": "underground:farm_shelter",
+    "kind": "entrance-wall",
+    "rect": [
+     0.2,
+     -22.4,
+     1.8,
+     -22.1
+    ]
+   },
+   {
+    "id": "underground:farm_shelter",
+    "kind": "entrance-wall",
+    "rect": [
+     -1.9,
+     -27.5,
+     -1.6,
+     -22.1
+    ]
+   },
+   {
+    "id": "underground:farm_shelter",
+    "kind": "entrance-wall",
+    "rect": [
+     1.8,
+     -27.5,
+     2.1,
+     -22.1
+    ]
+   },
+   {
+    "id": "underground:farm_shelter",
+    "kind": "entrance-wall",
+    "rect": [
+     -1.6,
+     -27.5,
+     1.8,
+     -27.2
+    ]
+   },
+   {
+    "id": "underground:farm_shelter",
+    "kind": "entrance-divider",
+    "rect": [
+     16.3,
+     12.1,
+     19.3,
+     12.3
+    ]
+   },
+   {
+    "id": "underground:farm_shelter",
+    "kind": "entrance-wall",
+    "rect": [
+     16.0,
+     12.1,
+     16.3,
+     12.3
+    ]
+   },
+   {
+    "id": "underground:farm_shelter",
+    "kind": "entrance-wall",
+    "rect": [
+     16.0,
+     12.3,
+     16.3,
+     13.9
+    ]
+   },
+   {
+    "id": "underground:farm_shelter",
+    "kind": "entrance-wall",
+    "rect": [
+     16.0,
+     10.2,
+     21.4,
+     10.5
+    ]
+   },
+   {
+    "id": "underground:farm_shelter",
+    "kind": "entrance-wall",
+    "rect": [
+     16.0,
+     13.9,
+     21.4,
+     14.2
+    ]
+   },
+   {
+    "id": "underground:farm_shelter",
+    "kind": "entrance-wall",
+    "rect": [
+     21.1,
+     10.5,
+     21.4,
+     13.9
+    ]
+   },
+   {
+    "id": "underground:farm_shelter",
+    "kind": "entrance-divider",
+    "rect": [
+     -20.1,
+     1.5,
+     -19.9,
+     4.5
+    ]
+   },
+   {
+    "id": "underground:farm_shelter",
+    "kind": "entrance-wall",
+    "rect": [
+     -20.1,
+     4.5,
+     -19.9,
+     4.8
+    ]
+   },
+   {
+    "id": "underground:farm_shelter",
+    "kind": "entrance-wall",
+    "rect": [
+     -19.9,
+     4.5,
+     -18.3,
+     4.8
+    ]
+   },
+   {
+    "id": "underground:farm_shelter",
+    "kind": "entrance-wall",
+    "rect": [
+     -22.0,
+     -0.6,
+     -21.7,
+     4.8
+    ]
+   },
+   {
+    "id": "underground:farm_shelter",
+    "kind": "entrance-wall",
+    "rect": [
+     -18.3,
+     -0.6,
+     -18.0,
+     4.8
+    ]
+   },
+   {
+    "id": "underground:farm_shelter",
+    "kind": "entrance-wall",
+    "rect": [
+     -21.7,
+     -0.6,
+     -18.3,
+     -0.3
+    ]
+   }
+  ],
+  "entranceWalks": {
+   "house": [
+    [
+     -3.2,
+     0,
+     -1.55
+    ],
+    [
+     -3.2,
+     0,
+     -0.05
+    ],
+    [
+     -3.2,
+     -3.5,
+     5.65
+    ],
+    [
+     -3.2,
+     -3.5,
+     7.25
+    ]
+   ],
+   "barn": [
+    [
+     -16.4,
+     0,
+     -29.97
+    ],
+    [
+     -16.4,
+     0,
+     -31.47
+    ],
+    [
+     -16.4,
+     -3.5,
+     -37.17
+    ],
+    [
+     -16.4,
+     -3.5,
+     -38.77
+    ]
+   ],
+   "north": [
+    [
+     -0.8,
+     0,
+     -20.9
+    ],
+    [
+     -0.8,
+     0,
+     -22.7
+    ],
+    [
+     -0.8,
+     -1.75,
+     -25.75
+    ],
+    [
+     1.0,
+     -1.75,
+     -25.75
+    ],
+    [
+     1.0,
+     -3.5,
+     -22.6
+    ],
+    [
+     1.0,
+     -3.5,
+     -21.1
+    ]
+   ],
+   "east": [
+    [
+     14.8,
+     0,
+     11.3
+    ],
+    [
+     16.6,
+     0,
+     11.3
+    ],
+    [
+     19.65,
+     -1.75,
+     11.3
+    ],
+    [
+     19.65,
+     -1.75,
+     13.1
+    ],
+    [
+     16.5,
+     -3.5,
+     13.1
+    ],
+    [
+     15.0,
+     -3.5,
+     13.1
+    ]
+   ],
+   "southwest": [
+    [
+     -20.9,
+     0,
+     6.0
+    ],
+    [
+     -20.9,
+     0,
+     4.2
+    ],
+    [
+     -20.9,
+     -1.75,
+     1.15
+    ],
+    [
+     -19.1,
+     -1.75,
+     1.15
+    ],
+    [
+     -19.1,
+     -3.5,
+     4.3
+    ],
+    [
+     -19.1,
+     -3.5,
+     5.8
+    ]
+   ]
+  },
+  "posters": [
+   {
+    "building": "barn",
+    "cell": 2,
+    "framed": false,
+    "w": 0.65,
+    "h": 0.975,
+    "x": -22.8,
+    "y": 1.15,
+    "z": -23.488,
+    "normal": [
+     0,
+     1
+    ]
+   },
+   {
+    "building": "barn",
+    "cell": 6,
+    "framed": false,
+    "w": 0.65,
+    "h": 0.975,
+    "x": -21.6,
+    "y": 1.0,
+    "z": -23.488,
+    "normal": [
+     0,
+     1
+    ]
+   },
+   {
+    "building": "barn",
+    "cell": 4,
+    "framed": false,
+    "w": 0.65,
+    "h": 0.975,
+    "x": -20.4,
+    "y": 1.15,
+    "z": -23.488,
+    "normal": [
+     0,
+     1
+    ]
+   },
+   {
+    "building": "garage",
+    "cell": 8,
+    "framed": false,
+    "w": 0.65,
+    "h": 0.975,
+    "x": -20.9,
+    "y": 1.15,
+    "z": 18.238,
+    "normal": [
+     0,
+     -1
+    ]
+   },
+   {
+    "building": "garage",
+    "cell": 9,
+    "framed": false,
+    "w": 0.65,
+    "h": 0.975,
+    "x": -19.8,
+    "y": 1.0,
+    "z": 18.238,
+    "normal": [
+     0,
+     -1
+    ]
+   },
+   {
+    "building": "garage",
+    "cell": 5,
+    "framed": false,
+    "w": 0.65,
+    "h": 0.975,
+    "x": -19.8,
+    "y": 1.2,
+    "z": 28.262,
+    "normal": [
+     0,
+     1
+    ]
+   },
+   {
+    "building": "cabin",
+    "cell": 0,
+    "framed": false,
+    "w": 0.65,
+    "h": 0.975,
+    "x": 16.55,
+    "y": 1.25,
+    "z": -25.988,
+    "normal": [
+     0,
+     1
+    ]
+   },
+   {
+    "building": "house",
+    "cell": 10,
+    "framed": false,
+    "w": 0.65,
+    "h": 0.975,
+    "x": -1.2,
+    "y": 1.3,
+    "z": -8.512,
+    "normal": [
+     0,
+     -1
+    ]
+   },
+   {
+    "building": "house",
+    "cell": 3,
+    "framed": false,
+    "w": 0.65,
+    "h": 0.975,
+    "x": 12.012,
+    "y": 1.2,
+    "z": -0.5,
+    "normal": [
+     1,
+     0
+    ]
+   }
+  ]
+ },
+ "props": [
+  {
+   "type": "tree_oak_small",
+   "pos": [
+    9.4,
+    0.0,
+    -39.9
+   ],
+   "heading": 203
+  },
+  {
+   "type": "tree_oak_small",
+   "pos": [
+    -8.6,
+    0.0,
+    -39.9
+   ],
+   "heading": 329
+  },
+  {
+   "type": "tree_oak",
+   "pos": [
+    -4.3,
+    0.0,
+    -34.6
+   ],
+   "heading": 62
+  },
+  {
+   "type": "tree_oak_small",
+   "pos": [
+    10.5,
+    0.0,
+    -31.4
+   ],
+   "heading": 277
+  },
+  {
+   "type": "tree_oak",
+   "pos": [
+    -0.1,
+    0.0,
+    -30.4
+   ],
+   "heading": 146
+  },
+  {
+   "type": "tree_oak",
+   "pos": [
+    -8.6,
+    0.0,
+    -29.3
+   ],
+   "heading": 43
+  },
+  {
+   "type": "tree_oak_small",
+   "pos": [
+    -4.3,
+    0.0,
+    -25.1
+   ],
+   "heading": 128
+  },
+  {
+   "type": "tree_oak",
+   "pos": [
+    6.2,
+    0.0,
+    -21.9
+   ],
+   "heading": 287
+  },
+  {
+   "type": "tree_oak_small",
+   "pos": [
+    4.1,
+    0.0,
+    -18.7
+   ],
+   "heading": 282
+  },
+  {
+   "type": "tree_oak_small",
+   "pos": [
+    -1.1,
+    0.0,
+    -14.5
+   ],
+   "heading": 244
+  },
+  {
+   "type": "tree_oak",
+   "pos": [
+    26.4,
+    0.0,
+    -14.4
+   ],
+   "heading": 242
+  },
+  {
+   "type": "tree_oak_small",
+   "pos": [
+    13.8,
+    0.0,
+    -9.1
+   ],
+   "heading": 116
+  },
+  {
+   "type": "tree_oak",
+   "pos": [
+    -31.0,
+    0.0,
+    -6.5
+   ],
+   "heading": 272
+  },
+  {
+   "type": "tree_oak",
+   "pos": [
+    -25.6,
+    0.0,
+    4.4
+   ],
+   "heading": 58
+  },
+  {
+   "type": "tree_oak",
+   "pos": [
+    -19.2,
+    0.0,
+    11.0
+   ],
+   "heading": 187
+  },
+  {
+   "type": "tree_oak",
+   "pos": [
+    -29.8,
+    0.0,
+    13.1
+   ],
+   "heading": 64
+  },
+  {
+   "type": "tree_oak_small",
+   "pos": [
+    -15.0,
+    0.0,
+    13.1
+   ],
+   "heading": 257
+  },
+  {
+   "type": "tree_oak",
+   "pos": [
+    -12.3,
+    0.0,
+    17.3
+   ],
+   "heading": 321
+  },
+  {
+   "type": "tree_oak",
+   "pos": [
+    29.1,
+    0.0,
+    18.4
+   ],
+   "heading": 147
+  },
+  {
+   "type": "tree_oak_small",
+   "pos": [
+    14.8,
+    0.0,
+    21.6
+   ],
+   "heading": 344
+  },
+  {
+   "type": "tree_oak",
+   "pos": [
+    -8.6,
+    0.0,
+    22.7
+   ],
+   "heading": 47
+  },
+  {
+   "type": "tree_oak_small",
+   "pos": [
+    4.1,
+    0.0,
+    22.6
+   ],
+   "heading": 212
+  },
+  {
+   "type": "tree_oak_small",
+   "pos": [
+    13.7,
+    0.0,
+    30.1
+   ],
+   "heading": 29
+  },
+  {
+   "type": "tree_oak_small",
+   "pos": [
+    26.4,
+    0.0,
+    34.3
+   ],
+   "heading": 223
+  },
+  {
+   "type": "tree_oak_small",
+   "pos": [
+    -29.8,
+    0.0,
+    36.4
+   ],
+   "heading": 227
+  },
+  {
+   "type": "tree_oak_small",
+   "pos": [
+    4.1,
+    0.0,
+    36.4
+   ],
+   "heading": 308
+  },
+  {
+   "type": "tree_oak",
+   "pos": [
+    11.6,
+    0.0,
+    37.5
+   ],
+   "heading": 53
+  },
+  {
+   "type": "tree_oak",
+   "pos": [
+    -17.1,
+    0.0,
+    37.5
+   ],
+   "heading": 40
+  },
+  {
+   "type": "tree_oak_small",
+   "pos": [
+    -30.9,
+    0.0,
+    -19.8
+   ],
+   "heading": 180
+  },
+  {
+   "type": "tree_oak",
+   "pos": [
+    29.0,
+    0.0,
+    9.9
+   ],
+   "heading": 86
+  },
+  {
+   "type": "tree_oak",
+   "pos": [
+    31.2,
+    0.0,
+    6.5
+   ],
+   "heading": 91
+  },
+  {
+   "type": "tree_pine",
+   "pos": [
+    -20.3,
+    0.0,
+    -45.0
+   ],
+   "heading": 312
+  },
+  {
+   "type": "tree_pine",
+   "pos": [
+    11.6,
+    0.0,
+    -45.0
+   ],
+   "heading": 239
+  },
+  {
+   "type": "tree_pine",
+   "pos": [
+    23.3,
+    0.0,
+    -45.0
+   ],
+   "heading": 345
+  },
+  {
+   "type": "tree_pine",
+   "pos": [
+    -34.7,
+    0.0,
+    -35.7
+   ],
+   "heading": 229
+  },
+  {
+   "type": "tree_pine",
+   "pos": [
+    34.6,
+    0.0,
+    -30.4
+   ],
+   "heading": 159
+  },
+  {
+   "type": "tree_pine",
+   "pos": [
+    -34.7,
+    0.0,
+    -14.4
+   ],
+   "heading": 336
+  },
+  {
+   "type": "tree_pine",
+   "pos": [
+    34.6,
+    0.0,
+    -3.9
+   ],
+   "heading": 292
+  },
+  {
+   "type": "tree_pine",
+   "pos": [
+    -34.7,
+    0.0,
+    17.3
+   ],
+   "heading": 134
+  },
+  {
+   "type": "tree_pine",
+   "pos": [
+    34.6,
+    0.0,
+    27.9
+   ],
+   "heading": 91
+  },
+  {
+   "type": "crate",
+   "pos": [
+    -8.1,
+    0.0,
+    -20.0
+   ],
+   "heading": 10
+  },
+  {
+   "type": "crate",
+   "pos": [
+    -8.9,
+    0.0,
+    -18.5
+   ],
+   "heading": 80
+  },
+  {
+   "type": "crate",
+   "pos": [
+    -7.2,
+    0.0,
+    -18.5
+   ],
+   "heading": 35
+  },
+  {
+   "type": "crate",
+   "pos": [
+    -3.6,
+    0.0,
+    -10.6
+   ],
+   "heading": 15
+  },
+  {
+   "type": "crate",
+   "pos": [
+    -1.9,
+    0.0,
+    -10.6
+   ],
+   "heading": 60
+  },
+  {
+   "type": "crate",
+   "pos": [
+    26.1,
+    0.0,
+    -10.0
+   ],
+   "heading": 20
+  },
+  {
+   "type": "crate",
+   "pos": [
+    27.8,
+    0.0,
+    -10.0
+   ],
+   "heading": 70
+  },
+  {
+   "type": "crate",
+   "pos": [
+    -15.4,
+    0.0,
+    -0.4
+   ],
+   "heading": 5
+  },
+  {
+   "type": "crate",
+   "pos": [
+    -16.3,
+    0.0,
+    1.1
+   ],
+   "heading": 40
+  },
+  {
+   "type": "crate_small",
+   "pos": [
+    -14.8,
+    0.0,
+    1.2
+   ],
+   "heading": 70
+  },
+  {
+   "type": "crate",
+   "pos": [
+    27.1,
+    0.0,
+    18.1
+   ],
+   "heading": 25
+  },
+  {
+   "type": "crate",
+   "pos": [
+    12.3,
+    0.0,
+    20.2
+   ],
+   "heading": 50
+  },
+  {
+   "type": "crate",
+   "pos": [
+    6.6,
+    0.0,
+    22.9
+   ],
+   "heading": 15
+  },
+  {
+   "type": "crate",
+   "pos": [
+    -13.2,
+    0.0,
+    24.4
+   ],
+   "heading": 80
+  },
+  {
+   "type": "crate",
+   "pos": [
+    4.9,
+    0.0,
+    30.8
+   ],
+   "heading": 20
+  },
+  {
+   "type": "crate_small",
+   "pos": [
+    6.6,
+    0.0,
+    30.8
+   ],
+   "heading": 60
+  },
+  {
+   "type": "crate",
+   "pos": [
+    7.0,
+    0.0,
+    13.2
+   ],
+   "heading": 10
+  },
+  {
+   "type": "crate",
+   "pos": [
+    8.7,
+    0.0,
+    13.2
+   ],
+   "heading": 75
+  },
+  {
+   "type": "crate_small",
+   "pos": [
+    3.0,
+    0.0,
+    11.5
+   ],
+   "heading": 30
+  },
+  {
+   "type": "crate",
+   "pos": [
+    16.6,
+    0.0,
+    -24.4
+   ],
+   "heading": 15
+  },
+  {
+   "type": "crate_small",
+   "pos": [
+    14.7,
+    0.0,
+    -27.4
+   ],
+   "heading": 70
+  },
+  {
+   "type": "crate",
+   "pos": [
+    27.5,
+    0.0,
+    -24.3
+   ],
+   "heading": 40
+  },
+  {
+   "type": "crate",
+   "pos": [
+    28.6,
+    0.0,
+    -23.9
+   ],
+   "heading": 5
+  },
+  {
+   "type": "crate",
+   "pos": [
+    -13.4,
+    0.0,
+    -21.0
+   ],
+   "heading": 20
+  },
+  {
+   "type": "crate_large",
+   "pos": [
+    -17.6,
+    0.0,
+    -21.3
+   ],
+   "heading": 0
+  },
+  {
+   "type": "crate",
+   "pos": [
+    -26.6,
+    0.0,
+    -20.8
+   ],
+   "heading": 55
+  },
+  {
+   "type": "crate_small",
+   "pos": [
+    -12.4,
+    0.0,
+    -19.9
+   ],
+   "heading": 75
+  },
+  {
+   "type": "hedge_long",
+   "pos": [
+    -35.0,
+    0.0,
+    -30.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "hedge_long",
+   "pos": [
+    35.0,
+    0.0,
+    -24.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "hedge_long",
+   "pos": [
+    -35.0,
+    0.0,
+    -5.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "hedge_long",
+   "pos": [
+    35.0,
+    0.0,
+    -5.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "hedge_long",
+   "pos": [
+    -35.0,
+    0.0,
+    30.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "hedge_long",
+   "pos": [
+    35.0,
+    0.0,
+    30.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "hedge_long",
+   "pos": [
+    -18.0,
+    0.0,
+    -45.0
+   ],
+   "heading": 90
+  },
+  {
+   "type": "hedge_long",
+   "pos": [
+    -18.0,
+    0.0,
+    42.9
+   ],
+   "heading": 90
+  },
+  {
+   "type": "hedge_long",
+   "pos": [
+    16.0,
+    0.0,
+    -45.0
+   ],
+   "heading": 90
+  },
+  {
+   "type": "hedge_long",
+   "pos": [
+    16.0,
+    0.0,
+    42.9
+   ],
+   "heading": 90
+  },
+  {
+   "type": "hedge_long",
+   "pos": [
+    -31.0,
+    0.0,
+    -12.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "hedge_long",
+   "pos": [
+    -26.0,
+    0.0,
+    -0.5
+   ],
+   "heading": 0
+  },
+  {
+   "type": "hedge_long",
+   "pos": [
+    -9.5,
+    0.0,
+    -11.5
+   ],
+   "heading": 0
+  },
+  {
+   "type": "hedge_long",
+   "pos": [
+    12.5,
+    0.0,
+    -10.5
+   ],
+   "heading": 0
+  },
+  {
+   "type": "hedge_long",
+   "pos": [
+    29.0,
+    0.0,
+    -0.5
+   ],
+   "heading": 0
+  },
+  {
+   "type": "hedge_long",
+   "pos": [
+    31.0,
+    0.0,
+    -9.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "hedge_long",
+   "pos": [
+    20.0,
+    0.0,
+    5.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "hedge_long",
+   "pos": [
+    23.0,
+    0.0,
+    8.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "hedge_long",
+   "pos": [
+    13.5,
+    0.0,
+    16.5
+   ],
+   "heading": 0
+  },
+  {
+   "type": "hedge_long",
+   "pos": [
+    26.5,
+    0.0,
+    14.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "tractor",
+   "pos": [
+    -21.0,
+    0.0,
+    -8.4
+   ],
+   "heading": 90
+  },
+  {
+   "type": "hay_stack",
+   "pos": [
+    -31.4,
+    0.0,
+    -27.0
+   ],
+   "heading": 90
+  },
+  {
+   "type": "hay_stack",
+   "pos": [
+    -31.4,
+    0.0,
+    -35.2
+   ],
+   "heading": 90
+  },
+  {
+   "type": "water_trough",
+   "pos": [
+    -10.2,
+    0.0,
+    -22.8
+   ],
+   "heading": 0
+  },
+  {
+   "type": "well",
+   "pos": [
+    2.6,
+    0.0,
+    16.5
+   ],
+   "heading": 0
+  },
+  {
+   "type": "wheelbarrow",
+   "pos": [
+    12.4,
+    0.0,
+    -23.6
+   ],
+   "heading": 40
+  },
+  {
+   "type": "firewood_stack",
+   "pos": [
+    11.4,
+    0.0,
+    -31.0
+   ],
+   "heading": 90
+  },
+  {
+   "type": "car_red",
+   "pos": [
+    -13.5,
+    0.0,
+    30.5
+   ],
+   "heading": 90
+  },
+  {
+   "type": "bench",
+   "pos": [
+    3.9,
+    0.0,
+    8.45
+   ],
+   "heading": 180
+  },
+  {
+   "type": "bench",
+   "pos": [
+    10.4,
+    0.0,
+    8.45
+   ],
+   "heading": 180
+  },
+  {
+   "type": "barrel",
+   "pos": [
+    11.2,
+    0.0,
+    9.4
+   ],
+   "heading": 0
+  },
+  {
+   "type": "flower_pot_large",
+   "pos": [
+    0.6,
+    0.0,
+    8.7
+   ],
+   "heading": 0
+  },
+  {
+   "type": "flower_pot_large",
+   "pos": [
+    -5.4,
+    0.0,
+    8.7
+   ],
+   "heading": 0
+  },
+  {
+   "type": "hay_bale",
+   "pos": [
+    31.6,
+    0.0,
+    14.2
+   ],
+   "heading": 20
+  },
+  {
+   "type": "barrel_group",
+   "pos": [
+    13.0,
+    0.0,
+    -27.4
+   ],
+   "heading": 0
+  },
+  {
+   "type": "cart",
+   "pos": [
+    -29.2,
+    0.0,
+    -9.5
+   ],
+   "heading": 8
+  },
+  {
+   "type": "bush",
+   "pos": [
+    -13.3,
+    0.0,
+    -9.4
+   ],
+   "heading": 0
+  },
+  {
+   "type": "bush",
+   "pos": [
+    -3.2,
+    0.0,
+    -9.5
+   ],
+   "heading": 0
+  },
+  {
+   "type": "bush",
+   "pos": [
+    9.0,
+    0.0,
+    -9.5
+   ],
+   "heading": 0
+  },
+  {
+   "type": "bush",
+   "pos": [
+    12.9,
+    0.0,
+    2.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "bush",
+   "pos": [
+    -14.9,
+    0.0,
+    5.9
+   ],
+   "heading": 0
+  },
+  {
+   "type": "bush",
+   "pos": [
+    1.0,
+    0.0,
+    -42.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "bush",
+   "pos": [
+    5.0,
+    0.0,
+    -42.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "bush",
+   "pos": [
+    -31.2,
+    0.0,
+    20.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "bush",
+   "pos": [
+    -10.8,
+    0.0,
+    25.2
+   ],
+   "heading": 0
+  },
+  {
+   "type": "bush",
+   "pos": [
+    -29.0,
+    0.0,
+    -17.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "bush",
+   "pos": [
+    25.4,
+    0.0,
+    -20.4
+   ],
+   "heading": 0
+  },
+  {
+   "type": "market_table",
+   "pos": [
+    -18.9,
+    0.22,
+    -13.1
+   ],
+   "heading": 0
+  },
+  {
+   "type": "crate",
+   "pos": [
+    -17.3,
+    0.22,
+    -11.9
+   ],
+   "heading": 20
+  },
+  {
+   "type": "crate_small",
+   "pos": [
+    -20.3,
+    0.22,
+    -14.3
+   ],
+   "heading": 60
+  },
+  {
+   "type": "firewood_stack",
+   "pos": [
+    26.75,
+    0.22,
+    3.9
+   ],
+   "heading": 90
+  },
+  {
+   "type": "crate",
+   "pos": [
+    28.1,
+    0.22,
+    5.5
+   ],
+   "heading": 15
+  },
+  {
+   "type": "crate_small",
+   "pos": [
+    25.3,
+    0.22,
+    2.4
+   ],
+   "heading": 60
+  },
+  {
+   "type": "workbench",
+   "pos": [
+    22.0,
+    0.22,
+    31.3
+   ],
+   "heading": 0
+  },
+  {
+   "type": "barrel",
+   "pos": [
+    20.4,
+    0.22,
+    28.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "barrel",
+   "pos": [
+    23.6,
+    0.22,
+    28.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "hay_stack",
+   "pos": [
+    -10.1,
+    0.22,
+    35.6
+   ],
+   "heading": 0
+  },
+  {
+   "type": "hay_bale",
+   "pos": [
+    -8.4,
+    0.22,
+    38.4
+   ],
+   "heading": 90
+  },
+  {
+   "type": "feed_sacks",
+   "pos": [
+    -11.9,
+    0.22,
+    38.4
+   ],
+   "heading": 20
+  },
+  {
+   "type": "sofa",
+   "pos": [
+    -7.2,
+    0.0,
+    -1.5
+   ],
+   "heading": 0
+  },
+  {
+   "type": "table",
+   "pos": [
+    -7.2,
+    0.0,
+    -3.3
+   ],
+   "heading": 0
+  },
+  {
+   "type": "bookshelf",
+   "pos": [
+    -12.4,
+    0.0,
+    -7.9
+   ],
+   "heading": 180
+  },
+  {
+   "type": "bookshelf",
+   "pos": [
+    -4.0,
+    0.0,
+    -7.9
+   ],
+   "heading": 180
+  },
+  {
+   "type": "stool",
+   "pos": [
+    -5.9,
+    0.0,
+    -3.4
+   ],
+   "heading": 0
+  },
+  {
+   "type": "kitchen_counter",
+   "pos": [
+    1.7,
+    0.0,
+    -7.8
+   ],
+   "heading": 180
+  },
+  {
+   "type": "kitchen_counter",
+   "pos": [
+    8.3,
+    0.0,
+    -7.8
+   ],
+   "heading": 180
+  },
+  {
+   "type": "fridge",
+   "pos": [
+    10.95,
+    0.0,
+    -7.75
+   ],
+   "heading": 180
+  },
+  {
+   "type": "table",
+   "pos": [
+    6.4,
+    0.0,
+    -3.6
+   ],
+   "heading": 0
+  },
+  {
+   "type": "stool",
+   "pos": [
+    5.2,
+    0.0,
+    -3.6
+   ],
+   "heading": 0
+  },
+  {
+   "type": "stool",
+   "pos": [
+    7.6,
+    0.0,
+    -3.6
+   ],
+   "heading": 0
+  },
+  {
+   "type": "dining_table",
+   "pos": [
+    7.6,
+    0.0,
+    3.25
+   ],
+   "heading": 0
+  },
+  {
+   "type": "crate",
+   "pos": [
+    -12.6,
+    0.0,
+    6.1
+   ],
+   "heading": 0
+  },
+  {
+   "type": "crate",
+   "pos": [
+    -11.1,
+    0.0,
+    6.1
+   ],
+   "heading": 90
+  },
+  {
+   "type": "storage_shelf",
+   "pos": [
+    -13.38,
+    0.0,
+    1.2
+   ],
+   "heading": 90
+  },
+  {
+   "type": "barrel",
+   "pos": [
+    -7.3,
+    0.0,
+    0.2
+   ],
+   "heading": 0
+  },
+  {
+   "type": "bed",
+   "pos": [
+    4.4,
+    3.4,
+    -6.4
+   ],
+   "heading": 0
+  },
+  {
+   "type": "wardrobe",
+   "pos": [
+    4.7,
+    3.4,
+    -1.45
+   ],
+   "heading": 0
+  },
+  {
+   "type": "bed",
+   "pos": [
+    9.9,
+    3.4,
+    -6.4
+   ],
+   "heading": 0
+  },
+  {
+   "type": "wardrobe",
+   "pos": [
+    7.2,
+    3.4,
+    -1.45
+   ],
+   "heading": 0
+  },
+  {
+   "type": "bed",
+   "pos": [
+    6.6,
+    3.4,
+    3.65
+   ],
+   "heading": 0
+  },
+  {
+   "type": "bookshelf",
+   "pos": [
+    10.7,
+    3.4,
+    7.4
+   ],
+   "heading": 0
+  },
+  {
+   "type": "crate",
+   "pos": [
+    1.0,
+    3.4,
+    6.9
+   ],
+   "heading": 30
+  },
+  {
+   "type": "bench",
+   "pos": [
+    4.3,
+    3.4,
+    6.15
+   ],
+   "heading": 90
+  },
+  {
+   "type": "tractor",
+   "pos": [
+    -26.8,
+    0.0,
+    -33.6
+   ],
+   "heading": 0
+  },
+  {
+   "type": "hay_stack",
+   "pos": [
+    -28.2,
+    0.0,
+    -36.9
+   ],
+   "heading": 0
+  },
+  {
+   "type": "hay_bale",
+   "pos": [
+    -28.6,
+    0.0,
+    -35.3
+   ],
+   "heading": 0
+  },
+  {
+   "type": "hay_bale",
+   "pos": [
+    -29.0,
+    0.0,
+    -26.6
+   ],
+   "heading": 90
+  },
+  {
+   "type": "crate_stack",
+   "pos": [
+    -29.0,
+    0.0,
+    -29.6
+   ],
+   "heading": 90
+  },
+  {
+   "type": "workbench",
+   "pos": [
+    -22.2,
+    0.0,
+    -35.2
+   ],
+   "heading": 270
+  },
+  {
+   "type": "hay_bale",
+   "pos": [
+    -12.5,
+    0.0,
+    -36.8
+   ],
+   "heading": 0
+  },
+  {
+   "type": "hay_bale",
+   "pos": [
+    -12.5,
+    0.0,
+    -33.6
+   ],
+   "heading": 90
+  },
+  {
+   "type": "barrel",
+   "pos": [
+    -12.4,
+    0.0,
+    -29.5
+   ],
+   "heading": 0
+  },
+  {
+   "type": "feed_sacks",
+   "pos": [
+    -12.3,
+    0.0,
+    -26.8
+   ],
+   "heading": 90
+  },
+  {
+   "type": "hay_bale",
+   "pos": [
+    -18.3,
+    0.0,
+    -24.7
+   ],
+   "heading": 0
+  },
+  {
+   "type": "crate",
+   "pos": [
+    -13.0,
+    0.0,
+    -24.7
+   ],
+   "heading": 25
+  },
+  {
+   "type": "hay_stack",
+   "pos": [
+    -13.2,
+    3.0,
+    -37.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "hay_bale",
+   "pos": [
+    -15.4,
+    3.0,
+    -36.8
+   ],
+   "heading": 90
+  },
+  {
+   "type": "hay_stack",
+   "pos": [
+    -13.2,
+    3.0,
+    -26.4
+   ],
+   "heading": 0
+  },
+  {
+   "type": "crate",
+   "pos": [
+    -20.6,
+    3.0,
+    -35.5
+   ],
+   "heading": 20
+  },
+  {
+   "type": "barrel",
+   "pos": [
+    -22.0,
+    3.0,
+    -24.6
+   ],
+   "heading": 0
+  },
+  {
+   "type": "hay_bale",
+   "pos": [
+    -17.8,
+    3.0,
+    -33.4
+   ],
+   "heading": 0
+  },
+  {
+   "type": "crate_small",
+   "pos": [
+    -16.2,
+    3.0,
+    -29.4
+   ],
+   "heading": 70
+  },
+  {
+   "type": "table",
+   "pos": [
+    19.0,
+    0.0,
+    -33.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "stool",
+   "pos": [
+    18.0,
+    0.0,
+    -33.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "stool",
+   "pos": [
+    20.0,
+    0.0,
+    -33.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "bench",
+   "pos": [
+    16.25,
+    0.0,
+    -34.2
+   ],
+   "heading": 90
+  },
+  {
+   "type": "crate",
+   "pos": [
+    23.5,
+    0.0,
+    -27.8
+   ],
+   "heading": 10
+  },
+  {
+   "type": "barrel",
+   "pos": [
+    27.7,
+    0.0,
+    -27.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "bookshelf",
+   "pos": [
+    24.6,
+    0.0,
+    -35.4
+   ],
+   "heading": 180
+  },
+  {
+   "type": "firewood_stack",
+   "pos": [
+    23.6,
+    0.0,
+    -29.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "bed",
+   "pos": [
+    18.2,
+    3.4,
+    -32.6
+   ],
+   "heading": 0
+  },
+  {
+   "type": "wardrobe",
+   "pos": [
+    20.8,
+    3.4,
+    -35.0
+   ],
+   "heading": 180
+  },
+  {
+   "type": "bed",
+   "pos": [
+    24.6,
+    3.4,
+    -33.5
+   ],
+   "heading": 0
+  },
+  {
+   "type": "table",
+   "pos": [
+    25.4,
+    3.4,
+    -29.9
+   ],
+   "heading": 0
+  },
+  {
+   "type": "stool",
+   "pos": [
+    24.2,
+    3.4,
+    -31.2
+   ],
+   "heading": 0
+  },
+  {
+   "type": "bench",
+   "pos": [
+    20.5,
+    3.4,
+    -27.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "car_blue",
+   "pos": [
+    -23.5,
+    0.0,
+    25.3
+   ],
+   "heading": 90
+  },
+  {
+   "type": "workbench",
+   "pos": [
+    -27.4,
+    0.0,
+    19.1
+   ],
+   "heading": 180
+  },
+  {
+   "type": "tire_stack",
+   "pos": [
+    -28.0,
+    0.0,
+    26.9
+   ],
+   "heading": 0
+  },
+  {
+   "type": "oil_drum",
+   "pos": [
+    -20.5,
+    0.0,
+    19.2
+   ],
+   "heading": 0
+  },
+  {
+   "type": "oil_drum_red",
+   "pos": [
+    -19.7,
+    0.0,
+    19.2
+   ],
+   "heading": 0
+  },
+  {
+   "type": "utility_box",
+   "pos": [
+    -23.5,
+    0.0,
+    18.9
+   ],
+   "heading": 180
+  },
+  {
+   "type": "workbench",
+   "pos": [
+    -16.6,
+    0.0,
+    27.4
+   ],
+   "heading": 0
+  },
+  {
+   "type": "storage_shelf",
+   "pos": [
+    -17.6,
+    0.0,
+    18.85
+   ],
+   "heading": 180
+  },
+  {
+   "type": "barrel",
+   "pos": [
+    -18.4,
+    0.0,
+    27.4
+   ],
+   "heading": 0
+  },
+  {
+   "type": "crate",
+   "pos": [
+    -20.0,
+    0.0,
+    26.9
+   ],
+   "heading": 10
+  },
+  {
+   "type": "crate_small",
+   "pos": [
+    -16.0,
+    0.0,
+    19.3
+   ],
+   "heading": 60
+  },
+  {
+   "type": "bunk_bed",
+   "pos": [
+    -7.9,
+    -3.5,
+    15.45
+   ],
+   "heading": 0
+  },
+  {
+   "type": "bunk_bed",
+   "pos": [
+    -5.5,
+    -3.5,
+    15.45
+   ],
+   "heading": 0
+  },
+  {
+   "type": "storage_shelf",
+   "pos": [
+    -2.9,
+    -3.5,
+    15.7
+   ],
+   "heading": 0
+  },
+  {
+   "type": "storage_shelf",
+   "pos": [
+    -0.7,
+    -3.5,
+    15.7
+   ],
+   "heading": 0
+  },
+  {
+   "type": "ibc_tank",
+   "pos": [
+    1.6,
+    -3.5,
+    15.2
+   ],
+   "heading": 0
+  },
+  {
+   "type": "crate_stack",
+   "pos": [
+    5.0,
+    -3.5,
+    15.1
+   ],
+   "heading": 0
+  },
+  {
+   "type": "barrel",
+   "pos": [
+    -8.5,
+    -3.5,
+    13.4
+   ],
+   "heading": 0
+  },
+  {
+   "type": "crate",
+   "pos": [
+    -8.4,
+    -3.5,
+    14.35
+   ],
+   "heading": 20
+  },
+  {
+   "type": "storage_shelf",
+   "pos": [
+    -1.2,
+    -3.5,
+    -2.5
+   ],
+   "heading": 90
+  },
+  {
+   "type": "storage_shelf",
+   "pos": [
+    -1.2,
+    -3.5,
+    -0.2
+   ],
+   "heading": 90
+  },
+  {
+   "type": "crate_small",
+   "pos": [
+    5.0,
+    -3.5,
+    -3.3
+   ],
+   "heading": 10
+  },
+  {
+   "type": "barrel_group",
+   "pos": [
+    0.1,
+    -3.5,
+    0.8
+   ],
+   "heading": 0
+  },
+  {
+   "type": "crate",
+   "pos": [
+    4.9,
+    -3.5,
+    -2.2
+   ],
+   "heading": 30
+  },
+  {
+   "type": "wine_rack",
+   "pos": [
+    -22.9,
+    -3.5,
+    5.3
+   ],
+   "heading": 180
+  },
+  {
+   "type": "wine_rack",
+   "pos": [
+    -23.7,
+    -3.5,
+    8.0
+   ],
+   "heading": 90
+  },
+  {
+   "type": "cask",
+   "pos": [
+    -22.9,
+    -3.5,
+    14.6
+   ],
+   "heading": 90
+  },
+  {
+   "type": "cask",
+   "pos": [
+    -22.9,
+    -3.5,
+    12.9
+   ],
+   "heading": 90
+  },
+  {
+   "type": "barrel",
+   "pos": [
+    -15.2,
+    -3.5,
+    14.9
+   ],
+   "heading": 0
+  },
+  {
+   "type": "barrel",
+   "pos": [
+    -15.2,
+    -3.5,
+    6.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "crate_stack",
+   "pos": [
+    -16.4,
+    -3.5,
+    14.7
+   ],
+   "heading": 0
+  },
+  {
+   "type": "market_crate",
+   "pos": [
+    -22.6,
+    -3.5,
+    6.6
+   ],
+   "heading": 90
+  },
+  {
+   "type": "transformer",
+   "pos": [
+    14.6,
+    -3.5,
+    15.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "oil_drum",
+   "pos": [
+    8.0,
+    -3.5,
+    15.4
+   ],
+   "heading": 0
+  },
+  {
+   "type": "oil_drum_red",
+   "pos": [
+    8.7,
+    -3.5,
+    15.4
+   ],
+   "heading": 0
+  },
+  {
+   "type": "drum_group",
+   "pos": [
+    14.0,
+    -3.5,
+    9.1
+   ],
+   "heading": 0
+  },
+  {
+   "type": "cable_reel",
+   "pos": [
+    8.2,
+    -3.5,
+    8.9
+   ],
+   "heading": 0
+  },
+  {
+   "type": "utility_box",
+   "pos": [
+    12.2,
+    -3.5,
+    8.5
+   ],
+   "heading": 180
+  },
+  {
+   "type": "barrel_group",
+   "pos": [
+    -21.0,
+    -3.5,
+    -38.4
+   ],
+   "heading": 0
+  },
+  {
+   "type": "crate_stack",
+   "pos": [
+    -13.1,
+    -3.5,
+    -38.3
+   ],
+   "heading": 0
+  },
+  {
+   "type": "storage_shelf",
+   "pos": [
+    -15.6,
+    -3.5,
+    -44.65
+   ],
+   "heading": 0
+  },
+  {
+   "type": "storage_shelf",
+   "pos": [
+    -13.1,
+    -3.5,
+    -44.65
+   ],
+   "heading": 0
+  },
+  {
+   "type": "crate",
+   "pos": [
+    -21.1,
+    -3.5,
+    -44.2
+   ],
+   "heading": 15
+  },
+  {
+   "type": "barrel",
+   "pos": [
+    -21.3,
+    -3.5,
+    -41.5
+   ],
+   "heading": 0
+  },
+  {
+   "type": "hay_bale",
+   "pos": [
+    -13.0,
+    -3.5,
+    -42.0
+   ],
+   "heading": 90
+  },
+  {
+   "type": "crate_stack",
+   "pos": [
+    -8.3,
+    -3.5,
+    -13.6
+   ],
+   "heading": 0
+  },
+  {
+   "type": "barrel",
+   "pos": [
+    -8.4,
+    -3.5,
+    -14.5
+   ],
+   "heading": 0
+  },
+  {
+   "type": "storage_shelf",
+   "pos": [
+    -3.0,
+    -3.5,
+    -13.45
+   ],
+   "heading": 0
+  },
+  {
+   "type": "bench",
+   "pos": [
+    -3.0,
+    -3.5,
+    -21.65
+   ],
+   "heading": 180
+  },
+  {
+   "type": "crate",
+   "pos": [
+    5.2,
+    -3.5,
+    -13.6
+   ],
+   "heading": 20
+  },
+  {
+   "type": "feed_sacks",
+   "pos": [
+    5.2,
+    -3.5,
+    -21.4
+   ],
+   "heading": 180
+  },
+  {
+   "type": "bunk_bed",
+   "pos": [
+    13.1,
+    -3.5,
+    -23.5
+   ],
+   "heading": 0
+  },
+  {
+   "type": "bunk_bed",
+   "pos": [
+    15.3,
+    -3.5,
+    -23.5
+   ],
+   "heading": 0
+  },
+  {
+   "type": "bunk_bed",
+   "pos": [
+    20.0,
+    -3.5,
+    -23.5
+   ],
+   "heading": 0
+  },
+  {
+   "type": "bunk_bed",
+   "pos": [
+    13.1,
+    -3.5,
+    -13.5
+   ],
+   "heading": 180
+  },
+  {
+   "type": "storage_shelf",
+   "pos": [
+    15.7,
+    -3.5,
+    -13.55
+   ],
+   "heading": 0
+  },
+  {
+   "type": "barrel",
+   "pos": [
+    20.4,
+    -3.5,
+    -14.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "table",
+   "pos": [
+    16.5,
+    -3.5,
+    -19.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "stool",
+   "pos": [
+    15.3,
+    -3.5,
+    -19.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "stool",
+   "pos": [
+    17.7,
+    -3.5,
+    -19.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "pump_skid",
+   "pos": [
+    18.5,
+    -3.5,
+    1.2
+   ],
+   "heading": 0
+  },
+  {
+   "type": "barrel",
+   "pos": [
+    21.4,
+    -3.5,
+    1.3
+   ],
+   "heading": 0
+  },
+  {
+   "type": "crate_stack",
+   "pos": [
+    15.4,
+    -3.5,
+    -4.3
+   ],
+   "heading": 0
+  },
+  {
+   "type": "utility_box",
+   "pos": [
+    13.6,
+    -3.5,
+    -4.45
+   ],
+   "heading": 180
+  },
+  {
+   "type": "workbench",
+   "pos": [
+    -10.2,
+    -3.5,
+    -30.45
+   ],
+   "heading": 180
+  },
+  {
+   "type": "workbench",
+   "pos": [
+    -6.4,
+    -3.5,
+    -30.45
+   ],
+   "heading": 180
+  },
+  {
+   "type": "tire_stack",
+   "pos": [
+    -5.3,
+    -3.5,
+    -26.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "crate",
+   "pos": [
+    -11.2,
+    -3.5,
+    -25.2
+   ],
+   "heading": 25
+  },
+  {
+   "type": "barrel",
+   "pos": [
+    -5.1,
+    -3.5,
+    -30.4
+   ],
+   "heading": 0
+  },
+  {
+   "type": "storage_shelf",
+   "pos": [
+    -11.6,
+    -3.5,
+    -27.9
+   ],
+   "heading": 90
+  }
+ ],
+ "obstacles": [],
+ "lights": [
+  {
+   "type": "point",
+   "pos": [
+    6.0,
+    2.65,
+    -4.5
+   ],
+   "color": [
+    1.0,
+    0.88,
+    0.7
+   ],
+   "intensity": 0.65,
+   "range": 5.0
+  },
+  {
+   "type": "point",
+   "pos": [
+    -25.6,
+    3.75,
+    -30.5
+   ],
+   "color": [
+    1.0,
+    0.86,
+    0.66
+   ],
+   "intensity": 0.7,
+   "range": 6.0
+  }
+ ],
+ "targets": [
+  {
+   "id": "T01",
+   "pos": [
+    -26,
+    0.0,
+    -17
+   ],
+   "heading": 90
+  },
+  {
+   "id": "T02",
+   "pos": [
+    -8,
+    0.0,
+    -26
+   ],
+   "heading": 180
+  },
+  {
+   "id": "T03",
+   "pos": [
+    6,
+    0.0,
+    -30
+   ],
+   "heading": 180
+  },
+  {
+   "id": "T04",
+   "pos": [
+    18,
+    0.0,
+    -17
+   ],
+   "heading": 270
+  },
+  {
+   "id": "T05",
+   "pos": [
+    31,
+    0.0,
+    -18
+   ],
+   "heading": 270
+  },
+  {
+   "id": "T06",
+   "pos": [
+    30,
+    0.0,
+    8
+   ],
+   "heading": 270
+  },
+  {
+   "id": "T07",
+   "pos": [
+    20,
+    0.0,
+    24
+   ],
+   "heading": 270
+  },
+  {
+   "id": "T08",
+   "pos": [
+    8,
+    0.0,
+    33
+   ],
+   "heading": 0
+  },
+  {
+   "id": "T09",
+   "pos": [
+    -5,
+    0.0,
+    30
+   ],
+   "heading": 0
+  },
+  {
+   "id": "T10",
+   "pos": [
+    -22,
+    0.0,
+    32
+   ],
+   "heading": 0
+  },
+  {
+   "id": "T11",
+   "pos": [
+    -31,
+    0.0,
+    16
+   ],
+   "heading": 90
+  },
+  {
+   "id": "T12",
+   "pos": [
+    -6,
+    0.0,
+    12
+   ],
+   "heading": 0
+  }
+ ],
+ "spawns": [
+  {
+   "id": "S01",
+   "pos": [
+    -31,
+    0.0,
+    -30
+   ],
+   "heading": 110
+  },
+  {
+   "id": "S02",
+   "pos": [
+    -8,
+    0.0,
+    -33
+   ],
+   "heading": 170
+  },
+  {
+   "id": "S03",
+   "pos": [
+    8,
+    0.0,
+    -26
+   ],
+   "heading": 200
+  },
+  {
+   "id": "S04",
+   "pos": [
+    31,
+    0.0,
+    -24
+   ],
+   "heading": 250
+  },
+  {
+   "id": "S05",
+   "pos": [
+    30,
+    0.0,
+    -4
+   ],
+   "heading": 270
+  },
+  {
+   "id": "S06",
+   "pos": [
+    30.0,
+    0.0,
+    13.0
+   ],
+   "heading": 260
+  },
+  {
+   "id": "S07",
+   "pos": [
+    28,
+    0.0,
+    36
+   ],
+   "heading": 330
+  },
+  {
+   "id": "S08",
+   "pos": [
+    16,
+    0.0,
+    37
+   ],
+   "heading": 0
+  },
+  {
+   "id": "S09",
+   "pos": [
+    0.5,
+    0.0,
+    36
+   ],
+   "heading": 10
+  },
+  {
+   "id": "S10",
+   "pos": [
+    -15,
+    0.0,
+    36.5
+   ],
+   "heading": 20
+  },
+  {
+   "id": "S11",
+   "pos": [
+    -31,
+    0.0,
+    24
+   ],
+   "heading": 70
+  },
+  {
+   "id": "S12",
+   "pos": [
+    -31,
+    0.0,
+    8
+   ],
+   "heading": 80
+  },
+  {
+   "id": "S13",
+   "pos": [
+    -18.5,
+    0.0,
+    -6.5
+   ],
+   "heading": 90
+  },
+  {
+   "id": "S14",
+   "pos": [
+    6,
+    0.0,
+    -13
+   ],
+   "heading": 180
+  },
+  {
+   "id": "S15",
+   "pos": [
+    -1,
+    0.0,
+    20
+   ],
+   "heading": 0
+  },
+  {
+   "id": "S16",
+   "pos": [
+    13.0,
+    0.0,
+    22.0
+   ],
+   "heading": 300
+  }
+ ],
+ "navigation": {
+  "version": 1,
+  "groundRoutes": [
+   {
+    "id": "meadow",
+    "kind": "yard",
+    "rect": [
+     -33.0,
+     -43.0,
+     33.0,
+     40.5
+    ]
+   },
+   {
+    "id": "north_gap",
+    "kind": "yard",
+    "rect": [
+     -1.5,
+     -47.0,
+     5.0,
+     -43.0
+    ]
+   },
+   {
+    "id": "south_gap",
+    "kind": "yard",
+    "rect": [
+     -4.75,
+     40.5,
+     -0.5,
+     45.0
+    ]
+   },
+   {
+    "id": "west_gap",
+    "kind": "yard",
+    "rect": [
+     -37.0,
+     -1.9,
+     -33.0,
+     4.75
+    ]
+   },
+   {
+    "id": "east_gap_north",
+    "kind": "yard",
+    "rect": [
+     33.0,
+     -19.9,
+     37.0,
+     -13.4
+    ]
+   },
+   {
+    "id": "east_gap_south",
+    "kind": "yard",
+    "rect": [
+     33.0,
+     17.25,
+     37.0,
+     23.75
+    ]
+   },
+   {
+    "id": "south_gate_path",
+    "kind": "street",
+    "rect": [
+     -4.75,
+     8.0,
+     -0.6,
+     44.0
+    ]
+   },
+   {
+    "id": "garage_path",
+    "kind": "street",
+    "rect": [
+     -26.9,
+     28.1,
+     -4.75,
+     32.75
+    ]
+   },
+   {
+    "id": "barn_path",
+    "kind": "street",
+    "rect": [
+     -28.1,
+     -23.5,
+     -24.1,
+     -2.5
+    ]
+   },
+   {
+    "id": "barn_link",
+    "kind": "street",
+    "rect": [
+     -28.1,
+     -5.6,
+     -13.6,
+     -2.5
+    ]
+   },
+   {
+    "id": "cabin_link",
+    "kind": "street",
+    "rect": [
+     11.9,
+     -6.0,
+     23.25,
+     -2.9
+    ]
+   },
+   {
+    "id": "house_apron",
+    "kind": "street",
+    "rect": [
+     -3.4,
+     8.0,
+     1.6,
+     14.0
+    ]
+   },
+   {
+    "id": "cabin_path",
+    "kind": "street",
+    "rect": [
+     20.25,
+     -26.0,
+     23.25,
+     -2.5
+    ]
+   },
+   {
+    "id": "house_floor",
+    "kind": "court",
+    "rect": [
+     -13.65,
+     -8.15,
+     11.65,
+     7.65
+    ]
+   },
+   {
+    "id": "kitchen_floor",
+    "kind": "court",
+    "rect": [
+     -1.0,
+     -8.15,
+     11.65,
+     -0.85
+    ]
+   },
+   {
+    "id": "pantry_floor",
+    "kind": "court",
+    "rect": [
+     -13.65,
+     -0.65,
+     -6.6,
+     7.65
+    ]
+   },
+   {
+    "id": "dining_porch",
+    "kind": "court",
+    "rect": [
+     1.0,
+     8.0,
+     12.5,
+     14.0
+    ]
+   },
+   {
+    "id": "barn_floor",
+    "kind": "court",
+    "rect": [
+     -29.7,
+     -37.7,
+     -11.8,
+     -23.8
+    ]
+   },
+   {
+    "id": "stall_floor",
+    "kind": "court",
+    "rect": [
+     -19.28,
+     -37.7,
+     -11.8,
+     -23.8
+    ]
+   },
+   {
+    "id": "cabin_floor",
+    "kind": "court",
+    "rect": [
+     15.8,
+     -35.7,
+     28.2,
+     -26.3
+    ]
+   },
+   {
+    "id": "garage_floor",
+    "kind": "court",
+    "rect": [
+     -28.7,
+     18.55,
+     -19.3,
+     27.95
+    ]
+   },
+   {
+    "id": "workshop_floor",
+    "kind": "court",
+    "rect": [
+     -19.1,
+     18.55,
+     -15.3,
+     27.95
+    ]
+   }
+  ],
+  "coveredRoutes": [
+   {
+    "id": "house_living",
+    "kind": "interior",
+    "rect": [
+     -13.65,
+     -8.15,
+     -1.2,
+     -0.85
+    ]
+   },
+   {
+    "id": "house_kitchen",
+    "kind": "interior",
+    "rect": [
+     -1.0,
+     -8.15,
+     11.65,
+     -0.85
+    ]
+   },
+   {
+    "id": "house_hall",
+    "kind": "interior",
+    "rect": [
+     -6.4,
+     -0.65,
+     2.9,
+     7.65
+    ]
+   },
+   {
+    "id": "house_pantry",
+    "kind": "interior",
+    "rect": [
+     -13.65,
+     -0.65,
+     -6.6,
+     7.65
+    ]
+   },
+   {
+    "id": "house_dining",
+    "kind": "interior",
+    "rect": [
+     3.1,
+     4.6,
+     11.65,
+     7.65
+    ]
+   },
+   {
+    "id": "barn_bay",
+    "kind": "interior",
+    "rect": [
+     -29.7,
+     -37.7,
+     -22.6,
+     -23.8
+    ]
+   },
+   {
+    "id": "barn_stalls",
+    "kind": "interior",
+    "rect": [
+     -19.28,
+     -30.98,
+     -11.8,
+     -23.8
+    ]
+   },
+   {
+    "id": "cabin_west",
+    "kind": "interior",
+    "rect": [
+     15.8,
+     -35.7,
+     22.1,
+     -26.3
+    ]
+   },
+   {
+    "id": "cabin_east",
+    "kind": "interior",
+    "rect": [
+     22.3,
+     -35.7,
+     28.2,
+     -26.3
+    ]
+   },
+   {
+    "id": "garage_bay",
+    "kind": "interior",
+    "rect": [
+     -28.7,
+     18.55,
+     -19.3,
+     27.95
+    ]
+   },
+   {
+    "id": "garage_shop",
+    "kind": "interior",
+    "rect": [
+     -19.1,
+     18.55,
+     -15.3,
+     27.95
+    ]
+   }
+  ],
+  "upperRoutes": [],
+  "groundObstacles": [
+   {
+    "id": "house:stairs",
+    "rect": [
+     1.5,
+     0.65,
+     2.9,
+     4.1938
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     -14.0,
+     -8.5,
+     -13.0,
+     -8.15
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     -14.0,
+     -8.5,
+     -13.0,
+     -8.15
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     -13.0,
+     -8.5,
+     -11.4,
+     -8.15
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     -13.0,
+     -8.5,
+     -11.4,
+     -8.15
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     -11.4,
+     -8.5,
+     -9.55,
+     -8.15
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     -11.4,
+     -8.5,
+     -9.55,
+     -8.15
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     -6.55,
+     -8.5,
+     0.0,
+     -8.15
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     -6.55,
+     -8.5,
+     0.0,
+     -8.15
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     0.0,
+     -8.5,
+     1.0,
+     -8.15
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     0.0,
+     -8.5,
+     1.0,
+     -8.15
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     1.0,
+     -8.5,
+     2.5,
+     -8.15
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     1.0,
+     -8.5,
+     2.5,
+     -8.15
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     2.5,
+     -8.5,
+     3.9,
+     -8.15
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     2.5,
+     -8.5,
+     3.9,
+     -8.15
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     6.6,
+     -8.5,
+     8.6,
+     -8.15
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     6.6,
+     -8.5,
+     8.6,
+     -8.15
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     8.6,
+     -8.5,
+     10.2,
+     -8.15
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     8.6,
+     -8.5,
+     10.2,
+     -8.15
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     10.2,
+     -8.5,
+     12.0,
+     -8.15
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     10.2,
+     -8.5,
+     12.0,
+     -8.15
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     -14.0,
+     -8.15,
+     -13.65,
+     -7.4
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     -14.0,
+     -8.15,
+     -13.65,
+     -7.4
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     -14.0,
+     -7.4,
+     -13.65,
+     -6.2
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     -14.0,
+     -7.4,
+     -13.65,
+     -6.2
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     -14.0,
+     -6.2,
+     -13.65,
+     -5.15
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     -14.0,
+     -6.2,
+     -13.65,
+     -5.15
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     -14.0,
+     -2.6,
+     -13.65,
+     2.35
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     -14.0,
+     -2.6,
+     -13.65,
+     2.35
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     -14.0,
+     4.85,
+     -13.65,
+     7.65
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     -14.0,
+     4.85,
+     -13.65,
+     7.65
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     11.65,
+     -8.15,
+     12.0,
+     -7.4
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     11.65,
+     -8.15,
+     12.0,
+     -7.4
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     11.65,
+     -7.4,
+     12.0,
+     -6.2
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     11.65,
+     -7.4,
+     12.0,
+     -6.2
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     11.65,
+     -6.2,
+     12.0,
+     -5.7
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     11.65,
+     -6.2,
+     12.0,
+     -5.7
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     11.65,
+     -3.1,
+     12.0,
+     2.3
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     11.65,
+     -3.1,
+     12.0,
+     2.3
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     11.65,
+     4.85,
+     12.0,
+     5.8
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     11.65,
+     4.85,
+     12.0,
+     5.8
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     11.65,
+     5.8,
+     12.0,
+     7.0
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     11.65,
+     5.8,
+     12.0,
+     7.0
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     11.65,
+     7.0,
+     12.0,
+     7.65
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     11.65,
+     7.0,
+     12.0,
+     7.65
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     -14.0,
+     7.65,
+     -11.6,
+     8.0
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     -14.0,
+     7.65,
+     -11.6,
+     8.0
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     -8.6,
+     7.65,
+     -1.9,
+     8.0
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     -8.6,
+     7.65,
+     -1.9,
+     8.0
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     1.1,
+     7.65,
+     5.4,
+     8.0
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     1.1,
+     7.65,
+     5.4,
+     8.0
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     8.4,
+     7.65,
+     9.6,
+     8.0
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     8.4,
+     7.65,
+     9.6,
+     8.0
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     9.6,
+     7.65,
+     11.0,
+     8.0
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     9.6,
+     7.65,
+     11.0,
+     8.0
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     11.0,
+     7.65,
+     12.0,
+     8.0
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     11.0,
+     7.65,
+     12.0,
+     8.0
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     -13.65,
+     -0.85,
+     -11.5,
+     -0.65
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     -8.75,
+     -0.85,
+     -5.6,
+     -0.65
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     -2.2,
+     -0.85,
+     6.0,
+     -0.65
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     8.75,
+     -0.85,
+     11.65,
+     -0.65
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     -1.2,
+     -8.15,
+     -1.0,
+     -5.75
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     -1.2,
+     -3.0,
+     -1.0,
+     -0.85
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     -6.6,
+     -0.65,
+     -6.4,
+     3.25
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     -6.6,
+     6.0,
+     -6.4,
+     7.65
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     2.9,
+     -0.65,
+     3.1,
+     4.9
+    ]
+   },
+   {
+    "id": "house:wall",
+    "rect": [
+     2.9,
+     7.0,
+     3.1,
+     7.65
+    ]
+   },
+   {
+    "id": "house:post",
+    "rect": [
+     1.04,
+     13.69,
+     1.26,
+     13.91
+    ]
+   },
+   {
+    "id": "house:post",
+    "rect": [
+     4.49,
+     13.69,
+     4.71,
+     13.91
+    ]
+   },
+   {
+    "id": "house:post",
+    "rect": [
+     7.94,
+     13.69,
+     8.16,
+     13.91
+    ]
+   },
+   {
+    "id": "house:post",
+    "rect": [
+     11.39,
+     13.69,
+     11.61,
+     13.91
+    ]
+   },
+   {
+    "id": "house:post",
+    "rect": [
+     12.24,
+     13.69,
+     12.46,
+     13.91
+    ]
+   },
+   {
+    "id": "house:post",
+    "rect": [
+     1.04,
+     10.79,
+     1.26,
+     11.01
+    ]
+   },
+   {
+    "id": "house:post",
+    "rect": [
+     6.64,
+     10.79,
+     6.86,
+     11.01
+    ]
+   },
+   {
+    "id": "house:post",
+    "rect": [
+     12.24,
+     10.79,
+     12.46,
+     11.01
+    ]
+   },
+   {
+    "id": "barn:stairs",
+    "rect": [
+     -21.0,
+     -32.6,
+     -19.52,
+     -29.3429
+    ]
+   },
+   {
+    "id": "barn:wall",
+    "rect": [
+     -30.0,
+     -38.0,
+     -25.8,
+     -37.7
+    ]
+   },
+   {
+    "id": "barn:wall",
+    "rect": [
+     -22.8,
+     -38.0,
+     -18.9,
+     -37.7
+    ]
+   },
+   {
+    "id": "barn:wall",
+    "rect": [
+     -18.9,
+     -38.0,
+     -17.7,
+     -37.7
+    ]
+   },
+   {
+    "id": "barn:wall",
+    "rect": [
+     -17.7,
+     -38.0,
+     -14.4,
+     -37.7
+    ]
+   },
+   {
+    "id": "barn:wall",
+    "rect": [
+     -14.4,
+     -38.0,
+     -13.2,
+     -37.7
+    ]
+   },
+   {
+    "id": "barn:wall",
+    "rect": [
+     -13.2,
+     -38.0,
+     -11.5,
+     -37.7
+    ]
+   },
+   {
+    "id": "barn:wall",
+    "rect": [
+     -30.0,
+     -37.7,
+     -29.7,
+     -36.6
+    ]
+   },
+   {
+    "id": "barn:wall",
+    "rect": [
+     -30.0,
+     -36.6,
+     -29.7,
+     -35.2
+    ]
+   },
+   {
+    "id": "barn:wall",
+    "rect": [
+     -30.0,
+     -35.2,
+     -29.7,
+     -32.0
+    ]
+   },
+   {
+    "id": "barn:wall",
+    "rect": [
+     -30.0,
+     -28.8,
+     -29.7,
+     -23.8
+    ]
+   },
+   {
+    "id": "barn:wall",
+    "rect": [
+     -11.8,
+     -37.7,
+     -11.5,
+     -35.5
+    ]
+   },
+   {
+    "id": "barn:wall",
+    "rect": [
+     -11.8,
+     -33.25,
+     -11.5,
+     -28.6
+    ]
+   },
+   {
+    "id": "barn:wall",
+    "rect": [
+     -11.8,
+     -26.4,
+     -11.5,
+     -23.8
+    ]
+   },
+   {
+    "id": "barn:wall",
+    "rect": [
+     -30.0,
+     -23.8,
+     -28.5,
+     -23.5
+    ]
+   },
+   {
+    "id": "barn:wall",
+    "rect": [
+     -24.0,
+     -23.8,
+     -16.8,
+     -23.5
+    ]
+   },
+   {
+    "id": "barn:wall",
+    "rect": [
+     -14.4,
+     -23.8,
+     -11.5,
+     -23.5
+    ]
+   },
+   {
+    "id": "barn:wall",
+    "rect": [
+     -19.52,
+     -37.7,
+     -19.28,
+     -35.5
+    ]
+   },
+   {
+    "id": "barn:wall",
+    "rect": [
+     -19.52,
+     -33.25,
+     -19.28,
+     -28.6
+    ]
+   },
+   {
+    "id": "barn:wall",
+    "rect": [
+     -19.52,
+     -26.4,
+     -19.28,
+     -23.8
+    ]
+   },
+   {
+    "id": "barn:wall",
+    "rect": [
+     -19.28,
+     -31.22,
+     -17.4,
+     -30.98
+    ]
+   },
+   {
+    "id": "barn:wall",
+    "rect": [
+     -15.1,
+     -31.22,
+     -11.8,
+     -30.98
+    ]
+   },
+   {
+    "id": "barn:post",
+    "rect": [
+     -29.65,
+     -18.85,
+     -29.35,
+     -18.55
+    ]
+   },
+   {
+    "id": "barn:post",
+    "rect": [
+     -22.55,
+     -18.85,
+     -22.25,
+     -18.55
+    ]
+   },
+   {
+    "id": "barn:post",
+    "rect": [
+     -16.75,
+     -18.85,
+     -16.45,
+     -18.55
+    ]
+   },
+   {
+    "id": "barn:post",
+    "rect": [
+     -12.15,
+     -18.85,
+     -11.85,
+     -18.55
+    ]
+   },
+   {
+    "id": "cabin:stairs",
+    "rect": [
+     26.8,
+     -34.7,
+     28.2,
+     -31.1714
+    ]
+   },
+   {
+    "id": "cabin:wall",
+    "rect": [
+     15.5,
+     -36.0,
+     17.7,
+     -35.7
+    ]
+   },
+   {
+    "id": "cabin:wall",
+    "rect": [
+     20.3,
+     -36.0,
+     23.0,
+     -35.7
+    ]
+   },
+   {
+    "id": "cabin:wall",
+    "rect": [
+     25.0,
+     -36.0,
+     28.5,
+     -35.7
+    ]
+   },
+   {
+    "id": "cabin:wall",
+    "rect": [
+     15.5,
+     -35.7,
+     15.8,
+     -35.0
+    ]
+   },
+   {
+    "id": "cabin:wall",
+    "rect": [
+     15.5,
+     -35.0,
+     15.8,
+     -33.6
+    ]
+   },
+   {
+    "id": "cabin:wall",
+    "rect": [
+     15.5,
+     -33.6,
+     15.8,
+     -32.4
+    ]
+   },
+   {
+    "id": "cabin:wall",
+    "rect": [
+     15.5,
+     -29.8,
+     15.8,
+     -28.4
+    ]
+   },
+   {
+    "id": "cabin:wall",
+    "rect": [
+     15.5,
+     -28.4,
+     15.8,
+     -27.0
+    ]
+   },
+   {
+    "id": "cabin:wall",
+    "rect": [
+     15.5,
+     -27.0,
+     15.8,
+     -26.3
+    ]
+   },
+   {
+    "id": "cabin:wall",
+    "rect": [
+     28.2,
+     -35.7,
+     28.5,
+     -29.9
+    ]
+   },
+   {
+    "id": "cabin:wall",
+    "rect": [
+     28.2,
+     -27.5,
+     28.5,
+     -26.3
+    ]
+   },
+   {
+    "id": "cabin:wall",
+    "rect": [
+     15.5,
+     -26.3,
+     17.3,
+     -26.0
+    ]
+   },
+   {
+    "id": "cabin:wall",
+    "rect": [
+     19.9,
+     -26.3,
+     20.3,
+     -26.0
+    ]
+   },
+   {
+    "id": "cabin:wall",
+    "rect": [
+     20.3,
+     -26.3,
+     21.8,
+     -26.0
+    ]
+   },
+   {
+    "id": "cabin:wall",
+    "rect": [
+     21.8,
+     -26.3,
+     24.0,
+     -26.0
+    ]
+   },
+   {
+    "id": "cabin:wall",
+    "rect": [
+     26.6,
+     -26.3,
+     28.5,
+     -26.0
+    ]
+   },
+   {
+    "id": "cabin:wall",
+    "rect": [
+     22.1,
+     -35.7,
+     22.3,
+     -32.2
+    ]
+   },
+   {
+    "id": "cabin:wall",
+    "rect": [
+     22.1,
+     -29.6,
+     22.3,
+     -26.3
+    ]
+   },
+   {
+    "id": "cabin:post",
+    "rect": [
+     13.84,
+     -22.26,
+     14.06,
+     -22.04
+    ]
+   },
+   {
+    "id": "cabin:post",
+    "rect": [
+     17.29,
+     -22.26,
+     17.51,
+     -22.04
+    ]
+   },
+   {
+    "id": "cabin:post",
+    "rect": [
+     20.69,
+     -22.26,
+     20.91,
+     -22.04
+    ]
+   },
+   {
+    "id": "cabin:post",
+    "rect": [
+     24.09,
+     -22.26,
+     24.31,
+     -22.04
+    ]
+   },
+   {
+    "id": "cabin:post",
+    "rect": [
+     27.49,
+     -22.26,
+     27.71,
+     -22.04
+    ]
+   },
+   {
+    "id": "cabin:post",
+    "rect": [
+     30.14,
+     -22.26,
+     30.36,
+     -22.04
+    ]
+   },
+   {
+    "id": "cabin:post",
+    "rect": [
+     13.84,
+     -35.96,
+     14.06,
+     -35.74
+    ]
+   },
+   {
+    "id": "cabin:post",
+    "rect": [
+     30.14,
+     -35.96,
+     30.36,
+     -35.74
+    ]
+   },
+   {
+    "id": "cabin:post",
+    "rect": [
+     13.84,
+     -31.61,
+     14.06,
+     -31.39
+    ]
+   },
+   {
+    "id": "cabin:post",
+    "rect": [
+     30.14,
+     -31.61,
+     30.36,
+     -31.39
+    ]
+   },
+   {
+    "id": "cabin:post",
+    "rect": [
+     13.84,
+     -27.31,
+     14.06,
+     -27.09
+    ]
+   },
+   {
+    "id": "cabin:post",
+    "rect": [
+     30.14,
+     -27.31,
+     30.36,
+     -27.09
+    ]
+   },
+   {
+    "id": "garage:wall",
+    "rect": [
+     -29.0,
+     18.25,
+     -25.6,
+     18.55
+    ]
+   },
+   {
+    "id": "garage:wall",
+    "rect": [
+     -22.6,
+     18.25,
+     -18.0,
+     18.55
+    ]
+   },
+   {
+    "id": "garage:wall",
+    "rect": [
+     -18.0,
+     18.25,
+     -16.4,
+     18.55
+    ]
+   },
+   {
+    "id": "garage:wall",
+    "rect": [
+     -16.4,
+     18.25,
+     -15.0,
+     18.55
+    ]
+   },
+   {
+    "id": "garage:wall",
+    "rect": [
+     -29.0,
+     18.55,
+     -28.7,
+     19.4
+    ]
+   },
+   {
+    "id": "garage:wall",
+    "rect": [
+     -29.0,
+     19.4,
+     -28.7,
+     20.6
+    ]
+   },
+   {
+    "id": "garage:wall",
+    "rect": [
+     -29.0,
+     20.6,
+     -28.7,
+     21.9
+    ]
+   },
+   {
+    "id": "garage:wall",
+    "rect": [
+     -29.0,
+     24.5,
+     -28.7,
+     27.95
+    ]
+   },
+   {
+    "id": "garage:wall",
+    "rect": [
+     -15.3,
+     18.55,
+     -15.0,
+     20.25
+    ]
+   },
+   {
+    "id": "garage:wall",
+    "rect": [
+     -15.3,
+     22.4,
+     -15.0,
+     24.9
+    ]
+   },
+   {
+    "id": "garage:wall",
+    "rect": [
+     -15.3,
+     26.6,
+     -15.0,
+     27.95
+    ]
+   },
+   {
+    "id": "garage:wall",
+    "rect": [
+     -29.0,
+     27.95,
+     -26.9,
+     28.25
+    ]
+   },
+   {
+    "id": "garage:wall",
+    "rect": [
+     -21.0,
+     27.95,
+     -17.8,
+     28.25
+    ]
+   },
+   {
+    "id": "garage:wall",
+    "rect": [
+     -17.8,
+     27.95,
+     -16.4,
+     28.25
+    ]
+   },
+   {
+    "id": "garage:wall",
+    "rect": [
+     -16.4,
+     27.95,
+     -15.0,
+     28.25
+    ]
+   },
+   {
+    "id": "garage:wall",
+    "rect": [
+     -19.3,
+     18.55,
+     -19.1,
+     21.9
+    ]
+   },
+   {
+    "id": "garage:wall",
+    "rect": [
+     -19.3,
+     24.5,
+     -19.1,
+     27.95
+    ]
+   },
+   {
+    "id": "shack_1:post",
+    "rect": [
+     -21.12,
+     -15.32,
+     -20.84,
+     -15.04
+    ]
+   },
+   {
+    "id": "shack_1:post",
+    "rect": [
+     -21.12,
+     -11.16,
+     -20.84,
+     -10.88
+    ]
+   },
+   {
+    "id": "shack_1:post",
+    "rect": [
+     -16.96,
+     -15.32,
+     -16.68,
+     -15.04
+    ]
+   },
+   {
+    "id": "shack_1:post",
+    "rect": [
+     -16.96,
+     -11.16,
+     -16.68,
+     -10.88
+    ]
+   },
+   {
+    "id": "shack_2:post",
+    "rect": [
+     24.53,
+     1.68,
+     24.81,
+     1.96
+    ]
+   },
+   {
+    "id": "shack_2:post",
+    "rect": [
+     24.53,
+     5.84,
+     24.81,
+     6.12
+    ]
+   },
+   {
+    "id": "shack_2:post",
+    "rect": [
+     28.69,
+     1.68,
+     28.97,
+     1.96
+    ]
+   },
+   {
+    "id": "shack_2:post",
+    "rect": [
+     28.69,
+     5.84,
+     28.97,
+     6.12
+    ]
+   },
+   {
+    "id": "shack_3:post",
+    "rect": [
+     19.78,
+     27.28,
+     20.06,
+     27.56
+    ]
+   },
+   {
+    "id": "shack_3:post",
+    "rect": [
+     19.78,
+     31.44,
+     20.06,
+     31.72
+    ]
+   },
+   {
+    "id": "shack_3:post",
+    "rect": [
+     23.94,
+     27.28,
+     24.22,
+     27.56
+    ]
+   },
+   {
+    "id": "shack_3:post",
+    "rect": [
+     23.94,
+     31.44,
+     24.22,
+     31.72
+    ]
+   },
+   {
+    "id": "shack_4:post",
+    "rect": [
+     -12.32,
+     35.03,
+     -12.04,
+     35.31
+    ]
+   },
+   {
+    "id": "shack_4:post",
+    "rect": [
+     -12.32,
+     39.19,
+     -12.04,
+     39.47
+    ]
+   },
+   {
+    "id": "shack_4:post",
+    "rect": [
+     -8.16,
+     35.03,
+     -7.88,
+     35.31
+    ]
+   },
+   {
+    "id": "shack_4:post",
+    "rect": [
+     -8.16,
+     39.19,
+     -7.88,
+     39.47
+    ]
+   },
+   {
+    "id": "underground:farm_shelter:entrance-guard",
+    "rect": [
+     -2.5,
+     -0.35,
+     -2.2,
+     6.25
+    ]
+   },
+   {
+    "id": "underground:farm_shelter:entrance-guard",
+    "rect": [
+     -4.2,
+     -0.35,
+     -3.9,
+     6.25
+    ]
+   },
+   {
+    "id": "underground:farm_shelter:entrance-guard",
+    "rect": [
+     -3.9,
+     5.95,
+     -2.5,
+     6.25
+    ]
+   },
+   {
+    "id": "underground:farm_shelter:entrance-guard",
+    "rect": [
+     -17.4,
+     -37.77,
+     -17.1,
+     -31.17
+    ]
+   },
+   {
+    "id": "underground:farm_shelter:entrance-guard",
+    "rect": [
+     -15.7,
+     -37.77,
+     -15.4,
+     -31.17
+    ]
+   },
+   {
+    "id": "underground:farm_shelter:entrance-guard",
+    "rect": [
+     -17.1,
+     -37.77,
+     -15.7,
+     -37.47
+    ]
+   },
+   {
+    "id": "underground:farm_shelter:entrance-divider",
+    "rect": [
+     0.0,
+     -25.4,
+     0.2,
+     -22.4
+    ]
+   },
+   {
+    "id": "underground:farm_shelter:entrance-wall",
+    "rect": [
+     0.0,
+     -22.4,
+     0.2,
+     -22.1
+    ]
+   },
+   {
+    "id": "underground:farm_shelter:entrance-wall",
+    "rect": [
+     0.2,
+     -22.4,
+     1.8,
+     -22.1
+    ]
+   },
+   {
+    "id": "underground:farm_shelter:entrance-wall",
+    "rect": [
+     -1.9,
+     -27.5,
+     -1.6,
+     -22.1
+    ]
+   },
+   {
+    "id": "underground:farm_shelter:entrance-wall",
+    "rect": [
+     1.8,
+     -27.5,
+     2.1,
+     -22.1
+    ]
+   },
+   {
+    "id": "underground:farm_shelter:entrance-wall",
+    "rect": [
+     -1.6,
+     -27.5,
+     1.8,
+     -27.2
+    ]
+   },
+   {
+    "id": "underground:farm_shelter:entrance-divider",
+    "rect": [
+     16.3,
+     12.1,
+     19.3,
+     12.3
+    ]
+   },
+   {
+    "id": "underground:farm_shelter:entrance-wall",
+    "rect": [
+     16.0,
+     12.1,
+     16.3,
+     12.3
+    ]
+   },
+   {
+    "id": "underground:farm_shelter:entrance-wall",
+    "rect": [
+     16.0,
+     12.3,
+     16.3,
+     13.9
+    ]
+   },
+   {
+    "id": "underground:farm_shelter:entrance-wall",
+    "rect": [
+     16.0,
+     10.2,
+     21.4,
+     10.5
+    ]
+   },
+   {
+    "id": "underground:farm_shelter:entrance-wall",
+    "rect": [
+     16.0,
+     13.9,
+     21.4,
+     14.2
+    ]
+   },
+   {
+    "id": "underground:farm_shelter:entrance-wall",
+    "rect": [
+     21.1,
+     10.5,
+     21.4,
+     13.9
+    ]
+   },
+   {
+    "id": "underground:farm_shelter:entrance-divider",
+    "rect": [
+     -20.1,
+     1.5,
+     -19.9,
+     4.5
+    ]
+   },
+   {
+    "id": "underground:farm_shelter:entrance-wall",
+    "rect": [
+     -20.1,
+     4.5,
+     -19.9,
+     4.8
+    ]
+   },
+   {
+    "id": "underground:farm_shelter:entrance-wall",
+    "rect": [
+     -19.9,
+     4.5,
+     -18.3,
+     4.8
+    ]
+   },
+   {
+    "id": "underground:farm_shelter:entrance-wall",
+    "rect": [
+     -22.0,
+     -0.6,
+     -21.7,
+     4.8
+    ]
+   },
+   {
+    "id": "underground:farm_shelter:entrance-wall",
+    "rect": [
+     -18.3,
+     -0.6,
+     -18.0,
+     4.8
+    ]
+   },
+   {
+    "id": "underground:farm_shelter:entrance-wall",
+    "rect": [
+     -21.7,
+     -0.6,
+     -18.3,
+     -0.3
+    ]
+   }
+  ]
+ },
+ "underground": [
+  {
+   "id": "farm_shelter",
+   "style": "farm",
+   "name": "Storm shelter",
+   "purpose": "Storm shelter and storage tunnels below the farm: close-quarters rooms joined by short offset tunnels",
+   "segments": [
+    [
+     -9.0,
+     6.25,
+     6.0,
+     16.0
+    ],
+    [
+     -24.0,
+     4.8,
+     -14.0,
+     15.5
+    ],
+    [
+     7.0,
+     8.0,
+     16.0,
+     16.0
+    ],
+    [
+     -22.0,
+     -45.0,
+     -12.0,
+     -37.77
+    ],
+    [
+     -9.0,
+     -22.1,
+     6.0,
+     -13.0
+    ],
+    [
+     12.0,
+     -24.0,
+     21.0,
+     -13.0
+    ],
+    [
+     13.0,
+     -5.0,
+     22.0,
+     2.0
+    ],
+    [
+     -12.0,
+     -31.0,
+     -4.5,
+     -24.2
+    ],
+    [
+     -1.5,
+     -4.5,
+     5.5,
+     1.5
+    ],
+    [
+     3.2,
+     1.5,
+     5.6,
+     6.25
+    ],
+    [
+     0.4,
+     -13.0,
+     2.8,
+     -4.5
+    ],
+    [
+     -14.0,
+     9.5,
+     -9.0,
+     12.0
+    ],
+    [
+     6.0,
+     10.5,
+     7.0,
+     13.0
+    ],
+    [
+     14.0,
+     2.0,
+     16.4,
+     8.0
+    ],
+    [
+     17.0,
+     -13.0,
+     19.4,
+     -5.0
+    ],
+    [
+     6.0,
+     -19.5,
+     12.0,
+     -17.0
+    ],
+    [
+     -12.0,
+     -41.8,
+     -7.0,
+     -39.4
+    ],
+    [
+     -9.4,
+     -39.4,
+     -7.0,
+     -31.0
+    ],
+    [
+     -8.6,
+     -24.2,
+     -6.2,
+     -22.1
+    ]
+   ],
+   "piers": [
+    [
+     -6.0,
+     9.4
+    ],
+    [
+     -6.0,
+     13.6
+    ],
+    [
+     -1.5,
+     9.4
+    ],
+    [
+     -1.5,
+     13.6
+    ],
+    [
+     3.0,
+     9.4
+    ],
+    [
+     3.0,
+     13.6
+    ],
+    [
+     -5.5,
+     -20.4
+    ],
+    [
+     -5.5,
+     -15.8
+    ],
+    [
+     -1.5,
+     -20.4
+    ],
+    [
+     -1.5,
+     -15.8
+    ],
+    [
+     4.2,
+     -20.4
+    ],
+    [
+     4.2,
+     -15.8
+    ],
+    [
+     -19.0,
+     8.6
+    ],
+    [
+     -19.0,
+     12.2
+    ],
+    [
+     11.0,
+     9.8
+    ],
+    [
+     11.0,
+     14.0
+    ]
+   ],
+   "blocks": [
+    {
+     "rect": [
+      13.6,
+      -3.4,
+      16.6,
+      -1.0
+     ],
+     "h": 1.0,
+     "kind": "tank"
+    },
+    {
+     "rect": [
+      8.0,
+      13.3,
+      10.3,
+      14.1
+     ],
+     "h": 0.95,
+     "kind": "counter"
+    },
+    {
+     "rect": [
+      -20.2,
+      -43.6,
+      -17.4,
+      -43.0
+     ],
+     "h": 0.95,
+     "kind": "counter"
+    }
+   ],
+   "decor": [],
+   "entrances": [
+    {
+     "id": "house",
+     "type": "straight",
+     "rect": [
+      -4.2,
+      -0.35,
+      -2.2,
+      6.25
+     ],
+     "side": "n",
+     "floor": -3.5,
+     "risers": 20,
+     "run": 0.24,
+     "style": "farm"
+    },
+    {
+     "id": "barn",
+     "type": "straight",
+     "rect": [
+      -17.4,
+      -37.77,
+      -15.4,
+      -31.17
+     ],
+     "side": "s",
+     "floor": -3.5,
+     "risers": 20,
+     "run": 0.24,
+     "style": "farm"
+    },
+    {
+     "id": "north",
+     "type": "dogleg",
+     "rect": [
+      -1.9,
+      -27.5,
+      2.1,
+      -22.1
+     ],
+     "side": "s",
+     "hand": "left",
+     "floor": -3.5,
+     "risers": 20,
+     "run": 0.24,
+     "style": "farm"
+    },
+    {
+     "id": "east",
+     "type": "dogleg",
+     "rect": [
+      16.0,
+      10.2,
+      21.4,
+      14.2
+     ],
+     "side": "w",
+     "hand": "left",
+     "floor": -3.5,
+     "risers": 20,
+     "run": 0.24,
+     "style": "farm"
+    },
+    {
+     "id": "southwest",
+     "type": "dogleg",
+     "rect": [
+      -22.0,
+      -0.6,
+      -18.0,
+      4.8
+     ],
+     "side": "s",
+     "hand": "left",
+     "floor": -3.5,
+     "risers": 20,
+     "run": 0.24,
+     "style": "farm"
+    }
+   ],
+   "route": [
+    [
+     -3.2,
+     7.6
+    ],
+    [
+     -3.2,
+     11.2
+    ],
+    [
+     -9.5,
+     11.2
+    ],
+    [
+     -14.5,
+     11.2
+    ],
+    [
+     -16.8,
+     10.6
+    ],
+    [
+     -16.8,
+     7.4
+    ],
+    [
+     -19.1,
+     6.6
+    ]
+   ],
+   "walks": [
+    [
+     [
+      -3.2,
+      7.6
+     ],
+     [
+      -3.2,
+      11.7
+     ],
+     [
+      6.5,
+      11.7
+     ],
+     [
+      13.0,
+      11.7
+     ],
+     [
+      15.0,
+      13.1
+     ]
+    ],
+    [
+     [
+      15.2,
+      10.0
+     ],
+     [
+      15.2,
+      3.0
+     ],
+     [
+      15.2,
+      -0.2
+     ],
+     [
+      18.2,
+      -0.2
+     ],
+     [
+      18.2,
+      -4.6
+     ],
+     [
+      18.2,
+      -12.0
+     ],
+     [
+      18.2,
+      -16.0
+     ],
+     [
+      14.0,
+      -16.0
+     ],
+     [
+      11.5,
+      -18.25
+     ],
+     [
+      6.5,
+      -18.25
+     ],
+     [
+      3.0,
+      -18.25
+     ]
+    ],
+    [
+     [
+      1.6,
+      -12.0
+     ],
+     [
+      1.6,
+      -1.0
+     ],
+     [
+      4.4,
+      0.9
+     ],
+     [
+      4.4,
+      5.5
+     ],
+     [
+      4.4,
+      7.2
+     ]
+    ],
+    [
+     [
+      -7.4,
+      -20.0
+     ],
+     [
+      -7.4,
+      -23.0
+     ],
+     [
+      -8.3,
+      -25.0
+     ],
+     [
+      -8.3,
+      -31.5
+     ],
+     [
+      -8.2,
+      -38.5
+     ],
+     [
+      -8.2,
+      -40.6
+     ],
+     [
+      -12.5,
+      -40.6
+     ],
+     [
+      -16.4,
+      -40.0
+     ],
+     [
+      -16.4,
+      -38.6
+     ]
+    ]
+   ],
+   "floor": -3.5,
+   "ceiling": -0.3,
+   "rect": [
+    -24.0,
+    -45.0,
+    22.0,
+    16.0
+   ],
+   "waypoints": [
+    [
+     -3.2,
+     0,
+     -1.55
+    ],
+    [
+     -3.2,
+     0,
+     -0.05
+    ],
+    [
+     -3.2,
+     -3.5,
+     5.65
+    ],
+    [
+     -3.2,
+     -3.5,
+     7.25
+    ],
+    [
+     -3.2,
+     -3.5,
+     7.6
+    ],
+    [
+     -3.2,
+     -3.5,
+     11.2
+    ],
+    [
+     -9.5,
+     -3.5,
+     11.2
+    ],
+    [
+     -14.5,
+     -3.5,
+     11.2
+    ],
+    [
+     -16.8,
+     -3.5,
+     10.6
+    ],
+    [
+     -16.8,
+     -3.5,
+     7.4
+    ],
+    [
+     -19.1,
+     -3.5,
+     6.6
+    ],
+    [
+     -19.1,
+     -3.5,
+     5.8
+    ],
+    [
+     -19.1,
+     -3.5,
+     4.3
+    ],
+    [
+     -19.1,
+     -1.75,
+     1.15
+    ],
+    [
+     -20.9,
+     -1.75,
+     1.15
+    ],
+    [
+     -20.9,
+     0,
+     4.2
+    ],
+    [
+     -20.9,
+     0,
+     6.0
+    ]
+   ]
+  }
+ ]
+}

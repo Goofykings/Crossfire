@@ -267,6 +267,9 @@ def map_collision(layout: dict) -> dict:
         boxes.extend(railing_boxes(t))
     for a in layout.get("arches", []):
         boxes.extend(arch_boxes(a))
+    import farmstead
+    for box, tag in farmstead.collision_boxes(layout):
+        boxes.append(to_obb(box, tag))
     from industrial_roofs import parts
     for box,_,part in parts(layout):
         boxes.append(to_obb(box, f'roof:{part}'))
@@ -275,12 +278,13 @@ def map_collision(layout: dict) -> dict:
         for box, _, part in route_parts(route):
             boxes.append(to_obb(box, f"upper:{route['id']}:{part}"))
     # invisible safety ring just outside the playable square
-    p0, _, p1, _ = layout["playArea"]
+    # (Maps need not be square: x and z limits are read separately. Square maps get the same boxes as before.)
+    p0, q0, p1, q1 = layout["playArea"]
     ring = 3.0
-    for bx in (aabb(p0 - ring - 0.5, 0, p0 - ring, p0 - 0.5, 30, p1 + ring),
-               aabb(p1 + 0.5, 0, p0 - ring, p1 + ring + 0.5, 30, p1 + ring),
-               aabb(p0 - ring, 0, p0 - ring - 0.5, p1 + ring, 30, p0 - 0.5),
-               aabb(p0 - ring, 0, p1 + 0.5, p1 + ring, 30, p1 + ring + 0.5)):
+    for bx in (aabb(p0 - ring - 0.5, 0, q0 - ring, p0 - 0.5, 30, q1 + ring),
+               aabb(p1 + 0.5, 0, q0 - ring, p1 + ring + 0.5, 30, q1 + ring),
+               aabb(p0 - ring, 0, q0 - ring - 0.5, p1 + ring, 30, q0 - 0.5),
+               aabb(p0 - ring, 0, q1 + 0.5, p1 + ring, 30, q1 + ring + 0.5)):
         boxes.append(to_obb(bx, "boundary"))
     return {"version": 1, "map": layout["id"], "boxes": boxes}
 

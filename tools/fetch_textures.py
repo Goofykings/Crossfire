@@ -71,6 +71,12 @@ TEXTURES: dict[str, tuple[str, int, int]] = {
     "asphalt_fine": ("asphalt_01", 2048, 1024),
     "roof_gravel": ("tarred_gravel", 1024, 1024),
     "granite": ("granite_tile", 1024, 1024),
+    # --- Farmstead ------------------------------------------------------------------------------
+    "grass": ("grass_ground", 1024, 1024),
+    "dirt": ("dirt_floor", 1024, 1024),
+    "siding": ("weathered_plank_siding", 1024, 1024),
+    "logs": ("wood_plank_wall", 1024, 1024),
+    "bark": ("bark_brown_01", 1024, 1024),
 }
 
 # output name -> Poly Haven HDRI ("pure sky": no ground in the panorama, so it works as a visible sky).

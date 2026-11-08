@@ -258,6 +258,8 @@ describe.each(MAP_IDS)('%s overhaul', (id) => {
         }
       }
     }
-    expect(longest, `longest clear axis sightline from ${at}`).toBeLessThan(40);
+    // The compact street maps stay under 40 m. The farmstead is an open yard: long lanes are the point, but none may
+    // cross the whole 84 m map (hedgerows and windbreaks cut them).
+    expect(longest, `longest clear axis sightline from ${at}`).toBeLessThan(id === 'farmstead' ? 76.5 : 40);
   });
 });

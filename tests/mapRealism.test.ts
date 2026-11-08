@@ -10,7 +10,8 @@ import { NO_INTENT, PlayerController } from '../src/player/PlayerController';
 import { CollisionWorld } from '../src/physics/CollisionWorld';
 
 const catalog=JSON.parse(readFileSync('public/assets/models/shared/props/props.json','utf8')) as PropCatalog;
-describe.each(MAP_IDS)('%s enclosed circulation', id=>{
+// (The farmstead's buildings are authored as wall/slab/stair elements: tests/farmstead.test.ts.)
+describe.each(MAP_IDS.filter(id=>id!=='farmstead'))('%s enclosed circulation', id=>{
   const layout=JSON.parse(readFileSync(`src/maps/${id}/layout.json`,'utf8')) as MapLayout;
   const collision=JSON.parse(readFileSync(`public/assets/models/${id}/collision.json`,'utf8')) as CollisionFile;
   const environment=JSON.parse(readFileSync(`public/assets/models/${id}/environment.json`,'utf8')) as EnvironmentDefinition;

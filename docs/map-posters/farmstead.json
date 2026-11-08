@@ -1,0 +1,131 @@
+{
+ "map": "farmstead",
+ "facade": [
+  {
+   "building": "barn",
+   "cell": 2,
+   "framed": false,
+   "w": 0.65,
+   "h": 0.975,
+   "x": -22.8,
+   "y": 1.15,
+   "z": -23.488,
+   "normal": [
+    0,
+    1
+   ]
+  },
+  {
+   "building": "barn",
+   "cell": 6,
+   "framed": false,
+   "w": 0.65,
+   "h": 0.975,
+   "x": -21.6,
+   "y": 1.0,
+   "z": -23.488,
+   "normal": [
+    0,
+    1
+   ]
+  },
+  {
+   "building": "barn",
+   "cell": 4,
+   "framed": false,
+   "w": 0.65,
+   "h": 0.975,
+   "x": -20.4,
+   "y": 1.15,
+   "z": -23.488,
+   "normal": [
+    0,
+    1
+   ]
+  },
+  {
+   "building": "garage",
+   "cell": 8,
+   "framed": false,
+   "w": 0.65,
+   "h": 0.975,
+   "x": -20.9,
+   "y": 1.15,
+   "z": 18.238,
+   "normal": [
+    0,
+    -1
+   ]
+  },
+  {
+   "building": "garage",
+   "cell": 9,
+   "framed": false,
+   "w": 0.65,
+   "h": 0.975,
+   "x": -19.8,
+   "y": 1.0,
+   "z": 18.238,
+   "normal": [
+    0,
+    -1
+   ]
+  },
+  {
+   "building": "garage",
+   "cell": 5,
+   "framed": false,
+   "w": 0.65,
+   "h": 0.975,
+   "x": -19.8,
+   "y": 1.2,
+   "z": 28.262,
+   "normal": [
+    0,
+    1
+   ]
+  },
+  {
+   "building": "cabin",
+   "cell": 0,
+   "framed": false,
+   "w": 0.65,
+   "h": 0.975,
+   "x": 16.55,
+   "y": 1.25,
+   "z": -25.988,
+   "normal": [
+    0,
+    1
+   ]
+  },
+  {
+   "building": "house",
+   "cell": 10,
+   "framed": false,
+   "w": 0.65,
+   "h": 0.975,
+   "x": -1.2,
+   "y": 1.3,
+   "z": -8.512,
+   "normal": [
+    0,
+    -1
+   ]
+  },
+  {
+   "building": "house",
+   "cell": 3,
+   "framed": false,
+   "w": 0.65,
+   "h": 0.975,
+   "x": 12.012,
+   "y": 1.2,
+   "z": -0.5,
+   "normal": [
+    1,
+    0
+   ]
+  }
+ ]
+}

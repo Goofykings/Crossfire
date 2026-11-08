@@ -33,6 +33,7 @@ URBAN_DIR = "assets/textures/urban/"
 IND_DIR = "assets/textures/industrial-complex/"
 CITY_DIR = "assets/textures/modern-city/"
 WEAPON_DIR = "assets/textures/weapons/"
+FARM_DIR = "assets/textures/farmstead/"
 
 MATERIALS: dict[str, dict] = {
     # --- architecture ----------------------------------------------------------------------------
@@ -286,6 +287,47 @@ _tints("carpaint", {"tint": [1, 1, 1], "roughness": 0.28, "metallic": 0.55}, {
     "white": [0.78, 0.78, 0.76], "green": [0.04, 0.16, 0.08]})
 _tints("canvas", {"tex": "plaster", "tile": 1.0, "roughness": 0.95}, {
     "blue": [0.16, 0.3, 0.55], "black": [0.06, 0.06, 0.065], "olive": [0.32, 0.36, 0.2]})
+
+
+# --- Farmstead (2026-11) --------------------------------------------------------------------------------
+MATERIALS.update({
+    # Ground and plants: the grass set is an olive Poly Haven scan, lifted toward green by the tint.
+    "grass": {"tex": "grass", "tile": 3.6, "tint": [0.66, 1.0, 0.44], "roughness": 1.0, "normal": 0.9},
+    "dirt": {"tex": "dirt", "tile": 2.8, "tint": [0.74, 0.66, 0.55], "roughness": 1.0, "normal": 1.1},
+    "dirt_floor": {"tex": "dirt", "tile": 2.2, "tint": [0.62, 0.52, 0.42], "roughness": 1.0, "normal": 0.9},
+    "bark": {"tex": "bark", "tile": 1.4, "tint": [0.8, 0.7, 0.6], "normal": 1.0},
+    "leaves_oak": {"albedo": FARM_DIR + "leaves.jpg", "tile": 1.7, "tint": [0.8, 1.0, 0.62], "roughness": 0.85},
+    "leaves_oak_b": {"albedo": FARM_DIR + "leaves.jpg", "tile": 1.7, "tint": [1.0, 1.0, 0.58], "roughness": 0.85},
+    "leaves_pine": {"albedo": FARM_DIR + "leaves.jpg", "tile": 1.3, "tint": [0.38, 0.62, 0.5], "roughness": 0.9},
+    "hay": {"albedo": FARM_DIR + "hay.jpg", "tile": 0.9, "roughness": 1.0},
+    # Walls and roofs.
+    "siding_red": {"tex": "siding", "tile": 1.8, "tint": [2.2, 0.55, 0.42], "normal": 1.0},
+    "siding_weathered": {"tex": "siding", "tile": 1.8, "tint": [1.5, 1.35, 1.2], "normal": 1.0},
+    "logs": {"tex": "logs", "tile": 1.7, "tint": [2.1, 1.65, 1.25], "normal": 1.1},
+    "clapboard_cream": {"albedo": PROC_DIR + "wood_painted_grey.jpg", "tex": "wood_painted", "tile": 1.1,
+                        "tint": [0.95, 0.88, 0.7]},
+    "trim_white": {"albedo": PROC_DIR + "wood_painted_grey.jpg", "tex": "wood_painted", "tile": 0.7,
+                   "tint": [0.92, 0.9, 0.84]},
+    "trim_green": {"albedo": PROC_DIR + "wood_painted_grey.jpg", "tex": "wood_painted", "tile": 0.7,
+                   "tint": [0.1, 0.24, 0.14]},
+    "trim_brown": {"tex": "wood_dark", "tile": 0.8, "tint": [0.5, 0.38, 0.28]},
+    # Bright cream plaster for the house interior (the scanned plaster is grey; farmhouse rooms need to read as lit)
+    "wall_cream": {"tex": "plaster", "tile": 3.0, "tint": [1.8, 1.66, 1.42], "roughness": 1.0},
+    "roof_shingle": {"tex": "roof_tiles_b", "tile": 2.2, "tint": [0.42, 0.36, 0.34], "normal": 1.2},
+    "roof_barn": {"tex": "corrugated_worn", "tile": 2.0, "tint": [0.72, 0.74, 0.76], "normal": 1.1},
+    "roof_shed": {"tex": "corrugated_rusty", "tile": 2.0, "tint": [1.0, 0.86, 0.78], "normal": 1.1},
+    "block_wall": {"tex": "concrete_panel", "tile": 3.0, "tint": [0.82, 0.8, 0.74]},
+    # Cloth and small things (tint only: they share the PBR defaults).
+    "cloth_blue": {"tex": "plaster", "tile": 0.8, "tint": [0.1, 0.2, 0.42], "roughness": 0.95},
+    "cloth_blue_light": {"tex": "plaster", "tile": 0.8, "tint": [0.18, 0.3, 0.55], "roughness": 0.95},
+    "cloth_red": {"tex": "plaster", "tile": 0.8, "tint": [0.5, 0.1, 0.08], "roughness": 0.95},
+    "cloth_tan": {"tex": "plaster", "tile": 0.8, "tint": [0.75, 0.66, 0.5], "roughness": 0.95},
+    "cloth_green": {"tex": "plaster", "tile": 0.8, "tint": [0.18, 0.28, 0.16], "roughness": 0.95},
+    "burlap": {"tex": "plaster", "tile": 0.4, "tint": [0.6, 0.48, 0.3], "roughness": 1.0},
+    "rope": {"tint": [0.55, 0.45, 0.3], "roughness": 1.0},
+    "tractor_red": {"tint": [0.45, 0.04, 0.03], "roughness": 0.4, "metallic": 0.4},
+    "tractor_hub": {"tint": [0.7, 0.5, 0.06], "roughness": 0.5, "metallic": 0.3},
+})
 
 
 def wall_material(palette: str) -> str:

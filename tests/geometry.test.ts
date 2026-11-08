@@ -267,7 +267,7 @@ function families(pairs: Pair[]): string {
   return [...by.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([k, v]) => `${v.toFixed(3)} m2 ${k}`).join('\n');
 }
 
-const NEW_MAPS = ['industrial-complex', 'modern-city'].filter((id) => existsSync(`public/assets/models/${id}/map-assets.json`));
+const NEW_MAPS = ['industrial-complex', 'modern-city', 'farmstead'].filter((id) => existsSync(`public/assets/models/${id}/map-assets.json`));
 
 describe.each(NEW_MAPS)('%s geometry has no coplanar overlapping surfaces (z-fighting)', (id) => {
   const idx = JSON.parse(readFileSync(`public/assets/models/${id}/map-assets.json`, 'utf8')) as { models: string[] };

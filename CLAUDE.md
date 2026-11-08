@@ -1,3 +1,23 @@
+## Farmstead map (2026-11-07)
+
+See docs/FARMSTEAD.md. Fourth map `farmstead` (plan: references_images/Newoutdoormap.png): an open farm yard with
+house, barn, cabin, garage, four open shacks, a gapped fence and a storm shelter underneath. Gameplay, protocol
+(WebSocket v21, HTTP schemas) and Cloudflare configuration are untouched; layouts, collision and map revisions are
+new, so frontend assets and Worker need a matching release when authorized (the schedule now reshuffles once per full
+pass over `MAP_IDS`; with three maps that was identical). The buildings are NOT street-block buildings: tools/
+farm_structures.py authors *elements* (walls with openings, slabs, stairs, rails, posts, roofs) and
+blender/scripts/lib/farmstead.py derives the mesh and the collision from them (tags `farm:<id>:<kind>`); roofs are
+visual only, each building has a solid ceiling slab at its eave. There are no doors: every gap is an open entry.
+Stairs need their upper-slab void to run the whole flight plus 1 m (a gun swung down a flight meets a slab
+otherwise) and a free approach at both ends; an entrance footprint (underground stairs) must never face a wall
+opening. The shelter is underground style `farm` (floor -3.5 m, tunnels offset so no long lane). Hedgerows
+(`hedge_long`, 3 m collider) cut the long eye-level lanes (limit 76.5 m for this open map in tests/mapOverhaul.test.ts)
+and close the outer strip; `collision_gen` now reads the play area per axis (the map is not square). Build:
+`python -B -I tools/layout_farm.py --write`, `node tools/run-blender.mjs --only props,farm`, then restore the tracked
+`__pycache__` (see the memory note) and run `npm test --prefix server` (it rebuilds the Worker bundle). Review shots:
+`node tools/farm-shots.mjs <url>`; tests: tests/farmstead.test.ts plus every shared `MAP_IDS` suite. No
+commit/push/deploy.
+
 ## Melee trails, bigger underground spaces and posters (2026-11-07)
 
 See docs/UNDERGROUND_POSTERS.md and the newest docs/DUAL_DAGGERS.md section. Melee presentation

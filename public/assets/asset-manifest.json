@@ -1,7 +1,7 @@
 {
  "generator": "blender/scripts/generate_all.py",
  "blender": "5.2.3 LTS",
- "generated": "2026-11-07 15:33:11",
+ "generated": "2026-11-07 20:37:37",
  "assets": [
   {
    "path": "assets/characters/player-albedo.png",
@@ -36,7 +36,7 @@
   {
    "path": "assets/materials.json",
    "kind": "materials",
-   "bytes": 54673,
+   "bytes": 62129,
    "description": "Material table (names, texture sets, tiling, tint, PBR factors)",
    "script": "blender/scripts/lib/materials.py"
   },
@@ -172,6 +172,43 @@
    "description": "Streets, plaza, courts, terraces, stairs, garden walls, gates and flying arches",
    "script": "blender/scripts/generate_all.py",
    "triangles": 7320
+  },
+  {
+   "path": "assets/models/farmstead/collision.json",
+   "kind": "collision",
+   "bytes": 75133,
+   "description": "879 oriented collision boxes (runtime physics)",
+   "script": "blender/scripts/lib/collision_gen.py"
+  },
+  {
+   "path": "assets/models/farmstead/collision_debug.glb",
+   "kind": "collision-debug",
+   "bytes": 1044096,
+   "description": "Collision boxes as meshes for in-game debug view (F2)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 10548
+  },
+  {
+   "path": "assets/models/farmstead/environment.json",
+   "kind": "interactive-definitions",
+   "bytes": 631,
+   "description": "Shared authored prop bodies, sign hinges and precise stall collision",
+   "script": "blender/scripts/lib/interactive_environment.py"
+  },
+  {
+   "path": "assets/models/farmstead/map-assets.json",
+   "kind": "map-index",
+   "bytes": 174,
+   "description": "List of model files the runtime loads for this map",
+   "script": "blender/scripts/generate_all.py"
+  },
+  {
+   "path": "assets/models/farmstead/terrain.glb",
+   "kind": "map-terrain",
+   "bytes": 2543476,
+   "description": "Meadow and dirt paths, the farmhouse, barn, cabin, garage and open shacks, the perimeter fence and the storm shelter",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 48959
   },
   {
    "path": "assets/models/industrial-complex/buildings/block_01.glb",
@@ -800,6 +837,14 @@
    "triangles": 1290
   },
   {
+   "path": "assets/models/shared/props/bed.glb",
+   "kind": "prop",
+   "bytes": 14376,
+   "description": "bed (2.1 x 0.95 x 1.56 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 120
+  },
+  {
    "path": "assets/models/shared/props/bench.glb",
    "kind": "prop",
    "bytes": 15296,
@@ -838,6 +883,30 @@
    "description": "bollard_yellow (0.21 x 1 x 0.21 m)",
    "script": "blender/scripts/generate_all.py",
    "triangles": 144
+  },
+  {
+   "path": "assets/models/shared/props/bookshelf.glb",
+   "kind": "prop",
+   "bytes": 118216,
+   "description": "bookshelf (1.6 x 1.9 x 0.36 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 1368
+  },
+  {
+   "path": "assets/models/shared/props/bunk_bed.glb",
+   "kind": "prop",
+   "bytes": 17056,
+   "description": "bunk_bed (2 x 1.9 x 0.95 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 168
+  },
+  {
+   "path": "assets/models/shared/props/bush.glb",
+   "kind": "prop",
+   "bytes": 13800,
+   "description": "bush (1.4 x 0.95 x 1.2 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 112
   },
   {
    "path": "assets/models/shared/props/cable_reel.glb",
@@ -1016,6 +1085,14 @@
    "triangles": 540
   },
   {
+   "path": "assets/models/shared/props/dining_table.glb",
+   "kind": "prop",
+   "bytes": 44556,
+   "description": "dining_table (2.6 x 0.9 x 1.7 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 504
+  },
+  {
    "path": "assets/models/shared/props/drain_grate.glb",
    "kind": "prop",
    "bytes": 13244,
@@ -1056,6 +1133,14 @@
    "triangles": 125
   },
   {
+   "path": "assets/models/shared/props/feed_sacks.glb",
+   "kind": "prop",
+   "bytes": 10760,
+   "description": "feed_sacks (0.9 x 0.5 x 0.66 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 96
+  },
+  {
    "path": "assets/models/shared/props/fence.glb",
    "kind": "prop",
    "bytes": 20240,
@@ -1078,6 +1163,14 @@
    "description": "fire_hydrant (0.42 x 0.74 x 0.41 m)",
    "script": "blender/scripts/generate_all.py",
    "triangles": 388
+  },
+  {
+   "path": "assets/models/shared/props/firewood_stack.glb",
+   "kind": "prop",
+   "bytes": 74568,
+   "description": "firewood_stack (1.8 x 1.2 x 0.6 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 840
   },
   {
    "path": "assets/models/shared/props/floodlight_pole.glb",
@@ -1120,12 +1213,44 @@
    "triangles": 808
   },
   {
+   "path": "assets/models/shared/props/fridge.glb",
+   "kind": "prop",
+   "bytes": 7396,
+   "description": "fridge (0.8 x 1.8 x 0.72 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 48
+  },
+  {
    "path": "assets/models/shared/props/gas_cage.glb",
    "kind": "prop",
    "bytes": 42532,
    "description": "gas_cage (1.7 x 2.04 x 0.9 m)",
    "script": "blender/scripts/generate_all.py",
    "triangles": 500
+  },
+  {
+   "path": "assets/models/shared/props/hay_bale.glb",
+   "kind": "prop",
+   "bytes": 7116,
+   "description": "hay_bale (1.1 x 0.5 x 0.55 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 56
+  },
+  {
+   "path": "assets/models/shared/props/hay_stack.glb",
+   "kind": "prop",
+   "bytes": 9912,
+   "description": "hay_stack (2.2 x 1 x 0.55 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 96
+  },
+  {
+   "path": "assets/models/shared/props/hedge_long.glb",
+   "kind": "prop",
+   "bytes": 71360,
+   "description": "hedge_long (3.8 x 2.9 x 0.95 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 656
   },
   {
    "path": "assets/models/shared/props/ibc_tank.glb",
@@ -1142,6 +1267,14 @@
    "description": "jersey_barrier (2 x 0.81 x 0.6 m)",
    "script": "blender/scripts/generate_all.py",
    "triangles": 26
+  },
+  {
+   "path": "assets/models/shared/props/kitchen_counter.glb",
+   "kind": "prop",
+   "bytes": 28696,
+   "description": "kitchen_counter (2.44 x 0.92 x 0.68 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 294
   },
   {
    "path": "assets/models/shared/props/market_crate.glb",
@@ -1250,7 +1383,7 @@
   {
    "path": "assets/models/shared/props/props.json",
    "kind": "prop-catalog",
-   "bytes": 14790,
+   "bytes": 18117,
    "description": "Prop sizes and collision boxes used by the runtime",
    "script": "blender/scripts/lib/catalog.py"
   },
@@ -1335,6 +1468,14 @@
    "triangles": 192
   },
   {
+   "path": "assets/models/shared/props/sofa.glb",
+   "kind": "prop",
+   "bytes": 13072,
+   "description": "sofa (2 x 0.85 x 0.9 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 120
+  },
+  {
    "path": "assets/models/shared/props/stone_bollard.glb",
    "kind": "prop",
    "bytes": 9644,
@@ -1349,6 +1490,14 @@
    "description": "stool (0.4 x 0.45 x 0.4 m)",
    "script": "blender/scripts/generate_all.py",
    "triangles": 84
+  },
+  {
+   "path": "assets/models/shared/props/storage_shelf.glb",
+   "kind": "prop",
+   "bytes": 77232,
+   "description": "storage_shelf (2 x 1.9 x 0.5 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 900
   },
   {
    "path": "assets/models/shared/props/street_lantern.glb",
@@ -1389,6 +1538,14 @@
    "description": "tire_stack (0.9 x 0.77 x 0.9 m)",
    "script": "blender/scripts/generate_all.py",
    "triangles": 288
+  },
+  {
+   "path": "assets/models/shared/props/tractor.glb",
+   "kind": "prop",
+   "bytes": 47276,
+   "description": "tractor (2 x 2.45 x 3.7 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 640
   },
   {
    "path": "assets/models/shared/props/traffic_cone.glb",
@@ -1437,6 +1594,30 @@
    "description": "trash_bin_grey (0.62 x 1.03 x 0.75 m)",
    "script": "blender/scripts/generate_all.py",
    "triangles": 106
+  },
+  {
+   "path": "assets/models/shared/props/tree_oak.glb",
+   "kind": "prop",
+   "bytes": 48760,
+   "description": "tree_oak (4.8 x 7.4 x 4.8 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 480
+  },
+  {
+   "path": "assets/models/shared/props/tree_oak_small.glb",
+   "kind": "prop",
+   "bytes": 48800,
+   "description": "tree_oak_small (3.6 x 5.6 x 3.6 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 480
+  },
+  {
+   "path": "assets/models/shared/props/tree_pine.glb",
+   "kind": "prop",
+   "bytes": 13640,
+   "description": "tree_pine (3.6 x 8 x 3.6 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 182
   },
   {
    "path": "assets/models/shared/props/utility_box.glb",
@@ -1495,6 +1676,22 @@
    "triangles": 138
   },
   {
+   "path": "assets/models/shared/props/wardrobe.glb",
+   "kind": "prop",
+   "bytes": 8984,
+   "description": "wardrobe (1.26 x 2.06 x 0.66 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 72
+  },
+  {
+   "path": "assets/models/shared/props/water_trough.glb",
+   "kind": "prop",
+   "bytes": 9124,
+   "description": "water_trough (2.24 x 0.66 x 0.74 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 54
+  },
+  {
    "path": "assets/models/shared/props/well.glb",
    "kind": "prop",
    "bytes": 49048,
@@ -1509,6 +1706,14 @@
    "description": "wet_floor_sign (0.4 x 0.67 x 0.45 m)",
    "script": "blender/scripts/generate_all.py",
    "triangles": 28
+  },
+  {
+   "path": "assets/models/shared/props/wheelbarrow.glb",
+   "kind": "prop",
+   "bytes": 15916,
+   "description": "wheelbarrow (1.7 x 0.75 x 0.6 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 145
   },
   {
    "path": "assets/models/shared/props/wine_rack.glb",
@@ -1618,6 +1823,13 @@
    "script": "blender/scripts/generate_all.py"
   },
   {
+   "path": "blender/source/farmstead.blend",
+   "kind": "blend",
+   "bytes": 1709473,
+   "description": "Editable source: buildings, terrain, collision, markers, prop preview",
+   "script": "blender/scripts/generate_all.py"
+  },
+  {
    "path": "blender/source/grenade.blend",
    "kind": "blend",
    "bytes": 117617,
@@ -1648,7 +1860,7 @@
   {
    "path": "blender/source/props.blend",
    "kind": "blend",
-   "bytes": 744987,
+   "bytes": 913586,
    "description": "Editable source: all street props",
    "script": "blender/scripts/generate_all.py"
   },

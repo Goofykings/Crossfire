@@ -1,3 +1,54 @@
+# Farmstead: a new outdoor map with a storm shelter (2026-11-07)
+
+New playable map `farmstead` built from `references_images/Newoutdoormap.png`; see docs/FARMSTEAD.md.
+Gameplay, scoring, networking (WebSocket v21, HTTP schemas), cosmetics and Cloudflare configuration are
+unchanged. Layout, collision and map revision are new (`MAP_IDS` has a fourth map and the schedule reshuffles once
+per full pass; with three maps that was identical), so the frontend assets and the Worker need a matching release when
+authorized. No commit, push or deployment.
+
+## Added
+- **Surface** (74 x 92 m play area, 66 x 83.5 m fence line): farmhouse (26 x 16.5 m: living room, hall, kitchen,
+  dining room, pantry, stairs, three bedrooms upstairs, a balcony over the dining porch with a drop-down gap), barn
+  (double-height bay, two stalls, hayloft and stair, forebay deck), two-floor log cabin with a balcony on the west, south
+  and east and a gap in the south railing, garage with a wide bay and a workshop, four shacks open on all four sides,
+  post-and-rail fence with open gaps on every side, dirt paths from the south gate to the house, garage, barn and
+  cabin, 39 trees, 45 crates (extra ones under the three balconies), 20 hedgerows, 9 exterior posters. No doors: every
+  gap of the plan is an open entry; windows are real openings.
+- **Storm shelter**: 922 m2 of rooms and tunnels at -3.5 m (3.2 m clear), eight rooms joined by ten offset tunnels in a
+  loop, five entrances (house hall and barn stall stairs, three fieldstone portals), 16 piers, 59 props, concrete and
+  timber styling (`underground.py` style `farm`).
+- **Pipeline**: `tools/farm_structures.py` (buildings as elements) -> `blender/scripts/lib/farmstead.py` (mesh and
+  collision from the same elements, roofs visual only with a solid ceiling slab under each), `tools/layout_farm.py`
+  (layout, prop validation), `terrain_farm.py` (meadow, ragged dirt paths, exact interior floors), `props_farm.py` (20 new
+  props), new materials and Poly Haven textures (grass, dirt, siding, logs, bark) plus procedural leaves and hay,
+  `tools/farm-shots.mjs`, `farm-thumb.mjs/.py`, `farm-menu-shot.mjs`, `tests/farmstead.test.ts`.
+- **Shared fixes**: `collision_gen` reads the play area per axis (non-square maps), the map schedule shuffle uses the
+  map count, the tactical map draws `farm.solids`/`farm.fences`, the map-menu grid auto-fits four cards, `map.test.ts`
+  probes each zone's own surface (a 1.2 m fence is not ground), `collisionSafety` probes with 1 mm, street-only suites
+  (`compactMaps`, `mapRealism`, `phase2Maps`, `stairSliding`) skip the farmstead, `mapOverhaul` allows 76.5 m lanes
+  on the open map, the geometry z-fight suite covers it.
+
+## Verified
+- 823 frontend tests (1 existing skip): 820 passed in the full run and the 2 `characterWeapon` timeouts that load caused
+  passed alone; the Worker suite passes (integration 22/22, including both real clients rotating through all four maps
+  with a farmstead spawn); typecheck, production build and `assets:verify` pass. `tests/farmstead.test.ts` walks every opening both ways with no gun, a rifle
+  and a sniper rifle, every stair, the cabin balcony (railing blocks, the gap drops), the fence gaps, the shacks, all five
+  shelter entrances, and Practice navigation from every spawn to every room; the shared `MAP_IDS` suites (integrity audit,
+  collision safety, tactical, practice bots, overhaul walks, posters, geometry/z-fight, assets) pass for it.
+- Practice bots over six seeds: no stuck bot, they climb to the 3.4 m and 3.0 m floors and descend to the shelter.
+- Real Chrome screenshots (`node tools/farm-shots.mjs`, git-ignored `test-results/farm/`): six aerials, the yard and
+  paths, the fence gaps, every building from outside, house/barn/cabin/garage inside (ground and upper floors, loft,
+  forebay, balconies), all four shacks, all eight shelter rooms and five entrances (about 80 viewpoints). Fixes found
+  that way: a green strip down the middle of wide paths, orange dirt, a brown skirt past the meadow, grey and dark
+  interiors, rusty-looking posts, a window shutter against a door frame, benches and sofas in doorways, stairs that
+  met a window or a door, a stair void that caught a gun barrel, and a bot pocket between a bush, a hay bale and a hedge.
+
+## Remaining limits
+- Interiors stay dim (two point lights on every map); the shelter is deliberately darker than the yard.
+- The thumbnail is a game screenshot; there is no Blender preview render for this map.
+- The aerial shots are hazy at 40+ m (the map's distance fog).
+- Public Cloudflare behaviour was not validated; old browser tabs need a refresh after the matching releases.
+
 # Melee polish, blade trails, bigger underground spaces and posters (2026-11-07)
 
 Presentation, map-art and navigation pass; see docs/UNDERGROUND_POSTERS.md and the new "Expressive
