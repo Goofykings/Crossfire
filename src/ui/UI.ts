@@ -891,7 +891,7 @@ export class UI {
       row.querySelectorAll<HTMLButtonElement|HTMLInputElement>('button,input').forEach(c=>c.disabled=overridden);
     }
     const mode=this.settingRows.get('chromebookMode');
-    if(mode&&!mode.querySelector('.chromebook-hint')){const hint=el('small','chromebook-hint','Overrides resolution, shadows, textures and effects; previous preferences are kept.');mode.append(hint);}
+    if(mode&&!mode.querySelector('.chromebook-hint')){const hint=el('small','chromebook-hint','Targets 60 FPS with adaptive resolution, lighter textures and effects. Previous preferences are kept.');mode.append(hint);}
     const dirty = new Set(this.draft.dirtyKeys);
     const rename = this.usernameDraft !== this.profile.value.username;
     if (this.usernameInput.value !== this.usernameDraft) this.usernameInput.value = this.usernameDraft;
@@ -1075,12 +1075,13 @@ export class UI {
   }
 
   setWeaponName(name: string): void {
-    if (this.weaponName.textContent !== name) feedback(this.weaponName);
+    if(this.weaponName.textContent===name)return;
+    feedback(this.weaponName);
     this.weaponName.textContent = name;
   }
 
   setHealth(hp: number, max: number): void {
-    this.healthValue.textContent = String(Math.ceil(hp));
+    const text=String(Math.ceil(hp));if(this.healthValue.textContent!==text)this.healthValue.textContent=text;
     this.healthBar.style.width = `${Math.max(0, (hp / max) * 100)}%`;
   }
 
@@ -1102,7 +1103,7 @@ export class UI {
   }
 
   /** Scope overlay (sniper fully aimed): `amount` 0..1 fades it in as the scope reaches the eye. */
-  setScopeZoom(magnification:number):void {this.scopeZoom.textContent=`${magnification.toFixed(1)}x`; }
+  setScopeZoom(magnification:number):void {const text=`${magnification.toFixed(1)}x`;if(this.scopeZoom.textContent!==text)this.scopeZoom.textContent=text; }
   setScope(amount: number): void {
     for (const scope of [this.scope, this.spectatorScope]) {
       scope.style.opacity = String(amount);
@@ -1128,17 +1129,19 @@ export class UI {
     this.chargeRing.style.setProperty('--charge', String(Math.max(0, Math.min(1, progress))));
   }
   setGrenades(count: number): void {
-    this.grenadeButton.querySelector('span')!.textContent = String(count);
+    const value=this.grenadeButton.querySelector('span')!,text=String(count);
+    if(value.textContent!==text)value.textContent=text;
     this.grenadeButton.disabled = count === 0;
-    this.grenadeButton.setAttribute('aria-label', `Throw grenade (${count} remaining)`);
-    this.grenadeButton.title = `Throw grenade: ${bindingName(this.draft.value.keyBindings.grenade[0])}`;
+    const label=`Throw grenade (${count} remaining)`,title=`Throw grenade: ${bindingName(this.draft.value.keyBindings.grenade[0])}`;
+    if(this.grenadeButton.getAttribute('aria-label')!==label)this.grenadeButton.setAttribute('aria-label',label);
+    if(this.grenadeButton.title!==title)this.grenadeButton.title=title;
   }
 
   setMeleeEquipped(value:boolean):void {this.screens.get('hud')!.dataset.melee=String(value);}
   setAmmo(ammo: number, reserve: number, magazine: number, reloading: boolean, progress: number): void {
-    if (this.ammoValue.textContent !== String(ammo)) feedback(this.ammoValue);
-    this.ammoValue.textContent = String(ammo);
-    this.ammoReserve.innerHTML = Number.isFinite(reserve) ? `/ ${reserve}` : '/ &infin;';
+    const text=String(ammo),remaining=Number.isFinite(reserve)?`/ ${reserve}`:'/ ∞';
+    if (this.ammoValue.textContent !== text){feedback(this.ammoValue);this.ammoValue.textContent=text;}
+    if(this.ammoReserve.textContent!==remaining)this.ammoReserve.textContent=remaining;
     this.ammoBox.classList.toggle('low', ammo <= Math.floor(magazine * 0.2));
     this.reloadBar.classList.toggle('active', reloading);
     (this.reloadBar.firstElementChild as HTMLElement).style.width = `${Math.round(progress * 100)}%`;
@@ -1164,12 +1167,12 @@ export class UI {
   }
 
   setFps(text: string | null): void {
-    this.fpsBox.textContent = text ?? '';
+    if(this.fpsBox.textContent!==(text??''))this.fpsBox.textContent=text??'';
     this.fpsBox.style.display = text ? 'block' : 'none';
   }
 
   setStats(text: string): void {
-    this.statsBox.textContent = text;
+    if(this.statsBox.textContent!==text)this.statsBox.textContent = text;
   }
 
   setLockHint(visible: boolean): void {

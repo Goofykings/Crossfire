@@ -1,4 +1,5 @@
 import { Camera, Color4, Engine, FreeCamera, Quaternion, Scene, Vector3 } from '@babylonjs/core';
+import {AdaptiveResolution,renderPixelRatio} from './AdaptiveResolution';
 
 /** Engine, scene and the first-person camera. The scene uses glTF's right-handed convention. */
 export class RenderContext {
@@ -6,6 +7,8 @@ export class RenderContext {
   readonly scene: Scene;
   readonly camera: FreeCamera;
   private resolutionScale = 1;
+  private chromebook=false;
+  private readonly adaptive=new AdaptiveResolution();
 
   constructor(readonly canvas: HTMLCanvasElement, opts: { preserveDrawingBuffer?: boolean } = {}) {
     this.engine = new Engine(
@@ -41,14 +44,29 @@ export class RenderContext {
     this.camera = cam;
     scene.activeCamera = cam;
 
-    window.addEventListener('resize', () => this.engine.resize());
+    window.addEventListener('resize', () => this.applyRenderSize());
   }
 
   /** Render at a fraction of the display's device-pixel resolution (1 = native). */
-  setResolutionScale(scale: number): void {
+  setResolutionScale(scale: number,chromebook=false): void {
     this.resolutionScale = scale;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    this.engine.setHardwareScalingLevel(1 / (dpr * scale));
+    this.chromebook=chromebook;this.adaptive.reset();
+    this.applyRenderSize();
+  }
+
+  private applyRenderSize():void {
+    const scale=this.chromebook?this.adaptive.scale:this.resolutionScale;
+    const ratio=renderPixelRatio(this.canvas.clientWidth,this.canvas.clientHeight,window.devicePixelRatio||1,scale,this.chromebook);
+    this.engine.setHardwareScalingLevel(1/ratio);
+  }
+
+  updateResolution(dt:number,playing:boolean):void {
+    if(this.chromebook&&playing&&this.adaptive.sample(dt))this.applyRenderSize();
+  }
+
+  resolutionStats(){
+    return {adaptive:this.chromebook,scale:this.chromebook?this.adaptive.scale:this.resolutionScale,
+      width:this.engine.getRenderWidth(),height:this.engine.getRenderHeight(),pixelBudget:this.chromebook?1280*720:null};
   }
 
   get renderScale(): number {

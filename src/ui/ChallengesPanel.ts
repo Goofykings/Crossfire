@@ -96,7 +96,7 @@ export class ChallengesPanel {
       const t=Math.min(1,(performance.now()-this.balanceAt)/350),amount=Math.round(this.startGems+(this.targetGems-this.startGems)*(1-(1-t)**3));
       if(amount!==this.displayedGems){this.displayedGems=amount;this.balance.textContent=amount.toLocaleString('en-US');}
     }
-    if(serverNow===null||!this.view){this.countdown.textContent='';return;}
+    if(serverNow===null||!this.view){if(this.countdown.textContent)this.countdown.textContent='';return;}
     const second=Math.floor(serverNow/1000);if(second===this.lastSecond)return;this.lastSecond=second;
     const remaining=this.view[this.category].endsAt-serverNow;
     this.countdown.textContent=`Resets in ${resetCountdown(this.view[this.category].endsAt,serverNow)} · UTC`;

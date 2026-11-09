@@ -23,6 +23,7 @@ import { Environment } from '../rendering/Environment';
 import { MaterialLibrary } from '../rendering/MaterialLibrary';
 import type { RenderContext } from '../rendering/RenderContext';
 import { GeometryBatcher } from '../rendering/StaticBatcher';
+import type { GraphicsPreset } from '../rendering/quality';
 import { deriveTacticalMap, type TacticalMapData } from './tactical';
 import type { CollisionFile, MapAssetIndex, MapDefinition, PropCatalog, PropPlacement, SpawnPoint } from './types';
 
@@ -67,7 +68,7 @@ export class MapManager {
   constructor(
     private readonly ctx: RenderContext,
     private readonly materials: MaterialLibrary,
-    private readonly batchCell: () => number,
+    private readonly graphics: () => GraphicsPreset,
     private readonly practiceTargets = true,
   ) {}
 
@@ -93,7 +94,8 @@ export class MapManager {
       const interactive=index.environment?await fetchJson<EnvironmentDefinition>(base+index.environment,active):EMPTY_ENVIRONMENT;
 
       active.throwIfAborted();
-      const environment = new Environment(scene, def.environment);
+      const graphics=this.graphics();
+      const environment = new Environment(scene, def.environment,graphics);
       cleanup.push(() => environment.dispose());
 
       // --- models -------------------------------------------------------------------------------
@@ -112,7 +114,7 @@ export class MapManager {
 
       // Everything static (building shells, terrain, kit pieces, props) is baked into one mesh per
       // canonical material and map quadrant. Kit pieces arrive as glTF instances of shared meshes.
-      const batcher = new GeometryBatcher(scene, this.batchCell());
+      const batcher = new GeometryBatcher(scene, graphics.batchCell);
       let kitInstances = 0;
       const kitKeys = new Set<string>();
       const addMesh = (m: AbstractMesh, world: Matrix) => {
@@ -215,6 +217,7 @@ export class MapManager {
       onProgress(0.94, 'Compiling shaders');
       await readinessDeadline(scene.whenReadyAsync(), active, 'Map shaders failed to become ready');
       active.throwIfAborted();
+      this.materials.trim();
 
       let debugMeshes: AbstractMesh[] | null = null;
       let debugVisible = false;

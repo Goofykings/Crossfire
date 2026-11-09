@@ -30,7 +30,7 @@ export class ExplosionBurst {
       mesh.isPickable = false; mesh.alwaysSelectAsActiveMesh = true;
       mesh.alphaIndex = additive ? 22 : 21;
       for (const p of sps.particles) { p.scaling.setAll(0); p.color = new Color4(1, 1, 1, 0); }
-      sps.setParticles(); return sps;
+      sps.setParticles();mesh.setEnabled(false);return sps;
     };
     this.fire = batch('explosion-fire', 4 * 8, false);
     this.glow = batch('explosion-additive', 4 * 32, true);
@@ -54,6 +54,7 @@ export class ExplosionBurst {
     this.slots[this.cursor++ % this.slots.length] = structuredClone(event);
   }
   update(now: number, reduced: boolean, lighting=true): void {
+    if(!this.slots.some(Boolean)&&!this.fire.mesh.isEnabled()&&!this.glow.mesh.isEnabled())return;
     const illumination: { id: string; position: Vector3; intensity: number }[] = [];
     this.slots.forEach((event, slot) => {
       const e = burstEnvelope(event ? now - event.at : 1000);
@@ -111,7 +112,10 @@ export class ExplosionBurst {
     active: this.slots.flatMap(e => e ? [{ id: e.id, ...burstEnvelope(now - e.at) }] : []) }; }
   clear(): void {
     this.slots.fill(null);
-    for (const light of this.lights) light.includedOnlyMeshes = [];
+    for (const light of this.lights){light.includedOnlyMeshes = [];light.intensity=0;light.metadata=null;}
+    for(const ring of this.rings)ring.visibility=0;
+    // Run the final clearing upload even when the pool was already sleeping.
+    this.fire.mesh.setEnabled(true);
     this.update(0, false);
   }
   dispose(): void {

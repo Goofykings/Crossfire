@@ -46,6 +46,7 @@ export class MaterialLibrary {
   setChromebook(enabled:boolean):void {
     if(this.chromebook===enabled)return;this.chromebook=enabled;
     for(const [name,m] of this.materials)this.applyQuality(name,this.defs[name],m);
+    this.releaseUnusedTextures();
   }
   private compactTexture(source:Texture,m:PBRMaterial):void {
     const assign=()=>{
@@ -60,7 +61,15 @@ export class MaterialLibrary {
         this.smallTextures.set(source,copy);
       }
       const ready=copy;
-      void texturesReady([ready]).then(()=>{if(this.chromebook&&this.scene.materials.includes(m))m.albedoTexture=ready;}).catch(()=>{});
+      void texturesReady([ready]).then(()=>{
+        if(!this.chromebook||this.scene.isDisposed)return;
+        // Replace every user before releasing the full-size image. Keeping both
+        // copies defeated the memory saving, especially on shared-memory GPUs.
+        for(const material of this.materials.values()){
+          if(material.albedoTexture===source)material.albedoTexture=ready;
+          if(material.emissiveTexture===source)material.emissiveTexture=ready;
+        }
+      }).catch(()=>{});
     };
     if(source.isReady())assign();else source.onLoadObservable.addOnce(assign);
   }
@@ -75,7 +84,42 @@ export class MaterialLibrary {
     this.defs = file.materials;
   }
 
-  ready(signal?: AbortSignal): Promise<void> { return texturesReady([...this.textures.values()], signal); }
+  async ready(signal?: AbortSignal): Promise<void> {
+    const end=Date.now()+60000;
+    for(;;){
+      signal?.throwIfAborted();
+      if(this.scene.isDisposed)throw new Error('Material scene disposed');
+      // Compaction replaces and disposes sources while loading. Re-read the
+      // live set so readiness never waits forever on a released original.
+      const live=[...this.textures.values(),...this.smallTextures.values()].filter(t=>!!t.getInternalTexture());
+      const failed=live.find(t=>t.loadingError);
+      if(failed)throw new Error(`Required texture failed to load: ${failed.name}`);
+      if(live.every(t=>t.isReady()))return;
+      if(Date.now()>=end)throw new Error('Required material textures timed out');
+      await new Promise(resolve=>setTimeout(resolve,25));
+    }
+  }
+
+  private releaseUnusedTextures():void {
+    const used=new Set([...this.scene.materials,...this.materials.values()].flatMap(m=>m.getActiveTextures()));
+    for(const [key,t] of this.textures){
+      if(used.has(t))continue;
+      // A compact copy can still be sampling its source during async compilation.
+      const compact=this.smallTextures.get(t);
+      if(compact&&!compact.isReady())continue;
+      t.dispose();
+      if(!compact)this.textures.delete(key);
+    }
+    for(const [source,copy]of this.smallTextures){
+      // Cached resize shaders can finish synchronously, before the promise
+      // assigning the copy to materials runs. Its live source still owns it.
+      if(used.has(copy)||used.has(source)||!copy.isReady())continue;
+      copy.dispose();this.smallTextures.delete(source);
+    }
+  }
+
+  /** Run after shader/asset readiness, once no loader is awaiting a source image. */
+  trim():void {this.releaseUnusedTextures();}
 
   has(name: string): boolean {
     return name in this.defs;
@@ -101,14 +145,17 @@ export class MaterialLibrary {
     // Preserve source maps for a lossless return from the derived low-cost mode.
     if(def.albedo){const source=this.texture(def.albedo,def.tile||1,false,!def.atlas);m.albedoTexture=source;
       if(this.chromebook&&!def.atlas)this.compactTexture(source,m);}
-    m.bumpTexture=def.normal?this.texture(def.normal,def.tile||1,true):null;
+    m.emissiveTexture=def.emissive_tex?m.albedoTexture:null;
+    m.bumpTexture=!this.chromebook&&def.normal?this.texture(def.normal,def.tile||1,true):null;
+    if(m.bumpTexture){m.bumpTexture.level=def.normal_strength??1;m.invertNormalMapX=false;m.invertNormalMapY=false;}
     m.roughness=def.roughness??(def.orm?1:.8);
     m.reflectionColor=this.chromebook?Color3.Black():Color3.White();
     m.enableSpecularAntiAliasing = this.ultra;
     // Alpha defaults to true in Babylon and takes precedence over green. Our
     // authored ORM images store roughness in green, with an opaque alpha channel.
     m.useRoughnessFromMetallicTextureAlpha = !this.ultra;
-    if (def.orm) {
+    m.metallicTexture=null;
+    if (def.orm&&!this.chromebook) {
       // This borrowed dielectric texture has almost zero metal in blue. The
       // existing corrected variant preserves its identical AO/roughness channels
       // and supplies white metal so the authored scalar metallic factor applies.
@@ -132,6 +179,10 @@ export class MaterialLibrary {
   private texture(path: string, tile: number, linear: boolean, invertY = true): Texture {
     const key = `${path}|${tile}|${linear}|${invertY}`;
     let tex = this.textures.get(key);
+    if(tex&&this.chromebook&&!linear&&invertY){const compact=this.smallTextures.get(tex);if(compact?.isReady())return compact;}
+    // Leaving Chromebook mode lazily reloads originals instead of retaining
+    // invisible full-resolution textures for the entire match.
+    if(tex&&!tex.getInternalTexture()){this.textures.delete(key);tex=undefined;}
     if (!tex) {
       tex = new Texture(assetUrl(path), this.scene, {
         noMipmap: false,
@@ -215,7 +266,7 @@ export class MaterialLibrary {
         m.alphaCutOff = def.alpha_cutoff;
       }
     }
-    if (def.normal) {
+    if (def.normal&&!this.chromebook) {
       m.bumpTexture = this.texture(def.normal, tile, true);
       m.bumpTexture.level = def.normal_strength ?? 1;
       // OpenGL-convention normal maps in a right-handed scene
@@ -223,7 +274,7 @@ export class MaterialLibrary {
       m.invertNormalMapY = false;
     }
     if (def.orm) {
-      m.metallicTexture = this.texture(def.orm, tile, true);
+      if(!this.chromebook)m.metallicTexture = this.texture(def.orm, tile, true);
       m.useAmbientOcclusionFromMetallicTextureRed = true;
       m.useRoughnessFromMetallicTextureGreen = true;
       m.useMetallnessFromMetallicTextureBlue = true;
@@ -287,11 +338,9 @@ export class MaterialLibrary {
       for (const t of [m.albedoTexture, m.bumpTexture, m.metallicTexture, m.emissiveTexture]) if (t) keep.add(t as Texture);
     }
     let textures = 0;
-    for(const [name] of this.materials){const d=this.defs[name];
-      for(const t of this.textures.values())if([d.albedo,d.normal,d.orm].some(path=>path&&t.url===assetUrl(path)))keep.add(t);
-    }
     for (const [key, t] of this.textures) {
-      if (keep.has(t)) continue;
+      const compact=this.smallTextures.get(t);
+      if (keep.has(t)||compact&&keep.has(compact)) continue;
       this.smallTextures.get(t)?.dispose();this.smallTextures.delete(t);
       t.dispose();
       this.textures.delete(key);

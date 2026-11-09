@@ -191,7 +191,7 @@ export class Game {
     this.ui = new UI(uiRoot, this.settings, this.audio, this.guestProfile);
     this.homeCharacter = new HomeCharacter(uiRoot.querySelector('#menu')!);
     this.materials = new MaterialLibrary(this.ctx.scene);
-    this.maps = new MapManager(this.ctx, this.materials, () => graphicsPreset(this.settings.value).batchCell, !options.multiplayer);
+    this.maps = new MapManager(this.ctx, this.materials, () => graphicsPreset(this.settings.value), !options.multiplayer);
     this.remotePlayers = new RemotePlayers(this.ctx.scene, uiRoot, this.materials);
     this.postfx = new PostFX(this.ctx.scene, this.ctx.camera);
     this.instrumentation = new SceneInstrumentation(this.ctx.scene);
@@ -217,7 +217,7 @@ export class Game {
 
   async init(): Promise<void> {
     const s = effectiveSettings(this.settings.value);
-    this.ctx.setResolutionScale(s.resolutionScale);
+    this.ctx.setResolutionScale(s.resolutionScale,s.chromebookMode);
     this.ctx.setFov(s.fov);
     this.audio.setVolume(s.masterVolume);
     this.audio.setSfxVolume(s.sfxVolume);
@@ -987,7 +987,7 @@ export class Game {
     const v=effectiveSettings(raw);
     if(changed.includes('chromebookMode'))changed=[...new Set([...changed,'resolutionScale','graphicsQuality','shadowQuality'] as (keyof Settings)[])];
     if (changed.includes('keyBindings')) { this.input.setBindings(v.keyBindings); this.ui.setChatBinding(v.keyBindings.chat[0]); }
-    if (changed.includes('resolutionScale')) this.ctx.setResolutionScale(v.resolutionScale);
+    if (changed.includes('resolutionScale')) this.ctx.setResolutionScale(v.resolutionScale,v.chromebookMode);
     if (changed.includes('masterVolume')) this.audio.setVolume(v.masterVolume);
     if (changed.includes('sfxVolume')) this.audio.setSfxVolume(v.sfxVolume);
     if (changed.includes('graphicsQuality')) {
@@ -1014,6 +1014,7 @@ export class Game {
 
   // --- main loop -------------------------------------------------------------------------------
   private frame(rawDt: number): void {
+    this.ctx.updateResolution(rawDt,this.state==='playing'&&!document.hidden);
     this.ui.rooms.update(this.network?.latest??null,this.network?.selfId??'',Date.now()+(this.network?.clockOffset??0),!['menu','loading','results'].includes(this.state));
     this.ui.challenges.update(this.guestProfile.value.username, this.career?.serverNow ?? null);
     this.homeCharacter.setCosmetics(this.cosmetics?.view?.equipped??defaultEquipment());
@@ -1614,6 +1615,7 @@ export class Game {
       graphics: () => ({
         quality: this.settings.value.graphicsQuality,
         chromebook:this.settings.value.chromebookMode,effective:effectiveSettings(this.settings.value),preset:graphicsPreset(this.settings.value),
+        resolution:this.ctx.resolutionStats(),
         reflectionSize: this.ctx.scene.environmentTexture?.getSize().width ?? 0,
         reflectionId: this.ctx.scene.environmentTexture?.uniqueId ?? null,
         reflectionReady: this.ctx.scene.environmentTexture?.isReady() ?? false,
@@ -1628,6 +1630,10 @@ export class Game {
           coat: m.clearCoat.isEnabled, alpha: m.alpha })),
       }),
       visibilityStats: () => this.remotePlayers.visibilityStats(),
+      renderResources:()=>({pending:this.ctx.scene.getWaitingItemsCount(),
+        unready:this.ctx.scene.meshes.filter(m=>!m.isReady(true)).map(m=>({name:m.name,material:m.material?.name,
+          textures:m.material?.getActiveTextures().map(t=>({name:t.name,ready:t.isReady(),size:t.getSize()}))})),
+        textures:this.ctx.scene.textures.filter(t=>!!t.getInternalTexture()).map(t=>({name:t.name,size:t.getSize(),ready:t.isReady()}))}),
       remoteOutlines: (enabled: boolean) => this.remotePlayers.setOutlinesEnabled(enabled),
       stats: () => ({
         fps: this.fps.value,

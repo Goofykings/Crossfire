@@ -21,6 +21,7 @@ export class ExplosionGround {
     const mesh=this.rocks.buildMesh(); mesh.material=this.rockMaterial; mesh.isPickable=false;
     mesh.hasVertexAlpha=true; mesh.alwaysSelectAsActiveMesh=true;
     for(const p of this.rocks.particles){p.scaling.setAll(0);p.color=new Color4(1,1,1,0);} this.rocks.setParticles();
+    mesh.setEnabled(false);
     this.markMaterial=new StandardMaterial('blast-scorch',scene);
     const texture=new Texture(assetUrl('assets/textures/shared/fx/bullet_hole.png'),scene);texture.hasAlpha=true;
     this.markMaterial.diffuseTexture=texture;this.markMaterial.useAlphaFromDiffuseTexture=true;
@@ -52,10 +53,13 @@ export class ExplosionGround {
       mark.material=this.markMaterial;mark.isPickable=false;this.marks.push(mark);
       if(this.marks.length>24)this.marks.shift()!.dispose();
     }
+    let changed=false,active=false;
     for(let i=0;i<this.motion.length;i++){
       const m=this.motion[i],p=this.rocks.particles[i];if(!m.live)continue;
+      changed=true;
       const age=(now-m.at)/1000;
       if(age>=1.2){m.live=false;p.scaling.setAll(0);p.color!.a=0;continue;}
+      active=true;
       let left=Math.min(.3,Math.max(0,(now-m.updated)/1000));m.updated=now;
       while(left>1e-6&&!m.sleeping){
         const dt=Math.min(left,1/120);left-=dt;m.velocity.y-=14*dt;
@@ -71,7 +75,7 @@ export class ExplosionGround {
       }
       p.color!.a=Math.min(1,(1.2-age)/.35);
     }
-    this.rocks.mesh.setEnabled(this.motion.some(m=>m.live));this.rocks.setParticles();
+    this.rocks.mesh.setEnabled(active);if(changed)this.rocks.setParticles();
   }
   inspect(){return {rocks:this.motion.filter(m=>m.live).length,sleeping:this.motion.filter(m=>m.live&&m.sleeping).length,marks:this.marks.length,budget:this.motion.length,markArea:.35**2,bulletArea:.11**2};}
   clear():void{this.pending.length=0;for(const m of this.motion)m.live=false;for(const p of this.rocks.particles){p.scaling.setAll(0);p.color!.a=0;}this.rocks.setParticles();this.rocks.mesh.setEnabled(false);this.marks.splice(0).forEach(m=>m.dispose());}

@@ -82,3 +82,27 @@ it('Chromebook materials remove specular IBL/normal/ORM/coat costs and restore t
  library.setChromebook(true);expect(m.reflectionColor.asArray()).toEqual([0,0,0]);expect(m.bumpTexture).toBeNull();expect(m.metallicTexture).toBeNull();expect(m.metallic).toBe(0);expect(m.clearCoat.isEnabled).toBe(false);expect(m.albedoTexture).toBe(base);
  library.setChromebook(false);expect(m.albedoTexture).toBe(base);expect(m.bumpTexture).toBe(normal);expect(m.metallicTexture).toBe(orm);expect(m.metallic).toBe(.9);expect(m.reflectionColor.asArray()).toEqual([1,1,1]);
 });
+
+it('cold Chromebook materials never request unused normal or ORM images',()=>{
+ library.setChromebook(true);
+ const load=vi.mocked((library as unknown as {texture: (path:string,tile:number,linear:boolean,invertY?:boolean)=>Texture}).texture);
+ material('galvanized');material('stone_rubble');material('gun_fde');
+ expect(load.mock.calls.length).toBeGreaterThan(0);
+ expect(load.mock.calls.every(call=>!call[2])).toBe(true);
+ library.setChromebook(false);
+ expect(load.mock.calls.some(call=>call[2])).toBe(true);
+ expect(material('galvanized').bumpTexture).not.toBeNull();
+ expect(material('galvanized').metallicTexture).not.toBeNull();
+});
+
+it('retains a ready resized copy while material assignment is queued',async()=>{
+ const m=material('stone_rubble'),source=m.albedoTexture as Texture;
+ const copy=RawTexture.CreateRGBTexture(new Uint8Array([200,140,255]),1,1,scene,false,false);
+ copy.getInternalTexture()!.isReady=true; // Simulate a cached GPU resize finishing before its assignment microtask.
+ const cache=(library as unknown as {smallTextures:Map<Texture,Texture>}).smallTextures;
+ cache.set(source,copy);
+ const assignment=Promise.resolve().then(()=>{m.albedoTexture=copy;});
+ library.setChromebook(true);
+ expect(copy.getInternalTexture()).not.toBeNull();
+ await assignment;library.trim();expect(m.albedoTexture?.isReady()).toBe(true);
+});

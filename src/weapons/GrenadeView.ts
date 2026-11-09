@@ -46,6 +46,7 @@ export class GrenadeView {
     mesh.alphaIndex = 19; mesh.hasVertexAlpha = true; mesh.isPickable = false; mesh.alwaysSelectAsActiveMesh = true;
     for (const p of this.particles.particles) { p.scaling.setAll(0); p.color = new Color4(1, 1, 1, 0); }
     this.particles.setParticles();
+    mesh.setEnabled(false);
     this.cloudMaterial = this.material.clone('grenade-smoke');
     this.cloudMaterial.fogEnabled = false;
     const source = MeshBuilder.CreatePlane('smoke-source', { size: 1 }, scene);
@@ -56,6 +57,7 @@ export class GrenadeView {
     clouds.alphaIndex = 20; clouds.hasVertexAlpha = true; clouds.isPickable = false; clouds.alwaysSelectAsActiveMesh = true;
     for (const p of this.cloudParticles.particles) { p.scaling.setAll(0); p.color = new Color4(.43, .45, .47, 0); }
     this.cloudParticles.setParticles();
+    clouds.setEnabled(false);
     // Depth-dependent fog only while physically inside a cloud, blended at its
     // boundary. Near objects remain visible; this is never an opaque HUD overlay.
     // Restore map fog after every render, including graphics/map changes.
@@ -135,25 +137,31 @@ export class GrenadeView {
       }
     }
     const now = performance.now() / 1000;
+    let particlesChanged=false,activeParticles=false;
     for (let i = 0; i < this.lives.length; i++) {
       const data = this.lives[i], p = this.particles.particles[i];
       if (!data.life) continue;
+      particlesChanged=true;
       // A server event may arrive between frames: do not age it by time before its birth.
       const previousAge = data.age;
       data.age = Math.max(0, now - data.born);
       const elapsed = data.age - previousAge;
       if (data.age >= data.life) { data.life = 0; p.scaling.setAll(0); p.color!.a = 0; continue; }
+      activeParticles=true;
       if (data.debris) {data.velocity.y-=20*elapsed;p.rotation.z+=elapsed*8;}
       p.position.addInPlaceFromFloats(data.velocity.x * elapsed, data.velocity.y * elapsed, data.velocity.z * elapsed);
       const t = data.age / data.life;
       p.scaling.setAll(data.size * (1 + t * (data.flash ? .6 : data.debris ? 0 : 2)));
       p.color!.a = (data.flash ? .8 : data.debris?.7:.24) * (1 - t) ** 2;
     }
-    this.particles.setParticles();
+    this.particles.mesh.setEnabled(activeParticles);
+    if(particlesChanged)this.particles.setParticles();
     this.burst.update(serverTime, this.reduced||this.chromebook, !this.chromebook);
     this.ground.update(serverTime, world);
     this.serverTime = serverTime;
     this.inside = 0;
+    // Empty pooled effects retain their buffers but do no billboard work or uploads.
+    if(!this.clouds.size){this.cloudParticles.mesh.setEnabled(false);return;}
     const eye = this.scene.activeCamera?.globalPosition;
     let slot = 0;
     for (const [id, cloud] of this.clouds) {
@@ -176,8 +184,10 @@ export class GrenadeView {
         p.color!.set(.43, .45, .47, opacity * (.85 + .15 * Math.abs(Math.sin(phase + i * 9.1))) * (this.reduced ? .9 : .78));
       }
     }
+    const activeCloudParticles=slot;
     for (; slot < this.cloudParticles.nbParticles; slot++) { const p = this.cloudParticles.particles[slot]; p.scaling.setAll(0); p.color!.a = 0; }
-    this.cloudParticles.setParticles();
+    this.cloudParticles.mesh.setEnabled(activeCloudParticles>0);
+    if(activeCloudParticles>0)this.cloudParticles.setParticles();
   }
   obscures(from: Vector3, to: Vector3): boolean {
     return [...this.clouds.values()].some(c => smokeObscures(from, to, c.position, this.serverTime - c.at));
@@ -196,10 +206,12 @@ export class GrenadeView {
     this.clouds.clear(); this.seen.clear(); this.inside = 0; this.restoreFog();
     for (const p of this.cloudParticles.particles) { p.scaling.setAll(0); p.color!.a = 0; }
     this.cloudParticles.setParticles();
+    this.cloudParticles.mesh.setEnabled(false);
     for (const object of this.objects.values()) object.root.dispose(); this.objects.clear();
     for (const p of this.lives) p.life = 0;
     for (const p of this.particles.particles) { p.scaling.setAll(0); p.color!.a = 0; }
     this.particles.setParticles();
+    this.particles.mesh.setEnabled(false);
   }
   dispose(): void { this.clear(); this.scene.onBeforeRenderObservable.remove(this.before); this.scene.onAfterRenderObservable.remove(this.after);
     this.burst.dispose(); this.ground.dispose(); this.container?.dispose(); this.cloudParticles.dispose(); this.cloudMaterial.dispose(); this.particles.dispose(); this.material.dispose(true, true); }

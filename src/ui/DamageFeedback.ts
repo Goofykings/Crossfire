@@ -17,6 +17,7 @@ export class DamageFeedback {
   private strength = 0;
   private attackFrom = 0;
   private incoming: Vec3 | null = null;
+  private active=false;
   constructor(root: HTMLElement) {
     this.edges.className = 'damage-edges'; this.healing.className = 'healing-edges'; this.arrow.className = 'damage-arrow';
     for (const element of [this.edges, this.healing, this.arrow]) element.setAttribute('aria-hidden', 'true');
@@ -28,6 +29,7 @@ export class DamageFeedback {
   }
   hit(direction: Vec3 | null, amount: number): void {
     if (!(amount > 0)) return;
+    this.active=true;
     const now = performance.now();
     this.attackFrom = Number(this.edges.style.opacity) || 0;
     this.strength = Math.min(.9, Math.max(this.attackFrom, .34 + Math.min(100, amount) * .005));
@@ -44,6 +46,7 @@ export class DamageFeedback {
     else if (change.healed && now - this.hitAt > 180) {
       if (now - this.healAt > 250) { this.nextSymbol = now; this.healStarted = now; }
       this.healAt = now;
+      this.active=true;
     }
   }
   private stopHealing(): void {
@@ -51,6 +54,7 @@ export class DamageFeedback {
     for (const s of this.symbols) { s.at = -Infinity; s.element.style.opacity = '0'; }
   }
   update(yaw: number, pitch = 0): void {
+    if(!this.active)return;
     const now = performance.now(), t = (now - this.hitAt) / 1000;
     const fade = t < .075 ? Math.max(0, t / .075) : Math.max(0, 1 - (t - .075) / .55) ** 2;
     const angle = this.incoming ? damageAngle(this.incoming, yaw) : null;
@@ -81,10 +85,11 @@ export class DamageFeedback {
       s.element.style.opacity = String(progress >= 0 && progress < 1 ? .7 * Math.sin(Math.PI * progress) : 0);
       s.element.style.transform = `translate(${s.drift * Math.min(1, progress)}px, ${-s.rise * Math.min(1, progress)}px)`;
     }
+    if(t>=.625&&healingAge>=350&&this.symbols.every(s=>now-s.at>=s.duration))this.active=false;
   }
   clear(): void {
     this.hitAt = -Infinity; this.incoming = null; this.strength = this.attackFrom = 0;
-    this.health.clear(); this.stopHealing(); this.update(0);
+    this.health.clear(); this.stopHealing();this.active=true; this.update(0);
   }
   inspect() { return { age: (performance.now() - this.hitAt) / 1000, direction: this.arrow.dataset.direction,
     edges: Number(this.edges.style.opacity), arrow: Number(this.arrow.style.opacity),

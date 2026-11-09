@@ -40,7 +40,7 @@ export function sunVector(headingDeg: number, elevationDeg: number): Vector3 {
  */
 export class Environment {
   readonly sun: DirectionalLight;
-  readonly hdr: HDRCubeTexture;
+  private hdr: HDRCubeTexture|null=null;
   readonly sky: Mesh;
   shadows: ShadowGenerator | null = null;
   private casters: AbstractMesh[] = [];
@@ -51,24 +51,21 @@ export class Environment {
   private ultraSettled = false;
   private ultraReady = false;
   private wantsUltra = false;
+  private wantsReflections=true;
   private ambient: HemisphericLight | null=null;
 
   constructor(
     private readonly scene: Scene,
     readonly cfg: EnvironmentConfig,
+    initialGraphics?:GraphicsPreset,
   ) {
     // A mesh rotation of +t about +Y moves its features by -t in compass heading, while a cube
     // texture's rotationY moves them by +t. `hdriSunHeading` was calibrated empirically
     // (tools/dev-sun-sweep.mjs) as the sun's heading with no rotation applied.
     const rot = (cfg.hdriSunHeading - cfg.sunHeading) * DEG;
 
-    const hdrSettled = () => {
-      this.hdrSettled = true;
-      if (this.disposed) this.hdr.dispose();
-    };
-    this.hdr = new HDRCubeTexture(assetUrl(cfg.hdr), scene, 256, false, true, false, true, hdrSettled, hdrSettled);
-    this.hdr.rotationY = -rot;
-    scene.environmentTexture = this.hdr;
+    this.wantsReflections=!initialGraphics?.noReflections;
+    if(this.wantsReflections)scene.environmentTexture=this.reflections();
     scene.environmentIntensity = cfg.environmentIntensity;
 
     const skyTex = new EquiRectangularCubeTexture(assetUrl(cfg.skyImage), scene, 1024, false, true);
@@ -116,6 +113,18 @@ export class Environment {
     ipc.vignetteWeight = 1.4;
     ipc.vignetteStretch = 0.4;
     ipc.vignetteColor.set(0.05, 0.04, 0.03, 0);
+    if(initialGraphics)this.applyGraphicsPreset(initialGraphics);
+  }
+
+  private reflections():HDRCubeTexture {
+    if(this.hdr)return this.hdr;
+    const settled=()=>queueMicrotask(()=>{
+      this.hdrSettled=true;
+      if(this.disposed||!this.wantsReflections){this.hdr?.dispose();this.hdr=null;this.hdrSettled=false;}
+    });
+    this.hdr=new HDRCubeTexture(assetUrl(this.cfg.hdr),this.scene,256,false,true,false,true,settled,settled);
+    this.hdr.rotationY=(this.cfg.sunHeading-this.cfg.hdriSunHeading)*DEG;
+    return this.hdr;
   }
 
   setFog(enabled: boolean): void {
@@ -126,11 +135,14 @@ export class Environment {
    * Keep the original environment until the new cube has finished prefiltering. */
   applyGraphicsPreset(p: GraphicsPreset): void {
     this.setFog(p.fog);
+    this.wantsReflections=!p.noReflections;
     this.wantsUltra = !p.noReflections && p.reflectionSize === 512;
     if(p.noReflections){
       // Disable the IBL shader path entirely. A cheap hemisphere preserves ambient
       // readability alongside the existing sun and authored interior fixtures.
       this.scene.environmentTexture=null;
+      if(this.hdrSettled){this.hdr?.dispose();this.hdr=null;this.hdrSettled=false;}
+      if(this.ultraSettled){this.ultraHdr?.dispose();this.ultraHdr=null;this.ultraSettled=false;this.ultraReady=false;}
       if(!this.ambient){this.ambient=new HemisphericLight('chromebook-ambient',Vector3.Up(),this.scene);
         this.ambient.diffuse=new Color3(.78,.84,1);this.ambient.groundColor=new Color3(.28,.3,.34);
         this.ambient.specular=Color3.Black();this.ambient.intensity=this.cfg.environmentIntensity*.65;this.ambient.renderPriority=2;}
@@ -141,7 +153,7 @@ export class Environment {
       return;
     }
     this.ambient?.setEnabled(false);
-    if (!this.wantsUltra) { this.scene.environmentTexture = this.hdr; return; }
+    if (!this.wantsUltra) { this.scene.environmentTexture = this.reflections(); return; }
     if (this.ultraReady) { this.scene.environmentTexture = this.ultraHdr; return; }
     if (this.ultraHdr) return;
     const settled = (ready: boolean) => {
@@ -149,7 +161,7 @@ export class Environment {
       queueMicrotask(() => {
         this.ultraSettled = true;
         this.ultraReady = ready;
-        if (this.disposed) this.ultraHdr?.dispose();
+        if (this.disposed||!this.wantsReflections) {this.ultraHdr?.dispose();this.ultraHdr=null;this.ultraReady=false;this.ultraSettled=false;}
         else if (ready && this.wantsUltra) this.scene.environmentTexture = this.ultraHdr;
       });
     };
@@ -157,7 +169,7 @@ export class Environment {
     // Distinguish the 512 cube while still serving the same static HDR asset.
     this.ultraHdr = new HDRCubeTexture(`${assetUrl(this.cfg.hdr)}?ibl=512`, this.scene, 512, false, true, false, true,
       () => settled(true), () => settled(false));
-    this.ultraHdr.rotationY = this.hdr.rotationY;
+    this.ultraHdr.rotationY = (this.cfg.sunHeading-this.cfg.hdriSunHeading)*DEG;
   }
 
   /**
@@ -245,7 +257,7 @@ export class Environment {
     this.sky.dispose();
     // Babylon's native async prefilter cannot be interrupted safely. Detach now,
     // then release its texture after the prefilter settles instead of invalidating it mid-pass.
-    if (this.hdrSettled) this.hdr.dispose();
+    if (this.hdrSettled) this.hdr?.dispose();
     if (this.ultraSettled) this.ultraHdr?.dispose();
     if (this.scene.environmentTexture === this.hdr || this.scene.environmentTexture === this.ultraHdr) this.scene.environmentTexture = null;
   }

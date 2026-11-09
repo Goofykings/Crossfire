@@ -154,7 +154,9 @@ export class GeometryBatcher {
 
 export function finalizeStatic(m: Mesh): void {
   m.isPickable = false;
-  m.cullingStrategy = AbstractMesh.CULLINGSTRATEGY_BOUNDINGSPHERE_ONLY;
+  // Large rectangular map batches have loose spheres. The frozen box test
+  // rejects off-screen streets without dropping visible scenery.
+  m.cullingStrategy = AbstractMesh.CULLINGSTRATEGY_STANDARD;
   m.computeWorldMatrix(true);
   m.freezeWorldMatrix();
   m.doNotSyncBoundingInfo = true;

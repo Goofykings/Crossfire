@@ -77,7 +77,7 @@ export class RoomMenus {
  update(snapshot:Snapshot|null,selfId:string,now:number,visible:boolean){
   const room=snapshot?.roomInfo;this.roomBadge.hidden=!visible||!room;this.warning.hidden=true;
   if(!visible)return;
-  if(room){this.roomText.textContent=`${room.name} \u00b7 ${MAPS.find(m=>m.id===room.mapId)?.name??room.mapId} \u00b7 ${room.mode.toUpperCase()} \u00b7 ${room.players}/${room.maxPlayers}${room.hostId===selfId?' \u00b7 HOST':''}`;
+  if(room){const text=`${room.name} \u00b7 ${MAPS.find(m=>m.id===room.mapId)?.name??room.mapId} \u00b7 ${room.mode.toUpperCase()} \u00b7 ${room.players}/${room.maxPlayers}${room.hostId===selfId?' \u00b7 HOST':''}`;if(this.roomText.textContent!==text)this.roomText.textContent=text;
    if(this.lastCode!==(room.code??'')){this.lastCode=room.code??'';this.roomCode.textContent=room.code?`Copy Code: ${room.code}`:'';this.roomCode.dataset.copied='false';}this.roomCode.hidden=!room.code;
    if(room.warningAt!==null&&now>=room.warningAt&&room.closesAt!==null){this.warning.hidden=false;this.warning.textContent=`No other player has joined. This room closes in ${Math.max(0,Math.ceil((room.closesAt-now)/1000))}s unless someone joins.`;}
   }
