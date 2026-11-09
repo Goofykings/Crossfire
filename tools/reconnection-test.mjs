@@ -69,7 +69,7 @@ try {
         const pending = pendingFrames.get(id); if (!pending) return;
         clearTimeout(pending.timer); cancelFrame(pending.frame); pendingFrames.delete(id);
       };
-      localStorage.setItem('crossfire.pending-weapon', 'sniper');
+      localStorage.setItem('crossfire.pending-weapon', 'semi-sniper');
       const Socket = window.WebSocket;
       window.__wireDelay = 0; window.__wire = []; window.__sockets = [];
       window.WebSocket = class extends Socket {
@@ -125,7 +125,7 @@ try {
   });
   await delay(120);
   await a.evaluate(() => window.dispatchEvent(new MouseEvent('mouseup', { button: 0, bubbles: true })));
-  await until(async () => me(await state(b)).health === 25, 'actual server-authoritative sniper body hit');
+  await until(async () => {const health=me(await state(b)).health;return health>=65&&health<=68;}, 'actual server-authoritative semi-auto sniper body hit');
   check(me(await state(a)).combat.gun.ammo === beforeAmmo - 1, 'actual shot spent ammunition');
 
   const stableStart = await Promise.all(pages.map(state));

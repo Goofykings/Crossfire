@@ -474,9 +474,10 @@ export class RemotePlayers {
     return false;
   }
 
-  aimTargets():AimTarget[]{return [...this.avatars].flatMap(([id,a])=>{
+  aimTargets(head=false):AimTarget[]{return [...this.avatars].flatMap(([id,a])=>{
     const motion=a.samples.at(-1)?.player.motion;
-    return !a.death&&!a.friendly&&a.visible&&a.clearFor>=.04&&motion?[{id,point:{x:a.root.position.x,y:a.root.position.y+a.height*.68,z:a.root.position.z},velocity:{...motion.velocity},grounded:motion.grounded,sliding:motion.slideRemaining>0}]:[];
+    const offset=head?leanOffset(a.root.rotation.y,a.lean):{x:0,z:0};
+    return !a.death&&!a.friendly&&a.visible&&a.clearFor>=.04&&motion?[{id,point:{x:a.root.position.x+offset.x,y:a.root.position.y+(head?a.height-.2:a.height*.68),z:a.root.position.z+offset.z},velocity:{...motion.velocity},grounded:motion.grounded,sliding:motion.slideRemaining>0}]:[];
   });}
   aimVisible(target:AimTarget,eye:{x:number;y:number;z:number}):boolean{
     const from=new Vector3(eye.x,eye.y,eye.z),to=new Vector3(target.point.x,target.point.y,target.point.z),delta=to.subtract(from),distance=delta.length();

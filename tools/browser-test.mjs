@@ -247,14 +247,14 @@ const pool = targets.map((t) => t.id).filter((id) => id !== 'T05');
   w = await cfw(() => window.__crossfire.weapon());
   check(w.ammo === 30 && w.reserve === 'infinite', `three magazines emptied and reloaded, still full (${w.ammo}) with infinite reserve`);
 
-  // sniper: one-shot headshot, body shot leaves the target standing, bolt worked after each shot
+  // sniper: one-shot headshots and body shots, bolt worked after each shot
   w = await select(3, 'sniper');
   check(w.id === 'sniper', 'key 3 selects the sniper rifle');
   const sh = await shootTarget(pool[2], 'head', 14, true);
   check(sh.shot.head && sh.shot.damage >= 100 && sh.after.state !== 'up', `sniper headshot kills in one shot (${sh.shot.damage}, target ${sh.after.state})`);
   await wait(1300);
   const sb = await shootTarget(pool[3], 'body', 14, true);
-  check(!sb.shot.head && sb.shot.damage === 75 && sb.after.state === 'up', `sniper body shot does not (${sb.shot.damage}, target ${sb.after.state})`);
+  check(!sb.shot.head && sb.shot.damage === 100 && sb.after.state !== 'up', `sniper body shot kills (${sb.shot.damage}, target ${sb.after.state})`);
   const snds = await cfw(() => window.__crossfire.sounds());
   check(['bolt_up', 'bolt_back', 'bolt_fwd', 'bolt_down'].every((n) => snds.includes(n)), 'the bolt is worked after a shot (bolt sounds)');
   // the bolt has to close before the eye goes back to the scope

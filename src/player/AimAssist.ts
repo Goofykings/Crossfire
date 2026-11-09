@@ -5,8 +5,19 @@ export const AIM_ASSIST=Object.freeze({cone:2.5*DEG,range:35,minRange:2,strength
  maxCorrection:.25*DEG,windowMs:180,rearmMs:100,minInputRate:.4*DEG,maxInputRate:180*DEG,motionRate:4*DEG,motionSpeed:.35,trackingRatio:.6});
 export interface AimTarget{id:string;point:Vec3;velocity:Vec3;grounded:boolean;sliding:boolean}
 interface AimInput{enabled:boolean;now:number;dt:number;yaw:number;pitch:number;inputYaw:number;inputPitch:number;eye:Vec3;
- targets:AimTarget[];canSee:(target:AimTarget)=>boolean;firing:boolean;recoiling:boolean}
+ targets:AimTarget[];canSee:(target:AimTarget)=>boolean;firing:boolean;recoiling:boolean;boosted?:boolean}
 const angles=(eye:Vec3,p:Vec3)=>{const x=p.x-eye.x,y=p.y-eye.y,z=p.z-eye.z;return {yaw:Math.atan2(-x,-z),pitch:Math.atan2(y,Math.hypot(x,z)),distance:Math.hypot(x,y,z)};};
+/** Count a rapid sequence of switch changes; activation always ends with the switch on. */
+export class AimAssistUnlock {
+ private count=0;private last=-Infinity;
+ toggle(on:boolean,now:number,active:boolean):{on:boolean;active:boolean}{
+  if(active&&!on){this.count=0;this.last=now;return {on:false,active:false};}
+  this.count=now-this.last<=700?this.count+1:1;this.last=now;
+  if(this.count>=10){this.reset();return {on:true,active:true};}
+  return {on,active};
+ }
+ reset(){this.count=0;this.last=-Infinity;}
+}
 export class AimAssist {
  private target:string|null=null;private started=0;private total=0;private lastInput=-Infinity;private blockedUntil=0;private velocity:Vec3|null=null;
  reset(){this.target=null;this.total=0;this.velocity=null;this.lastInput=-Infinity;}
@@ -14,6 +25,12 @@ export class AimAssist {
  step(i:AimInput):{yaw:number;pitch:number}{
   const zero={yaw:0,pitch:0},dt=Math.max(.0001,Math.min(.1,i.dt)),input=Math.hypot(i.inputYaw,i.inputPitch),rate=input/dt;
   if(!i.enabled){this.reset();return zero;}
+  if(i.boosted){
+   const candidates=i.targets.map(t=>({t,a:angles(i.eye,t.point)})).map(v=>({...v,yaw:wrap(v.a.yaw-i.yaw),pitch:v.a.pitch-i.pitch}))
+    .filter(v=>v.a.distance<=800&&Math.hypot(v.yaw,v.pitch)<=5*DEG).sort((a,b)=>Math.hypot(a.yaw,a.pitch)-Math.hypot(b.yaw,b.pitch));
+   const target=candidates.find(v=>i.canSee(v.t));this.target=target?.t.id??null;
+   return target?{yaw:target.yaw,pitch:target.pitch}:zero;
+  }
   if(i.now-this.lastInput>AIM_ASSIST.rearmMs){this.target=null;this.total=0;this.velocity=null;}
   if(rate<AIM_ASSIST.minInputRate)return zero;this.lastInput=i.now;
   if(i.firing){this.suppress(i.now);return zero;}

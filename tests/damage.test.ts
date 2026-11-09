@@ -44,14 +44,14 @@ describe('damage', () => {
     ]);
   });
 
-  it('kills a 100-health target with one sniper headshot but not with one body shot', () => {
+  it('kills a 100-health target with one sniper headshot or body shot', () => {
     const ds = new DamageSystem();
     const a = new Dummy('a');
     ds.tryApply(attacker, a, { bodyDamage: damageAt(SNIPER, 60), point, zone: 'head', weapon: 'sniper' });
     expect(a.alive).toBe(false);
     const b = new Dummy('b');
     ds.tryApply(attacker, b, { bodyDamage: damageAt(SNIPER, 60), point, zone: 'body', weapon: 'sniper' });
-    expect(b.alive).toBe(true);
+    expect(b.alive).toBe(false);
   });
 
   it('needs five rifle body hits or four headshots, and a point-blank shotgun blast kills', () => {

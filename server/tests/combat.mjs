@@ -181,7 +181,7 @@ for (const mode of (process.env.CROSSFIRE_SCORING_ONLY ? ['ffa'] : ['ffa', 'team
       for(const client of [a,b,resumed,killer])await leave(client);
       let next=finished;while(next.mapId!=='european-town')next=await stub.advanceMapForTest();
     });
-    for (let [weapon, expected] of [['rifle', 25], ['smg', 11], ['sniper', 75], ['shotgun', 100]]) {
+    for (let [weapon, expected] of [['rifle', 25], ['smg', 11], ['sniper', 100], ['shotgun', 100]]) {
       await t.test(`${weapon}: actual opponents lose weapon-specific health on both clients`, async () => {
         const a = await open(weapon), b = await open();
         if (mode === 'teams') assert.notEqual(me(a).team, me(b).team);
@@ -422,14 +422,14 @@ for (const mode of (process.env.CROSSFIRE_SCORING_ONLY ? ['ffa'] : ['ffa', 'team
       await leave(target);
     });
     await t.test('regeneration waits, heals by server time, resets on hits and survives resume without reviving dead lives', async () => {
-      let a = await open('sniper'), b = await open('rifle');
+      let a = await open('rifle'), b = await open('rifle');
       // Rejected clients from the preceding security case remain in grace.
       // Choose a real opponent using authoritative teams, never assign a team.
       const extra = [];
       while (mode === 'teams' && me(a).team === me(b).team && extra.length < 4) { extra.push(b); b = await open('rifle'); }
       if (mode === 'teams') assert.notEqual(me(a).team, me(b).team);
       for (const c of extra) await leave(c);
-      await place(a, b); await aim(a, b); await shot(a, b); // B: 25 HP.
+      await place(a, b); await aim(a, b); await shot(a, b); // Damage B without eliminating them.
       await aim(b, a); const firstHit=(await shot(b,a)).hits[0];assert.ok([20,21,22].includes(firstHit.amount));
       const first = await stub.healthForTest(a.id);
       assert.equal(first.health,100-firstHit.amount);
@@ -463,7 +463,7 @@ for (const mode of (process.env.CROSSFIRE_SCORING_ONLY ? ['ffa'] : ['ffa', 'team
       assert.equal(interrupted.health, interrupt.health);
       assert.ok(interrupted.regenAt > interrupted.now && interrupted.regenAt <= interrupted.now + 5000, JSON.stringify(interrupted));
       const original = a; a.ws.close(); await delay(100);
-      a = await open('sniper', original.token); a.position = original.position;
+      a = await open('rifle', original.token); a.position = original.position;
       assert.equal(a.id, original.id);
       assert.equal((await stub.healthForTest(a.id)).regenAt, interrupted.regenAt, 'resume retains the waiting deadline');
       assert.equal(me(a).health, interrupted.health);

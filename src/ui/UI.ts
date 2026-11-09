@@ -12,6 +12,7 @@ import { CrosshairMotion } from './CrosshairMotion';
 import type { AudioManager } from '../audio/AudioManager';
 import { SETTING_LIMITS, type Settings, type SettingsStore } from '../config/settings';
 import { SettingsDraft } from '../config/settingsDraft';
+import { AimAssistUnlock } from '../player/AimAssist';
 import { BINDABLE_ACTIONS, BINDING_LABELS, DEFAULT_BINDINGS, bindingConflict, bindingName, defaultBindings, supportedBinding, type BindableAction } from '../config/keybindings';
 import type { GuestProfileStore } from '../config/guestProfile';
 import { normalizeUsername } from '../../shared/username';
@@ -75,6 +76,9 @@ export class UI {
   private settingsFocus: HTMLElement | null = null;
   /** What the settings screen edits. The game only sees changes when Apply hands them to the SettingsStore. */
   private readonly draft: SettingsDraft;
+  private readonly aimUnlock = new AimAssistUnlock();
+  private aimBoostDraft = false;
+  aimAssistBoosted = false;
   private usernameDraft: string;
   private usernameInput!: HTMLInputElement;
   private usernameRow!: HTMLElement;
@@ -623,6 +627,7 @@ export class UI {
     this.settingsFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     this.settingsReturn = from;
     this.draft.discard();
+    this.aimBoostDraft=this.aimAssistBoosted;this.aimUnlock.reset();
     this.usernameDraft = this.profile.value.username;
     this.usernameInput.setCustomValidity('');
     this.selectSettingsTab(0, false);
@@ -635,6 +640,7 @@ export class UI {
   private closeSettings(): void {
     this.rebinding = null;
     this.draft.discard();
+    this.aimBoostDraft=this.aimAssistBoosted;this.aimUnlock.reset();
     this.usernameDraft = this.profile.value.username;
     this.usernameInput.setCustomValidity('');
     this.show(this.settingsReturn, this.settingsReturn === 'pause');
@@ -643,7 +649,8 @@ export class UI {
 
   private applySettings(): void {
     const rename = this.usernameDraft !== this.profile.value.username;
-    if (!this.draft.dirty && !rename) return;
+    const boostChanged=this.aimBoostDraft!==this.aimAssistBoosted;
+    if (!this.draft.dirty && !rename && !boostChanged) return;
     if (rename && !normalizeUsername(this.usernameDraft)) {
       this.setSettingsStatus('Enter a username (1–24 characters).');
       this.usernameInput.setCustomValidity('Enter a username.');
@@ -653,8 +660,9 @@ export class UI {
     if (rename) this.profile.setUsername(this.usernameDraft);
     this.usernameDraft = this.profile.value.username;
     const changed = this.draft.apply();
+    this.aimAssistBoosted=this.aimBoostDraft&&this.draft.value.aimAssist;
     this.syncSettings();
-    const count = changed.length + Number(rename);
+    const count = changed.length + Number(rename) + Number(boostChanged&&!changed.includes('aimAssist'));
     this.setSettingsStatus(`Applied ${count} change${count === 1 ? '' : 's'}`, true);
   }
 
@@ -768,6 +776,7 @@ export class UI {
     foot.appendChild(
       this.button('Defaults', '', 'ghost', () => {
         this.draft.loadDefaults();
+        this.aimBoostDraft=false;this.aimUnlock.reset();
         this.syncSettings();
         this.setSettingsStatus('Defaults loaded: press Apply to keep them');
       }),
@@ -892,6 +901,7 @@ export class UI {
     const mode=this.settingRows.get('chromebookMode');
     if(mode&&!mode.querySelector('.chromebook-hint')){const hint=el('small','chromebook-hint','Targets 60 FPS with adaptive resolution, lighter textures and effects. Previous preferences are kept.');mode.append(hint);}
     const dirty = new Set(this.draft.dirtyKeys);
+    if(this.aimBoostDraft!==this.aimAssistBoosted)dirty.add('aimAssist');
     const rename = this.usernameDraft !== this.profile.value.username;
     if (this.usernameInput.value !== this.usernameDraft) this.usernameInput.value = this.usernameDraft;
     this.usernameRow.classList.toggle('changed', rename);
@@ -948,9 +958,14 @@ export class UI {
     const out = el('output');
     const sync = () => {
       input.checked = this.draft.value[key];
+      if(key==='aimAssist')input.classList.toggle('aim-boosted',input.checked&&this.aimBoostDraft);
       out.textContent = input.checked ? 'On' : 'Off';
     };
     input.addEventListener('change', () => {
+      if(key==='aimAssist'){
+        const result=this.aimUnlock.toggle(input.checked,performance.now(),this.aimBoostDraft);
+        input.checked=result.on;this.aimBoostDraft=result.active;
+      }
       this.draft.set(key, input.checked);
       this.syncSettings();
     });

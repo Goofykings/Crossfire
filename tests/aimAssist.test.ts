@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest';
-import {AIM_ASSIST,AimAssist,type AimTarget} from '../src/player/AimAssist';
+import {AIM_ASSIST,AimAssist,AimAssistUnlock,type AimTarget} from '../src/player/AimAssist';
 import {sanitizeSettings,DEFAULT_SETTINGS,SettingsStore} from '../src/config/settings';
 const DEG=Math.PI/180;
 const target:AimTarget={id:'opponent',point:{x:-Math.tan(1.5*DEG)*10,y:1.2,z:-10},velocity:{x:0,y:0,z:0},grounded:true,sliding:false};
@@ -38,4 +38,18 @@ it('does not resume correction during or just after a shot',()=>{
 it('defaults Off, sanitizes and persists the explicit setting without losing other preferences',()=>{
  expect(DEFAULT_SETTINGS.aimAssist).toBe(false);expect(sanitizeSettings({aimAssist:'yes'}).aimAssist).toBe(false);
  const store=new SettingsStore(null);store.update({aimAssist:true,masterVolume:.3});expect(store.value.aimAssist).toBe(true);expect(store.value.masterVolume).toBe(.3);store.update({aimAssist:false});expect(store.value.masterVolume).toBe(.3);
+});
+it('unlocks after ten quick toggles, resets when turned off, and ignores slow sequences',()=>{
+ const unlock=new AimAssistUnlock();let state={on:false,active:false};
+ for(let n=0;n<9;n++){state=unlock.toggle(!state.on,n*200,state.active);expect(state.active).toBe(false);}
+ state=unlock.toggle(!state.on,1800,state.active);expect(state).toEqual({on:true,active:true});
+ state=unlock.toggle(false,2000,state.active);expect(state).toEqual({on:false,active:false});
+ for(let n=0;n<12;n++)state=unlock.toggle(!state.on,3000+n*800,state.active);
+ expect(state.active).toBe(false);
+});
+it('boosted mode snaps to the closest visible target without manual input, including during recoil',()=>{
+ const a=new AimAssist();const out=a.step(input({boosted:true,inputYaw:0,firing:true,recoiling:true}));
+ expect(out.yaw).toBeCloseTo(1.5*DEG);expect(out.pitch).toBe(0);
+ expect(a.step(input({boosted:true,canSee:()=>false}))).toEqual({yaw:0,pitch:0});
+ expect(a.step(input({boosted:true,yaw:-5*DEG}))).toEqual({yaw:0,pitch:0});
 });

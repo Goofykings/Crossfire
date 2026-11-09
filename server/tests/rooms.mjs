@@ -39,7 +39,7 @@ test('rooms: authoritative kills, durable reward retries and statistics across r
  const gems=await h.central.prepareRoomChallengesForTest(aToken),ad=await h.create(aToken);let r=h.room(ad.room.id);
  let a=await h.open(ad,aToken),b=await h.open(await h.admission(bToken,{roomId:ad.room.id}),bToken);await h.spawn(a,'sniper');await h.spawn(b);
  async function kill(){const arena=await r.directionalArenaForTest();a.position=arena.sources.front;b.position=arena.center;await r.placeForCombatTest(a.id,a.position);await r.placeForCombatTest(b.id,b.position);const look=await aim(a,b);
-  for(const damage of [75,25]){const mark=a.messages.length;frames(a,{...look,trigger:true});const e=await until(()=>a.messages.slice(mark).find(m=>m.type==='shot'&&m.shot.shooterId===a.id),'confirmed sniper shot');assert.equal(e.shot.hits[0]?.amount,damage);await ack(a);await until(()=>self(a).combat.gun.cooldown===0,'existing sniper cooldown');}
+  {const mark=a.messages.length;frames(a,{...look,trigger:true});const e=await until(()=>a.messages.slice(mark).find(m=>m.type==='shot'&&m.shot.shooterId===a.id),'confirmed sniper shot');assert.equal(e.shot.hits[0]?.amount,100);await ack(a);}
   await until(()=>self(a).score===100,'kill score');}
 
  await h.central.loseRewardAckForTest();await kill();

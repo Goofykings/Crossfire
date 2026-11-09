@@ -166,8 +166,8 @@ export const SNIPER: WeaponStats = {
   rpm: 50,
   cycleTime: 1.05,
   cycleCues: [{ at: 0.18, cue: 'bolt_up' }, { at: 0.36, cue: 'bolt_back' }, { at: 0.38, cue: 'eject' }, { at: 0.6, cue: 'bolt_fwd' }, { at: 0.76, cue: 'bolt_down' }],
-  // 75 to the body, 112.5 to the head: a headshot kills a 100-health target outright, a body shot does not
-  damage: 75,
+  // One body shot eliminates a full-health opponent, with no range falloff.
+  damage: 100,
   pellets: 1,
   pelletSpread: 0,
   falloff: { start: 1000, end: 1001, minScale: 1 },

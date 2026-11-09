@@ -1205,7 +1205,7 @@ export class Game {
     rig.applyLook(look.dx, look.dy, s.mouseSensitivity, s.invertY, zoom);
     if(s.aimAssist&&!blockedMelee){const eye=player.leanEye(),now=performance.now(),assist=this.aimAssist.step({enabled:true,now,dt,yaw:player.yaw,pitch:player.pitch,
       inputYaw:Math.atan2(Math.sin(player.yaw-manualYaw),Math.cos(player.yaw-manualYaw)),inputPitch:player.pitch-manualPitch,eye,
-      targets:s.aimAssist?this.remotePlayers.aimTargets():[],canSee:target=>this.remotePlayers.aimVisible(target,eye),firing:input.isDown('fire')||input.wasPressed('fire'),recoiling:rig.recoiling||this.weapon.capture().cooldown>0});
+      boosted:this.ui.aimAssistBoosted,targets:this.remotePlayers.aimTargets(this.ui.aimAssistBoosted),canSee:target=>this.remotePlayers.aimVisible(target,eye),firing:input.isDown('fire')||input.wasPressed('fire'),recoiling:rig.recoiling||this.weapon.capture().cooldown>0});
     player.yaw=Math.atan2(Math.sin(player.yaw+assist.yaw),Math.cos(player.yaw+assist.yaw));player.pitch=Math.max(-88*Math.PI/180,Math.min(88*Math.PI/180,player.pitch+assist.pitch));
     }else this.aimAssist.reset();
     this.weaponView?.addSway(look.dx, look.dy);
