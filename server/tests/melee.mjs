@@ -57,7 +57,28 @@ test('real Worker melee obeys close range, forward arc and solid walls',{timeout
  const h=await harness(t),token=await h.profile(),ad=await h.create(token),a=await h.open(ad,token),bToken=await h.profile(),b=await h.open(await h.admission(bToken,{roomId:ad.room.id}),bToken);await h.spawn(a);await h.spawn(b);
  const room=h.room(ad.room.id),arena=await room.directionalArenaForTest();await room.placeForCombatTest(a.id,arena.sources.front);await room.placeForCombatTest(b.id,arena.center);
  await until(()=>self(a).combat.gun.action==='idle','gun settled');frames(a,{melee:true});await ack(a);await until(()=>self(a).combat.melee.phase==='ready','melee ready');
- async function miss(yaw,label){const count=a.messages.filter(m=>m.type==='melee').length;frames(a,{trigger:true,yaw});await ack(a);const event=await until(()=>a.messages.filter(m=>m.type==='melee')[count]?.event,label);assert.equal(event.hits.length,0,label);assert.equal(self(b).health,100);}
+ async function miss(yaw,label){
+  // Geometry cases are independent swings, not a combo timing test. Finish the
+  // previous swing before pressing again, including its acknowledged release.
+  // A busy CI Worker can skip the entire 90 ms contact window: stepMelee then
+  // deliberately marks contactDone without publishing an event. Retry only that
+  // completed, eventless swing; every actual contact must still miss.
+  for(let attempt=0;attempt<3;attempt++){
+   await until(()=>self(a).combat.melee.phase==='ready',label+' ready');
+   frames(a,{yaw});await ack(a);
+   const count=a.messages.filter(m=>m.type==='melee').length,sequence=self(a).combat.melee.sequence;
+   frames(a,{trigger:true,yaw});await ack(a);
+   const result=await until(()=>{
+    const event=a.messages.filter(m=>m.type==='melee')[count]?.event;
+    if(event)return {event};
+    const state=self(a).combat.melee;
+    return state.sequence===sequence+1&&state.phase==='ready'&&state.contactDone?{skipped:true}:null;
+   },label);
+   assert.equal(self(b).health,100,label);
+   if(result.event){assert.equal(result.event.hits.length,0,label);return;}
+  }
+  assert.fail(label+': Worker skipped the contact window on three consecutive swings; '+JSON.stringify(self(a).combat.melee));
+ }
  await miss(Math.PI,'outside short range');
  const close=await room.meleeArenaForTest();await room.placeForCombatTest(a.id,close.attacker);await room.placeForCombatTest(b.id,close.victim);await miss(Math.PI,'target behind attacker');
  const {pair:[p,q]}=await room.meleeWallForTest(),yaw=Math.atan2(-(q[0]-p[0]),-(q[2]-p[2]));await room.placeForCombatTest(a.id,p);await room.placeForCombatTest(b.id,q,(-yaw*180/Math.PI)+90);await miss(yaw,'actual wall blocks a target within melee range');
