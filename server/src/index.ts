@@ -4,6 +4,8 @@ import {MotionHistory,shotViewTime} from '../../shared/lagCompensation';
 import {encodeServerMessage} from '../../shared/snapshotWire';
 import {matchRewardRequests,matchIdentity,payMatchGems,type MatchLedger,type MatchRewardRequest} from './matchRewards';
 import { Inventory } from './inventory';
+import {PracticeChallenges} from './practiceChallenges';
+import {validPracticeChallengeRequest} from '../../shared/practiceChallenges';
 import { defaultEquipment, defaultCosmetic, compatibleCosmetic, validInventory, drawCrate, CRATE, COSMETICS_API_VERSION, type Equipment, type InventoryView } from '../../shared/cosmetics';
 import { RoomDirectory, DirectoryError, type RoomConfig } from './roomDirectory';
 import { ROOM_LIMITS, roomId, type RoomView } from '../../shared/rooms';
@@ -150,7 +152,7 @@ export default {
       const response=await env.ROOM.getByName(PUBLIC_ROOM).fetch(request);
       return new Response(response.body,{status:response.status,headers:{...headers,'Content-Type':'application/json'}});
     }
-    if(url.pathname==='/cosmetics'||url.pathname==='/cosmetics/equip'||url.pathname==='/cosmetics/open'){
+    if(url.pathname==='/cosmetics'||url.pathname==='/cosmetics/equip'||url.pathname==='/cosmetics/open'||url.pathname==='/practice-challenges'){
       const origin=request.headers.get('Origin');if(!origin||!env.ALLOWED_ORIGINS.split(',').map(s=>s.trim()).includes(origin))return new Response('Origin denied',{status:403});
       const headers={'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Methods':'GET, POST, OPTIONS','Access-Control-Allow-Headers':'Authorization, Content-Type','Cache-Control':'no-store','Vary':'Origin'};
       if(request.method==='OPTIONS')return new Response(null,{status:204,headers});
@@ -160,7 +162,7 @@ export default {
         try{
           if(!reader)throw Error('Missing body');
           const body=await Promise.race([(async()=>{const chunks:Uint8Array[]=[];let size=0;for(;;){const r=await reader.read();if(r.done)break;size+=r.value.length;if(size>1024)throw Error('Too large');chunks.push(r.value);}const bytes=new Uint8Array(size);let at=0;for(const c of chunks){bytes.set(c,at);at+=c.length;}return JSON.parse(new TextDecoder().decode(bytes));})(),new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(Error('Timed out')),1000);})]);
-          if(!body||Array.isArray(body)||Object.keys(body).some(k=>!(url.pathname==='/cosmetics/open'?['version','requestId']:['version','id']).includes(k)))throw Error('Invalid equipment');
+          if(url.pathname==='/practice-challenges'?!validPracticeChallengeRequest(body):!body||Array.isArray(body)||Object.keys(body).some(k=>!(url.pathname==='/cosmetics/open'?['version','requestId']:['version','id']).includes(k)))throw Error('Invalid request');
           const cleanHeaders=new Headers(request.headers);cleanHeaders.delete('Content-Length');request=new Request(request.url,{method:'POST',headers:cleanHeaders,body:JSON.stringify(body)});
         }catch{return Response.json({error:'Invalid equipment request.'},{status:400,headers});}
         finally{if(timer!==undefined)clearTimeout(timer);void reader?.cancel().catch(()=>{});}
@@ -360,6 +362,7 @@ export class PublicRoom extends DurableObject<Bindings> {
   private readonly players = new Map<string, Entry>();
   private readonly careers = new Careers(this.ctx.storage, () => new Set([...this.players.values()].flatMap(e => e.session.profileId ? [e.session.profileId] : []).concat(Object.values(this.ledger?.rewardParticipants??{}).filter(p=>!p.abandoned).map(p=>p.identity))));
   private readonly statistics = new Statistics(this.ctx.storage);
+  private readonly practiceChallenges=new PracticeChallenges(this.ctx.storage,this.careers,this.statistics);
   private readonly inventory=new Inventory(this.ctx.storage,id=>this.careers.load(id));
   async inventoryForRoom(identity:string):Promise<InventoryView>{return this.exclusive(()=>this.inventory.get(identity));}
   /** Canonical only. Spends gems and grants a crypto-drawn unowned item in ONE storage batch;
@@ -561,6 +564,7 @@ export class PublicRoom extends DurableObject<Bindings> {
       if(this.statistics.hasPending)await this.persist(); const response=await this.statistics.http(request);
       if(this.statistics.hasPending)await this.persist(); return response;
     });
+    if(new URL(request.url).pathname==='/practice-challenges')return this.exclusive(()=>this.practiceChallenges.http(request));
     if(new URL(request.url).pathname==='/cosmetics/open')return this.exclusive(()=>this.openCrate(request));
     if(new URL(request.url).pathname.startsWith('/cosmetics')){
       const result=await this.exclusive(()=>this.inventory.http(request));

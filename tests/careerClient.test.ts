@@ -7,6 +7,25 @@ import {PROTOCOL_VERSION} from '../shared/protocol';
 afterEach(()=>{vi.unstubAllGlobals();vi.restoreAllMocks();});
 const now=Date.UTC(2026,10,3,12),credential='a'.repeat(64),url='wss://example.test/ws';
 const disk=()=>{const data=new Map<string,string>();return {getItem:(key:string)=>data.get(key)??null,setItem:(key:string,value:string)=>{data.set(key,value);}};};
+it('authenticates bot reports and accepts only validated server wallet updates',async()=>{
+ const view=careerView(createCareer('id',now),now),client=new CareerClient(url,disk());
+ const runId='01234567-0123-0123-0123-0123456789ab';
+ const fetch=vi.fn().mockResolvedValueOnce(Response.json({v:PROTOCOL_VERSION,credential,profile:view}))
+  .mockResolvedValueOnce(Response.json({version:1,runId}))
+  .mockResolvedValueOnce(Response.json({v:PROTOCOL_VERSION,profile:{...view,revision:view.revision+1,gems:100}}));
+ vi.stubGlobal('fetch',fetch);
+ expect(await client.practiceChallenge({version:1,action:'start',difficulty:'absurd',bots:2})).toBe(runId);
+ await client.practiceChallenge({version:1,action:'progress',runId,kills:1,finished:false,won:false});
+ expect(client.view?.gems).toBe(100);
+ for(const [endpoint,options] of fetch.mock.calls.slice(1)){
+  expect(String(endpoint)).toBe('https://example.test/practice-challenges');
+  expect(options.headers.Authorization).toBe(`Bearer ${credential}`);
+  expect(JSON.parse(options.body)).not.toHaveProperty('gems');
+ }
+ fetch.mockResolvedValueOnce(Response.json({v:PROTOCOL_VERSION,profile:{...view,gems:-1}}));
+ await expect(client.practiceChallenge({version:1,action:'progress',runId,kills:2,finished:false,won:false})).rejects.toThrow('Invalid practice challenge progress');
+ expect(client.view?.gems).toBe(100);
+});
 it('cancels a profile request before accepting or persisting data when entering Practice',async()=>{
  const storage=disk(),view=careerView(createCareer('id',now),now);let resolve!:(response:Response)=>void;
  const fetch=vi.fn((_url:RequestInfo|URL,_init?:RequestInit)=>new Promise<Response>(r=>resolve=r));vi.stubGlobal('fetch',fetch);const client=new CareerClient(url,storage),work=client.ensure();await vi.waitFor(()=>expect(fetch).toHaveBeenCalledTimes(1));const rejected=expect(work).rejects.toThrow();client.dispose();

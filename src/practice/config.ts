@@ -7,7 +7,7 @@ export function loadDifficulty():BotDifficulty{try{const value=localStorage.getI
 export function saveDifficulty(value:BotDifficulty){try{localStorage.setItem(preference,value);}catch{/* Temporary selection remains usable. */}}
 export interface PracticeSetup {mapId:MapId;mode:MatchMode;bots:number;difficulty:BotDifficulty}
 export const DEFAULT_PRACTICE:PracticeSetup={mapId:'european-town',mode:'ffa',bots:3,difficulty:'advanced'};
-export const PRACTICE_NOTICE='Practice is offline. Kills, points, wins, challenges, and gems earned here will not count toward your account or global leaderboards.';
+export const PRACTICE_NOTICE='Practice runs locally. Bot challenges can earn account gems while connected. Practice kills, points and wins do not affect multiplayer statistics or leaderboards.';
 export function validPractice(value:unknown):value is PracticeSetup {
  if(!value||typeof value!=='object')return false;const v=value as PracticeSetup;
  return validMap(v.mapId)&&['ffa','teams'].includes(v.mode)&&Number.isInteger(v.bots)&&v.bots>=0&&v.bots<=5&&DIFFICULTIES.includes(v.difficulty);

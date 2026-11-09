@@ -111,7 +111,7 @@ export function validInventory(x:unknown):x is InventoryView {
 }
 export const killEffect = (id:unknown):KillEffect|undefined => collection(cosmetic(id)?.collection)?.killEffect;
 /** Server-authoritative crate. No Epic family exists yet; its share went to the others. */
-export const CRATE = {price:300,available:true,distribution:[
+export const CRATE = {price:250,available:true,distribution:[
   {rarity:'uncommon',percent:55},{rarity:'rare',percent:40},{rarity:'legendary',percent:5},
 ]} as const;
 export const crateItems = ():CosmeticDefinition[] => COSMETICS.filter(c=>c.ownership==='grant'&&!!c.collection);

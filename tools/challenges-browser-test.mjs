@@ -70,7 +70,7 @@ try{
 
   const a=await open('Challenge Hero');
 
-  check(await a.$$eval('.challenge-card:not([hidden])',cards=>cards.length===3),'exactly three daily cards');
+  check(await a.$$eval('.challenge-card:not([hidden])',cards=>cards.length===5),'exactly five daily cards');
 
   check(await a.$eval('#challenge-tab-daily',e=>e.getAttribute('aria-selected')==='true'),'Daily selected by default');
 
@@ -82,7 +82,7 @@ try{
 
   await a.click('#challenge-tab-weekly');
 
-  check(await a.$$eval('.challenge-card:not([hidden])',cards=>cards.length===3&&cards.every(c=>c.dataset.challengeId.startsWith('weekly:'))),'weekly tab shows exactly three weekly objectives');
+  check(await a.$$eval('.challenge-card:not([hidden])',cards=>cards.length===5&&cards.every(c=>c.dataset.challengeId.startsWith('weekly:'))),'weekly tab shows exactly five weekly objectives');
 
   await a.keyboard.press('ArrowLeft');check(await a.$eval('#challenge-tab-daily',e=>e.getAttribute('aria-selected')==='true'),'tabs support keyboard navigation');
 
@@ -164,7 +164,7 @@ try{
 
   await until(()=>a.evaluate(()=>document.body.dataset.screen==='menu'),'return home');
 
-  check(await a.$$eval('.challenge-card',cards=>cards.length===3&&cards.every(c=>c.classList.contains('completed')&&c.textContent.includes('RECEIVED')&&c.querySelector('.challenge-track').getAttribute('aria-valuenow')===c.querySelector('.challenge-track').getAttribute('aria-valuemax'))),'completed cards remain with full bars and received indicators');
+  check(await a.$$eval('.challenge-card',cards=>cards.length===5&&cards.slice(0,3).every(c=>c.classList.contains('completed')&&c.textContent.includes('RECEIVED')&&c.querySelector('.challenge-track').getAttribute('aria-valuenow')===c.querySelector('.challenge-track').getAttribute('aria-valuemax'))),'completed legacy cards remain with full bars alongside the added bot goals');
 
   await a.click('#challenge-tab-weekly');check(await a.$$eval('.challenge-reward',nodes=>nodes.every(n=>n.textContent==='250')),'weekly rewards show 250 with shared SVG icon');
 

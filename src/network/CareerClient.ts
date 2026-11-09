@@ -2,6 +2,7 @@ import { validLeaderboard, validPersonalStats, type LeaderboardView, type Person
 import { validCareerView, type CareerView } from '../../shared/challenges';
 import { PROTOCOL_VERSION } from '../../shared/protocol';
 import { presenceEndpoint } from './endpoint';
+import type {PracticeChallengeRequest} from '../../shared/practiceChallenges';
 
 /** The credential is a bearer capability, never the editable guestId or display name. */
 export class CareerClient {
@@ -75,6 +76,19 @@ export class CareerClient {
     if(!validLeaderboard(ranking)||ranking.period!==period||ranking.metric!==metric||(personal!==null&&!validPersonalStats(personal)))
       throw new Error('Leaderboard response is incompatible. Publish matching frontend and backend.');
     return {board:ranking,personal};
+  }
+  async practiceChallenge(body:PracticeChallengeRequest):Promise<string|undefined>{
+    if(!this.view)await this.ensure();
+    const endpoint=new URL(this.endpoint);endpoint.pathname='/practice-challenges';
+    const response=await fetch(endpoint,{method:'POST',cache:'no-store',headers:{Authorization:`Bearer ${this.credential}`,'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(8000)});
+    if(!response.ok)throw new Error('Bot challenge progress could not sync.');
+    const data=await response.json() as {version?:number;runId?:string;v?:number;profile?:unknown};
+    if(body.action==='start'){
+      if(data.version!==1||typeof data.runId!=='string'||!/^[a-f0-9-]{36}$/.test(data.runId))throw new Error('Invalid practice challenge session.');
+      return data.runId;
+    }
+    if(data.v!==PROTOCOL_VERSION||!validCareerView(data.profile))throw new Error('Invalid practice challenge progress.');
+    this.accept(data.profile);return undefined;
   }
   start(visible: () => boolean): void {
     if (this.timer) return;

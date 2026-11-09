@@ -53,7 +53,7 @@ describe('server crate draw', () => {
     expect(validCrateResult({ version:1, item:'marble-smg', gems:20, inventory })).toBe(true);
     for (const bad of [{ item:'default-smg' }, { item:'rich-smg' }, { gems:-1 }, { version:2 }, { extra:1 }])
       expect(validCrateResult({ version:1, item:'marble-smg', gems:20, inventory, ...bad })).toBe(false);
-    expect(CRATE.price).toBe(300);
+    expect(CRATE.price).toBe(250);
   });
 });
 

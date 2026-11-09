@@ -20,7 +20,7 @@ it('validates bounded inventories, ownership, exact fields and matching equipmen
 });
 it('rarities have explicit presentation colors and the crate odds cover the live pool at 100%',()=>{
  expect(Object.keys(RARITIES)).toEqual(['common','uncommon','rare','epic','legendary']);expect(RARITIES.epic.color).toBe('#ed7b82');expect(RARITIES.legendary.color).toBe('#eac567');
- expect(CRATE).toMatchObject({available:true,price:300});expect(CRATE.distribution.map(d=>d.rarity)).toEqual(['uncommon','rare','legendary']);expect(CRATE.distribution.reduce((n,d)=>n+d.percent,0)).toBe(100);
+ expect(CRATE).toMatchObject({available:true,price:250});expect(CRATE.distribution.map(d=>d.rarity)).toEqual(['uncommon','rare','legendary']);expect(CRATE.distribution.reduce((n,d)=>n+d.percent,0)).toBe(100);
  expect(JSON.parse(fs.readFileSync('public/assets/cosmetics/catalog.json','utf8')).items).toEqual(COSMETICS);
 });
 it('fetches server inventory using the existing capability, never browser ownership or gem claims',async()=>{

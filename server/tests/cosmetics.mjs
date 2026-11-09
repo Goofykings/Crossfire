@@ -13,7 +13,7 @@ test('cosmetics: real capability inventory, starter migration, strict equip, una
  for(const [body,status]of [[{version:1,id:'not-owned'},403],[{version:1,id:'default-rifle',owned:['gold']},400],[{version:1,id:'default-rifle',gems:100000},400],[{version:2,id:'default-rifle'},400]])assert.equal((await request('/cosmetics/equip',body)).status,status);
  const results=await Promise.all(defaults.map(id=>request('/cosmetics/equip',{version:1,id})));assert.ok(results.every(r=>r.status===200));assert.deepEqual((await request()).data.equipped,a.data.equipped);
  for(const path of ['/crates/open','/shop/open','/purchase'])assert.equal((await request(path,{version:1})).status,404);
- assert.equal((await request('/cosmetics/open',{version:1})).status,409,'37 gems cannot buy a 300-gem crate');
+ assert.equal((await request('/cosmetics/open',{version:1})).status,409,'37 gems cannot buy a 250-gem crate');
  const after=(await h.api('/profile',token)).data.profile;assert.equal(after.gems,37);for(const key of ['gems','revision','daily','weekly'])assert.deepEqual(after[key],career[key]);assert.deepEqual((await h.api('/stats',token)).data.totals,stats);
  assert.equal((await fetch(new URL('/cosmetics',h.base),{headers:{Origin:'https://hostile.invalid',Authorization:'Bearer '+token}})).status,403);
  await h.restart();const restored=await request();assert.deepEqual(restored.data.owned,defaults);assert.deepEqual(restored.data.equipped,a.data.equipped);assert.equal((await h.api('/profile',token)).data.profile.gems,37);
@@ -36,12 +36,12 @@ test('cosmetics: server crate spends gems and grants one unowned item atomically
  const stats=(await h.api('/stats',token)).data.totals;
  for(const body of [{version:1,id:'rich-rifle'},{version:1,rarity:'legendary'},{version:2},{version:1,gems:0}])assert.equal((await request('/cosmetics/open',body)).status,400,JSON.stringify(body));
  const opened=[];
- for(const left of [350,50]){const r=await request('/cosmetics/open',{version:1});assert.equal(r.status,200);assert.equal(r.data.gems,left);
+ for(const left of [400,150]){const r=await request('/cosmetics/open',{version:1});assert.equal(r.status,200);assert.equal(r.data.gems,left);
   assert.match(r.data.item,/^(green-camo|blue-camo|red-camo|marble|rainbow-glow|rich)-(rifle|smg|sniper|shotgun|semi-sniper|melee)$/);assert.ok(!opened.includes(r.data.item),'no duplicate');opened.push(r.data.item);
   assert.ok(r.data.inventory.owned.includes(r.data.item));assert.equal(r.data.inventory.version,1);}
  const broke=await request('/cosmetics/open',{version:1});assert.equal(broke.status,409);
  const inv=await request('/cosmetics');for(const id of opened)assert.ok(inv.data.owned.includes(id));assert.equal(inv.data.owned.length,defaults.length+2);
- assert.equal((await h.api('/profile',token)).data.profile.gems,50);assert.deepEqual((await h.api('/stats',token)).data.totals,stats,'spending never changes lifetime earned statistics');
+ assert.equal((await h.api('/profile',token)).data.profile.gems,150);assert.deepEqual((await h.api('/stats',token)).data.totals,stats,'spending never changes lifetime earned statistics');
  const item=opened[0],weapon=cosmetic(item).weapon;const eq=await request('/cosmetics/equip',{version:1,id:item});assert.equal(eq.status,200);assert.equal(eq.data.equipped[weapon],item);
- await h.restart();const restored=await request('/cosmetics');for(const id of opened)assert.ok(restored.data.owned.includes(id));assert.equal(restored.data.equipped[weapon],item);assert.equal((await h.api('/profile',token)).data.profile.gems,50);
+ await h.restart();const restored=await request('/cosmetics');for(const id of opened)assert.ok(restored.data.owned.includes(id));assert.equal(restored.data.equipped[weapon],item);assert.equal((await h.api('/profile',token)).data.profile.gems,150);
 });

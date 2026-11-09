@@ -1,28 +1,46 @@
 # Daily and weekly challenges
 
-Implemented locally 2026-11-03. No commit, push, public deployment or public-server validation.
+Current rotation update: five daily and five weekly objectives. No public deployment or public-server validation for this update.
 
 ## Rules and resets
 
 `shared/challenges.ts` is the configurable definition library and hosting-independent
-rule implementation. Exactly three objectives are saved for each category. A
+rule implementation. Exactly five objectives are saved for each category. A
 stable pseudo-random selection uses the server-issued identity hash, category,
-UTC period start and selection version. Selection chooses distinct families
-(at most one weapon objective and one match objective) and varies weapon/target
-within those families. Stored assignments are reused, not regenerated on refresh.
+UTC period start and selection version. Each new rotation chooses three distinct
+combat objectives from all five guns and melee, one difficulty-specific bot kill
+objective and one Beginner/Intermediate bot win objective. Stored assignments are
+reused, not regenerated on refresh. Existing three-card rotations retain progress
+and rewards and gain the two bot objectives until the next reset.
 Keep existing definition IDs when extending the library so active saved periods
 remain readable.
 
 Daily periods run midnight-to-midnight UTC and award 100 gems per objective
-(300 maximum). Weekly periods start Monday 00:00 UTC and award 250 each
-(750 maximum). Completing the current six can add 1,050 gems. Expiry creates
+(500 maximum). Weekly periods start Monday 00:00 UTC and award 250 each
+(1,250 maximum). Completing all ten can add 1,750 gems. Expiry creates
 new objectives without removing the existing balance. Delayed previous-period
 events cannot roll a current period backwards or credit its new daily tasks.
+Gun targets are 5 or 8 daily and 20 or 32 weekly; melee is 3 or 5 daily and 12 or
+20 weekly. Most weekly targets are four times daily targets. Absurd is one kill
+daily and three or five weekly. Bot wins require one daily and three or four
+weekly. Crates cost 250 gems, enforced by the shared catalog and server wallet.
+
+Practice bot progress uses a separate optional account reporter. A connected
+client obtains a server-issued run tied to its difficulty and bot count, then
+reports cumulative human kills and the frozen match outcome. The server bounds
+elapsed time and kill rates, rejects changed/decreasing totals and early wins,
+and atomically stores receipts, challenge rewards and wallet changes. Retries
+cannot repeat rewards. These are bounded client-reported practice claims, not
+server-replayed combat. They can advance only bot objectives. Practice never adds
+multiplayer kills, wins, points or games. Earned challenge gems update gem totals.
+The simulation remains playable when the account backend is unavailable;
+challenge rewards require connection. Zero-bot practice makes no reports.
 
 Only the authoritative credited alive-to-dead transition advances weapon kills,
 headshots, all eliminations and actual awarded points (including combo/headshot
 bonuses). Grenade eliminations count for total kills/points, not a firearm type.
-Nonlethal damage, practice mode, assists and client claims cannot advance them.
+Nonlethal damage, practice combat, assists and client claims cannot advance these
+online combat objectives.
 The existing elimination guard and input validation protect duplicate kills.
 
 Frozen server round results supply wins, MVP and completed-match progress.
@@ -101,7 +119,7 @@ progress during gameplay. A temporary API failure does not replace a stored
 credential or fabricate a balance; existing match play can continue without
 challenge credit if bootstrap is unavailable.
 
-The home panel has Daily/Weekly keyboard-accessible tabs, exactly three server
+The home panel has Daily/Weekly keyboard-accessible tabs, exactly five server
 objectives, white animated progress bars with precise totals, shared original SVG
 gem icons, retained completion/check/received labels, and a server reset countdown.
 Top-right shows the current local display name over the actual gem balance, with
@@ -114,7 +132,7 @@ are respected. Existing settings, loadout flow, maps and combat are preserved.
 
 ## Protocol and future hosting
 
-Shared protocol **v14** adds the optional guest credential to join and a validated
+Shared protocol **v25** requires five-card career views. The original v14 change added the optional guest credential to join and a validated
 private `career` server frame. There is a real schema change; version validation
 remains enabled. Existing shared gameplay fields and map revisions are unchanged.
 No new Cloudflare binding, migration, secret or frontend environment variable is
@@ -131,6 +149,14 @@ period assignments and balances during an actual migration. Do not switch the
 provider to the scaffold expecting persistent multiplayer or gems to work.
 
 ## Checks
+
+The five-card update adds `tests/challengeRotations.test.ts`,
+`tests/practiceChallenges.test.ts`, the real Worker
+`server/tests/practice-challenges.mjs`, and the responsive UI check
+`node tools/challenge-rotation-browser-test.mjs <frontend-url>`.
+The latter uses a real local Worker and checks both tabs, two bot objectives,
+three distinct combat objectives, fifth-card access at five viewport sizes and
+the 250-gem shop price. Deploy frontend and Worker together for protocol v25.
 
 From the repository root in PowerShell:
 
@@ -168,7 +194,7 @@ were not tested. Run browser and timed backend suites separately on this iGPU;
 concurrent Chrome load can overflow a test input producer or miss the existing
 apple-impulse test's timing window.
 
-### Results
+### Original implementation results (before the five-card update)
 
 - Frontend: 475 tests / 45 files, TypeScript and production build passed.
 - Worker: generated types/TypeScript, dry-run build and clean full suite 59/59.

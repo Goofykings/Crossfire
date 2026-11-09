@@ -105,7 +105,7 @@ try{
  await click('#pause','Settings');await shown('#settings');await click('#settings','Back');await shown('#pause');
  if(new URL(base).pathname==='/'){
   await page.evaluate(()=>window.__crossfire.practiceFinish());await shown('#results');await settled();await shot('results');
-  check(await page.$eval('#results',e=>!e.inert&&e.textContent.includes('RESULTS NOT SAVED')),'real offline match results retain accurate non-rewarding data');
+  check(await page.$eval('#results',e=>!e.inert&&e.textContent.includes('BOT CHALLENGES COUNT WHEN CONNECTED')),'real offline match results retain accurate non-rewarding data');
  }
  await page.evaluate(()=>window.__crossfire.networkLeave());await shown('#menu');await settled();
  states.final=await page.evaluate(()=>({screen:document.body.dataset.screen,light:document.body.dataset.uiLight,interactive:[...document.querySelectorAll('.screen:not([inert])')].map(e=>e.id)}));

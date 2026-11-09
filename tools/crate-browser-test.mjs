@@ -86,7 +86,7 @@ try{
   await clickText('.reveal-controls','EQUIP');await page.waitForFunction(()=>[...document.querySelectorAll('.reveal-controls .btn')].some(b=>b.textContent==='EQUIPPED'),{timeout:30000});
   const item=(await reveal()).item,weapon=item.split('-').pop();
   check((await page.evaluate(()=>window.__crossfire.cosmetics().view.equipped))[weapon]===item,`equip from the reveal persists ${item} on the server`);
-  check((await h.api('/profile',credential)).data.profile.gems===600,'server spent exactly 300 gems');
+  check((await h.api('/profile',credential)).data.profile.gems===650,'server spent exactly 250 gems');
   await clickText('.reveal-controls','CONTINUE');await page.waitForFunction(()=>document.querySelector('.crate-reveal').hidden);check(true,'Continue closes the reveal and returns to the Shop');
   check(await page.$eval('.crate-reveal',e=>e.inert)&&await page.$eval('.shop-open',e=>document.activeElement===e),'closing reveal inerts old controls and restores Shop focus');
   if(only==='all'){
@@ -95,7 +95,7 @@ try{
     const legendary=await openForced(id=>id.startsWith('rich-'),'legendary');check(legendary.background.toLowerCase()==='#ffc22e','legendary reveal background is gold');
     check(metrics.legendary.money>0,`legendary reveal plays the Rich money shower (${metrics.legendary.money} pieces)`);
     await clickText('.reveal-controls','CONTINUE');await page.waitForFunction(()=>document.querySelector('.crate-reveal').hidden);
-    check((await h.api('/profile',credential)).data.profile.gems===0,'three crates cost 900 gems');
+    check((await h.api('/profile',credential)).data.profile.gems===150,'three crates cost 750 gems');
     check(await page.$eval('.shop-open',n=>n.disabled),'Open disabled again when gems run out');
   }
   if(only==='all'||only==='locker'||only==='match'){

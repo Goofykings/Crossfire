@@ -1,4 +1,4 @@
-/** Actual browser gameplay with every backend request/socket forbidden. No mock combat replies. */
+/** Actual browser gameplay with account backend deliberately unreachable and gameplay sockets forbidden. No mock combat replies. */
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import {setTimeout as delay} from 'node:timers/promises';
@@ -21,7 +21,7 @@ try{
  const clickText=async(root,label)=>page.evaluate(({root,label})=>{const b=[...document.querySelectorAll(root+' button')].find(n=>n.textContent.trim().toUpperCase()===label.toUpperCase());if(!b)throw Error('Missing '+label);b.click();},{root,label});
  const openSetup=async()=>{await page.click('#menu .home-actions .primary');await visible('#modes');await clickText('#modes','Practice');await visible('#practice-setup');};
  await openSetup();check(await page.evaluate(()=>window.__backendAttempts.length===0&&window.__socketAttempts===0),'cold startup and Practice setup make zero backend requests/sockets');
- check(await page.$eval('.practice-notice',n=>n.textContent.includes('will not count')),'setup explains no online rewards');
+ check(await page.$eval('.practice-notice',n=>n.textContent.includes('Bot challenges can earn account gems')),'setup explains optional bot challenge rewards');
  await page.screenshot({path:out+'/setup-1000.png'});await page.setViewport({width:640,height:480});await page.screenshot({path:out+'/setup-640.png'});check(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'small setup no horizontal overflow');await page.setViewport({width:1000,height:700});
  const saved=await page.evaluate(()=>Object.fromEntries(Object.entries(localStorage).filter(([k])=>/career|stat|gem|challenge/.test(k))));
  for(const [index,map]of ['european-town','industrial-complex','modern-city'].entries()){
@@ -47,8 +47,8 @@ try{
    await page.screenshot({path:out+'/playing.png'});
    if(!production){
     await page.keyboard.press('F4');await page.waitForSelector('.practice-debug');await page.screenshot({path:out+'/navigation.png'});await page.keyboard.press('F4');check(await page.$('.practice-debug')===null,'development navigation overlay toggles and cleans up');
-    await page.evaluate(()=>window.__crossfire.practiceFinish());await visible('#results');await delay(850);check(await page.$eval('#results',n=>n.textContent.includes('PRACTICE')&&n.textContent.includes('RESULTS NOT SAVED')&&n.querySelectorAll('tbody tr').length===4),'local results explicitly not saved with full standings');
-    check(await page.$eval('.result-gems',n=>n.textContent==='PRACTICE — NO GEMS EARNED'&&n.dataset.confirmed==='false'),'Practice results never claim a server gem award');await page.screenshot({path:out+'/results.png'});
+    await page.evaluate(()=>window.__crossfire.practiceFinish());await visible('#results');await delay(850);check(await page.$eval('#results',n=>n.textContent.includes('PRACTICE')&&n.textContent.includes('BOT CHALLENGES COUNT WHEN CONNECTED')&&n.querySelectorAll('tbody tr').length===4),'local results explain bot challenge sync with full standings');
+    check(await page.$eval('.result-gems',n=>n.textContent==='PRACTICE — NO MATCH GEMS'&&n.dataset.confirmed==='false'),'Practice results never claim a server gem award');await page.screenshot({path:out+'/results.png'});
     await clickText('#results','RESTART');await visible('#weapons');await page.click('#weapons [data-weapon="smg"]');await page.waitForFunction(()=>window.__crossfire.ready());check(await page.evaluate(()=>window.__crossfire.practice().setup.bots===3&&window.__crossfire.network().snapshot.players.every(p=>p.score===0)),'restart preserves setup and resets local scores');
     await page.evaluate(()=>window.__crossfire.practiceFinish());await visible('#results');await clickText('#results','PRACTICE SETTINGS');await visible('#practice-setup');await clickText('#practice-setup','Back');await visible('#modes');await clickText('#modes','Back');await visible('#menu');
    }else{await page.evaluate(()=>window.__crossfire.networkLeave());await visible('#menu');}
@@ -62,7 +62,7 @@ try{
  await page.waitForFunction(()=>window.__crossfire.network().rendered.length===5,{timeout:120000});
  check(await page.evaluate(()=>{const n=window.__crossfire.network();return n.snapshot.players.filter(p=>p.team==='blue').length===3&&n.rendered.filter(p=>p.friendly).length===2&&window.__crossfire.practice().setup.difficulty==='absurd';}),'Teams balances six participants and renders two friendly bots');
  await delay(4000);for(let i=0;i<5;i++){performanceSamples.push(await page.evaluate(()=>({fps:window.__crossfire.stats().fps,frameMs:window.__crossfire.stats().frameMs})));await delay(500);}await page.evaluate(()=>window.__crossfire.hold('leaderboard',true));await page.screenshot({path:out+'/teams-five-bots.png'});await page.evaluate(()=>window.__crossfire.hold('leaderboard',false));await page.evaluate(()=>window.__crossfire.networkLeave());await visible('#menu');
- check(await page.evaluate(()=>window.__backendAttempts.length===0&&window.__socketAttempts===0),'all Practice gameplay/leave/results paths made zero backend requests/sockets');
+ check(await page.evaluate(()=>window.__backendAttempts.every(p=>p==='/profile'||p==='/practice-challenges')&&window.__socketAttempts===0),'Practice uses only optional account sync and never gameplay sockets');
  check(JSON.stringify(saved)===JSON.stringify(await page.evaluate(()=>Object.fromEntries(Object.entries(localStorage).filter(([k])=>/career|stat|gem|challenge/.test(k))))),'account-related browser data unchanged');check(errors.length===0,'no page errors or missing assets');
  await page.click('#menu .home-actions .primary');await visible('#modes');await clickText('#modes','Public Servers');await page.waitForFunction(()=>window.__backendAttempts.length>0);await delay(300);await clickText('#modes','Practice');await visible('#practice-setup');const afterFailure=await page.evaluate(()=>window.__backendAttempts.length);
  await page.click('#practice-setup [data-difficulty="beginner"]');await clickText('#practice-setup','START PRACTICE');await visible('#weapons');await page.click('#weapons [data-weapon="sniper"]');await page.waitForFunction(()=>window.__crossfire.ready());await delay(1500);

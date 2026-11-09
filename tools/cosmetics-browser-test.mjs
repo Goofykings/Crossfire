@@ -26,7 +26,7 @@ try{
  await h.central.legacyWalletForStatisticsTest(credential,37);
  await nav('Shop');await visible('#shop');await page.waitForFunction(()=>document.querySelector('.home-gems span')?.textContent==='37');
  check(await page.$eval('.shop-crate',n=>n.complete&&n.naturalWidth>0),'reward crate asset loads at GitHub Pages subpath');
- check(await page.$eval('.shop-open',n=>n.disabled&&n.textContent.includes('300')),'crate Open disabled below 300 gems');
+ check(await page.$eval('.shop-open',n=>n.disabled&&n.textContent.includes('250')),'crate Open disabled below 250 gems');
  check((await page.$$eval('.crate-distribution span',nodes=>nodes.map(n=>n.textContent.match(/\d+%/)[0]))).join(',')==='55%,40%,5%','crate odds displayed correctly');
  const requests=await page.evaluate(()=>window.__cosmeticRequests.length);await page.$eval('.shop-open',b=>b.click());await delay(100);
  check(await page.evaluate(n=>!window.__cosmeticRequests.slice(n).some(r=>r.path==='/cosmetics/open'),requests),'disabled crate makes no purchase request');await page.screenshot({path:out+'/shop-1000.png'});

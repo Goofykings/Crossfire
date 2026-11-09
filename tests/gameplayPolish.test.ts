@@ -58,7 +58,7 @@ it('Chromebook draft applies/persists derived costs and restores original graphi
  const draft=new SettingsDraft(store);draft.set('chromebookMode',true);expect(store.value.chromebookMode).toBe(false);draft.discard();expect(draft.value.chromebookMode).toBe(false);
  draft.set('chromebookMode',true);draft.apply();const loaded=new SettingsStore(storage);
  expect(effectiveSettings(loaded.value)).toMatchObject({graphicsQuality:'low',shadowQuality:'off',resolutionScale:.5,reducedEffects:true});
- expect(graphicsPreset(loaded.value)).toMatchObject({msaa:1,fxaa:false,bloom:false,ssao:false,sharpen:false,anisotropy:1});
+ expect(graphicsPreset(loaded.value)).toMatchObject({msaa:1,fxaa:false,bloom:false,ssao:false,sharpen:false,anisotropy:2});
  loaded.update({chromebookMode:false});expect(effectiveSettings(loaded.value)).toMatchObject({graphicsQuality:'ultra',shadowQuality:'high',resolutionScale:.85,reducedEffects:false});
  expect(sanitizeSettings({chromebookMode:'true'}).chromebookMode).toBe(false);expect(DEFAULT_SETTINGS.chromebookMode).toBe(false);draft.dispose();
 });

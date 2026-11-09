@@ -11,6 +11,15 @@ Practice needs the hosted frontend files, models, textures and audio, but never
 needs the multiplayer backend. This is not a service-worker/offline-download
 feature: uncached frontend assets must still be available from localhost or Pages.
 
+An optional account adapter now reports bot challenge progress while connected.
+Difficulty-specific kills and bot match wins can earn daily/weekly challenge gems;
+practice combat still contributes no multiplayer kills, points, games or wins.
+`PracticeChallenges.ts` sends cumulative totals through a separate authenticated
+endpoint, outside the offline simulation. The server issues bounded run receipts
+and grants each challenge reward once. Zero-bot sessions send no bot reports.
+These are client-reported local results with server bounds, not replayed combat.
+If account sync is unavailable, the local game continues without blocking play.
+
 ## Architecture and account isolation
 
 - `src/practice/config.ts`: validated setup, difficulty tuning, seeded random
@@ -48,7 +57,8 @@ respawn delay and choose a fresh valid spawn and random weapon.
 Cold startup and Mode Select deliberately do not request online data. Select
 **Public Servers/Refresh**, submit an online Create/Join action, or open an online
 account page to opt into those services. Practice aborts pending room/account
-requests and stops presence/profile polling. It never replays local events when
+requests and stops presence/profile polling, then starts its optional bot challenge
+session when at least one bot is selected. It never replays local combat when
 the user later joins multiplayer. Normal guest username, graphics, controls and
 last-used weapon preferences still work. They are not account reward statistics.
 

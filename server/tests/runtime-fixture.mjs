@@ -111,6 +111,18 @@ export class PublicRoom extends ProductionRoom {
       for(const card of p[category].challenges)if(card.completedAt!==null)card.completedAt-=offset;}
     await this.ctx.storage.put('career:'+e.session.profileId,p);
   }
+  async practiceChallengesForTest(credential,difficulty,age=0) {
+    const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(credential));
+    const id=[...new Uint8Array(digest)].map(n=>n.toString(16).padStart(2,'0')).join('');
+    if(difficulty){
+      const p=await this.careers.load(id);
+      for(const category of ['daily','weekly'])p[category].challenges=[...p[category].challenges.slice(0,3),
+        {id:`${category}:bot-kills-${difficulty}:${category==='daily'?1:3}`,progress:0,completedAt:null},
+        {id:`${category}:bot-wins-beginner:${category==='daily'?1:3}`,progress:0,completedAt:null}];
+      p.revision++;this.careers.mark(id);await this.persist();
+    }
+    if(age){const key='practice-challenges:'+id,run=await this.ctx.storage.get(key);run.startedAt-=age;await this.ctx.storage.put(key,run);}
+  }
   async environmentForTest(){return {definition:this.activeMap.environment,states:this.environment.capture(),active:this.environment.active};}
   async saveEnvironmentForTest(stale=false){
     await this.persist();

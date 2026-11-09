@@ -53,7 +53,7 @@ for(const mode of ['kills','eligible','late','abandoned'])test(`durable guest ch
     const preflight=await fetch(new URL('/profile',base),{method:'OPTIONS',headers:{Origin:origin}});assert.equal(preflight.status,204);assert.match(preflight.headers.get('Access-Control-Allow-Headers'),/Authorization/);
     const created=await(await http('POST')).json(),other=await(await http('POST')).json();
     assert.equal(created.v,v);assert.match(created.credential,/^[a-f0-9]{64}$/);assert.equal(created.profile.gems,0);
-    assert.equal(created.profile.daily.challenges.length,3);assert.equal(created.profile.weekly.challenges.length,3);
+    assert.equal(created.profile.daily.challenges.length,5);assert.equal(created.profile.weekly.challenges.length,5);
     assert.deepEqual((await profile(created.credential)).daily,created.profile.daily,'refresh is stable');
     let a=await open(created.credential),b=await open(other.credential);
     await spawn(a,'sniper');await spawn(b);
@@ -81,8 +81,8 @@ for(const mode of ['kills','eligible','late','abandoned'])test(`durable guest ch
       assert.equal(me(a).kills,1);assert.equal(a.profile.gems,1050);
       assert.deepEqual(await statistics(created.credential),{kills:1,assists:0,deaths:0,points:150,wins:0,games:0,gems:1050},'actual kill and rewards update lifetime statistics before round end');
       assert.equal((await statistics(other.credential)).deaths,1,'confirmed death records on the victim');
-      assert.ok(a.profile.daily.challenges.every(c=>c.completedAt!==null));
-      assert.ok(a.profile.weekly.challenges.every(c=>c.completedAt!==null));
+      assert.ok(a.profile.daily.challenges.slice(0,3).every(c=>c.completedAt!==null));
+      assert.ok(a.profile.weekly.challenges.slice(0,3).every(c=>c.completedAt!==null));
       await room.replayDeadTransitionForTest(b.id,a.id);
       assert.equal((await profile(created.credential)).gems,1050,'duplicate death cannot re-award');
       assert.equal((await statistics(created.credential)).kills,1,'duplicate death cannot duplicate lifetime awards');

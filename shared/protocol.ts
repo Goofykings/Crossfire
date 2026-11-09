@@ -14,8 +14,8 @@ import type { CombatIntent } from './combat';
 import { pointsOrder, type ScoreAward, type RoundResult, type RoundStanding } from './scoring';
 import { GRENADE, type GrenadeState, type GrenadeEvent, type GrenadeExplosion } from './grenades';
 
-// v24: independent compact snapshots, timing probes and bounded historical hitscan.
-export const PROTOCOL_VERSION = 24;
+// v25: five-card daily/weekly career views, including bot challenge objectives.
+export const PROTOCOL_VERSION = 25;
 export const validWeapon = (x: unknown): x is WeaponId => x === 'rifle' || x === 'shotgun' || x === 'sniper' || x === 'smg' || x === 'semi-sniper';
 export const PUBLIC_ROOM = 'public-main';
 export const INPUT_BATCH_LIMIT = 12;

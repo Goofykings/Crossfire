@@ -179,7 +179,7 @@ export class UI {
     this.buildMenu();
     this.rooms=new RoomMenus(name=>this.screen(name),name=>this.show(name),()=>this.profile.value.username,this.root);
     this.practice=new PracticeMenu(this.screen('practice-setup'),()=>this.show('practice-setup'),()=>this.rooms.open());
-    this.root.append(el('div','practice-indicator','PRACTICE · RESULTS NOT SAVED'));
+    this.root.append(el('div','practice-indicator','PRACTICE · LOCAL MATCH'));
     this.cosmetics=new CosmeticsPages(name=>this.screen(name),name=>this.show(name));this.cosmetics.onPreview=()=>this.show('cosmetic-preview');
     this.challenges = new ChallengesPanel(this.screens.get('menu')!);
     this.homeHeader.appendChild(this.challenges.account);

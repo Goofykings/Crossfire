@@ -11,7 +11,7 @@ export function updateResultGems(panel:HTMLElement,result:RoundResult,selfId:str
  const amount=result.gemRewards?.awards[selfId];
  if(!practice&&amount===undefined){reward?.remove();return;}
  if(!reward){reward=document.createElement('div');reward.className='result-gems';reward.setAttribute('role','status');panel.querySelector('.result-banner')!.append(reward);}
- const text=practice?'PRACTICE — NO GEMS EARNED':`+${amount} GEMS EARNED`;if(reward.textContent===text)return;
+ const text=practice?'PRACTICE — NO MATCH GEMS':`+${amount} GEMS EARNED`;if(reward.textContent===text)return;
  reward.replaceChildren();const icon=document.createElement('span');icon.innerHTML=GEM_ICON;reward.append(icon,document.createTextNode(text));reward.dataset.confirmed=String(!practice);reward.classList.toggle('practice',practice);
 }
 
@@ -31,7 +31,7 @@ export function createRoundResults(result: RoundResult, selfId: string, team: Pl
   const panel = node('div', 'round-results'); panel.dataset.outcome = outcome.toLowerCase();
   panel.dataset.mode=result.mode;
   const banner = node('header', 'result-banner');
-  banner.append(node('small', 'result-mode', practice?'PRACTICE — RESULTS NOT SAVED':result.mode === 'teams' ? 'TEAMS · MATCH COMPLETE' : 'FREE FOR ALL · MATCH COMPLETE'), node('h1', 'result-title', outcome));
+  banner.append(node('small', 'result-mode', practice?'PRACTICE · BOT CHALLENGES COUNT WHEN CONNECTED':result.mode === 'teams' ? 'TEAMS · MATCH COMPLETE' : 'FREE FOR ALL · MATCH COMPLETE'), node('h1', 'result-title', outcome));
   const winner = node('p', 'result-winner', result.draw ? 'Match drawn' : result.mode === 'teams'
     ? `${displayTeam(result.winningTeam, team)?.toUpperCase()} TEAM WINS` : `${result.winner?.name} wins`);
   banner.append(winner); panel.append(banner);

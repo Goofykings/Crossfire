@@ -3,6 +3,7 @@ import {MeleeFeedback} from './melee/MeleeFeedback';
 import {meleeBlocked,meleeClip,createMeleeState,stepMelee,MELEE} from '../../shared/melee';
 import { CosmeticsClient } from '../network/CosmeticsClient';
 import { PracticeClient,type MatchSession } from '../practice/PracticeClient';
+import {PracticeChallenges} from '../practice/PracticeChallenges';
 import {EnvironmentSimulation} from '../../shared/environment';
 import type { PracticeSetup } from '../practice/config';
 import { defaultEquipment, killEffect } from '../../shared/cosmetics';
@@ -150,6 +151,7 @@ export class Game {
   private onlineRequested=false;
   private onlineAbort:AbortController|null=null;
   private get localPractice(){return this.network instanceof PracticeClient?this.network:null;}
+  private practiceChallenges:PracticeChallenges|null=null;
   private practiceDebug:import('../practice/PracticeDebug').PracticeDebug|null=null;
   private practiceDebugLoading=false;
   private leavingRoom:Promise<void>=Promise.resolve();
@@ -497,6 +499,7 @@ export class Game {
           this.ui.setPractice(true);await this.prepareGameAssets(signal);await this.requestMap(id,signal);signal.throwIfAborted();
           this.map!.props.resetSynchronization();
           network=new PracticeClient(this.practiceSetup,{world:this.map!.world,layout:this.map!.def.layout,revision:this.map!.revision,environment:new EnvironmentSimulation(this.map!.props.definition,this.map!.world)},this.guestProfile.value.username);
+          if(this.career){this.practiceChallenges=new PracticeChallenges(this.career,(network as PracticeClient).simulation);void this.practiceChallenges.start();}
         }else{
           this.ui.setPractice(false);this.enableOnline();
           if (!this.multiplayerBackend.ok) throw new Error(this.multiplayerBackend.error);
@@ -945,6 +948,7 @@ export class Game {
 
   private quitToMenu(): void {
     const wasPractice=!!this.practiceSetup||!!this.localPractice;
+    this.practiceChallenges?.stop();this.practiceChallenges=null;
     this.practiceDebug?.dispose();this.practiceDebug=null;
     this.ui.rooms.update(null,'',0,false);
     this.admission=null;
@@ -1039,6 +1043,7 @@ export class Game {
       this.selectionCamera(dt);
     }
     this.localPractice?.advance(dt,this.state==='paused'||this.state==='loading');
+    this.practiceChallenges?.update();
     if(this.practiceDebug&&this.localPractice)this.practiceDebug.update(this.localPractice.simulation,this.fps.value);
     this.updateScoreboard();
     this.remotePlayers.setPresentationVisible(this.ui.currentScreen === 'hud' || this.state === 'spectating');

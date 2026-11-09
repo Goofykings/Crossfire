@@ -1,4 +1,4 @@
-import { challengeDefinition, type CareerView, type ChallengeCategory } from '../../shared/challenges';
+import { CHALLENGES_PER_PERIOD, challengeDefinition, type CareerView, type ChallengeCategory } from '../../shared/challenges';
 
 /** Original faceted crystal, reused for balances and every challenge reward. */
 export const GEM_ICON = '<svg class="gem-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10l5 6-10 13L2 9Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="m7 3 5 19L17 3M2 9h20M7 3l5 6 5-6" fill="none" stroke="currentColor" stroke-width="1" opacity=".6"/></svg>';
@@ -41,7 +41,7 @@ export class ChallengesPanel {
       this.tabs.push(tab); nav.append(tab);
     }
     this.body.className='challenge-list'; this.body.id='challenge-list'; this.body.setAttribute('role','tabpanel'); this.body.tabIndex=0;
-    for (let i=0;i<3;i++) {
+    for (let i=0;i<CHALLENGES_PER_PERIOD;i++) {
       const root=document.createElement('article');root.className='challenge-card';
       const title=document.createElement('div'); title.className='challenge-description';
       const progress=document.createElement('div');progress.className='challenge-progress';
