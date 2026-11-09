@@ -100,6 +100,7 @@ export class PublicRoom extends ProductionRoom {
     const e=this.players.get(id),p=e?.session.profileId?this.careers.profiles.get(e.session.profileId):null;
     if(!e||!p)throw new Error('Requires a real credential-authorized joined session');
     const ids=mode==='kills'?[['daily:sniper:5','daily:headshots:3','daily:points:1000'],['weekly:sniper:40','weekly:headshots:20','weekly:points:10000']]
+      :mode==='rifle-kills'?[['daily:rifle:5','daily:headshots:3','daily:points:1000'],['weekly:rifle:20','weekly:headshots:20','weekly:points:10000']]
       :[['daily:wins:1','daily:mvp:1','daily:matches:2'],['weekly:wins:5','weekly:mvp:3','weekly:matches:15']];
     for(const [index,category] of ['daily','weekly'].entries())p[category].challenges=ids[index].map(id=>({id,progress:Number(id.split(':')[2])-(id.includes(':points:')?50:1),completedAt:null}));
     if(mode==='round')e.session.participation.firstSpawn=eligibility==='late'?Date.now():Date.now()-600000+1000;

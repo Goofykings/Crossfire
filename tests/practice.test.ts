@@ -82,7 +82,7 @@ it('the natural ten-minute local timer starts on spawn and freezes the final res
 });
 it('Teams credits only opponent eliminations and preserves its local team totals in results',()=>{
  const sim=new PracticeSimulation({...DEFAULT_PRACTICE,mode:'teams',bots:2},arena(),'Local',{now:0});sim.spawnHuman('sniper');const [human,red,blue]=sim.actors;red.brain=blue.brain=null;
- human.controller.teleport({x:0,y:0,z:5},0);red.controller.teleport({x:0,y:0,z:-5},180);blue.controller.teleport({x:8,y:0,z:0},180);advance(sim,.6,()=>input(0,-.054));advance(sim,.1,()=>input(0,-.054,true));expect(red.state.health).toBe(25);expect(human.state.score).toBe(0);advance(sim,1.2,()=>input(0,-.054));advance(sim,.1,()=>input(0,-.054,true));expect(red.state.alive).toBe(false);expect(human.state.kills).toBe(1);expect(human.state.score).toBe(100);expect(blue.state.health).toBe(100);expect(sim.teamScores).toEqual({blue:1,red:0});sim.finish();expect(sim.result?.winningTeam).toBe('blue');expect(sim.result?.teamScores).toEqual({blue:1,red:0});
+ human.controller.teleport({x:0,y:0,z:5},0);red.controller.teleport({x:0,y:0,z:-5},180);blue.controller.teleport({x:8,y:0,z:0},180);advance(sim,.6,()=>input(0,-.054));advance(sim,.1,()=>input(0,-.054,true));expect(red.state.health).toBe(0);expect(red.state.alive).toBe(false);expect(human.state.kills).toBe(1);expect(human.state.score).toBe(100);expect(blue.state.health).toBe(100);expect(sim.teamScores).toEqual({blue:1,red:0});sim.finish();expect(sim.result?.winningTeam).toBe('blue');expect(sim.result?.teamScores).toEqual({blue:1,red:0});
 });
 
 it('local transport reconciles movement, pauses its clock and permanently closes on Leave',async()=>{

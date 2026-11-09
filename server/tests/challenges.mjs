@@ -71,9 +71,13 @@ for(const mode of ['kills','eligible','late','abandoned'])test(`durable guest ch
     }
     if(mode==='kills'){
       await room.seedCareerForTest(a.id);
-      await aimAndFire(a,b,.9);await until(()=>me(b).health===25,'nonlethal shot');
-      assert.equal((await profile(created.credential)).gems,0,'damage without elimination cannot progress challenges');
-      await delay(1000);
+      await room.seedCareerForTest(b.id,'rifle-kills');
+      const before=await profile(other.credential);
+      await aimAndFire(b,a,.9);await until(()=>me(a).health<100&&me(a).alive,'nonlethal rifle shot');
+      const after=await profile(other.credential);
+      assert.equal(after.gems,0,'damage without elimination earns no rewards');
+      assert.deepEqual(after.daily.challenges,before.daily.challenges,'nonlethal damage does not advance daily challenges');
+      assert.deepEqual(after.weekly.challenges,before.weekly.challenges,'nonlethal damage does not advance weekly challenges');
     }else await room.seedCareerForTest(a.id,'round',mode);
     await aimAndFire(a,b,1.6);await until(()=>!me(b).alive,'confirmed headshot elimination');
     if(mode==='kills'){

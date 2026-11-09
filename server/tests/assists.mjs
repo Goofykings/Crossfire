@@ -72,7 +72,9 @@ test('assist expiry, respawn cleanup and retired session migration in the real D
   b.snapshot=b.heldSnapshot;b.holdDeathSnapshots=false;await respawn;
   assert.equal(b.spawnRequests,requests+1,'one correlated spawn after authoritative readiness');
   assert.equal(self(b).life,oldLife+1);assert.equal(self(b).death,null);
-  await place();await aim(killer,b);await shot(killer,b);await contribute(a,b);
+  const other=await open('rifle');await place();other.position=arena.sources.left;await room.placeForCombatTest(other.id,other.position);
+  await aim(other,b);await shot(other,b);await aim(a,b);await contribute(a,b);
+  await until(()=>self(a).combat.gun.cooldown===0&&self(a).combat.gun.action==='idle','contributor ready');await contribute(a,b);
   await until(()=>!self(b).alive,'new life death');assert.equal(self(a).kills,1);assert.equal(self(a).assists,1,'previous-life damage never grants another assist');
   const before=await room.snapshotForTest(),saved=before.players.find(p=>p.id===a.id);
   for(const c of clients){clearInterval(c.timer);if(c.ws.readyState===WebSocket.OPEN){c.ws.close();await new Promise(resolve=>c.ws.once('close',resolve));}}
