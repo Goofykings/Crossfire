@@ -1,5 +1,7 @@
 import {createMeleeState,stepMelee,meleeBlocked,traceMelee,meleeKnockback,MELEE,validMelee} from '../../shared/melee';
 import { traceWeaponShot } from '../../shared/hitscan';
+import {MotionHistory,shotViewTime} from '../../shared/lagCompensation';
+import {encodeServerMessage} from '../../shared/snapshotWire';
 import {matchRewardRequests,matchIdentity,payMatchGems,type MatchLedger,type MatchRewardRequest} from './matchRewards';
 import { Inventory } from './inventory';
 import { defaultEquipment, defaultCosmetic, compatibleCosmetic, validInventory, drawCrate, CRATE, COSMETICS_API_VERSION, type Equipment, type InventoryView } from '../../shared/cosmetics';
@@ -82,8 +84,11 @@ interface Session extends ScoreState {
   lastSeen: number;
   expiresAt: number;
 }
-interface Attachment { openedAt: number; session?: Session }
+interface Attachment { openedAt: number; session?: Session;compact?:boolean }
 interface Entry {
+  history:MotionHistory;
+  rtt:number;
+  probe?:{nonce:string;at:number};
   /** Only room reconstruction gets time to process queued heartbeats. */
   restoredUntil?: number;
   grenadeCharge?: GrenadeCharge;
@@ -203,6 +208,7 @@ export default {
 };
 
 export class PublicRoom extends DurableObject<Bindings> {
+  private readonly compactSockets=new WeakSet<WebSocket>();
   private closing:Promise<void>|null=null;
   // Validation failures must not reject blockConcurrencyWhile: Cloudflare resets the
   // whole object on a rejected gate, which would drop unrelated connected players.
@@ -465,6 +471,7 @@ export class PublicRoom extends DurableObject<Bindings> {
         const e = this.entry(s);
         e.lastSeen = a.openedAt;
         e.socket = socket;
+        if(a.compact)this.compactSockets.add(socket);
         this.players.set(s.id, e);
       }
       for(const e of this.players.values()){regenerate(e.session,Date.now());}
@@ -544,7 +551,7 @@ export class PublicRoom extends DurableObject<Bindings> {
     const stats = WEAPONS.find((w) => w.id === session.weapon);
     const gun = stats ? new Weapon(stats) : null;
     if (gun && validGun(session.combat.gun)) gun.restore(session.combat.gun);
-    return { session, controller, gun, queue: [], received: session.ack, lastSeen: Date.now(), rateAt: Date.now(), rateCount: 0, leanHeld: 0, crouchHeld: session.crouchHeld??false, lastChatAt: 0 };
+    return { history:new MotionHistory(),rtt:0,session, controller, gun, queue: [], received: session.ack, lastSeen: Date.now(), rateAt: Date.now(), rateCount: 0, leanHeld: 0, crouchHeld: session.crouchHeld??false, lastChatAt: 0 };
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -598,7 +605,15 @@ export class PublicRoom extends DurableObject<Bindings> {
   }
 
   private send(socket: WebSocket, message: ServerMessage): void {
-    try { socket.send(JSON.stringify(message)); } catch { void this.disconnect(socket); }
+    this.sendText(socket,encodeServerMessage(message,this.compactSockets.has(socket)));
+  }
+  private sendText(socket:WebSocket,text:string):void {
+    try {socket.send(text);}catch{void this.disconnect(socket);}
+  }
+  private probe(e:Entry):void {
+    if(!e.socket||e.probe&&Date.now()-e.probe.at<2000)return;
+    e.probe={nonce:crypto.randomUUID(),at:Date.now()};
+    this.send(e.socket,{v:PROTOCOL_VERSION,type:'sync',nonce:e.probe.nonce});
   }
 
   private error(socket: WebSocket, code: string, message: string, fatal = false): void {
@@ -621,6 +636,7 @@ export class PublicRoom extends DurableObject<Bindings> {
     const e = this.current(socket);
     if (message.type === 'join') {
       if (e) { this.error(socket, 'already_joined', 'Already joined'); return; }
+      if(message.compact)this.compactSockets.add(socket);
       try{await this.exclusive(()=>this.join(socket, message.name, message.resumeToken, message.profileToken,message.roomTicket));}
       catch(error){this.error(socket,'room_join',(error as Error).message,true);}
       return;
@@ -642,11 +658,16 @@ export class PublicRoom extends DurableObject<Bindings> {
       if (now - e.lastChatAt < 750) { this.error(socket, 'chat_rate', 'Wait before sending another message'); return; }
       e.lastChatAt = now;e.session.activityAt=now;
       this.publish({ v: PROTOCOL_VERSION, type: 'chat', id: e.session.id, name: e.session.name, text: message.text.trim() });
+    } else if(message.type==='sync'){
+      if(e.probe?.nonce===message.nonce){const sample=now-e.probe.at;e.rtt=e.rtt?e.rtt*.75+sample*.25:sample;e.probe=undefined;}
     } else if (message.type === 'ping') {
       this.trace('heartbeat', { id: e.session.id, sentAt: message.at, receivedAt: now, lastSeen: e.lastSeen });
       this.attach(e);
       this.send(socket, { v: PROTOCOL_VERSION, type: 'pong', at: message.at, serverTime: now });
-      this.broadcast();
+      this.probe(e);
+      // Active rooms already publish at 20 Hz. A heartbeat must not trigger an
+      // extra full-roster broadcast to every other connection.
+      if(!this.timer)this.send(socket,{v:PROTOCOL_VERSION,type:'snapshot',snapshot:this.snapshot()});
       await this.scheduleCleanup();
     } else if (message.type === 'spawn') {
       if (message.mapVersion !== this.activeMap.revision) { this.error(socket, 'map_mismatch', 'Client and server map assets differ', true); return; }
@@ -673,6 +694,8 @@ export class PublicRoom extends DurableObject<Bindings> {
       e.session.combat = { melee:createMeleeState(), gun: e.gun.capture(), triggerHeld: false, reloadHeld: false, aimHeld: false, grenadeHeld: false };
       this.contributions.clear(e.session.id);
       e.session.life++;
+      e.history.clear();
+      e.history.record(now,e.session.life,this.round.id,e.controller.capture());
       e.session.activityAt=Date.now();e.session.activitySignature=undefined;
       e.session.weapon = message.weapon;
       e.queue.length = 0;
@@ -754,6 +777,7 @@ export class PublicRoom extends DurableObject<Bindings> {
     this.membershipChanged();
     await this.persist();
     this.send(socket, { v: PROTOCOL_VERSION, type: 'welcome', selfId: e.session.id, resumeToken: e.session.token, resumed, snapshot: this.snapshot(true) });
+    this.probe(e);
     if(joinedCareer&&profileId)this.sendCareerViews(new Map([[profileId,joinedCareer]]));
     // The persisted session/resume credential is the once-only announcement marker.
     // Socket replacement, refresh, hibernation and round snapshots never replay it.
@@ -768,7 +792,7 @@ export class PublicRoom extends DurableObject<Bindings> {
     e.session.motion = e.controller.capture();
     e.session.combat.gun = e.gun?.capture() ?? null;
     e.session.lastSeen = e.lastSeen;
-    e.socket?.serializeAttachment({ openedAt: e.lastSeen, session: e.session } satisfies Attachment);
+    e.socket?.serializeAttachment({ openedAt: e.lastSeen, session: e.session,compact:this.compactSockets.has(e.socket) } satisfies Attachment);
   }
 
   private environmentFrame(full:boolean,states=this.environment.capture()):EnvironmentFrame {
@@ -777,16 +801,19 @@ export class PublicRoom extends DurableObject<Bindings> {
 
   private snapshot(full=false): Snapshot {
     for (const e of this.players.values()) expireCombo(e.session, Date.now());
-    const players: PlayerState[] = this.connected().map((e) => ({ id: e.session.id,
+    const serverTime=Date.now();
+    const players: PlayerState[] = this.connected().map((e) => {
+      const motion=e.controller.capture();if(e.session.alive)e.history.record(serverTime,e.session.life,this.round.id,motion);
+      return ({ id: e.session.id,
       grenades: e.session.grenades,
       score: e.session.score, comboCount: e.session.comboCount, comboUntil: e.session.comboUntil,
       lastPlayedRound: e.session.lastPlayedRound, lastPlayedTeam: e.session.lastPlayedTeam,
-      name: e.session.name, motion: e.controller.capture(), ack: e.session.ack, alive: e.session.alive, life: e.session.life,
+      name: e.session.name, motion, ack: e.session.ack, alive: e.session.alive, life: e.session.life,
       health: e.session.health, combat: { ...e.session.combat, gun: e.gun?.capture() ?? null },
       ...(e.session.weapon?{cosmeticId:compatibleCosmetic(e.session.equipment?.[e.session.weapon],e.session.weapon)?e.session.equipment![e.session.weapon]:defaultCosmetic(e.session.weapon)}:{}),
-      meleeCosmeticId:e.session.equipment?.melee??defaultCosmetic('melee'), weapon: e.session.weapon, kills: e.session.kills, deaths: e.session.deaths, assists:e.session.assists, afkDeadline:e.session.alive?this.afkDeadline(e):null, team: e.session.team, death: e.session.death }));
+      meleeCosmeticId:e.session.equipment?.melee??defaultCosmetic('melee'), weapon: e.session.weapon, kills: e.session.kills, deaths: e.session.deaths, assists:e.session.assists, afkDeadline:e.session.alive?this.afkDeadline(e):null, team: e.session.team, death: e.session.death });});
     const result=this.lastResult&&this.confirmedMatchGems?.roundId===this.lastResult.roundId?{...this.lastResult,gemRewards:{matchId:this.confirmedMatchGems.matchId,awards:this.confirmedMatchGems.awards}}:this.lastResult;
-    return { ...(full?{environment:this.environmentFrame(true)}:{}),grenades: this.grenades, explosions: this.explosions, result, room: this.roomId, ...(this.config?{roomInfo:this.roomStatus()??undefined}:{}), mapId: this.round.mapId, roundId: this.round.id, mapVersion: this.activeMap.revision, serverTime: Date.now(), players,
+    return { ...(full?{environment:this.environmentFrame(true)}:{}),grenades: this.grenades, explosions: this.explosions, result, room: this.roomId, ...(this.config?{roomInfo:this.roomStatus()??undefined}:{}), mapId: this.round.mapId, roundId: this.round.id, mapVersion: this.activeMap.revision, serverTime, players,
       match: { mode: this.mode, endsAt: this.round.endsAt, teamScores: this.mode === 'teams' ? { blue: this.scores.blue, red: this.scores.red } : null } };
   }
 
@@ -856,7 +883,12 @@ export class PublicRoom extends DurableObject<Bindings> {
   private broadcast(): void {
     if(this.deferred)return;
     const message: ServerMessage = { v: PROTOCOL_VERSION, type: 'snapshot', snapshot: this.snapshot() };
-    for (const e of this.players.values()) if (e.socket) this.send(e.socket, message);
+    let plain:string|undefined,compact:string|undefined;
+    for (const e of this.players.values()) if (e.socket){
+      const packed=this.compactSockets.has(e.socket);
+      const text=packed?(compact??=encodeServerMessage(message,true)):(plain??=encodeServerMessage(message));
+      this.sendText(e.socket,text);
+    }
   }
 
   private publish(message: ServerMessage): void {
@@ -925,12 +957,14 @@ export class PublicRoom extends DurableObject<Bindings> {
     e.session.activityAt=at;this.publish({v:PROTOCOL_VERSION,type:'melee',event});
   }
 
-  private fire(e: Entry, spread: number, control: InputFrame['combat']): boolean {
+  private fire(e: Entry, spread: number, control: InputFrame['combat'],viewTime?:number): boolean {
     const at=Date.now();if(!e.session.alive)return false;
     const gun=e.gun!,p=e.controller,origin=p.leanEye();
     const result:ShotResult={id:crypto.randomUUID(),roundId:this.round.id,shooterId:e.session.id,weapon:gun.stats.id,hits:[]};
+    const sampledAt=shotViewTime(at,viewTime,e.rtt);
     result.traces=traceWeaponShot(this.activeMap.world,origin,control.aimYaw??p.yaw,control.aimPitch??p.pitch,gun.stats,spread,
-      ()=>this.connected().filter(target=>target!==e&&target.session.alive).map(target=>({value:target,motion:target.controller.capture()})),
+      ()=>this.connected().filter(target=>target!==e&&target.session.alive).map(target=>({value:target,
+        motion:target.history.sample(sampledAt,target.session.life,this.round.id)??target.controller.capture()})),
       (target,hit)=>{
         if(teammates(this.mode,e.session.team,target.session.team))return;
         let appliedDamage=0;
@@ -1058,6 +1092,7 @@ export class PublicRoom extends DurableObject<Bindings> {
         }
       }
       // Everyone moves first; then all weapons use the same fixed-step world state.
+      for(const e of frames.keys())if(e.session.alive)e.history.record(now,e.session.life,this.round.id,e.controller.capture());
       for (const [e, frame] of frames) {
         if (!e.session.alive || !e.gun) continue;
         const intent = frame?.combat ?? NO_COMBAT;
@@ -1078,7 +1113,7 @@ export class PublicRoom extends DurableObject<Bindings> {
           airborne: !e.controller.grounded, sprinting: false });
         if(frame)this.activity(e,frame,now,events.some(event=>event.type==='fire')||beforeAction==='idle'&&e.gun.action.startsWith('reload')&&frame.combat.reload&&!combat.reloadHeld||strength!==null||e.grenadeCharge.active&&!combat.grenadeHeld);
         if (frame) { combat.triggerHeld = intent.trigger; combat.reloadHeld = intent.reload; combat.aimHeld = frame.intent.aim; combat.grenadeHeld=!!intent.grenade; }
-        for (const event of events) if (event.type === 'fire') eliminated = this.fire(e, event.spread, intent) || eliminated;
+        for (const event of events) if (event.type === 'fire') eliminated = this.fire(e, event.spread, intent,frame?.viewTime) || eliminated;
       }
       this.accumulator -= FIXED_DT;
     }

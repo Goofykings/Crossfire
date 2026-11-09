@@ -1042,7 +1042,9 @@ export class Game {
     if(this.practiceDebug&&this.localPractice)this.practiceDebug.update(this.localPractice.simulation,this.fps.value);
     this.updateScoreboard();
     this.remotePlayers.setPresentationVisible(this.ui.currentScreen === 'hud' || this.state === 'spectating');
-    if (this.network?.state === 'connected') this.remotePlayers.update(Date.now() + this.network.clockOffset - 100, dt);
+    // Inputs above refer to the previously drawn pose. Advance the remote
+    // playhead only when that new pose is actually about to be presented.
+    if (this.network?.state === 'connected') this.remotePlayers.update(this.network.presentationTime(), dt);
     this.ui.combatFeed.setVisible(this.ui.currentScreen === 'hud' || this.ui.currentScreen === 'spectate');
     let spectatorScoped = false;
     if (this.state === 'spectating' && this.spectatingDeath) {
@@ -1477,7 +1479,8 @@ export class Game {
     const s = effectiveSettings(this.settings.value);
     if (s.showFps) {
       const fps = Math.max(1, this.fps.value);
-      this.ui.setFps(`${Math.round(fps)} FPS · ${(1000 / fps).toFixed(1)} ms`);
+      const ping=this.network?.state==='connected'&&!this.localPractice?` · ${Math.round(this.network.latency)} ms ping`:'';
+      this.ui.setFps(`${Math.round(fps)} FPS · ${(1000 / fps).toFixed(1)} ms${ping}`);
     } else {
       this.ui.setFps(null);
     }
@@ -1630,6 +1633,7 @@ export class Game {
           coat: m.clearCoat.isEnabled, alpha: m.alpha })),
       }),
       visibilityStats: () => this.remotePlayers.visibilityStats(),
+      remoteMotion:()=>this.remotePlayers.motionSamples(),
       renderResources:()=>({pending:this.ctx.scene.getWaitingItemsCount(),
         unready:this.ctx.scene.meshes.filter(m=>!m.isReady(true)).map(m=>({name:m.name,material:m.material?.name,
           textures:m.material?.getActiveTextures().map(t=>({name:t.name,ready:t.isReady(),size:t.getSize()}))})),

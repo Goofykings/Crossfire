@@ -3,7 +3,7 @@ import { MultiplayerClient } from '../src/network/MultiplayerClient';
 import { PlayerController, NO_INTENT } from '../src/player/PlayerController';
 import { CollisionWorld } from '../src/physics/CollisionWorld';
 import { Weapon, WEAPONS } from '../src/weapons/Weapon';
-import { PROTOCOL_VERSION, type PlayerState, type Snapshot } from '../shared/protocol';
+import { PROTOCOL_VERSION,parseClientMessage, type PlayerState, type Snapshot } from '../shared/protocol';
 import { createMeleeState } from '../shared/melee';
 
 // Explicit transport unit fixture. Operational multiplayer is tested separately
@@ -20,7 +20,7 @@ class SocketFixture {
   onerror: (() => void) | null = null;
   sent: { type: string; frames?: { seq: number }[] }[] = [];
   constructor() { SocketFixture.latest = this; SocketFixture.instances.push(this); }
-  send(raw: string) { this.sent.push(JSON.parse(raw)); }
+  send(raw: string) { this.sent.push(parseClientMessage(raw)!); }
   close(code = 1000, reason = '') { this.readyState = 3; this.onclose?.({ code, reason, wasClean: true }); }
   receive(message: unknown) { this.onmessage?.({ data: JSON.stringify(message) }); }
 }
@@ -45,6 +45,13 @@ async function connect(documentFixture?: object) {
   return { socket, p, client };
 }
 const frames = (s: SocketFixture) => s.sent.filter((m) => m.type === 'input').flatMap((m) => m.frames!);
+it('flushes combat edges before the 20 Hz batch timer and tags the displayed timeline',async()=>{
+ const {client,socket}=await connect();
+ const shown=client.presentationTime();
+ client.fixedInput(controller,{...NO_INTENT,z:1},{trigger:true,reload:false});
+ expect(frames(socket)).toHaveLength(0);vi.advanceTimersByTime(1);
+ expect(frames(socket)).toHaveLength(1);expect(frames(socket)[0]).toMatchObject({viewTime:Math.floor(shown)});
+});
 it('replays melee movement clearance per tick without restarting a pending equip animation',async()=>{
   const {client,p,socket}=await connect();p.combat.melee=createMeleeState();p.combat.gun!.action='idle';
   socket.receive({v:PROTOCOL_VERSION,type:'snapshot',snapshot:snapshot(p)});
@@ -111,9 +118,9 @@ it('stays connected with continuous input and 250ms acknowledgements while the s
   const send = socket.send.bind(socket);
   socket.send = (raw) => {
     send(raw);
-    const m = JSON.parse(raw);
-    if (m.type === 'input') {
-      const ack = m.frames.at(-1).seq;
+    const m = parseClientMessage(raw);
+    if (m?.type === 'input') {
+      const ack = m.frames.at(-1)!.seq;
       setTimeout(() => { p.ack = ack; socket.receive({ v: PROTOCOL_VERSION, type: 'snapshot', snapshot: snapshot(p) }); }, 250);
     }
   };

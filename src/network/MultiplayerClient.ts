@@ -8,6 +8,8 @@ import { MOVEMENT } from '../config/constants';
 import { NO_COMBAT, type CombatIntent } from '../../shared/combat';
 import type { GrenadeEvent } from '../../shared/grenades';
 import { multiplayerEndpoint } from './endpoint';
+import {NetworkTiming} from './NetworkTiming';
+import {encodeClientMessage} from '../../shared/inputWire';
 import { PROTOCOL_VERSION, INPUT_BATCH_LIMIT, NETWORK_HZ, parseServerMessage, type ClientMessage, type InputFrame,
   type ServerMessage, type Snapshot, type ShotResult, type Elimination } from '../../shared/protocol';
 
@@ -29,6 +31,10 @@ export class MultiplayerClient {
     this.environment={...f,full:true,states};this.onEnvironment(f);
   }
   clockOffset = 0;
+  private readonly timing=new NetworkTiming();
+  private renderedAt=0;
+  get latency():number{return this.timing.rtt;}
+  presentationTime():number {return this.renderedAt=this.timing.time(Date.now());}
   onRoomExit:(message:string)=>void=()=>{};
   onCareer: (profile: CareerView) => void = () => {};
   onSnapshot: (snapshot: Snapshot) => void = () => {};
@@ -62,6 +68,7 @@ export class MultiplayerClient {
   private pending: InputFrame[] = [];
   private unsent: InputFrame[] = [];
   private flushTimer = 0;
+  private urgentTimer=0;
   private pingTimer = 0;
   private retryTimer = 0;
   private deadline = 0;
@@ -123,6 +130,7 @@ export class MultiplayerClient {
       attempts: this.attempts, lastMessage: this.lastMessage, lastPing: this.lastPing, lastPong: this.lastPong,
       lastAck: this.lastAck, lastAckAt: this.lastAckAt, pending: this.pending.length, unsent: this.unsent.length,
       inFlight: this.sentSequence - this.lastAck, ackLatency: this.ackLatency, inputWindow: this.inputWindow,
+      timing:this.timing.inspect(),bufferedBytes:this.socket?.bufferedAmount??0,
       events: [...this.events] };
   }
   // Even if all packets arrive together, outstanding input must fit the server's
@@ -175,7 +183,7 @@ export class MultiplayerClient {
     socket.onopen = () => {
       if (this.socket !== socket) return;
       this.opens++; this.trace('open');
-      this.send({ v: PROTOCOL_VERSION, type: 'join', ...(this.options.roomTicket?{roomTicket:this.options.roomTicket}:{}), ...(this.options.profileToken?.() ? { profileToken: this.options.profileToken() } : {}), name: typeof this.name === 'function' ? this.name() : this.name, ...(this.token ? { resumeToken: this.token } : {}) });
+      this.send({ v: PROTOCOL_VERSION, type: 'join',compact:true, ...(this.options.roomTicket?{roomTicket:this.options.roomTicket}:{}), ...(this.options.profileToken?.() ? { profileToken: this.options.profileToken() } : {}), name: typeof this.name === 'function' ? this.name() : this.name, ...(this.token ? { resumeToken: this.token } : {}) });
     };
     socket.onmessage = (event) => {
       if (this.socket !== socket || typeof event.data !== 'string') return;
@@ -213,17 +221,22 @@ export class MultiplayerClient {
         this.unsent = [];
         this.connectedAt = Date.now();
         this.trace('welcome', { resumed: m.resumed, id: m.selfId });
-        this.clockOffset = m.snapshot.serverTime - Date.now();
+        this.timing.reset(m.snapshot.serverTime,Date.now());this.renderedAt=0;
+        this.clockOffset = this.timing.offset;
+        this.timing.snapshot(m.snapshot.serverTime,Date.now());
         this.latest = m.snapshot;
         if(this.environment?.roundId!==m.snapshot.roundId)this.environment=null;
         if(m.snapshot.environment)this.acceptEnvironment(m.snapshot.environment);
         this.setState('connected');
         this.startTimers();
+        this.ping();
         this.resolve?.(m);
         this.resolve = this.reject = null;
         this.onSnapshot(m.snapshot);
         this.grenadeHistory(m.snapshot);
       } else if (m.type === 'snapshot' || m.type === 'spawned') {
+        if(m.type==='snapshot'&&this.latest?.roundId===m.snapshot.roundId&&m.snapshot.serverTime<this.latest.serverTime)return;
+        this.timing.snapshot(m.snapshot.serverTime,Date.now());
         if (m.snapshot.roundId !== this.round) this.cancelSpawn('The map changed. Select a loadout after loading.');
         this.latest = m.snapshot;
         if(this.environment?.roundId!==m.snapshot.roundId)this.environment=null;
@@ -258,6 +271,7 @@ export class MultiplayerClient {
           window.clearTimeout(pending.timeout);
           pending.resolve(m.snapshot);
         }
+      } else if(m.type==='sync'){this.send({v:PROTOCOL_VERSION,type:'sync',nonce:m.nonce});
       } else if(m.type==='career'){ this.onCareer(m.profile);
       } else if(m.type==='environment'){this.acceptEnvironment(m.frame);
       } else if (m.type === 'grenade') {
@@ -287,7 +301,7 @@ export class MultiplayerClient {
       } else if (m.type === 'pong') {
         this.lastPong = Date.now();
         this.trace('pong', { sentAt: m.at, receivedAt: this.lastPong, rtt: this.lastPong - m.at });
-        this.clockOffset = m.serverTime - (m.at + Date.now()) / 2;
+        if(this.timing.probe(m.at,m.serverTime,Date.now()))this.clockOffset=this.timing.offset;
       }
     };
     socket.onerror = () => { if (this.socket === socket) this.trace('socket_error'); /* Close owns retries. */ };
@@ -341,19 +355,7 @@ export class MultiplayerClient {
         this.trace('receive_timeout', { lastMessage: this.lastMessage, lastPing: this.lastPing, lastPong: this.lastPong });
         this.socket?.close(4000, 'receive_timeout'); return;
       }
-      if (this.unsent.length && this.latest && (this.socket?.bufferedAmount ?? 0) < 32768) {
-        const ack = this.latest.players.find((p) => p.id === this.selfId)?.ack ?? 0;
-        // In-flight frames include propagation/ACK time, not just the Worker's
-        // queue. Retain bounded 20Hz batches and allow a backlog to drain.
-        const count = Math.min(INPUT_BATCH_LIMIT, this.unsent.length,
-          Math.max(0, this.inputWindow - (this.sentSequence - ack)));
-        if (count) {
-          const frames = this.unsent.splice(0, count);
-          this.send({ v: PROTOCOL_VERSION, type: 'input', roundId: this.latest.roundId, mapVersion: this.latest.mapVersion, frames });
-          this.sentSequence = frames[frames.length - 1].seq;
-          this.sentAt.set(this.sentSequence, now);
-        }
-      }
+      this.flushInput();
     }, 1000 / NETWORK_HZ);
     this.pingTimer = window.setInterval(() => this.ping(), 2000);
   }
@@ -362,13 +364,23 @@ export class MultiplayerClient {
     this.send({ v: PROTOCOL_VERSION, type: 'ping', at: this.lastPing });
   }
   private stopTimers(): void {
+    window.clearTimeout(this.urgentTimer);this.urgentTimer=0;
     for (const t of [this.flushTimer, this.pingTimer]) window.clearInterval(t);
     window.clearTimeout(this.deadline);
     window.clearTimeout(this.retryTimer);
     if (this.visibilityListening) { document.removeEventListener('visibilitychange', this.onVisibility); this.visibilityListening = false; }
   }
   private send(message: ClientMessage): void {
-    if (this.socket?.readyState === WebSocket.OPEN) this.socket.send(JSON.stringify(message));
+    if (this.socket?.readyState === WebSocket.OPEN) this.socket.send(encodeClientMessage(message));
+  }
+  private flushInput():void {
+    if(this.state!=='connected'||!this.unsent.length||!this.latest||(this.socket?.bufferedAmount??0)>=8192)return;
+    const ack=this.latest.players.find(p=>p.id===this.selfId)?.ack??0;
+    const count=Math.min(INPUT_BATCH_LIMIT,this.unsent.length,Math.max(0,this.inputWindow-(this.sentSequence-ack)));
+    if(!count)return;
+    const frames=this.unsent.splice(0,count);
+    this.send({v:PROTOCOL_VERSION,type:'input',roundId:this.latest.roundId,mapVersion:this.latest.mapVersion,frames});
+    this.sentSequence=frames[frames.length-1].seq;this.sentAt.set(this.sentSequence,Date.now());
   }
 
   sendChat(text: string): boolean {
@@ -397,6 +409,8 @@ export class MultiplayerClient {
       }
       return;
     }
+    const urgent=intent.jumpPressed||intent.slide&&!this.lastSlide||combat.trigger&&!this.lastCombat.trigger||combat.reload&&!this.lastCombat.reload
+      ||combat.melee&&!this.lastCombat.melee||combat.grenade&&!this.lastCombat.grenade||combat.grenadeCancel;
     this.lastYaw = yaw;
     this.lastPitch = player.pitch;
     // An idle Shift release must reach the server before another press can be an edge.
@@ -404,10 +418,13 @@ export class MultiplayerClient {
     this.lastAim = intent.aim;
     this.lastLean = intent.lean ?? 0;
     this.lastCombat = { ...combat };
-    const frame: InputFrame = { seq: ++this.sequence, yaw, pitch: player.pitch, intent: { ...intent }, combat: { ...combat } };
+    const frame: InputFrame = { viewTime:Math.max(0,Math.floor(this.renderedAt||this.presentationTime())),seq: ++this.sequence, yaw, pitch: player.pitch, intent: { ...intent }, combat: { ...combat } };
     this.inputTimes.set(frame.seq,Math.floor(Date.now()+this.clockOffset));
     this.pending.push(frame);
     this.unsent.push(frame);
+    // One deferred flush collects all fixed ticks from this rendered frame.
+    // Combat/jump edges no longer wait up to another 50 ms for the batch timer.
+    if(urgent&&!this.urgentTimer)this.urgentTimer=window.setTimeout(()=>{this.urgentTimer=0;this.flushInput();},0);
   }
 
   reconcile(player: PlayerController, snapshot: Snapshot, gun?: Weapon): void {

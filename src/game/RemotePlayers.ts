@@ -21,6 +21,7 @@ import {DeathMotion} from './DeathMotion';
 import {hashSeed} from './LimpBody';
 import type {CollisionWorld} from '../physics/CollisionWorld';
 import type {AimTarget} from '../player/AimAssist';
+import {extrapolatedPosition} from '../network/remoteMotion';
 
 interface Sample { at: number; player: PlayerState }
 interface Avatar {
@@ -37,6 +38,8 @@ interface Avatar {
   trails?: MeleeTrails;
   loadingCosmetic?:string; failedCosmetic?:string;
   weaponAds: number;
+  poseSampleAt?:number;extrapolating?:boolean;
+  correction?:{x:number;y:number;z:number};
   /** Server-confirmed shots waiting for the interpolated pose to reach them. */
   shots: ShotTimeline;
   life: number; death?: { elapsed: number; started: number; direction: Elimination['direction']; rotation: Quaternion; motion:DeathMotion; axis: Vector3; materials: Material[]; textures: Set<BaseTexture> };
@@ -335,7 +338,13 @@ export class RemotePlayers {
       a.label.dataset.health=String(player.health);a.label.dataset.maxHealth=String(PLAYER_MAX_HEALTH);
       a.label.dataset.relationship = a.friendly ? 'teammate' : 'opponent';
       a.seen = performance.now();
-      a.samples.push({ at: s.serverTime, player });
+      const last=a.samples.at(-1);
+      if(last&&s.serverTime<last.at)continue;
+      if(last?.at===s.serverTime)a.samples[a.samples.length-1]={at:s.serverTime,player};
+      else{
+        if(last&&Math.hypot(player.motion.position.x-last.player.motion.position.x,player.motion.position.y-last.player.motion.position.y,player.motion.position.z-last.player.motion.position.z)>2.5){a.samples.length=0;a.correction=undefined;a.extrapolating=false;}
+        a.samples.push({ at: s.serverTime, player });
+      }
       a.shots.stamp(s.serverTime);
       if (a.samples.length > 30) a.samples.shift();
     }
@@ -366,8 +375,18 @@ export class RemotePlayers {
       const older = samples[0], newer = samples[1] ?? older;
       const k = Math.max(0, Math.min(1, (serverTime - older.at) / Math.max(1, newer.at - older.at)));
       const m = older.player.motion, n = newer.player.motion;
-      a.root.position.set(m.position.x + (n.position.x - m.position.x) * k, m.position.y + (n.position.y - m.position.y) * k,
-        m.position.z + (n.position.z - m.position.z) * k);
+      const predicted=serverTime>newer.at,position=predicted?extrapolatedPosition(n,serverTime-newer.at,this.collisionWorld):{
+        x:m.position.x+(n.position.x-m.position.x)*k,y:m.position.y+(n.position.y-m.position.y)*k,z:m.position.z+(n.position.z-m.position.z)*k};
+      if(a.extrapolating&&a.poseSampleAt!==newer.at){
+        const error=a.root.position.subtract(new Vector3(position.x,position.y,position.z));
+        a.correction=error.length()<1.5?{x:error.x,y:error.y,z:error.z}:undefined;
+      }
+      if(a.correction){const decay=Math.exp(-Math.max(0,dt)*24);a.correction.x*=decay;a.correction.y*=decay;a.correction.z*=decay;
+        const offset=this.collisionWorld?.moveCylinder(position.x,position.z,a.correction.x,a.correction.z,MOVEMENT.radius,position.y+MOVEMENT.stepHeight,position.y+a.height);
+        position.x=offset?.x??position.x+a.correction.x;position.z=offset?.z??position.z+a.correction.z;
+        // Vertical corrections stay on the actual interpolated floor/ceiling band.
+      }
+      a.root.position.set(position.x,position.y,position.z);a.poseSampleAt=newer.at;a.extrapolating=predicted;
       a.root.rotation.y = m.yaw + Math.atan2(Math.sin(n.yaw - m.yaw), Math.cos(n.yaw - m.yaw)) * k;
       a.look.rotation.x = m.pitch + (n.pitch - m.pitch) * k;
       const ads = (older.player.combat.gun?.ads ?? 0) + ((newer.player.combat.gun?.ads ?? 0) - (older.player.combat.gun?.ads ?? 0)) * k;
@@ -466,6 +485,7 @@ export class RemotePlayers {
   inspect() {
     return [...this.avatars].map(([id, a]) => ({ id, x: a.root.position.x, y: a.root.position.y, z: a.root.position.z,
       yaw: a.root.rotation.y, scale: a.root.scaling.x, height: a.height, lean: a.lean, friendly: a.friendly, visible: a.visible,
+      extrapolating:!!a.extrapolating,
       labelVisible: !a.label.hidden && !this.labels.hidden, outline: !a.death && a.visible && (this.silhouettes?.has(a.meshes) ?? false),
       death: a.death ? { elapsed: a.death.elapsed, ...deathPose(a.death.elapsed, a.death.direction),
         alpha: a.meshes[0].material?.alpha, rotation: a.root.rotationQuaternion?.asArray() } : null,
@@ -473,6 +493,8 @@ export class RemotePlayers {
       shots: a.shots.inspect(),
       health: a.samples.at(-1)?.player.health ?? 0 }));
   }
+  /** Lightweight frame sampling for network diagnostics; avoids inspecting every rig bone. */
+  motionSamples(){return [...this.avatars].filter(([,a])=>!a.death).map(([id,a])=>({id,x:a.root.position.x,y:a.root.position.y,z:a.root.position.z,extrapolating:!!a.extrapolating}));}
   clear(): void {
     this.meleeFinishers.clear();
     for (const a of this.avatars.values()) this.remove(a);

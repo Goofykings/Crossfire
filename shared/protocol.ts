@@ -1,4 +1,6 @@
 import {validMelee, type MeleeState} from './melee';
+import {expandServerMessage} from './snapshotWire';
+import {expandClientMessage} from './inputWire';
 import { validCosmeticReference } from './cosmetics';
 import { roomId, validRoomView, type RoomView } from './rooms';
 import { normalizeUsername } from './username';
@@ -12,8 +14,8 @@ import type { CombatIntent } from './combat';
 import { pointsOrder, type ScoreAward, type RoundResult, type RoundStanding } from './scoring';
 import { GRENADE, type GrenadeState, type GrenadeEvent, type GrenadeExplosion } from './grenades';
 
-// v22 synchronizes the slide-only low-clearance stance for prediction and hitboxes.
-export const PROTOCOL_VERSION = 23;
+// v24: independent compact snapshots, timing probes and bounded historical hitscan.
+export const PROTOCOL_VERSION = 24;
 export const validWeapon = (x: unknown): x is WeaponId => x === 'rifle' || x === 'shotgun' || x === 'sniper' || x === 'smg' || x === 'semi-sniper';
 export const PUBLIC_ROOM = 'public-main';
 export const INPUT_BATCH_LIMIT = 12;
@@ -24,6 +26,8 @@ export const HEARTBEAT_TIMEOUT_MS = 10000;
 export const RESPAWN_DELAY_MS = 3000;
 
 export interface InputFrame {
+  /** Server-clock time of the remote world actually displayed when this input was sampled. */
+  viewTime?:number;
   seq: number;
   yaw: number;
   pitch: number;
@@ -86,13 +90,15 @@ export interface Snapshot {
   match: { mode: 'ffa' | 'teams' | null; endsAt: number | null; teamScores: { blue: number; red: number } | null };
 }
 export type ClientMessage =
-  | { v: typeof PROTOCOL_VERSION; type: 'join'; name: string; resumeToken?: string; profileToken?: string; roomTicket?:string }
+  | { v: typeof PROTOCOL_VERSION; type: 'join'; name: string; resumeToken?: string; profileToken?: string; roomTicket?:string; compact?:boolean }
+  | { v:typeof PROTOCOL_VERSION;type:'sync';nonce:string }
   | { v: typeof PROTOCOL_VERSION; type: 'spawn'; roundId: number; mapVersion: string; weapon: WeaponId; requestId: string }
   | { v: typeof PROTOCOL_VERSION; type: 'input'; roundId: number; mapVersion: string; frames: InputFrame[] }
   | { v: typeof PROTOCOL_VERSION; type: 'ping'; at: number }
   | { v: typeof PROTOCOL_VERSION; type: 'chat'; text: string }
   | { v: typeof PROTOCOL_VERSION; type: 'leave' };
 export type ServerMessage =
+  | {v:typeof PROTOCOL_VERSION;type:'sync';nonce:string}
   | {v:typeof PROTOCOL_VERSION;type:'room_exit';reason:'afk'|'closed';message:string}
   | { v: typeof PROTOCOL_VERSION; type: 'system'; kind: 'player_joined'; id: string; name: string }
   | { v: typeof PROTOCOL_VERSION; type: 'career'; profile: CareerView }
@@ -164,7 +170,8 @@ export function validElimination(e: unknown): e is Elimination {
 }
 
 export function validFrame(x: unknown): x is InputFrame {
-  if (!record(x) || !keys(x, ['seq', 'yaw', 'pitch', 'intent', 'combat'])) return false;
+  if (!record(x) || !keys(x, ['seq', 'yaw', 'pitch', 'intent', 'combat','viewTime'])) return false;
+  if(x.viewTime!==undefined&&(!Number.isSafeInteger(x.viewTime)||(x.viewTime as number)<0))return false;
   if (!record(x.combat) || !keys(x.combat, ['trigger', 'reload', 'grenade', 'grenadeCancel', 'melee', 'aimYaw', 'aimPitch'])
     || typeof x.combat.trigger !== 'boolean' || typeof x.combat.reload !== 'boolean') return false;
   if (!Number.isSafeInteger(x.seq) || (x.seq as number) < 1 || !finite(x.yaw) || Math.abs(x.yaw) > Math.PI
@@ -186,13 +193,14 @@ export function validFrame(x: unknown): x is InputFrame {
 export function parseClientMessage(text: string): ClientMessage | null {
   if (text.length > MESSAGE_LIMIT) return null;
   let x: unknown;
-  try { x = JSON.parse(text); } catch { return null; }
+  try { x = expandClientMessage(JSON.parse(text)); } catch { return null; }
   if (!record(x) || x.v !== PROTOCOL_VERSION) return null;
   switch (x.type) {
+    case 'sync':return keys(x,['v','type','nonce'])&&typeof x.nonce==='string'&&/^[a-f0-9-]{36}$/.test(x.nonce)?x as unknown as ClientMessage:null;
     case 'spawn': return keys(x, ['v', 'type', 'roundId', 'mapVersion', 'weapon', 'requestId']) && validWeapon(x.weapon)
       && Number.isSafeInteger(x.roundId) && (x.roundId as number) >= 0 && typeof x.mapVersion === 'string' && x.mapVersion.length <= 64 && typeof x.requestId === 'string'
       && /^[a-zA-Z0-9-]{1,48}$/.test(x.requestId) ? x as unknown as ClientMessage : null;
-    case 'join': return keys(x, ['v', 'type', 'name', 'resumeToken', 'profileToken', 'roomTicket']) && typeof x.name === 'string' && x.name.length <= 64
+    case 'join': return keys(x, ['v', 'type', 'name', 'resumeToken', 'profileToken', 'roomTicket','compact']) && (x.compact===undefined||typeof x.compact==='boolean')&& typeof x.name === 'string' && x.name.length <= 64
       && (x.roomTicket===undefined||typeof x.roomTicket==='string'&&/^[a-f0-9]{64}$/.test(x.roomTicket))
       && (x.profileToken === undefined || (typeof x.profileToken === 'string' && /^[a-f0-9]{64}$/.test(x.profileToken)))
       && (x.resumeToken === undefined || (typeof x.resumeToken === 'string' && /^[a-f0-9]{64}$/.test(x.resumeToken))) ? x as unknown as ClientMessage : null;
@@ -234,8 +242,9 @@ export function validGun(x: unknown): x is WeaponState {
 export function parseServerMessage(text: string): ServerMessage | null {
   if (text.length > 131072) return null;
   let x: unknown;
-  try { x = JSON.parse(text); } catch { return null; }
+  try { x = expandServerMessage(JSON.parse(text)); } catch { return null; }
   if (!record(x) || x.v !== PROTOCOL_VERSION) return null;
+  if(x.type==='sync')return keys(x,['v','type','nonce'])&&typeof x.nonce==='string'&&/^[a-f0-9-]{36}$/.test(x.nonce)?x as unknown as ServerMessage:null;
   if(x.type==='room_exit')return keys(x,['v','type','reason','message'])&&['afk','closed'].includes(String(x.reason))&&typeof x.message==='string'&&x.message.length<=200?x as unknown as ServerMessage:null;
   if (x.type === 'system') return keys(x, ['v', 'type', 'kind', 'id', 'name'])
     && x.kind === 'player_joined' && typeof x.id === 'string' && /^join:[0-9a-f-]{36}$/.test(x.id)
