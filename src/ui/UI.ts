@@ -373,7 +373,6 @@ export class UI {
       });
       card.dataset.weapon = id;
       card.prepend(el('div', 'weapon-art'));
-      if(id==='semi-sniper')card.append(el('span','weapon-detail','15 rounds · Medium–Long range'));
       this.weaponCards.set(id, card);
       grid.appendChild(card);
     }

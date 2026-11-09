@@ -48,7 +48,7 @@ export const SHADOW_PRESETS: Record<ShadowQuality, ShadowPreset> = {
   high: { enabled: true, mode: 'cascaded', mapSize: 2048, cascades: 3, filtering: 'high', maxZ: 90 },
 };
 
-export const CHROMEBOOK_PRESET: GraphicsPreset = {...GRAPHICS_PRESETS.low, fxaa:false, anisotropy:1, noReflections:true};
+export const CHROMEBOOK_PRESET: GraphicsPreset = {...GRAPHICS_PRESETS.low, fxaa:false, anisotropy:2, noReflections:true};
 export function graphicsPreset(s:Readonly<Settings>):GraphicsPreset {
   return s.chromebookMode?CHROMEBOOK_PRESET:GRAPHICS_PRESETS[s.graphicsQuality];
 }

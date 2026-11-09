@@ -1,5 +1,4 @@
-import { CreateResizedCopy } from '@babylonjs/core/Misc/textureTools';
-import { texturesReady } from '../core/assetReadiness';
+import {compactSurfaceTexture} from './SurfaceTexture';
 import { Color3, Material, PBRMaterial, Texture, type Scene } from '@babylonjs/core';
 import { assetUrl, fetchJson } from '../core/assets';
 
@@ -43,6 +42,8 @@ export class MaterialLibrary {
   private ultra = false;
   private chromebook=false;
   private readonly smallTextures=new Map<Texture,Texture>();
+  private readonly compactWork=new Map<Texture,Promise<void>>();
+  private readonly textureLifetime=new AbortController();
   setChromebook(enabled:boolean):void {
     if(this.chromebook===enabled)return;this.chromebook=enabled;
     for(const [name,m] of this.materials)this.applyQuality(name,this.defs[name],m);
@@ -52,31 +53,31 @@ export class MaterialLibrary {
     const assign=()=>{
       if(!this.chromebook||!this.scene.materials.includes(m)||this.scene.isDisposed)return;
       const size=source.getSize();if(Math.max(size.width,size.height)<=256)return;
-      let copy=this.smallTextures.get(source);
-      if(!copy){
-        const ratio=256/Math.max(size.width,size.height),u=source.wrapU,v=source.wrapV;
-        copy=CreateResizedCopy(source,Math.max(1,Math.round(size.width*ratio)),Math.max(1,Math.round(size.height*ratio)));
-        source.wrapU=u;source.wrapV=v;
-        copy.wrapU=u;copy.wrapV=v;copy.gammaSpace=source.gammaSpace;copy.hasAlpha=source.hasAlpha;copy.anisotropicFilteringLevel=1;
+      if(this.compactWork.has(source))return;
+      const work=(async()=>{
+        const copy=this.smallTextures.get(source)??await compactSurfaceTexture(source,this.scene,256,this.textureLifetime.signal);
+        if(!this.chromebook||this.scene.isDisposed){copy.dispose();return;}
+        copy.anisotropicFilteringLevel=this.anisotropy;
         this.smallTextures.set(source,copy);
-      }
-      const ready=copy;
-      void texturesReady([ready]).then(()=>{
-        if(!this.chromebook||this.scene.isDisposed)return;
-        // Replace every user before releasing the full-size image. Keeping both
-        // copies defeated the memory saving, especially on shared-memory GPUs.
+        // Replace every user before releasing the full-size GPU allocation.
         for(const material of this.materials.values()){
-          if(material.albedoTexture===source)material.albedoTexture=ready;
-          if(material.emissiveTexture===source)material.emissiveTexture=ready;
+          if(material.albedoTexture===source)material.albedoTexture=copy;
+          if(material.emissiveTexture===source)material.emissiveTexture=copy;
         }
-      }).catch(()=>{});
+      })().catch(error=>{
+        // A failed image optimization must never leave a missing surface.
+        if(!this.scene.isDisposed)console.warn('Keeping original texture',source.name,error);
+      }).finally(()=>this.compactWork.delete(source));
+      this.compactWork.set(source,work);
     };
     if(source.isReady())assign();else source.onLoadObservable.addOnce(assign);
   }
   private fallback: PBRMaterial | null = null;
   readonly missing = new Set<string>();
 
-  constructor(private readonly scene: Scene) {}
+  constructor(private readonly scene: Scene) {
+    scene.onDisposeObservable.addOnce(()=>this.textureLifetime.abort());
+  }
 
   async load(url = assetUrl('assets/materials.json'), signal?: AbortSignal): Promise<void> {
     const file = await fetchJson<MaterialFile>(url, signal);
@@ -94,7 +95,7 @@ export class MaterialLibrary {
       const live=[...this.textures.values(),...this.smallTextures.values()].filter(t=>!!t.getInternalTexture());
       const failed=live.find(t=>t.loadingError);
       if(failed)throw new Error(`Required texture failed to load: ${failed.name}`);
-      if(live.every(t=>t.isReady()))return;
+      if(live.every(t=>t.isReady())&&this.compactWork.size===0)return;
       if(Date.now()>=end)throw new Error('Required material textures timed out');
       await new Promise(resolve=>setTimeout(resolve,25));
     }
@@ -104,15 +105,16 @@ export class MaterialLibrary {
     const used=new Set([...this.scene.materials,...this.materials.values()].flatMap(m=>m.getActiveTextures()));
     for(const [key,t] of this.textures){
       if(used.has(t))continue;
-      // A compact copy can still be sampling its source during async compilation.
+      if(this.compactWork.has(t))continue;
+      // Retain a source until its replacement has finished uploading.
       const compact=this.smallTextures.get(t);
       if(compact&&!compact.isReady())continue;
       t.dispose();
       if(!compact)this.textures.delete(key);
     }
     for(const [source,copy]of this.smallTextures){
-      // Cached resize shaders can finish synchronously, before the promise
-      // assigning the copy to materials runs. Its live source still owns it.
+      // A cached image can finish before material assignment runs. Its live
+      // source still owns that replacement during the handover.
       if(used.has(copy)||used.has(source)||!copy.isReady())continue;
       copy.dispose();this.smallTextures.delete(source);
     }
@@ -132,6 +134,7 @@ export class MaterialLibrary {
   setAnisotropy(level: number): void {
     this.anisotropy = level;
     for (const t of this.textures.values()) t.anisotropicFilteringLevel = level;
+    for (const t of this.smallTextures.values()) t.anisotropicFilteringLevel = level;
   }
 
   /** Update shared instances in place, including weapon/remote materials, without rebatching. */
@@ -341,6 +344,7 @@ export class MaterialLibrary {
     for (const [key, t] of this.textures) {
       const compact=this.smallTextures.get(t);
       if (keep.has(t)||compact&&keep.has(compact)) continue;
+      if(this.compactWork.has(t))continue;
       this.smallTextures.get(t)?.dispose();this.smallTextures.delete(t);
       t.dispose();
       this.textures.delete(key);

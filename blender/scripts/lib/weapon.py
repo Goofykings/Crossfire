@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import math
 
-from meshkit import MeshData
+from meshkit import MeshData, face_normal
 
 
 def extrude(md: MeshData, profile, x0: float, x1: float, mat: str, bevel: float = 0.003, side_mat: str | None = None):
@@ -50,10 +50,10 @@ def _fix_winding(md: MeshData, start: int, center):
         f = md.faces[fi]
         pts = [md.verts[i] for i in f]
         c = [sum(p[k] for p in pts) / len(pts) for k in range(3)]
-        a, b, cc = pts[0], pts[1], pts[2]
-        u = (b[0] - a[0], b[1] - a[1], b[2] - a[2])
-        v = (cc[0] - a[0], cc[1] - a[1], cc[2] - a[2])
-        n = (u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0])
+        # Concave stocks/grips can start with a reflex corner. Its first triangle
+        # points opposite the polygon, turning entire side caps inside out.
+        # Newell's normal uses the whole boundary, including collinear corners.
+        n = face_normal(pts)
         out = (c[0] - center[0], c[1] - center[1], c[2] - center[2])
         if n[0] * out[0] + n[1] * out[1] + n[2] * out[2] < 0:
             md.faces[fi] = list(reversed(f))

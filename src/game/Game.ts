@@ -1495,6 +1495,8 @@ export class Game {
   debugApi() {
     return {
       ready: () => this.state === 'playing' && !!this.map && (!this.options.multiplayer || this.network?.state === 'connected'),
+      /** Local GPU inspection only; never expose the live scene in production. */
+      renderScene: () => import.meta.env.DEV ? this.ctx.scene : null,
       network: () => ({ state: this.network?.state ?? 'idle', selfId: this.network?.selfId ?? '',
         snapshot: this.network?.latest ?? null, rendered: this.remotePlayers.inspect(), diagnostics: this.network?.inspect() ?? null }),
       practice:()=>this.localPractice?.simulation.inspect()??null,

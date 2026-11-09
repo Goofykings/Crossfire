@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { readFile } from 'node:fs/promises';
-import { FreeCamera, NullEngine, Scene, StandardMaterial, Vector3 } from '@babylonjs/core';
+import { FreeCamera, MeshBuilder, NullEngine, Scene, StandardMaterial, Vector3 } from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
 import { VIEWMODEL_FOV, WeaponView } from '../src/weapons/WeaponView';
 import { SETTING_LIMITS, DEFAULT_SETTINGS } from '../src/config/settings';
@@ -21,6 +21,15 @@ it('preserves all five real weapon rigs and isolates close weapon depth from wor
     // An HTTP inventory response may arrive while game assets are still loading.
     await view.setCosmetics(defaultEquipment());
     await view.load(new AbortController().signal);
+    const fill=scene.getLightByName('viewmodel-fill')!;
+    const wall=MeshBuilder.CreateBox('unrelated-world',{},scene);
+    expect(fill.canAffectMesh(wall)).toBe(false);
+    expect(view.meshes.every(m=>fill.canAffectMesh(m))).toBe(true);
+    camera.rotation.y=Math.PI/2;
+    view.update(1/60,new Weapon(WEAPONS[0]),{speed:0,grounded:true,sliding:false,crouch:0,sprinting:false});
+    const direction=(fill as import('@babylonjs/core').HemisphericLight).direction;
+    expect(Vector3.Distance(direction,camera.getDirection(new Vector3(-.4,.8,.35)))).toBeLessThan(.00001);
+    camera.rotation.y=0;
     expect(requested.filter(url=>url.endsWith('.glb'))).toHaveLength(WEAPONS.length);
     for(const stats of WEAPONS){
       view.select(stats.id);const w=new Weapon(stats);

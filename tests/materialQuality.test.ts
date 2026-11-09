@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NullEngine, PBRMaterial, RawTexture, Scene, Texture } from '@babylonjs/core';
 import { MaterialLibrary } from '../src/rendering/MaterialLibrary';
 import { GRAPHICS_PRESETS } from '../src/rendering/quality';
+import * as surfaceTextures from '../src/rendering/SurfaceTexture';
 
 const manifest = JSON.parse(readFileSync('public/assets/materials.json', 'utf8'));
 let engine: NullEngine, scene: Scene, library: MaterialLibrary;
@@ -105,4 +106,15 @@ it('retains a ready resized copy while material assignment is queued',async()=>{
  library.setChromebook(true);
  expect(copy.getInternalTexture()).not.toBeNull();
  await assignment;library.trim();expect(m.albedoTexture?.isReady()).toBe(true);
+});
+
+it('keeps a visible original if image compaction fails',async()=>{
+ const m=material('stone_rubble'),source=m.albedoTexture as Texture;
+ source.getInternalTexture()!.isReady=true;
+ vi.spyOn(source,'getSize').mockReturnValue({width:512,height:512});
+ vi.spyOn(surfaceTextures,'compactSurfaceTexture').mockRejectedValue(new Error('Image decoder unavailable'));
+ const warning=vi.spyOn(console,'warn').mockImplementation(()=>{});
+ library.setChromebook(true);
+ await vi.waitFor(()=>expect(warning).toHaveBeenCalled());
+ library.trim();expect(m.albedoTexture).toBe(source);expect(source.isReady()).toBe(true);
 });

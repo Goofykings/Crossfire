@@ -46,7 +46,7 @@
         "thirdPersonPreset": "WEAPON_HOLDS.rifle"
       },
       "baseModel": "assets/models/shared/weapons/rifle.glb",
-      "baseSha256": "0e7ef259bd6d0c3fab918860a549576b8caa277a62861062a682565ada66b423"
+      "baseSha256": "2a31589123b3c25a5857fd874384d7649cce0c6a6e842566885e082b55a463c6"
     },
     {
       "catalogEntry": {
@@ -91,7 +91,7 @@
         "thirdPersonPreset": "WEAPON_HOLDS.smg"
       },
       "baseModel": "assets/models/shared/weapons/smg.glb",
-      "baseSha256": "628c8a5f40e66cc1b814f851021d491679c4aa355463c743616c39fd392a4488"
+      "baseSha256": "d9ff47389c1bc3235012764cae4c6e393dc0cbf0aa7b91011f6c18ebb6d3b676"
     },
     {
       "catalogEntry": {
@@ -137,7 +137,7 @@
         "thirdPersonPreset": "WEAPON_HOLDS.shotgun"
       },
       "baseModel": "assets/models/shared/weapons/shotgun.glb",
-      "baseSha256": "3c9226013517345235c1e88dde58fae20a9287499b666ebaf3a7311b8fc00b54"
+      "baseSha256": "e1370944b8fbf85b35f52dbcf9af8387b98b46f7f93455249748eede1035e682"
     },
     {
       "catalogEntry": {
@@ -184,7 +184,7 @@
         "thirdPersonPreset": "WEAPON_HOLDS.sniper"
       },
       "baseModel": "assets/models/shared/weapons/sniper.glb",
-      "baseSha256": "60c538cfabcad88b9cf23a70b9179b79430ddfdc55d70922d08c0dc38e4edf1a"
+      "baseSha256": "829e37a03529ae8f11453ff1cb65831475921c2489ec2118d8a75136badd1932"
     }
   ],
   "crate": {

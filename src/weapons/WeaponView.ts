@@ -3,6 +3,7 @@ import { cosmetic, defaultCosmetic, defaultEquipment, type Equipment } from '../
 import { loadCosmeticAsset, visualCosmetic } from '../rendering/CosmeticAssets';
 import {
   Color3,
+  HemisphericLight,
   Matrix,
   Mesh,
   MeshBuilder,
@@ -50,13 +51,13 @@ interface RigConfig {
 export const RIG_CONFIGS: Record<WeaponId, RigConfig> = {
   smg: {
     id: 'smg', file: cosmetic(defaultCosmetic('smg'))!.asset.model,
-    hip: [0.20, -0.235, -0.4], hipRot: [0.03, 0.09, -0.06],
+    hip: [0.20, -0.135, -0.54], hipRot: [0.03, 0.09, -0.06],
     eye: 0.20, casing: 'casing_rifle', flash: 0.75, kick: 0.7,
   },
   rifle: {
     id: 'rifle',
     file: cosmetic(defaultCosmetic('rifle'))!.asset.model,
-    hip: [0.22, -0.24, -0.4],
+    hip: [0.22, -0.135, -0.54],
     hipRot: [0.03, 0.09, -0.06],
     eye: 0.21,
     casing: 'casing_rifle',
@@ -65,13 +66,13 @@ export const RIG_CONFIGS: Record<WeaponId, RigConfig> = {
   },
   'semi-sniper': {
     id: 'semi-sniper', file: cosmetic(defaultCosmetic('semi-sniper'))!.asset.model,
-    hip: [0.22, -0.24, -0.4], hipRot: [0.03, 0.09, -0.06],
+    hip: [0.22, -0.135, -0.54], hipRot: [0.03, 0.09, -0.06],
     eye: 0.21, casing: 'casing_rifle', flash: 1.2, kick: 1.5,
   },
   shotgun: {
     id: 'shotgun',
     file: cosmetic(defaultCosmetic('shotgun'))!.asset.model,
-    hip: [0.22, -0.235, -0.4],
+    hip: [0.22, -0.13, -0.54],
     hipRot: [0.03, 0.09, -0.06],
     eye: 0.16,
     casing: 'casing_shell',
@@ -81,7 +82,7 @@ export const RIG_CONFIGS: Record<WeaponId, RigConfig> = {
   sniper: {
     id: 'sniper',
     file: cosmetic(defaultCosmetic('sniper'))!.asset.model,
-    hip: [0.22, -0.235, -0.4],
+    hip: [0.22, -0.13, -0.54],
     hipRot: [0.03, 0.09, -0.06],
     eye: 0.1,
     casing: 'casing_sniper',
@@ -152,6 +153,8 @@ export class WeaponView {
   private disposed=false;
   private current: Rig | null = null;
   private flashLight: PointLight | null = null;
+  private fillLight: HemisphericLight | null = null;
+  private readonly fillDirection=new Vector3(-.4,.8,.35);
   private reticle: StandardMaterial | null = null;
   private readonly containers: AssetContainer[] = [];
   private flashTimer = 0;
@@ -205,6 +208,15 @@ export class WeaponView {
     const reticle = this.reticleMaterial(scene);
     this.reticle = reticle;
     await Promise.all(Object.values(RIG_CONFIGS).map((cfg) => this.loadRig(cfg, reticle, signal)));
+    // Soft camera-relative fill makes metal/wood legible in shade. It lights
+    // held geometry only, with no world shadows or additional render pass.
+    this.fillLight=new HemisphericLight('viewmodel-fill',this.fillDirection.clone(),scene);
+    this.fillLight.diffuse=new Color3(.88,.93,1);
+    this.fillLight.groundColor=new Color3(.18,.20,.25);
+    this.fillLight.specular=Color3.Black();this.fillLight.intensity=.38;
+    this.fillLight.includedOnlyMeshes=this.meshes;
+    this.fillLight.renderPriority=3;
+    for(const m of this.meshes)m._resyncLightSources();
     const light = new PointLight('muzzle-light', Vector3.Zero(), scene);
     light.diffuse = new Color3(1.0, 0.72, 0.38);
     light.specular = new Color3(0.5, 0.35, 0.2);
@@ -254,6 +266,8 @@ export class WeaponView {
     const rig: Rig = { cosmeticId:item.id,cfg, root, meshes, anchors, pump: node('pump'), bolt, muzzle, eject, flash };
     root.setEnabled(false);
     this.meshes.push(...meshes, ...flash.getChildMeshes(false), flash);
+    // includedOnlyMeshes shares this array, including newly equipped skins.
+    if(this.fillLight)for(const m of meshes)m._resyncLightSources();
     this.rigs.set(item.id, rig);
   }
 
@@ -420,6 +434,8 @@ export class WeaponView {
   ): void {
     const rig = this.current;
     if (!rig) return;
+    // HemisphericLight does not transform its direction through a parent node.
+    if(this.fillLight)this.ctx.camera.getDirectionToRef(this.fillDirection,this.fillLight.direction);
     const pose = this.pose(rig, w);
     this.throwTime = Math.max(0, this.throwTime - dt);
     const throwLower = Math.sin(Math.PI * (1 - this.throwTime / .36)) * .20;
@@ -427,7 +443,6 @@ export class WeaponView {
     const motion = this.motion.update(dt, { ...s, ads });
     const sight = rig.anchors.get('sight') ?? Vector3.Zero();
     const hip = v3(rig.cfg.hip);
-    hip.y += .105; // The former low hip framing put grips below the viewport.
     const adsPos = new Vector3(-sight.x, -sight.y, -rig.cfg.eye - sight.z);
     const pos = Vector3.Lerp(hip, adsPos, ads);
     pos.x += motion.x;
@@ -521,6 +536,7 @@ export class WeaponView {
     this.ctx.scene.onBeforeRenderingGroupObservable.remove(this.beforeGroup);
     this.ctx.scene.onAfterRenderingGroupObservable.remove(this.afterGroup);
     this.flashLight?.dispose();
+    this.fillLight?.dispose();
     for (const container of this.containers) container.dispose();
     this.containers.length = 0;
     this.root.dispose(false, false);
