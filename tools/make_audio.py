@@ -147,6 +147,12 @@ def rifle_shot() -> list[float]:
     return gunshot(101, 0.9, 3800, 38, 0.13, (150, 52, 0.1), 0.75, 1100, 6, 0.22, [(0.043, 0.22), (0.09, 0.12), (0.16, 0.07)])
 
 
+def semi_sniper_shot() -> list[float]:
+    """A sharper crack and lower, shorter precision-rifle body than the bolt sniper."""
+    return gunshot(509, 1.05, 3200, 28, .16, (125, 42, .13), .9, 950, 5.5, .25,
+                   [(.046, .2), (.105, .13), (.19, .06)], 2.4)
+
+
 def shotgun_shot() -> list[float]:
     return gunshot(202, 0.6, 2300, 20, 0.22, (115, 36, 0.16), 1.1, 800, 4.2, 0.32, [(0.05, 0.25), (0.12, 0.16), (0.21, 0.09)], 2.6)
 
@@ -320,6 +326,7 @@ def main() -> None:
     write("grenade_explosion.wav", grenade_explosion(), .85)
     write("smg_shot.wav", smg_shot(), 0.8)
     write("rifle_shot.wav", rifle_shot(), 0.92)
+    write("semi_sniper_shot.wav", semi_sniper_shot(), 0.9)
     write("shotgun_shot.wav", shotgun_shot(), 0.95)
     write("sniper_shot.wav", sniper_shot(), 0.95)
     write("empty_click.wav", click(4, 3500, 0.06), 0.6)
@@ -344,4 +351,9 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+    if '--semi-sniper-only' in sys.argv:
+        OUT.mkdir(parents=True, exist_ok=True)
+        write('semi_sniper_shot.wav', semi_sniper_shot(), .9)
+    else:
+        main()

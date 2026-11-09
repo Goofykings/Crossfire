@@ -151,7 +151,7 @@ export class UI {
   private pendingWeapon: WeaponId = 'rifle';
   private readonly previews = new Map<WeaponId, string>();
   private readonly weaponCards = new Map<WeaponId, HTMLButtonElement>();
-  private readonly labels: Record<WeaponId | 'melee', string> = { melee:'Dual Daggers',smg: 'SMG', rifle: 'Assault Rifle', shotgun: 'Shotgun', sniper: 'Sniper Rifle' };
+  private readonly labels: Record<WeaponId | 'melee', string> = { melee:'Dual Daggers',smg: 'SMG', rifle: 'Assault Rifle', shotgun: 'Shotgun', sniper: 'Sniper Rifle', 'semi-sniper': 'Semi-Auto Sniper' };
   currentScreen: Screen = 'menu';
   readonly scoreboard: Scoreboard;
   readonly damage: DamageFeedback;
@@ -363,7 +363,7 @@ export class UI {
       else this.onQuit();
     }));
     const grid = el('div', 'weapon-grid');
-    for (const id of ['smg', 'rifle', 'sniper', 'shotgun'] as const) {
+    for (const id of ['smg', 'rifle', 'sniper', 'shotgun', 'semi-sniper'] as const) {
       const card = this.button(this.labels[id], '', 'weapon-card', () => {
         this.pendingWeapon = id;
         try { localStorage.setItem('crossfire.pending-weapon', id); } catch { /* Optional preference. */ }
@@ -373,6 +373,7 @@ export class UI {
       });
       card.dataset.weapon = id;
       card.prepend(el('div', 'weapon-art'));
+      if(id==='semi-sniper')card.append(el('span','weapon-detail','15 rounds · Medium–Long range'));
       this.weaponCards.set(id, card);
       grid.appendChild(card);
     }

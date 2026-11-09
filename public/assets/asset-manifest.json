@@ -1,7 +1,7 @@
 {
  "generator": "blender/scripts/generate_all.py",
  "blender": "5.2.3 LTS",
- "generated": "2026-11-07 20:37:37",
+ "generated": "2026-11-08 22:13:10",
  "assets": [
   {
    "path": "assets/characters/player-albedo.png",
@@ -277,17 +277,17 @@
   {
    "path": "assets/models/industrial-complex/collision.json",
    "kind": "collision",
-   "bytes": 25391,
-   "description": "295 oriented collision boxes (runtime physics)",
+   "bytes": 26376,
+   "description": "305 oriented collision boxes (runtime physics)",
    "script": "blender/scripts/lib/collision_gen.py"
   },
   {
    "path": "assets/models/industrial-complex/collision_debug.glb",
    "kind": "collision-debug",
-   "bytes": 346804,
+   "bytes": 358988,
    "description": "Collision boxes as meshes for in-game debug view (F2)",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 3540
+   "triangles": 3660
   },
   {
    "path": "assets/models/industrial-complex/environment.json",
@@ -306,10 +306,10 @@
   {
    "path": "assets/models/industrial-complex/terrain.glb",
    "kind": "map-terrain",
-   "bytes": 513100,
+   "bytes": 522780,
    "description": "Asphalt and concrete yards, loading docks, stairs, railings, fences, canopies, pipe bridges, road paint",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 8544
+   "triangles": 8664
   },
   {
    "path": "assets/models/modern-city/buildings/block_01.glb",
@@ -1764,6 +1764,14 @@
    "triangles": 1836
   },
   {
+   "path": "assets/models/shared/weapons/semi_sniper.glb",
+   "kind": "weapon",
+   "bytes": 167724,
+   "description": "semi_sniper first-person model: moving parts (mag) and anchors (muzzle, sight, eject, grip_r, grip_l, mag_grip)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 1962
+  },
+  {
    "path": "assets/models/shared/weapons/shotgun.glb",
    "kind": "weapon",
    "bytes": 68308,
@@ -1839,7 +1847,7 @@
   {
    "path": "blender/source/industrial-complex.blend",
    "kind": "blend",
-   "bytes": 1259273,
+   "bytes": 1263444,
    "description": "Editable source: buildings, terrain, collision, markers, prop preview",
    "script": "blender/scripts/generate_all.py"
   },
@@ -1862,6 +1870,13 @@
    "kind": "blend",
    "bytes": 913586,
    "description": "Editable source: all street props",
+   "script": "blender/scripts/generate_all.py"
+  },
+  {
+   "path": "blender/source/semi_sniper.blend",
+   "kind": "blend",
+   "bytes": 149914,
+   "description": "Editable source: semi-automatic sniper",
    "script": "blender/scripts/generate_all.py"
   },
   {

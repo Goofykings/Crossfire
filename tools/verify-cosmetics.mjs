@@ -20,5 +20,5 @@ for(const item of COSMETICS){
 }
 for(const c of COLLECTIONS)for(const w of WEAPON_CATEGORIES){const item=cosmetic(collectionCosmetic(c.id,w));assert.ok(item&&item.rarity===c.rarity&&item.name===c.name&&item.collection===c.id,'Collection '+c.id+' needs a '+w+' version');assert.ok(Object.keys(item.asset.materials??{}).length>0,item.id+' has no finish');}
 const crate=glb('assets/cosmetics/crate/reward-crate/model.glb');for(const name of ['crate_body','lid_nw','lid_ne','lid_sw','lid_se','seam_glow','core_glow'])assert.ok(crate.nodes.some(n=>n.name===name),'Reward crate missing '+name);local('assets/cosmetics/crate/reward-crate/thumbnail.png');local('assets/cosmetics/studio.jpg');local('assets/cosmetics/effects/banknote.jpg');
-console.log('Cosmetics verified: '+COSMETICS.length+' catalog items ('+COLLECTIONS.length+' crate collections x 5 equipment categories), compatible anchors, models, textures and reward crate parts.');
+console.log('Cosmetics verified: '+COSMETICS.length+' catalog items ('+COLLECTIONS.length+' crate collections x '+WEAPON_CATEGORIES.length+' equipment categories), compatible anchors, models, textures and reward crate parts.');
 if(fs.existsSync('public/assets/cosmetics/foundry-collection.json'))await import('./verify-cosmetic-collection.mjs');

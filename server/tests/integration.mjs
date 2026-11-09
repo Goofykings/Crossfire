@@ -373,7 +373,7 @@ test('Public room: real Workers runtime and real WebSocket clients', { timeout: 
           }
           seen.add(current.mapId);
           assert.ok(current.match.endsAt > current.serverTime);
-          for (const [client, weapon] of [[c, i === 0 ? 'smg' : 'sniper'], [d, i === 0 ? 'rifle' : 'shotgun']]) {
+          for (const [client, weapon] of [[c, i === 0 ? 'semi-sniper' : i === 1 ? 'smg' : 'sniper'], [d, i === 0 ? 'rifle' : 'shotgun']]) {
             const requestId = crypto.randomUUID();
             client.send({ type: 'spawn', roundId: current.roundId, mapVersion: current.mapVersion, weapon, requestId });
             const approved = await client.wait((m) => m.type === 'spawned' && m.requestId === requestId);

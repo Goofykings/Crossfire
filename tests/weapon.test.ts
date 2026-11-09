@@ -248,10 +248,10 @@ describe('Sniper rifle', () => {
 });
 
 describe('Loadout', () => {
-  it('holds the existing three weapons plus SMG in slot 4', () => {
+  it('keeps the original slots and adds Semi-Auto Sniper in slot 5', () => {
     const l = new Loadout();
-    expect(l.weapons.map((w) => w.stats.id)).toEqual(['rifle', 'shotgun', 'sniper', 'smg']);
-    expect(WEAPONS.map((w) => w.slot)).toEqual([1, 2, 3, 4]);
+    expect(l.weapons.map((w) => w.stats.id)).toEqual(['rifle', 'shotgun', 'sniper', 'smg', 'semi-sniper']);
+    expect(WEAPONS.map((w) => w.slot)).toEqual([1, 2, 3, 4, 5]);
     expect(l.current.stats.id).toBe('rifle');
   });
 
@@ -290,7 +290,7 @@ describe('Loadout', () => {
     const l = new Loadout();
     l.cycle(-1);
     simulate(l, 1);
-    expect(l.current.stats.id).toBe('smg');
+    expect(l.current.stats.id).toBe('semi-sniper');
     l.cycle(1);
     simulate(l, 1);
     expect(l.current.stats.id).toBe('rifle');

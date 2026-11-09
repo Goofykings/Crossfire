@@ -8,14 +8,14 @@ import { REVEAL_COLORS } from '../src/ui/CrateReveal';
 const seq = (...values:number[]) => { let i=0; return () => values[i++ % values.length]; };
 
 describe('crate collections', () => {
-  it('has six named families, each with a version for all four guns and the matching dagger pair', () => {
+  it('has six named families, each with a version for all five guns and the matching dagger pair', () => {
     expect(COLLECTIONS.map(c => [c.name, c.rarity])).toEqual([
       ['Green Camo','uncommon'],['Blue Camo','uncommon'],['Red Camo','uncommon'],['Marble','rare'],['Rainbow Glow','rare'],['Rich','legendary']]);
-    expect(crateItems()).toHaveLength(30);
+    expect(crateItems()).toHaveLength(36);
     for (const c of COLLECTIONS) for (const w of WEAPON_CATEGORIES) {
       const item = cosmetic(collectionCosmetic(c.id, w))!;
       expect(item).toMatchObject({ name:c.name, rarity:c.rarity, weapon:w, compatibleWith:[w], ownership:'grant', collection:c.id });
-      expect(item.asset.model).toBe(w==='melee'?'assets/models/shared/melee/dagger_r.glb':`assets/models/shared/weapons/${w}.glb`);
+      expect(item.asset.model).toBe(w==='melee'?'assets/models/shared/melee/dagger_r.glb':`assets/models/shared/weapons/${w==='semi-sniper'?'semi_sniper':w}.glb`);
       const names = Object.keys(item.asset.materials ?? {});
       expect(names.length).toBeGreaterThan(0);
       for (const name of names) expect(WEAPON_MATERIALS[w]).toContain(name);
@@ -41,8 +41,8 @@ describe('server crate draw', () => {
   it('never repeats an owned item and renormalizes when a rarity is exhausted', () => {
     const owned:string[] = [];
     const random = (() => { let s = 7; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();
-    for (let i = 0; i < 30; i++) { const item = drawCrate(owned, random)!; expect(owned).not.toContain(item.id); owned.push(item.id); }
-    expect(new Set(owned).size).toBe(30);
+    for (let i = 0; i < crateItems().length; i++) { const item = drawCrate(owned, random)!; expect(owned).not.toContain(item.id); owned.push(item.id); }
+    expect(new Set(owned).size).toBe(36);
     expect(drawCrate(owned, random)).toBeUndefined();
     const noUncommon = crateItems().filter(c => c.rarity === 'uncommon').map(c => c.id);
     expect(drawCrate(noUncommon, seq(0, 0))!.rarity).toBe('rare');

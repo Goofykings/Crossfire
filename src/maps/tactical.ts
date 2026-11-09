@@ -233,6 +233,10 @@ export function deriveTacticalMap(layout: MapLayout, props: PropCatalog | null, 
   }
 
   const obstacles: TacticalMapData['obstacles'] = [...farmStairs];
+  // These plinths block ordinary walking; only the shared slide collider fits.
+  for(const p of layout.slidePassages??[]){const [x,z]=p.center,w=p.width/2+.24,d=p.depth/2+.025;
+    obstacles.push({type:`slide:${p.id}`,poly:rectPoly([x-w,z-d,x+w,z+d])});
+  }
   // Ground-level queries must respect the solid stair runs and support posts,
   // while leaving suspended floors' underpasses open. Exported with collision.
   for (const part of layout.navigation?.groundObstacles ?? []) {

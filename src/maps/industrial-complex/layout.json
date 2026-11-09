@@ -2318,15 +2318,6 @@
    "heading": 0
   },
   {
-   "type": "pallet_wrapped",
-   "pos": [
-    -18.5,
-    0.0,
-    15.0
-   ],
-   "heading": 90
-  },
-  {
    "type": "cable_reel",
    "pos": [
     -20.0,
@@ -2614,6 +2605,28 @@
      "run": 0.32
     }
    ]
+  }
+ ],
+ "slidePassages": [
+  {
+   "id": "loading_service",
+   "center": [
+    2,
+    2
+   ],
+   "width": 1.8,
+   "depth": 0.8,
+   "clearance": 0.96
+  },
+  {
+   "id": "storage_service",
+   "center": [
+    -18,
+    15
+   ],
+   "width": 1.8,
+   "depth": 0.8,
+   "clearance": 0.96
   }
  ],
  "ladders": [

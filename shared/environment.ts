@@ -1,3 +1,4 @@
+import type { WeaponId } from '../src/weapons/Weapon';
 import type { BoxDesc, CollisionWorld } from '../src/physics/CollisionWorld';
 import type { Vec3 } from '../src/player/PlayerController';
 import { sweepSphere } from './grenades';
@@ -52,7 +53,7 @@ export class EnvironmentSimulation {
   private wake(b:Body|Sign):void{b.state.asleep=false;b.quiet=0;this.dirty.add(b.state.id);}
   /** Small objects do not stop bullets; only objects in front of the actual
    * world/player hit can react. A pellet wakes at most its nearest prop. */
-  shoot(origin:Vec3,direction:Vec3,maxDistance:number,weapon:'rifle'|'smg'|'sniper'|'shotgun'):string|null {
+  shoot(origin:Vec3,direction:Vec3,maxDistance:number,weapon:WeaponId):string|null {
     let best:{target:Body|Sign;distance:number;sign:boolean}|null=null;
     for(const b of this.bodies) {
       const r=b.definition.radius,h=b.definition.halfHeight,p=b.state.position;
@@ -83,7 +84,7 @@ export class EnvironmentSimulation {
       const torque=b.light?(Math.abs(localX)>=Math.abs(localZ)*.65?localX:localZ*.65):localX;
       b.state.angularVelocity=clamp(b.state.angularVelocity+torque*(weapon==='sniper'?3.4:weapon==='shotgun'?.9:2.6),3.5);
     } else {
-      const b=best.target as Body,k=({rifle:.22,smg:.15,sniper:.40,shotgun:.07}[weapon])*ENVIRONMENT.impulseScale/b.definition.mass;
+      const b=best.target as Body,k=({rifle:.22,smg:.15,sniper:.40,shotgun:.07,'semi-sniper':.3}[weapon])*ENVIRONMENT.impulseScale/b.definition.mass;
       b.state.velocity.x+=direction.x*k;b.state.velocity.y+=direction.y*k+.08*ENVIRONMENT.impulseScale;b.state.velocity.z+=direction.z*k;
       const speed=Math.hypot(...Object.values(b.state.velocity));if(speed>ENVIRONMENT.maxSpeed)for(const key of ['x','y','z'] as const)b.state.velocity[key]*=ENVIRONMENT.maxSpeed/speed;
       b.state.spin=clamp(b.state.spin+k*.5,4);

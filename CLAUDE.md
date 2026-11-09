@@ -1,3 +1,26 @@
+## Playable Semi-Auto Sniper (2026-11-09)
+
+The model handoff below has now been integrated. See docs/SEMI_SNIPER.md and the
+newest PROGRESS entry. Runtime ID `semi-sniper`, GLB `semi_sniper.glb`: 15 rounds,
+semi only, 567 RPM cap (0.9 of current AR), body integer 32–35, fixed head 50.
+Do not restore a head multiplier for it or automatic cooldown borrowing. Preserve
+existing four gun stats, recent lean/slide/rig work and no first-person reload arms.
+weaponAdsFov computes 1.5x AR optical power from the actual world FOV; scope=false.
+AR-compatible holds/clips, new recoil and sound, six collection skins, automatic
+default inventory migration, Sniper Locker group. Protocol v23, matching frontend
+and Worker release required when authorized; no commit/push/deploy performed.
+
+## Semi-Auto Sniper model handoff (historical, 2026-11-08)
+
+See docs/SEMI_SNIPER.md. Assets only: semi_sniper.glb/.blend/thumbnail from `semi_sniper()` in
+blender/scripts/lib/weapon.py (run generate_semi_sniper.py, not the whole weapon stage), new material
+`gun_gold`. It keeps the AR's grip/trigger/magwell/mag/butt-pad frames, so RIG_CONFIGS.rifle,
+WEAPON_HOLDS.rifle and rifleClips fit; only `mag` moves. Nothing is registered (no WeaponId, stats,
+catalog, UI, audio, protocol) and balance is untouched: the integration checklist is in the doc.
+`solid()` winds only convex profiles (concave ones render hollow from one side; the AR's stock has it);
+keep profiles convex. Review with tools/review-semi-sniper.mjs (cosmetic-asset-lab.html?semi). No
+commit/push/deploy.
+
 ## Farmstead map (2026-11-07)
 
 See docs/FARMSTEAD.md. Fourth map `farmstead` (plan: references_images/Newoutdoormap.png): an open farm yard with

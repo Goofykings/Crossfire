@@ -60,13 +60,14 @@ export class RoomMenus {
  private sync(){for(const o of this.options){const selected=this.setup[o.key]===o.value;o.button.classList.toggle('selected',selected);o.button.setAttribute('aria-pressed',String(selected));}}
  private needClient(){if(!this.client)throw Error('Multiplayer configuration is unavailable.');return this.client;}
  cancel(){this.limit.cancel();this.request?.abort();this.request=null;this.refresh.disabled=false;this.mode.querySelectorAll<HTMLButtonElement>('button').forEach(b=>b.disabled=false);this.create.querySelectorAll<HTMLButtonElement>('button').forEach(b=>b.disabled=false);}
- open(message=''){this.cancel();this.privateDialog.close();this.show('modes');this.list.replaceChildren();this.status.textContent=message||'Select Public Servers to connect, or Practice to play offline.';}
+ open(message=''){if(!message&&this.mode.classList.contains('visible')&&this.request)return;this.cancel();this.privateDialog.close();this.show('modes');void this.load(message);}
  private openCreate(){this.cancel();this.setup={name:roomName(this.username()+"'s Server"),privacy:'public',mapId:'european-town',mode:'ffa',maxPlayers:6};this.name.value=this.setup.name;this.limit.setValue(ROOM_LIMITS.defaultPlayers);this.creationError.textContent='';this.sync();this.show('create-room');}
  private async load(message=''){
-  this.cancel();const request=new AbortController();this.request=request;this.refresh.disabled=true;this.status.textContent=message||'Loading rooms...';this.list.replaceChildren();
-  try{this.onOnline();const rooms=await this.needClient().list(request.signal);if(request.signal.aborted)return;this.status.textContent=message||(rooms.length?'':'None');
+  if(this.request)return;
+  const request=new AbortController();this.request=request;this.refresh.disabled=true;this.status.dataset.state='loading';this.status.textContent='Loading rooms...';this.list.replaceChildren();
+  try{this.onOnline();const rooms=await this.needClient().list(request.signal);if(request.signal.aborted)return;this.status.dataset.state=rooms.length?'ready':'empty';this.status.textContent=[message,rooms.length?'':'No public servers available'].filter(Boolean).join(' ');
    for(const room of rooms){const b=this.button('',()=>void this.admit(signal=>this.needClient().join({roomId:room.id},signal),this.status));b.classList.add('room-row');b.append(node('span','',room.name),node('span','room-count',`${room.players}/${room.maxPlayers} players`));this.list.append(b);}
-  }catch(error){if(!request.signal.aborted)this.status.textContent=(error as Error).message;}finally{if(this.request===request)this.refresh.disabled=false;}
+  }catch(error){if(!request.signal.aborted){this.status.dataset.state='error';this.status.textContent=`Connection error: ${(error as Error).message}`;}}finally{if(this.request===request){this.request=null;this.refresh.disabled=false;}}
  }
  private async admit(action:(signal:AbortSignal)=>Promise<RoomAdmission>,error:HTMLElement){
   this.cancel();const request=new AbortController();this.request=request;error.textContent='Connecting...';

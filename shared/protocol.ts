@@ -12,9 +12,9 @@ import type { CombatIntent } from './combat';
 import { pointsOrder, type ScoreAward, type RoundResult, type RoundStanding } from './scoring';
 import { GRENADE, type GrenadeState, type GrenadeEvent, type GrenadeExplosion } from './grenades';
 
-// v21 expands authoritative magazine state to 64; v20 clients reject those snapshots.
-export const PROTOCOL_VERSION = 21;
-export const validWeapon = (x: unknown): x is WeaponId => x === 'rifle' || x === 'shotgun' || x === 'sniper' || x === 'smg';
+// v22 synchronizes the slide-only low-clearance stance for prediction and hitboxes.
+export const PROTOCOL_VERSION = 23;
+export const validWeapon = (x: unknown): x is WeaponId => x === 'rifle' || x === 'shotgun' || x === 'sniper' || x === 'smg' || x === 'semi-sniper';
 export const PUBLIC_ROOM = 'public-main';
 export const INPUT_BATCH_LIMIT = 12;
 export const MESSAGE_LIMIT = 8192;
@@ -214,6 +214,7 @@ export function validMotion(x: unknown): x is ControllerState {
   }
   return ['yaw', 'pitch', 'crouch', 'airTime', 'jumpBufferTimer', 'slideRemaining', 'slideCooldown', 'slideYaw', 'lean'].every((k) => finite(x[k]))
     && Math.abs(x.lean as number) <= 1
+    && (x.lowClearance === undefined || typeof x.lowClearance === 'boolean')
     && typeof x.slideHeld === 'boolean' && (x.crouch as number) >= 0 && (x.crouch as number) <= 1
     && (x.slideRemaining as number) >= 0 && (x.slideRemaining as number) <= 1
     && (x.slideCooldown as number) >= 0 && (x.slideCooldown as number) <= 1

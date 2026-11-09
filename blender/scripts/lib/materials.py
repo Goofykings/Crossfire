@@ -116,6 +116,9 @@ MATERIALS: dict[str, dict] = {
                     "metallic": 0.0, "normal": 0.16},
     "gun_fde": {"tex": "concrete_smooth", "albedo": None, "tile": 0.3, "tint": [0.34, 0.27, 0.18], "roughness": 0.82,
                 "metallic": 0.0, "normal": 0.18},
+    # anodised gold receiver and furniture of the semi-automatic sniper; same metal ORM as the other guns
+    "gun_gold": {"tex": "metal", "albedo": None, "orm": WEAPON_DIR + "gun_metal_orm.png", "tile": 0.22, "tint": [0.6, 0.355, 0.06],
+                 "roughness": 0.72, "metallic": 0.42, "normal": 0.2},
     "gun_wood": {"tex": "wood_dark", "tile": 0.4, "tint": [0.78, 0.52, 0.32], "roughness": 0.42, "metallic": 0.0, "normal": 0.5},
     "gun_rubber": {"tint": [0.028, 0.028, 0.028], "roughness": 0.95, "metallic": 0.0},
     "gun_glass": {"tint": [0.1, 0.16, 0.17], "roughness": 0.03, "metallic": 0.4, "alpha": 0.16},

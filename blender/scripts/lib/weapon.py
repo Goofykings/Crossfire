@@ -463,4 +463,158 @@ def smg():
     }
 
 
-WEAPONS = {"rifle": rifle, "shotgun": shotgun, "sniper": sniper, "smg": smg}
+# =====================================================================================================================
+# Semi-automatic sniper (gold marksman rifle: AR-pattern controls, heavier barrel, 4x scope)
+# =====================================================================================================================
+SEMI_BORE = 0.062
+
+
+def _slab(md: MeshData, profile, half: float, mat: str, bevel: float = 0.003):
+    """`solid` with the half width given directly (solid() trims `bevel` off each side, so details at +-half sit on it)."""
+    solid(md, profile, -(half + bevel), half + bevel, mat, bevel)
+
+
+def _panel(md: MeshData, x: float, pts, mat: str):
+    """A polygon [(z, y), ...] 2.5 mm proud of the side face at |x| (grip panels, ports, slots): faces outward.
+    The 0.6 mm of side_detail() is lost to depth precision at review distances; 2.5 mm stays visible where depth precision is coarse (Chromebook, review lab)."""
+    s = 1.0 if x > 0 else -1.0
+    xx = x + s * 0.0025
+    md.face_toward([(xx, y, z) for (z, y) in pts], mat, (s, 0.0, 0.0))
+
+
+def _rect(md: MeshData, x: float, y0: float, y1: float, z0: float, z1: float, mat: str):
+    _panel(md, x, [(z0, y0), (z1, y0), (z1, y1), (z0, y1)], mat)
+
+
+def _rail(md: MeshData, z0: float, z1: float, y: float, half: float = 0.0105):
+    """Picatinny rail like rail(), with a 15.5 mm slot pitch and no hidden bottom faces (fewer triangles for Chromebook)."""
+    box(md, -half, y, z1, half, y + 0.005, z0, "gun_black")
+    z = z0 - 0.005
+    while z - 0.0085 > z1:
+        md.box(-half - 0.0012, y + 0.005, z - 0.0085, half + 0.0012, y + 0.011, z, "gun_black", skip=("ny",))
+        z -= 0.0155
+
+
+def semi_sniper():
+    """Original gold semi-automatic marksman rifle.
+
+    Sits between the AR and the bolt sniper: same grip, trigger, magwell, magazine and butt pad positions as the AR so the
+    existing hand holds, reload clips and ADS shoulder fit apply unchanged; a longer free-float handguard, a heavy barrel
+    with a slotted brake (muzzle at z = -0.745, AR -0.656, sniper -0.855) and an open 4x scope instead of the holo sight.
+    Moving part: `mag` only. Dark metal is gun_black / gun_steel, the gold is gun_gold.
+    """
+    body = MeshData()
+    B = SEMI_BORE
+    SY = 0.1355   # scope axis height
+    # --- lower receiver (gold), flared magwell, trigger group ------------------------------------------------------
+    _slab(body, [(0.075, 0.0), (0.075, 0.046), (-0.108, 0.046), (-0.108, -0.004)], 0.0118, "gun_gold")
+    _slab(body, [(-0.036, -0.036), (-0.112, -0.036), (-0.108, 0.0), (-0.039, 0.0)], 0.0158, "gun_gold", 0.002)
+    _panel(body, -0.0158, [(-0.046, 0.03), (-0.034, 0.03), (-0.034, 0.016), (-0.046, 0.016)], "gun_steel")  # bolt catch
+    xtube(body, 0.0158, 0.0205, 0.018, -0.03, 0.0042, "gun_steel", sides=8)                          # magazine release
+    box(body, -0.004, -0.036, -0.04, 0.004, -0.03, -0.002, "gun_black")                               # trigger guard
+    box(body, -0.003, -0.03, -0.027, 0.003, -0.002, -0.021, "gun_steel")                               # trigger
+    box(body, -0.003, -0.029, -0.024, 0.003, -0.02, -0.018, "gun_steel")
+    xtube(body, -0.0222, -0.0118, 0.031, 0.04, 0.0058, "gun_steel", sides=8)                         # safety selector
+    box(body, -0.0245, 0.029, 0.034, -0.0222, 0.033, 0.054, "gun_steel")
+    # --- upper receiver (gold) with ejection port, brass deflector, side charging handle -----------------------------
+    _slab(body, [(0.09, 0.046), (0.09, 0.07), (0.05, 0.082), (-0.215, 0.082), (-0.215, 0.046)], 0.0135, "gun_gold")
+    _panel(body, 0.0135, [(-0.095, 0.054), (-0.02, 0.054), (-0.02, 0.074), (-0.095, 0.074)], "gun_black")        # port recess
+    box(body, 0.0135, 0.052, -0.004, 0.0185, 0.076, 0.016, "gun_gold")                                          # deflector
+    box(body, -0.0375, 0.062, -0.014, -0.0135, 0.07, 0.0, "gun_steel")                                          # charging handle
+    box(body, -0.0405, 0.059, -0.022, -0.0375, 0.073, 0.004, "gun_black")
+    _rail(body, 0.09, -0.215, 0.082)
+    # --- free-float handguard: heavy octagon, vent slots, long top rail, hand stop -------------------------------------
+    HR = 0.0252
+    HD = HR * math.cos(math.pi / 8)
+    ztube(body, -0.215, -0.5, B, HR, "gun_gold", sides=8, phase=math.pi / 8)
+    for k in range(7):
+        z = -0.238 - k * 0.0375
+        for sx in (-1, 1):
+            _rect(body, sx * HD, B - 0.0046, B + 0.0046, z, z - 0.026, "gun_black")
+    for k in range(5):
+        z = -0.25 - k * 0.0525
+        body.face_toward([(-0.0045, B - HD - 0.0025, z), (0.0045, B - HD - 0.0025, z), (0.0045, B - HD - 0.0025, z - 0.03),
+                          (-0.0045, B - HD - 0.0025, z - 0.03)], "gun_black", (0, -1, 0))
+    _rail(body, -0.215, -0.5, B + HD - 0.001)
+    ztube(body, -0.5, -0.51, B, HR + 0.0012, "gun_steel", sides=8, phase=math.pi / 8)                         # barrel nut
+    box(body, -0.0105, B - HD - 0.011, -0.425, 0.0105, B - HD + 0.002, -0.392, "gun_black")                    # hand stop
+    # --- heavy barrel, gas block with front sight, long slotted brake -------------------------------------------------
+    ztube(body, -0.51, -0.62, B, 0.0108, "gun_steel", sides=12)
+    ztube(body, -0.52, -0.556, B, 0.0158, "gun_black", sides=10)
+    box(body, -0.0024, B + 0.0155, -0.548, 0.0024, B + 0.0345, -0.532, "gun_black")                             # sight blade
+    ztube(body, -0.5455, -0.5465, B + 0.0345, 0.0024, "sight_dot", sides=6)
+    BR, BD = 0.0148, 0.0148 * math.cos(math.pi / 8)
+    ztube(body, -0.62, -0.745, B, BR, "gun_black", sides=8, phase=math.pi / 8)
+    ztube(body, -0.745, -0.749, B, BR * 0.74, "gun_steel", sides=8, phase=math.pi / 8)
+    for k in range(5):
+        z = -0.642 - k * 0.0195
+        for sx in (-1, 1):
+            _rect(body, sx * BD, B - 0.0048, B + 0.0048, z, z - 0.011, "gun_steel")
+        body.face_toward([(-0.0048, B + BD + 0.0025, z), (0.0048, B + BD + 0.0025, z), (0.0048, B + BD + 0.0025, z - 0.011),
+                          (-0.0048, B + BD + 0.0025, z - 0.011)], "gun_steel", (0, 1, 0))
+    # --- stock (gold) with a black cheek riser, rubber butt pad; pad rear face z = 0.348, y -0.04..0.094 as the AR -----
+    ztube(body, 0.075, 0.1, B - 0.002, 0.0152, "gun_black", sides=12)
+    # solid() only winds convex profiles correctly: the stock is a body plus a belly block, both convex
+    _slab(body, [(0.085, 0.08), (0.336, 0.092), (0.336, 0.0), (0.19, 0.0), (0.085, 0.012)], 0.0185, "gun_gold", 0.004)
+    _slab(body, [(0.19, 0.0004), (0.336, 0.0004), (0.312, -0.034), (0.27, -0.034)], 0.0185, "gun_gold", 0.004)
+    _slab(body, [(0.2, 0.084), (0.334, 0.0905), (0.334, 0.104), (0.215, 0.1005)], 0.0145, "gun_polymer", 0.002)
+    box(body, -0.0215, -0.04, 0.336, 0.0215, 0.094, 0.348, "gun_rubber")
+    for sx in (-1, 1):
+        _panel(body, sx * 0.0185, [(0.205, 0.062), (0.318, 0.076), (0.318, -0.012), (0.25, -0.012), (0.205, 0.018)], "gun_polymer")
+    # --- pistol grip: the AR's outline (hand fit) in gold with rubber side panels and a base cap -----------------------
+    _slab(body, [(0.004, 0.0), (0.038, 0.0), (0.072, -0.112), (0.058, -0.123), (0.027, -0.12), (0.0096, -0.03)], 0.0128,
+          "gun_gold", 0.004)
+    for sx in (-1, 1):
+        _panel(body, sx * 0.0128, [(0.0155, -0.034), (0.0435, -0.034), (0.0655, -0.104), (0.0285, -0.108)], "gun_rubber")
+    for k in range(3):
+        y = -0.052 - k * 0.0185
+        zf = 0.0105 + (-y - 0.03) * 0.19
+        body.sphere((0.0, y, zf), 0.0074, "gun_gold", rings=4, segments=8, squash=1.15)
+    box(body, -0.0145, -0.127, 0.0235, 0.0145, -0.119, 0.0615, "gun_black")
+    # --- scope: open 4x optic, bigger than the AR's holo sight, on a black two-ring mount -----------------------------
+    TR = 0.0178
+    for z in (-0.092, -0.205):
+        box(body, -0.0145, 0.093, z - 0.0125, 0.0145, SY - 0.012, z + 0.0125, "gun_black")
+        ztube(body, z + 0.0125, z - 0.0125, SY, TR + 0.0022, "gun_black", sides=14, caps=(False, False))
+        for sx in (-1, 1):
+            xtube(body, sx * (TR + 0.0022), sx * (TR + 0.0072), SY - 0.003, z, 0.0033, "gun_steel", sides=6)
+    ztube(body, -0.049, -0.095, SY, 0.0272, "gun_black", sides=14, r1=TR, caps=(False, False))               # eyepiece flare
+    ztube(body, -0.095, -0.25, SY, TR, "gun_black", sides=14, caps=(False, False))
+    ztube(body, -0.25, -0.282, SY, TR, "gun_black", sides=14, r1=0.0285, caps=(False, False))                # objective bell
+    ztube(body, -0.282, -0.292, SY, 0.0285, "gun_black", sides=14, caps=(False, False))
+    for z in (-0.049, -0.282):
+        r = 0.0262 if z > -0.1 else 0.0271
+        body.face_toward([(math.cos(2 * math.pi * i / 14) * r, SY + math.sin(2 * math.pi * i / 14) * r, z) for i in range(14)],
+                         "gun_glass", (0, 0, 1))
+    ztube(body, -0.1476, -0.1488, SY, 0.0152, "gun_steel", sides=14, caps=(False, False))                    # erector ring
+    r = 0.0115
+    zr = -0.13
+    body.face_toward([(-r, SY - r, zr), (r, SY - r, zr), (r, SY + r, zr), (-r, SY + r, zr)], "reticle_holo", (0, 0, 1),
+                     uv=[(0, 0), (1, 0), (1, 1), (0, 1)])
+    ytube(body, SY + TR - 0.002, SY + TR + 0.0155, 0.0, -0.15, 0.0105, "gun_black", sides=12)                # elevation turret
+    ytube(body, SY + TR + 0.0155, SY + TR + 0.0185, 0.0, -0.15, 0.0092, "gun_gold", sides=12)
+    xtube(body, TR - 0.002, TR + 0.0135, SY, -0.15, 0.0098, "gun_black", sides=12)                          # windage turret
+    xtube(body, TR + 0.0135, TR + 0.0165, SY, -0.15, 0.0085, "gun_gold", sides=12)
+    ztube(body, -0.1, -0.2, SY + TR + 0.0004, 0.0014, "gun_gold", sides=6, x=0.0, caps=(False, False))        # gold index line
+    # --- magazine: dark, curved double stack with a gold floor plate (positions as the AR's) -------------------------
+    mag = MeshData()
+    for prof in ([(-0.044, 0.012), (-0.1, 0.012), (-0.104, -0.07), (-0.05, -0.07)],
+                 [(-0.05, -0.07), (-0.104, -0.07), (-0.116, -0.13), (-0.06, -0.13)],
+                 [(-0.06, -0.13), (-0.116, -0.13), (-0.126, -0.184), (-0.068, -0.188)]):
+        _slab(mag, prof, 0.0111, "gun_black", 0.002)
+    for k in range(5):
+        y = -0.045 - k * 0.026
+        t = -y / 0.186
+        zb, zf = -0.05 - t * 0.016, -0.1 - t * 0.026
+        for sx in (-1, 1):
+            _rect(mag, sx * 0.0111, y - 0.0025, y + 0.0025, zb, zf, "gun_steel")
+    _slab(mag, [(-0.064, -0.186), (-0.128, -0.18), (-0.13, -0.196), (-0.064, -0.202)], 0.0128, "gun_gold", 0.002)
+    ztube(mag, -0.052, -0.09, 0.016, 0.0048, "brass", sides=8)
+    anchors = {
+        "muzzle": (0.0, B, -0.749), "sight": (0.0, SY, -0.049), "eject": (0.0178, 0.064, -0.055),
+        "grip_r": (0.0, -0.05, 0.03), "grip_l": (0.0, B - 0.03, -0.33), "mag_grip": (0.0, -0.12, -0.085),
+    }
+    return {"body": body, "mag": mag}, anchors
+
+
+WEAPONS = {"rifle": rifle, "shotgun": shotgun, "sniper": sniper, "smg": smg, "semi_sniper": semi_sniper}

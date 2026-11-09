@@ -14,7 +14,7 @@ function scene(id: WeaponId) {
 }
 
 describe('equipped weapon movement clearance', () => {
-  for (const id of ['smg', 'rifle', 'shotgun', 'sniper'] as const) {
+  for (const id of ['smg', 'rifle', 'shotgun', 'sniper', 'semi-sniper'] as const) {
     it(`stops ${id} before the wall and permits sliding and backing away`, () => {
       const player = scene(id);
       for (let i = 0; i < 180; i++) player.fixedUpdate(1 / 60, { ...NO_INTENT, z: 1 });

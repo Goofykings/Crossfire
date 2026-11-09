@@ -37,7 +37,7 @@ import { UI } from '../ui/UI';
 import { Effects } from '../weapons/Effects';
 import { GrenadeView } from '../weapons/GrenadeView';
 import { GRENADE, advanceGrenade, throwGrenade, blastDamage, sweepSphere, type GrenadeEvent, type GrenadeState } from '../../shared/grenades';
-import { applySpread, damageAt, rollDamage, pelletSpreadAt, Loadout, WEAPONS, Weapon, type WeaponEvent } from '../weapons/Weapon';
+import { applySpread, damageAt, rollDamage, pelletSpreadAt, weaponAdsFov, Loadout, WEAPONS, Weapon, type WeaponEvent } from '../weapons/Weapon';
 import { RIG_CONFIGS, WEAPON_RENDER_GROUP, WeaponView } from '../weapons/WeaponView';
 import { MeleeView } from '../weapons/MeleeView';
 import type { MeleeClipName, MeleeStage } from './melee/MeleeAnimation';
@@ -1060,7 +1060,7 @@ export class Game {
         }
         this.spectatorWeapon.restore(pose.gun);
         const w = this.spectatorWeapon;
-        const targetFov = this.settings.value.fov * (1 + (w.stats.adsFovScale - 1) * w.ads);
+        const targetFov = this.settings.value.fov + (weaponAdsFov(w.stats,this.settings.value.fov)-this.settings.value.fov)*w.ads;
         this.spectatorFov += (targetFov - this.spectatorFov) * (1 - Math.exp(-dt * 18));
         this.ctx.setFov(this.spectatorFov);
         const scope = w.stats.scope ? Math.max(0, Math.min(1, (w.ads - .72) / .22)) : 0;
@@ -1070,7 +1070,7 @@ export class Game {
         if(this.meleeView&&this.weaponView){this.meleeView.setVisible(this.ui.currentScreen==='spectate');this.meleeView.update(this.weaponView.motion.pose);this.meleeShown=true;}
         spectatorScoped = scope > .98 && this.ui.currentScreen === 'spectate';
         this.weaponView?.update(dt, w, { sprinting: false, speed: pose.speed, grounded: pose.grounded,
-          verticalSpeed: pose.verticalSpeed, sliding: pose.sliding, crouch: pose.crouch, reducedMotion: this.reducedMotion.matches });
+          lean:pose.lean, verticalSpeed: pose.verticalSpeed, sliding: pose.sliding, crouch: pose.crouch, reducedMotion: this.reducedMotion.matches });
         this.weaponView?.setHidden(scope > .98);
         this.weaponView?.setVisible(this.ui.currentScreen === 'spectate');
         this.ui.setScope(scope);
@@ -1182,7 +1182,7 @@ export class Game {
     if(this.meleeTogglePending)this.meleeDebug=false;
     const blockedMelee=meleeBlocked(meleeState);
     const magnification=this.sniperZoom.update(dt);
-    const zoom = 1 + ((this.weapon.stats.scope?1/magnification:this.weapon.stats.adsFovScale) - 1) * this.weapon.ads;
+    const zoom = 1 + ((this.weapon.stats.scope?1/magnification:weaponAdsFov(this.weapon.stats,s.fov)/s.fov) - 1) * this.weapon.ads;
     this.ui.setScopeZoom(magnification);
     const events: WeaponEvent[] = [];
     // weapon switching: number keys and mouse wheel
@@ -1286,7 +1286,7 @@ export class Game {
     this.meleeView?.advance(dt);
     this.weaponView?.setMelee(this.meleeView?.gunLower ?? 0, this.meleeView?.gunVisible ?? true);
     this.weaponView?.update(dt, shown, { sprinting: false, speed: player.horizontalSpeed,
-      grounded: player.grounded, verticalSpeed: player.velocity.y, sliding: player.sliding, crouch: player.crouch, reducedMotion: this.reducedMotion.matches });
+      lean:player.lean, grounded: player.grounded, verticalSpeed: player.velocity.y, sliding: player.sliding, crouch: player.crouch, reducedMotion: this.reducedMotion.matches });
     if (this.meleeView && this.weaponView) {
       this.meleeView.setVisible(true);
       this.meleeView.update(this.weaponView.motion.pose);

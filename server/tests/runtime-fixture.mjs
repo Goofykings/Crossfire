@@ -64,6 +64,14 @@ export class PublicRoom extends ProductionRoom {
     const id=[...new Uint8Array(digest)].map(n=>n.toString(16).padStart(2,'0')).join('');
     const current=await this.inventory.get(id);await this.ctx.storage.put('inventory:'+id,{revision:current.revision+1,owned:[...new Set([...current.owned.filter(id=>id.startsWith('default-')),...owned])],equipped:current.equipped});
   }
+  /** A real pre-fifth-weapon inventory record; migration is exercised by HTTP. */
+  async legacyInventoryForSemiSniperTest(credential) {
+    const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(credential));
+    const id=[...new Uint8Array(digest)].map(n=>n.toString(16).padStart(2,'0')).join('');
+    const current=await this.inventory.get(id),equipped={...current.equipped};delete equipped['semi-sniper'];
+    await this.ctx.storage.put('inventory:'+id,{revision:current.revision,owned:current.owned.filter(id=>id!=='default-semi-sniper'),equipped});
+    return current.revision;
+  }
   async legacyWalletForStatisticsTest(credential,gems) {
     const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(credential));
     const id=[...new Uint8Array(digest)].map(n=>n.toString(16).padStart(2,'0')).join('');

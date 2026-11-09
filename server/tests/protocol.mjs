@@ -40,11 +40,12 @@ test('real frontend transport is compatible with the production Worker messages'
     assert.equal(joins[1].id,`join:${b.selfId}`);
     assert.equal(a.latest.players.find(p=>p.id===a.selfId).alive,false,'Joining must not spawn before selection');
     assert.equal(a.latest.room,protocol.PUBLIC_ROOM);assert.ok(a.environment?.full);
-    await Promise.all([a.spawn('rifle'),b.spawn('smg')]);
+    await Promise.all([a.spawn('semi-sniper'),b.spawn('smg')]);
     for(const c of [a,b]){
       const self=c.latest.players.find(p=>p.id===c.selfId);assert.equal(self.alive,true);assert.equal(self.health,100);
       assert.ok(self.combat.gun);if(self.weapon==='smg')assert.equal(self.combat.gun.ammo,64,'real frontend accepts the shared expanded magazine limit');assert.ok(Number.isFinite(self.motion.crouch));assert.ok(Number.isFinite(self.motion.lean));
       assert.equal(self.cosmeticId,`default-${self.weapon}`,'Optional visual metadata carries canonical compatible equipment');
+      if(self.weapon==='semi-sniper')assert.equal(self.combat.gun.ammo,15,'real frontend accepts the fifth weapon and its magazine');
     }
     const player=new PlayerController(new CollisionWorld());player.restore(a.latest.players.find(p=>p.id===a.selfId).motion);
     player.yaw=.3;player.pitch=.1;
@@ -70,7 +71,7 @@ test('real frontend transport is compatible with the production Worker messages'
     assert.equal(protocol.parseServerMessage(JSON.stringify(future)),null,'Known cross-category metadata remains invalid');
     assert.ok(sent.some(raw=>JSON.parse(raw).type==='input'));assert.ok(received.some(raw=>JSON.parse(raw).type==='spawned'));
     const selfId=a.selfId;a.disconnect(false);await a.connect();assert.equal(a.selfId,selfId,'Real frontend resume retains server identity');
-    assert.equal(a.latest.players.find(p=>p.id===selfId).weapon,'rifle');
+    assert.equal(a.latest.players.find(p=>p.id===selfId).weapon,'semi-sniper');
     await delay(150);assert.equal(joins.length,2,'Resuming/refreshing the same session must not announce twice');
     const observer=[];b.onSystem=m=>observer.push(m);
     a.disconnect(false);await a.connect();await delay(150);

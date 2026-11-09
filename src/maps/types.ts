@@ -120,6 +120,7 @@ export interface MapLayout {
   terraces: Terrace[];
   upperRoutes?: (Terrace & { style: 'gallery' | 'catwalk' | 'sky_passage' })[];
   ladders?: LadderRegion[];
+  slidePassages?: {id:string;center:[number,number];width:number;depth:number;clearance:number}[];
   circulationRoutes?: { id: string; height: number; waypoints: Vec3Tuple[] }[];
   underground?: UndergroundPassage[];
   navigation?: {

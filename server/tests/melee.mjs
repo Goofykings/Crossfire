@@ -48,7 +48,7 @@ test('melee cosmetic starter migration and paired reward pool retain authoritati
  const equip=await fetch(new URL('/cosmetics/equip',h.base),{method:'POST',headers:{Origin:origin,Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({version:1,id:'rich-melee'})});assert.equal(equip.status,403);
  await h.central.inventoryForTest(token,crateItems().filter(c=>c.id!=='rich-melee').map(c=>c.id));await h.central.legacyWalletForStatisticsTest(token,300);
  const body={version:1,requestId:crypto.randomUUID()},open=()=>fetch(new URL('/cosmetics/open',h.base),{method:'POST',headers:{Origin:origin,Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(body)});
- for(const r of await Promise.all([open(),open()])){assert.equal(r.status,200);const result=await r.json();assert.equal(result.item,'rich-melee');assert.equal(result.gems,0);assert.equal(result.inventory.owned.length,35);}
+ for(const r of await Promise.all([open(),open()])){assert.equal(r.status,200);const result=await r.json();assert.equal(result.item,'rich-melee');assert.equal(result.gems,0);assert.equal(result.inventory.owned.length,42);}
  await h.restart();const retried=await open();assert.equal(retried.status,200);assert.equal((await retried.json()).gems,0);
  const equipped=await fetch(new URL('/cosmetics/equip',h.base),{method:'POST',headers:{Origin:origin,Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({version:1,id:'rich-melee'})});assert.equal(equipped.status,200);assert.equal((await equipped.json()).equipped.melee,'rich-melee');
 });

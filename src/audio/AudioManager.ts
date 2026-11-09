@@ -7,6 +7,7 @@ export type SoundName =
   | 'smg_shot'
   | 'shotgun_shot'
   | 'sniper_shot'
+  | 'semi-sniper_shot'
   | 'empty'
   | 'mag_out'
   | 'mag_in'
@@ -42,6 +43,7 @@ const FILES: Record<SoundName, string> = {
   smg_shot: 'smg_shot.wav',
   shotgun_shot: 'shotgun_shot.wav',
   sniper_shot: 'sniper_shot.wav',
+  'semi-sniper_shot': 'semi_sniper_shot.wav',
   empty: 'empty_click.wav',
   mag_out: 'mag_out.wav',
   mag_in: 'mag_in.wav',

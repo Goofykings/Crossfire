@@ -7,6 +7,36 @@ const id='12345678-1234-4123-8123-123456789abc',ticket='a'.repeat(64),credential
 const setup={name:'Guest Server',privacy:'public' as const,mapId:'european-town' as const,mode:'ffa' as const,maxPlayers:6};
 const room={...setup,id,players:0,hostId:null,warningAt:60000,closesAt:90000};
 afterEach(()=>{vi.unstubAllGlobals();vi.restoreAllMocks();});
+it('automatically recovers transient discovery with bounded retries, without credentials or sockets',async()=>{
+ vi.useFakeTimers();
+ try{
+  const fetch=vi.fn().mockRejectedValueOnce(new TypeError('offline')).mockResolvedValueOnce(new Response('gateway',{status:503})).mockResolvedValue(Response.json({v,rooms:[room]}));
+  const credential=vi.fn();vi.stubGlobal('fetch',fetch);
+  const result=new RoomClient('wss://backend.example/ws',credential).list(new AbortController().signal);
+  await vi.runAllTimersAsync();expect(await result).toEqual([room]);expect(fetch).toHaveBeenCalledTimes(3);expect(credential).not.toHaveBeenCalled();
+  fetch.mockReset().mockRejectedValue(new TypeError('offline'));
+  const failure=new RoomClient('wss://backend.example/ws',credential).list(new AbortController().signal);
+  const rejected=expect(failure).rejects.toThrow('offline');await vi.runAllTimersAsync();await rejected;expect(fetch).toHaveBeenCalledTimes(3);
+ }finally{vi.useRealTimers();}
+});
+it('cancels transient discovery backoff without making a late request',async()=>{
+ vi.useFakeTimers();
+ try{
+  const fetch=vi.fn().mockRejectedValue(new TypeError('offline'));vi.stubGlobal('fetch',fetch);
+  const controller=new AbortController(),request=new RoomClient('wss://backend.example/ws',vi.fn()).list(controller.signal);
+  const rejected=expect(request).rejects.toThrow();
+  await vi.advanceTimersByTimeAsync(0);expect(fetch).toHaveBeenCalledTimes(1);
+  controller.abort();await rejected;await vi.runAllTimersAsync();expect(fetch).toHaveBeenCalledTimes(1);
+ }finally{vi.useRealTimers();}
+});
+it('does not retry incompatible directory data or permanent HTTP errors',async()=>{
+ const fetch=vi.fn();vi.stubGlobal('fetch',fetch);
+ for(const response of [Response.json({v:v-1,rooms:[]}),Response.json({error:'Not supported'},{status:404})]){
+  fetch.mockReset().mockResolvedValue(response);
+  await expect(new RoomClient('wss://backend.example/ws',vi.fn()).list(new AbortController().signal)).rejects.toThrow();
+  expect(fetch).toHaveBeenCalledTimes(1);
+ }
+});
 it('accepts all three maps, FFA/Teams and integer capacities 2-10; rejects injected gameplay or ownership',()=>{
  for(const mapId of ['european-town','industrial-complex','modern-city'])for(const mode of ['ffa','teams'])for(const maxPlayers of [2,6,10])expect(validSetup({...setup,mapId,mode,maxPlayers})).toBe(true);
  for(const invalid of [{maxPlayers:1},{maxPlayers:11},{maxPlayers:2.5},{mode:'powerups'},{mapId:'secret'},{hostId:'fake'},{name:''},{name:' <x>'}])expect(validSetup({...setup,...invalid})).toBe(false);

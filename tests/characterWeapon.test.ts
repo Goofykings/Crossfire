@@ -13,7 +13,7 @@ import type { WeaponAction } from '../src/weapons/Weapon';
 
 afterEach(() => vi.unstubAllGlobals());
 
-const WEAPONS = ['rifle', 'shotgun', 'smg', 'sniper'] as const;
+const WEAPONS = ['rifle', 'shotgun', 'smg', 'sniper', 'semi-sniper'] as const;
 const still: CharacterMotion = { velocity: { x: 0, y: 0, z: 0 }, grounded: true, crouch: 0, slideRemaining: 0 };
 
 /** Real GLBs, real animation evaluation and the same restore/update order as the game. */
@@ -34,8 +34,8 @@ async function rig() {
   await Promise.all([characters.load(signal), ...WEAPONS.map((id) => weapons.load(id, signal))]);
   const parent = new TransformNode('player', scene), character = characters.instantiate(parent, 'test')!;
   let weapon: CharacterWeapon | null = null;
-  scene.onBeforeAnimationsObservable.add(() => weapon?.restore());
-  scene.onAfterAnimationsObservable.add(() => weapon?.update());
+  scene.onBeforeAnimationsObservable.add(() => {weapon?.restore();character.restoreLean();});
+  scene.onAfterAnimationsObservable.add(() => {character.applyLean();weapon?.update();});
   const equip = (id: typeof WEAPONS[number]) => { weapon?.dispose(); weapon = weapons.create(character, id); return weapon!; };
   /** Advance 1/60 s frames: locomotion clip, hold smoothing, render (animations + IK). */
   const step = (motion: CharacterMotion, frames: number, sample?: () => void) => {
@@ -48,6 +48,29 @@ async function rig() {
 }
 
 const joints = (c: CharacterInstance) => c.inspect().joints;
+it('controlled peeking keeps feet planted and hands on each weapon at hip and ADS',async()=>{
+ const {engine,scene,character,equip,step}=await rig();
+ try{for(const id of WEAPONS){const gun=equip(id);
+  for(const ads of [0,1]){
+   character.setLean(0);gun.setState({ads});step(still,18);const rest=joints(character);
+   for(const lean of [-1,1]){
+   character.setLean(lean);gun.setState({ads});step(still,18);const pose=joints(character);
+   expect(pose.foot_l).toEqual(rest.foot_l);expect(pose.foot_r).toEqual(rest.foot_r);
+   expect((pose.head[0]-rest.head[0])*lean).toBeGreaterThan(.10);expect(Math.abs(pose.head[0]-rest.head[0])).toBeLessThan(.28);
+   for(const hand of gun.inspect().hands)expect(hand.gap).toBeLessThan(.015);
+   }
+  }
+ }}finally{character.dispose();scene.dispose();engine.dispose();}
+});
+it('keeps weapon contacts together in the low passage presentation',async()=>{
+ const {engine,scene,parent,character,equip,step}=await rig();
+ try{scene.onBeforeAnimationsObservable.add(()=>{parent.scaling.y=1;});
+  scene.onAfterAnimationsObservable.add(()=>{parent.scaling.y=.78/1.15;parent.computeWorldMatrix(true);});
+  for(const id of WEAPONS){const gun=equip(id);for(const ads of [0,1]){gun.setState({ads});step({...still,crouch:1,slideRemaining:.5},20);
+   for(const hand of gun.inspect().hands)expect(hand.gap).toBeLessThan(.025);
+  }}
+ }finally{character.dispose();scene.dispose();engine.dispose();}
+});
 
 it('derives arm rest frames from the exported bind pose and attaches each actual weapon once', async () => {
   const { requested, engine, scene, character, equip } = await rig();
@@ -69,6 +92,7 @@ it('derives arm rest frames from the exported bind pose and attaches each actual
   character.dispose(); scene.dispose(); engine.dispose();
 });
 
+// Actual GLB loading plus all four weapons x nine poses exceeded 6.6s on the cohosted test machine.
 it('keeps both hands on every weapon with natural elbows and wrists in each stance', async () => {
   const { engine, scene, character, equip, step } = await rig();
   const stances: [string, CharacterMotion, number, number][] = [
@@ -123,7 +147,7 @@ it('keeps both hands on every weapon with natural elbows and wrists in each stan
     for (const hand of aimed.hands) expect(hand.wristBend, `${id} ADS wrist`).toBeLessThan(35 * Math.PI / 180);
   }
   character.dispose(); scene.dispose(); engine.dispose();
-});
+}, 15_000);
 
 it('works the gun with visible hand actions that rejoin the grips', async () => {
   const { engine, scene, character, equip, step } = await rig();

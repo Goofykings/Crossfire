@@ -21,6 +21,11 @@ EQUIPMENT = [
 
 
 def author(layout):
+    # Two short maintenance-plinth shortcuts, not a map-wide crawl network.
+    layout['slidePassages'] = [
+        {'id': 'loading_service', 'center': [2, 2], 'width': 1.8, 'depth': .8, 'clearance': .96},
+        {'id': 'storage_service', 'center': [-18, 15], 'width': 1.8, 'depth': .8, 'clearance': .96},
+    ]
     x0, z0, x1, z1 = ROOF_BLOCK
     roofs = [b for b in layout['buildings'] if x0 <= b['rect'][0] and b['rect'][2] <= x1 and z0 <= b['rect'][1] and b['rect'][3] <= z1]
     assert roofs, 'rooftop workshop block has no lots'
@@ -49,6 +54,13 @@ def author(layout):
 
 def parts(layout):
     """All walking decks and blocking equipment use these exact solids in both exports."""
+    for p in layout.get('slidePassages', []):
+        x,z=p['center']; w=p['width']/2; d=p['depth']/2; h=p['clearance']; name=p['id']
+        yield [x-w-.24,0,z-d,x-w,1.65,z+d], 'steel_grey', f'slide:{name}:left'
+        yield [x+w,0,z-d,x+w+.24,1.65,z+d], 'steel_grey', f'slide:{name}:right'
+        yield [x-w,h,z-d,x+w,1.65,z+d], 'steel_grey', f'slide:{name}:plinth'
+        for dz in (-d-.025,d):
+            yield [x-w-.24,h,z+dz,x+w+.24,h+.09,z+dz+.025], 'steel_yellow', f'slide:{name}:hazard'
     for b in layout['buildings']:
         if b.get('serviceRoof'):
             x0,z0,x1,z1 = b['rect']; h = b['height']

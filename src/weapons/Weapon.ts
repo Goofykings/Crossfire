@@ -6,7 +6,7 @@
  * empty. Timed cues inside each action (magazine out, bolt back...) drive both the sounds and the hand animation.
  */
 
-export type WeaponId = 'rifle' | 'shotgun' | 'sniper' | 'smg';
+export type WeaponId = 'rifle' | 'shotgun' | 'sniper' | 'smg' | 'semi-sniper';
 export type FireMode = 'auto' | 'semi' | 'pump' | 'bolt';
 
 /** A named moment inside an action, at a fraction (0..1) of its duration. */
@@ -55,6 +55,8 @@ export interface WeaponStats {
   damage: number;
   /** Authority-only integer base roll; applied before falloff/head multiplier. */
   damageRoll?: readonly [number,number];
+  /** Fixed head damage, replacing the usual multiplier when defined. */
+  headshotDamage?: number;
   pellets: number;
   /** Half-angle of the pellet pattern around the aim direction (degrees). */
   pelletSpread: number;
@@ -209,7 +211,26 @@ export const SMG: WeaponStats = {
   reload: { ...(RIFLE.reload as MagazineReload), time: 1.65, emptyTime: 2.05 },
   spreadHip: 1.7, spreadAds: 0.16, recoilPitch: 0.34, recoilYaw: 0.18, viewKick: 5,
 };
-export const WEAPONS: readonly WeaponStats[] = [RIFLE, SHOTGUN, SNIPER, SMG];
+export const SEMI_SNIPER: WeaponStats = {
+  ...RIFLE, id: 'semi-sniper', name: 'Semi-Auto Sniper', slot: 5,
+  magazine: 15, mode: 'semi', rpm: RIFLE.rpm * .9,
+  damage: 33, damageRoll: [32,35], headshotDamage: 50,
+  range: 500, falloff: { start: 1000, end: 1001, minScale: 1 },
+  spreadHip: 2, spreadAds: .035, spreadMove: 2, spreadPerShot: .28,
+  recoilPitch: 1.35, recoilYaw: .32, viewKick: 12, adsTime: .22,
+  scope: false,
+  // Nominal 90-degree value; weaponAdsFov recalculates for the actual world FOV.
+  adsFovScale: 2*Math.atan(Math.tan(RIFLE.adsFovScale*Math.PI/4)/1.5)/(Math.PI/2),
+};
+export const WEAPONS: readonly WeaponStats[] = [RIFLE, SHOTGUN, SNIPER, SMG, SEMI_SNIPER];
+
+/** Preserve old projections; the marksman's optical power is 1.5x the AR's at
+ * the player's current world FOV (magnification is a tangent ratio, not angles). */
+export function weaponAdsFov(stats: WeaponStats, baseDegrees: number): number {
+  if (stats.id !== 'semi-sniper') return baseDegrees * stats.adsFovScale;
+  const ar = RIFLE.adsFovScale * baseDegrees * Math.PI / 180;
+  return 2 * Math.atan(Math.tan(ar / 2) / 1.5) * 180 / Math.PI;
+}
 
 export type WeaponEvent =
   | { type: 'fire'; spread: number }
@@ -385,7 +406,9 @@ export class Weapon {
       if (this.ammo > 0) {
         const spread = this.spread(input);
         this.ammo--;
-        this.cooldown += this.fireInterval+overshoot;
+        // A semi-auto press never borrows time from an earlier cooldown. This
+        // strictly caps macros/rapid alternating input at the configured rate.
+        this.cooldown += this.fireInterval+(s.mode==='semi'?0:overshoot);
         this.bloom = Math.min(this.bloom + s.spreadPerShot, s.maxBloom);
         events.push({ type: 'fire', spread });
         if (this.ammo === 0) {

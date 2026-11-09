@@ -75,7 +75,7 @@ const SUPPORT_POINT: Curl = [-.75, -.85, -.55, 0];
 /** Calibrated against each GLB's grip_r/grip_l/sight anchors and measured butt pad; see
  * docs/CHARACTER_ANIMATION.md. Grip anchors are palm contact points on the surface, so
  * `offset` moves each hand to the measured handle centre (grips ~1.7 cm, fore-ends 2-5 cm). */
-export const WEAPON_HOLDS: Record<WeaponId, WeaponHold> = {
+const STANDARD_HOLDS: Record<Exclude<WeaponId,'semi-sniper'>, WeaponHold> = {
   rifle: {
     ready: { point: 'grip_r', at: [.10, -.21, -.17], yaw: .60, pitch: -.12, roll: -.12, elbows: READY_ELBOWS },
     ads: { point: 'butt', at: [-.095, .03, -.1], yaw: -.02, pitch: 0, roll: 0, elbows: ADS_ELBOWS },
@@ -117,6 +117,11 @@ export const WEAPON_HOLDS: Record<WeaponId, WeaponHold> = {
     index: { off: TRIGGER_OFF, on: [-1.1, .9, .6, .2], support: SUPPORT_POINT },
     trigger: [0, -.012, -.028],
   },
+};
+
+export const WEAPON_HOLDS: Record<WeaponId, WeaponHold> = {
+  ...STANDARD_HOLDS, 'semi-sniper': {...STANDARD_HOLDS.rifle,
+    recoil: {kick: .05, rise: .09, torso: .035, frequency: 23}},
 };
 
 /** Synchronized or local presentation inputs; none of them are sent anywhere. */
@@ -650,6 +655,8 @@ export class CharacterWeapon {
     rotation.multiplyInPlace(Quaternion.RotationYawPitchRollToRef(w[3], w[4], w[5], t.turn));
     const motion = (1 - .75 * ads)*this.idleAmplitude;
     rotation.multiplyInPlace(Quaternion.RotationYawPitchRollToRef(drift * .008 * motion, sway * .01 * motion + recoil * this.hold.recoil.rise, 0, t.turn));
+    const lean = this.character.leanAmount ?? 0;
+    if(Math.abs(lean)>.0001)rotation.multiplyInPlace(Quaternion.RotationYawPitchRollToRef(0,0,-lean*.10,t.turn));
     position.y += sway * .003 * motion + this.landing.value * .05;
     // Recoil drives the weapon straight back along its own bore.
     position.addInPlace(t.tmp.set(0, 0, recoil * this.hold.recoil.kick).applyRotationQuaternionInPlace(rotation));
@@ -845,12 +852,14 @@ export class CharacterWeapon {
       daggersVisible: melee.pair.roots.map((r) => r.isEnabled()), scale: [...melee.pose.scale], fit: hands, tips, grips };
   }
   inspect() {
-    const weaponWorld = this.root.getWorldMatrix();
+    const weaponWorld = this.root.computeWorldMatrix(true);
     const targets = this.arms.length ? this.targets() : [];
     const hands = this.arms.map((arm, index) => {
       const frame = arm.handFrame(), hold = this.hold.hands[index];
       // Where the solved hand's enclosed handle centre is, and where it should be.
-      const contact = arm.hand.getAbsolutePosition().add(frame.fingers.scale(WRIST_TO_PALM)).subtractInPlace(frame.back.scale(hold.depth));
+      const axes=arm.handAxes(),handWorld=arm.hand.computeWorldMatrix(true);
+      const contact = arm.hand.getAbsolutePosition().add(Vector3.TransformNormal(axes.fingers,handWorld).scale(WRIST_TO_PALM))
+        .subtractInPlace(Vector3.TransformNormal(axes.back,handWorld).scale(hold.depth));
       const handle = targets[index]?.point.clone() ?? contact;
       const forearm = arm.hand.getAbsolutePosition().subtract(arm.forearm.getAbsolutePosition()).normalize();
       const upper = arm.forearm.getAbsolutePosition().subtract(arm.upper.getAbsolutePosition()).normalize();
@@ -870,7 +879,7 @@ export class CharacterWeapon {
     const butt = Vector3.TransformCoordinates(this.anchors.butt, weaponWorld);
     return { id: this.id, cosmeticId: this.cosmeticId, ads: this.state.ads, adsBlend: this.adsBlend, pitch: this.state.pitch, shots: this.shots,
       recoil: this.recoil.value, meshes: this.meshes.length, posing: this.posing, solves: this.solves, solveEvery: this.solveEvery,
-      instances: this.character.root.getChildTransformNodes(true).filter((n) => /^held:(rifle|smg|shotgun|sniper)$/.test(n.name)).length,
+      instances: this.character.root.getChildTransformNodes(true).filter((n) => /^held:(rifle|smg|shotgun|sniper|semi-sniper)$/.test(n.name)).length,
       grips: this.grips.map((g) => g.getAbsolutePosition().asArray()), hands,
       flash: this.flash.inspect(),
       muzzle: Vector3.TransformCoordinates(this.anchors.muzzle, weaponWorld).asArray(),

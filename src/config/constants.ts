@@ -9,8 +9,10 @@ export interface MovementConfig {
   radius: number;
   standHeight: number;
   crouchHeight: number;
+  slideHeight: number;
   standEye: number;
   crouchEye: number;
+  slideEye: number;
   walkSpeed: number;
   slideSpeed: number;
   slideDuration: number;
@@ -37,8 +39,10 @@ export const MOVEMENT: MovementConfig = {
   radius: 0.34,
   standHeight: 1.8,
   crouchHeight: 1.15,
+  slideHeight: .78,
   standEye: 1.64,
   crouchEye: 1.02,
+  slideEye: .66,
   walkSpeed: 4.7,
   slideSpeed: 7.8,
   slideDuration: 1,

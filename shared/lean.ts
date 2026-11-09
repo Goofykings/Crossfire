@@ -5,6 +5,8 @@ import { MOVEMENT } from '../src/config/constants';
 /** Fixed, server-owned lean envelope; positive is the player's right. */
 export const LEAN_OFFSET = .28;
 export const LEAN_ANGLE = 14 * Math.PI / 180;
+/** Optical roll only; the authoritative upper-body envelope stays unchanged. */
+export const LEAN_CAMERA_ANGLE = 3 * Math.PI / 180;
 export const LEAN_RATE = 20; // exponential response: ~95% in 150 ms
 export const LEAN_RADIUS = .20;
 

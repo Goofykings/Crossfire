@@ -8,11 +8,11 @@ import type { CharacterMotion } from '../game/PlayerAnimation';
 import { MaterialLibrary } from '../rendering/MaterialLibrary';
 import { MeleeLibrary, type CharacterMelee } from '../game/melee/MeleeAssets';
 import type { MeleeClipName } from '../game/melee/MeleeAnimation';
-import type { WeaponAction, WeaponId } from '../weapons/Weapon';
+import { WEAPONS, type WeaponAction, type WeaponId } from '../weapons/Weapon';
 
 /** Test-only pose lab: the same rig and weapon holds under explicit, repeatable inputs. */
 export interface CharacterLabOptions {
-  weapon?: WeaponId; ads?: number; pitch?: number; fire?: number;
+  weapon?: WeaponId; ads?: number; pitch?: number; fire?: number; lean?:number;
   /** A gameplay action held at a progress fraction (reload, pump or bolt hand work). */
   action?: WeaponAction; progress?: number;
   motion?: Partial<CharacterMotion>;
@@ -151,6 +151,7 @@ export class HomeCharacter {
     scene.onBeforeAnimationsObservable.add(() => {
       this.weapon?.restore();
       if (this.headNode?.rotationQuaternion && this.hasHeadPose) this.headNode.rotationQuaternion.copyFrom(this.animatedHead);
+      this.character?.restoreLean();
     });
     scene.onAfterAnimationsObservable.add(() => {
       const head = this.headNode;
@@ -160,6 +161,7 @@ export class HomeCharacter {
         head.rotate(Vector3.Up(), this.headYaw, Space.WORLD);
         head.rotate(Vector3.Right(), this.headPitch, Space.WORLD);
       }
+      this.character?.setLean(this.lab?.lean??0);this.character?.applyLean();
       this.weapon?.update();
     });
     this.library = new CharacterAssetLibrary(scene);
@@ -282,7 +284,7 @@ export class HomeCharacter {
   async characterPerf(count: number, frames = 240): Promise<CharacterPerfResult | null> {
     const engine = this.engine, scene = this.scene, library = this.library, weapons = this.weapons;
     if (!engine || !scene || !library || !weapons || !this.character || !this.weapon) return null;
-    const ids: WeaponId[] = ['rifle', 'smg', 'shotgun', 'sniper'];
+    const ids = WEAPONS.map(w=>w.id);
     await Promise.all(ids.map((id) => weapons.load(id)));
     const extras: { character: CharacterInstance; weapon: CharacterWeapon }[] = [];
     for (let i = 1; i < count; i++) {

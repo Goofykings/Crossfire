@@ -10,7 +10,7 @@ import type { MaterialLibrary } from '../src/rendering/MaterialLibrary';
 import { defaultEquipment } from '../shared/cosmetics';
 
 afterEach(()=>vi.unstubAllGlobals());
-it('preserves all four real weapon rigs and isolates close weapon depth from world projection',async()=>{
+it('preserves all five real weapon rigs and isolates close weapon depth from world projection',async()=>{
   const requested:string[]=[];
   vi.stubGlobal('fetch',async(url:string)=>{requested.push(url);return new Response(await readFile(`public/${url.replace(/^.*?assets\//,'assets/')}`));});
   const engine=new NullEngine(),scene=new Scene(engine);scene.useRightHandedSystem=true;
@@ -21,13 +21,21 @@ it('preserves all four real weapon rigs and isolates close weapon depth from wor
     // An HTTP inventory response may arrive while game assets are still loading.
     await view.setCosmetics(defaultEquipment());
     await view.load(new AbortController().signal);
-    expect(requested.filter(url=>url.endsWith('.glb'))).toHaveLength(4);
+    expect(requested.filter(url=>url.endsWith('.glb'))).toHaveLength(WEAPONS.length);
     for(const stats of WEAPONS){
       view.select(stats.id);const w=new Weapon(stats);
       view.update(1/60,w,{speed:0,grounded:true,sliding:false,crouch:0,sprinting:false});
       const enabled=view.meshes.filter(m=>m.isEnabled()&&m.getTotalVertices()>0&&!m.name.includes('flash'));
-      expect(enabled.length).toBeGreaterThan(3);expect(enabled.some(m=>m.name.includes(stats.id))).toBe(true);
+      expect(enabled.length).toBeGreaterThan(3);expect(enabled.some(m=>m.name.includes(stats.id==='semi-sniper'?'semi_sniper':stats.id))).toBe(true);
       expect(enabled.every(m=>m.renderingGroupId===1&&m.alwaysSelectAsActiveMesh)).toBe(true);
+      w.ads=1;
+      for(const lean of [-1,1]){
+        for(let i=0;i<60;i++)view.update(1/60,w,{speed:0,grounded:true,sliding:false,crouch:0,sprinting:false,lean});
+        const sight=scene.transformNodes.find(n=>n.name==='sight'&&n.isEnabled())!;
+        sight.computeWorldMatrix(true);const at=sight.getAbsolutePosition();
+        expect(at.x).toBeCloseTo(0,5);expect(at.y).toBeCloseTo(0,5);
+      }
+      w.ads=0;
       let fixed: number[] | undefined;
       for (const degrees of [SETTING_LIMITS.fov[0], DEFAULT_SETTINGS.fov, SETTING_LIMITS.fov[1], 90*.22]) {
         camera.fov=degrees*Math.PI/180;

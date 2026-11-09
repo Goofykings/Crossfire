@@ -2,9 +2,9 @@ import type { WeaponId } from '../src/weapons/Weapon';
 
 export const COSMETICS_API_VERSION = 1;
 export type CosmeticCategory=WeaponId|'melee';
-export const GUN_CATEGORIES:readonly WeaponId[]=['rifle','smg','sniper','shotgun'];
+export const GUN_CATEGORIES:readonly WeaponId[]=['rifle','smg','sniper','shotgun','semi-sniper'];
 export const WEAPON_CATEGORIES: readonly CosmeticCategory[] = [...GUN_CATEGORIES,'melee'];
-export const CATEGORY_NAMES: Record<CosmeticCategory, string> = { rifle:'AR', smg:'SMG', sniper:'SNIPER', shotgun:'SHOTGUN',melee:'MELEE' };
+export const CATEGORY_NAMES: Record<CosmeticCategory, string> = { rifle:'AR', smg:'SMG', sniper:'SNIPER', shotgun:'SHOTGUN','semi-sniper':'SEMI-AUTO SNIPER',melee:'MELEE' };
 export const RARITIES = {
   common:{name:'Common',color:'#b7bec9',background:'#454a53'},
   uncommon:{name:'Uncommon',color:'#70cb8c',background:'#254c36'},
@@ -61,21 +61,22 @@ export const COLLECTIONS: readonly CosmeticCollection[] = [
 /** Material names each original GLB actually uses (tools/verify-cosmetics.mjs checks them). */
 export const WEAPON_MATERIALS:Record<CosmeticCategory,readonly string[]> = {
   melee:['dagger_coat','dagger_steel','dagger_metal','dagger_grip','dagger_accent'], rifle:['gun_fde','gun_polymer','gun_black','gun_steel'], smg:['gun_steel','gun_polymer','gun_black'],
-  sniper:['gun_steel','gun_black','gun_polymer'], shotgun:['gun_wood','gun_polymer','gun_steel','gun_black'],
+  sniper:['gun_steel','gun_black','gun_polymer'], 'semi-sniper':['gun_gold','gun_black','gun_polymer','gun_steel'], shotgun:['gun_wood','gun_polymer','gun_steel','gun_black'],
 };
 export const collectionCosmetic = (family:string,weapon:CosmeticCategory):string => `${family}-${weapon}`;
+const modelFile = (weapon:CosmeticCategory) => weapon==='semi-sniper'?'semi_sniper':weapon;
 /** Explicit definitions, never inferred from filenames. Crate items are granted only by the server draw. */
 export const COSMETICS: readonly CosmeticDefinition[] = [
   ...WEAPON_CATEGORIES.map((weapon):CosmeticDefinition=>({
     id:defaultCosmetic(weapon),name:weapon==='melee'?'Default Daggers':'Default',weapon,rarity:'common',
-    asset:weapon==='melee'?{model:'assets/models/shared/melee/dagger_r.glb',secondaryModel:'assets/models/shared/melee/dagger_l.glb',binding:'embedded'}:{model:`assets/models/shared/weapons/${weapon}.glb`,binding:'shared'},
-    ...(weapon==='melee'?{preview:'assets/models/shared/melee/daggers-thumbnail.png'}:{}),
+    asset:weapon==='melee'?{model:'assets/models/shared/melee/dagger_r.glb',secondaryModel:'assets/models/shared/melee/dagger_l.glb',binding:'embedded'}:{model:`assets/models/shared/weapons/${modelFile(weapon)}.glb`,binding:'shared'},
+    ...(weapon==='melee'?{preview:'assets/models/shared/melee/daggers-thumbnail.png'}:weapon==='semi-sniper'?{preview:'assets/models/shared/weapons/semi_sniper-thumbnail.png'}:{}),
     ownership:'starter',compatibleWith:[weapon],
   })),
   ...COLLECTIONS.flatMap(c=>WEAPON_CATEGORIES.map((weapon):CosmeticDefinition=>({
     id:collectionCosmetic(c.id,weapon),name:c.name,weapon,rarity:c.rarity,
-    asset:{...(weapon==='melee'?{model:'assets/models/shared/melee/dagger_r.glb',secondaryModel:'assets/models/shared/melee/dagger_l.glb',binding:'embedded' as const}:{model:`assets/models/shared/weapons/${weapon}.glb`,binding:'shared' as const}),
-      materials:weapon==='melee'?{'dagger_coat':c.finish.gun_black,'dagger_steel':c.finish.gun_steel??c.finish.gun_black}:Object.fromEntries(Object.entries(c.finish).filter(([name])=>WEAPON_MATERIALS[weapon].includes(name)))},
+    asset:{...(weapon==='melee'?{model:'assets/models/shared/melee/dagger_r.glb',secondaryModel:'assets/models/shared/melee/dagger_l.glb',binding:'embedded' as const}:{model:`assets/models/shared/weapons/${modelFile(weapon)}.glb`,binding:'shared' as const}),
+      materials:weapon==='melee'?{'dagger_coat':c.finish.gun_black,'dagger_steel':c.finish.gun_steel??c.finish.gun_black}:Object.fromEntries(Object.entries(weapon==='semi-sniper'?{...c.finish,gun_gold:c.finish.gun_fde??c.finish.gun_black}:c.finish).filter(([name])=>WEAPON_MATERIALS[weapon].includes(name)))},
     ownership:'grant',compatibleWith:[weapon],collection:c.id,
   }))),
 ];

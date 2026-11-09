@@ -70,6 +70,8 @@ function cellKey(ix: number, iz: number): number {
 }
 
 export class CollisionWorld {
+  /** Authored shortcuts only; regular stair/landing undersides keep the normal slide pose. */
+  readonly slidePassages: {x:number;z:number;halfWidth:number;halfDepth:number;clearance:number}[] = [];
   readonly ladders: LadderRegion[] = [];
   private readonly colliders = new Map<number, Collider>();
   private readonly grid = new Map<number, Collider[]>();

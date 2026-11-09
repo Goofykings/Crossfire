@@ -1,5 +1,5 @@
 /** Development-only visual review. Not imported by the game and never contacts inventory APIs. */
-import {ArcRotateCamera,Color3,Color4,DirectionalLight,Engine,FreeCamera,HDRCubeTexture,HemisphericLight,Scene,TransformNode,Vector3} from '@babylonjs/core';
+import {ArcRotateCamera,Camera,Color3,Color4,DirectionalLight,Engine,FreeCamera,HDRCubeTexture,HemisphericLight,Scene,TransformNode,Vector3} from '@babylonjs/core';
 import '@babylonjs/loaders/glTF';
 import {COSMETICS,defaultEquipment,type CosmeticDefinition} from '../shared/cosmetics';
 import {loadCosmeticAsset} from '../src/rendering/CosmeticAssets';
@@ -17,6 +17,12 @@ const manifest=await(await fetch(assetUrl('assets/cosmetics/foundry-collection.j
 // Only this separate lab's JS realm gains staged definitions. No live registration or ownership grant.
 const staged:CosmeticDefinition[]=manifest.items.map((entry:{catalogEntry:CosmeticDefinition})=>entry.catalogEntry);
 (COSMETICS as CosmeticDefinition[]).push(...staged);
+// Semi-auto sniper review (docs/SEMI_SNIPER.md): staged in memory only, on the AR ('rifle') rig presets, with ?semi.
+const SEMI_ID='semi-sniper-review',SEMI_MODE=new URLSearchParams(location.search).has('semi');
+if(new URLSearchParams(location.search).has('semi')){
+ const semi:CosmeticDefinition={id:SEMI_ID,name:'Semi-Auto Sniper',weapon:'rifle',rarity:'common',ownership:'grant',compatibleWith:['rifle'],asset:{model:'assets/models/shared/weapons/semi_sniper.glb',binding:'shared'}};
+ (COSMETICS as CosmeticDefinition[]).push(semi);staged.length=0;staged.push(semi);
+}
 let scene:Scene|null=null;
 type View='locker'|'side'|'front'|'third'|'third-side'|'third-ads'|'fp'|'ads'|'reload'|'recoil'|'walk';
 async function capture(id:string,context:View,low=false){
@@ -38,6 +44,7 @@ async function capture(id:string,context:View,low=false){
   await s.whenReadyAsync();await weapons.ready(signal);await meshesReady(character.meshes,signal);
   for(let i=0;i<75;i++){character.update(motion,1/60);gun.advance(1/60);s.render();}inspect=gun.inspect();
  }else if(['fp','ads','reload','recoil','walk'].includes(context)&&item){
+  if(SEMI_MODE){camera.fovMode=Camera.FOVMODE_HORIZONTAL_FIXED;camera.fov=Math.PI/2;}/* game viewmodel: 90 degrees horizontal */
   const view=new WeaponView({scene:s,camera} as RenderContext,materials,null);await view.load(signal);await view.setCosmetics({...defaultEquipment(),[item.weapon]:id});view.select(item.weapon);
   const w=new Weapon(WEAPONS.find(w=>w.id===item.weapon)!);if(context==='ads')w.ads=1;
   if(context==='reload'){w.action=(item.weapon==='shotgun'?'shell':'reload') as WeaponAction;w.progress=.4;}
@@ -60,5 +67,6 @@ async function capture(id:string,context:View,low=false){
  const result={image:canvas.toDataURL('image/png'),inspect,drawCalls:(counter.current-start)/30,renderCpuMedianMs:cpu[15],renderCpuP95Ms:cpu[28],engineCount:Engine.Instances.length};
  return result;
 }
+(window as unknown as {__cosmeticLabScene:()=>Scene|null}).__cosmeticLabScene=()=>scene;
 (window as unknown as {__cosmeticLab:unknown}).__cosmeticLab={capture,items:staged.map(c=>c.id)};
 label.textContent='Asset lab ready. Use tools/review-cosmetic-assets.mjs. No inventory changes.';

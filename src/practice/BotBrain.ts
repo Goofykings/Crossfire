@@ -82,7 +82,7 @@ export class BotBrain {
   const turn=Math.max(-this.tuning.turn*dt,Math.min(this.tuning.turn*dt,wrap(desired-p.yaw)));p.yaw=wrap(p.yaw+turn);
   if(aim){const eye=this.eye(a);p.pitch=Math.max(-1.2,Math.min(1.2,Math.atan2(aim.y-eye.y,Math.hypot(aim.x-eye.x,aim.z-eye.z))+(engage?this.errorPitch:0)));}else p.pitch*=Math.exp(-dt*3);
   if(engage&&enemy){
-   const d=dist(p.position,enemy.controller.position),preferred=a.state.weapon==='shotgun'?7:a.state.weapon==='sniper'?21:13;
+   const d=dist(p.position,enemy.controller.position),preferred=a.state.weapon==='shotgun'?7:a.state.weapon==='sniper'?21:a.state.weapon==='semi-sniper'?17:13;
    if(d<1.65){dx=dz=0;length=1;}
    else if(d<preferred){dx=Math.cos(p.yaw)*this.strafe;dz=-Math.sin(p.yaw)*this.strafe;length=1;}
   }

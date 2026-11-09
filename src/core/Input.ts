@@ -27,6 +27,7 @@ export type Action =
   | 'weapon2'
   | 'weapon3'
   | 'weapon4'
+  | 'weapon5'
   | 'pause'
   | 'lastWeapon'
   | 'nextWeapon'

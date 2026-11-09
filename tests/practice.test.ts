@@ -170,3 +170,31 @@ it('multiple bots space grenade attempts and cancel a charge when a wall blocks 
  data.world.add({c:[0,3,0],h:[12,3,.2]});advance(sim,1);expect(sim.actors.some(a=>a.charge.active)).toBe(false);expect(sim.events.filter(e=>e.type==='grenade'&&e.event.kind==='throw')).toHaveLength(0);
  expect(sim.actors.slice(1).map(a=>a.state.grenades)).toEqual([1,1,1]);
 });
+
+it('Practice uses real semi-auto presses, exact head damage and offline-only rewards',()=>{
+ const sim=new PracticeSimulation({...DEFAULT_PRACTICE,bots:1},arena(),'Marksman',{now:0});sim.spawnHuman('semi-sniper');
+ const [human,bot]=sim.actors;bot.brain=null;human.controller.teleport({x:0,y:0,z:5},0);bot.controller.teleport({x:0,y:0,z:-5},180);
+ advance(sim,.3,()=>input());const eye=human.controller.leanEye(),pitch=Math.atan2(1.6-eye.y,10);
+ advance(sim,1,()=>input(0,pitch,true));const first=sim.events.filter(e=>e.type==='shot');expect(first).toHaveLength(1);expect(bot.state.health).toBe(50);expect(human.gun!.ammo).toBe(14);
+ advance(sim,.2,()=>input(0,pitch,false));advance(sim,.1,()=>input(0,pitch,true));expect(bot.state.alive).toBe(false);expect(human.state.score).toBe(150);expect(human.state.kills).toBe(1);
+ expect(sim.policy).toMatchObject({rewards:false,persistStatistics:false,uploadResults:false});expect(sim.snapshot().players.find(p=>p.id===human.state.id)!.weapon).toBe('semi-sniper');
+});
+it('every bot difficulty taps the semi-auto, respects its rate/ammo, reloads and can switch back to existing guns',()=>{
+ const data=arena(),nav=new PracticeNavigation(data.world,data.layout);
+ for(const difficulty of DIFFICULTIES){
+  const sim=new PracticeSimulation({...DEFAULT_PRACTICE,bots:1,difficulty},data,'Local',{now:0,navigation:nav});sim.spawnHuman('rifle');const [human,bot]=sim.actors;
+  sim.switchWeapon(bot,'semi-sniper');human.controller.teleport({x:0,y:0,z:6},0);bot.controller.teleport({x:0,y:0,z:-6},180);bot.state.grenades=0;
+  const times:number[]=[];let reloaded=false,lastAmmo=15,seen=0,previousTrigger=false;
+  for(let i=0;i<120*15;i++){
+   human.state.health=100;sim.step(input());const gun=bot.gun!;
+   expect(gun.stats.id).toBe('semi-sniper');expect(gun.ammo).toBeGreaterThanOrEqual(0);expect(gun.ammo).toBeLessThanOrEqual(15);
+   if(gun.ammo>lastAmmo)reloaded=true;lastAmmo=gun.ammo;
+   const shots=sim.events.filter(e=>e.type==='shot'&&e.shot.shooterId===bot.state.id);
+   if(shots.length>seen){expect(shots.length-seen).toBe(1);expect(previousTrigger).toBe(false);expect(bot.state.combat.triggerHeld).toBe(true);times.push(sim.now);seen=shots.length;}
+   previousTrigger=bot.state.combat.triggerHeld;
+  }
+  expect(times.length,difficulty).toBeGreaterThan(15);expect(reloaded,difficulty).toBe(true);
+  for(let i=1;i<times.length;i++)expect(times[i]-times[i-1]+.0001).toBeGreaterThanOrEqual(60000/(630*.9));
+  for(let i=0;i<400&&bot.gun!.reloading;i++)sim.step(input());sim.switchWeapon(bot,'rifle');expect(bot.state.weapon).toBe('rifle');
+ }
+});

@@ -1,3 +1,4 @@
+import { playerHeight } from './combat';
 import { MOVEMENT } from '../src/config/constants';
 import type { Collider, CollisionWorld } from '../src/physics/CollisionWorld';
 import type { ControllerState, Vec3, PlayerController } from '../src/player/PlayerController';
@@ -113,7 +114,7 @@ export function advanceGrenade(g: GrenadeState, now: number, world: CollisionWor
 }
 
 export function blastDamage(world: CollisionWorld, origin: Vec3, motion: ControllerState): number {
-  const p=motion.position,height=(MOVEMENT.standHeight+(MOVEMENT.crouchHeight-MOVEMENT.standHeight)*motion.crouch);
+  const p=motion.position,height=playerHeight(motion);
   const dy=Math.max(p.y-origin.y,origin.y-(p.y+height),0);
   const distance=Math.hypot(p.x-origin.x,dy,p.z-origin.z);
   if(distance>=GRENADE.damageRadius)return 0;

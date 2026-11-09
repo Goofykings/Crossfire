@@ -24,6 +24,7 @@ export interface CharacterAssetDefinition {
 const CHARACTER_ASSET_PATH = 'assets/characters/player.json';
 
 export interface CharacterInstance {
+  readonly leanAmount?: number;
   root: TransformNode;
   meshes: Mesh[];
   entries: InstantiatedEntries;
@@ -125,7 +126,7 @@ export class CharacterAssetLibrary {
     const animator = new PlayerAnimator(groups, definition.durations);
     const bones = entries.skeletons[0].bones;
     const byName = new Map(bones.map((b) => [b.name, b]));
-    const spine = byName.get('spine')?.getTransformNode(), chest = byName.get('chest')?.getTransformNode();
+    const spine = byName.get('spine')?.getTransformNode(), chest = byName.get('chest')?.getTransformNode(), head = byName.get('head')?.getTransformNode();
     const saved = new Map<TransformNode, { rotation: Quaternion; position: Vector3 }>();
     let lean = 0;
     const restoreLean = () => {
@@ -136,12 +137,13 @@ export class CharacterAssetLibrary {
       if (Math.abs(lean) < .0001 || !spine || !chest) return;
       const yaw = parent.rotation.y;
       const axis = new Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
-      for (const [node, weight] of [[spine, .45], [chest, .55]] as const) {
+      for (const [node, weight] of [[spine, 4/14], [chest, 3/14], [head, 4/14]] as const) {
+        if(!node)continue;
         node.rotationQuaternion ??= Quaternion.Identity();
         saved.set(node, { rotation: node.rotationQuaternion.clone(), position: node.position.clone() });
-        // The rotations add roughly 0.10 m at the head; together this keeps the
-        // animated head close to the server's 0.28 m full-lean hitbox offset.
-        if (node === spine) node.position.x += lean * .16 / scale;
+        // Smaller torso angles, a little extra head roll, planted legs. Lateral
+        // translation stays within the unchanged server-owned 0.28 m head envelope.
+        if (node === spine) node.position.x += lean * .08 / scale;
         node.parent?.computeWorldMatrix(true);
         node.rotate(axis, lean * LEAN_ANGLE * weight, Space.WORLD);
         node.computeWorldMatrix(true);
@@ -171,7 +173,7 @@ export class CharacterAssetLibrary {
       if (!limp) captureDeath(0);
       limp!.pose(elapsed, angle, axis);
     };
-    return { root, meshes, entries, update: (motion, dt) => animator.update(motion, dt),
+    return { root, meshes, entries, get leanAmount(){return lean;}, update: (motion, dt) => animator.update(motion, dt),
       setLean: (amount) => { lean = Math.max(-1, Math.min(1, amount)); }, restoreLean, applyLean, captureDeath, poseDeath,
       visibilityPoints: () => ['head', 'chest', 'pelvis', 'upper_arm_l', 'upper_arm_r', 'hand_l', 'hand_r', 'foot_l', 'foot_r']
         .map(point).filter((p): p is Vector3 => !!p),

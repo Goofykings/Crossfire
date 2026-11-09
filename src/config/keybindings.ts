@@ -3,14 +3,14 @@ export const DEFAULT_BINDINGS = {
   forward: ['KeyW', 'ArrowUp'], back: ['KeyS', 'ArrowDown'], left: ['KeyA', 'ArrowLeft'], right: ['KeyD', 'ArrowRight'],
   jump: ['Space'], slide: ['ShiftLeft', 'ShiftRight'], crouch: ['ControlLeft'], melee: ['KeyV'], grenade: ['KeyG'], aim: ['Mouse2', 'KeyK'], fire: ['Mouse0', 'KeyJ'], reload: ['KeyR'],
   leanLeft: ['KeyQ'], leanRight: ['KeyE'], leaderboard: ['Tab'], chat: ['Enter'], pause: ['Escape'],
-  weapon1: ['Digit1', 'Numpad1'], weapon2: ['Digit2', 'Numpad2'], weapon3: ['Digit3', 'Numpad3'], weapon4: ['Digit4', 'Numpad4'],
+  weapon1: ['Digit1', 'Numpad1'], weapon2: ['Digit2', 'Numpad2'], weapon3: ['Digit3', 'Numpad3'], weapon4: ['Digit4', 'Numpad4'], weapon5: ['Digit5', 'Numpad5'],
 } as const;
 export type BindableAction = keyof typeof DEFAULT_BINDINGS;
 export type KeyBindings = Record<BindableAction, string[]>;
 export const BINDING_LABELS: Record<BindableAction, string> = {
   forward: 'Move forward', back: 'Move backward', left: 'Move left', right: 'Move right', jump: 'Jump', slide: 'Slide',
   aim: 'Aim down sights', fire: 'Shoot / melee attack', reload: 'Reload', crouch: 'Hold to crouch', melee: 'Toggle dual daggers', grenade: 'Throw grenade', leanLeft: 'Lean left', leanRight: 'Lean right',
-  leaderboard: 'Leaderboard', chat: 'Open chat', pause: 'Pause menu', weapon1: 'Weapon 1', weapon2: 'Weapon 2', weapon3: 'Weapon 3', weapon4: 'Weapon 4',
+  leaderboard: 'Leaderboard', chat: 'Open chat', pause: 'Pause menu', weapon1: 'Weapon 1', weapon2: 'Weapon 2', weapon3: 'Weapon 3', weapon4: 'Weapon 4', weapon5: 'Weapon 5',
 };
 export const BINDABLE_ACTIONS = Object.keys(DEFAULT_BINDINGS) as BindableAction[];
 export const defaultBindings = (): KeyBindings => Object.fromEntries(BINDABLE_ACTIONS.map((a) => [a, [...DEFAULT_BINDINGS[a]]])) as KeyBindings;
@@ -20,10 +20,10 @@ export function sanitizeBindings(value: unknown): KeyBindings {
   const fallback = defaultBindings();
   if (!value || typeof value !== 'object') return fallback;
   const data = { ...value as Record<string, unknown> }, result = {} as KeyBindings, seen = new Set<string>();
-  const oldActions = BINDABLE_ACTIONS.filter(a => a !== 'grenade' && a !== 'crouch' && a !== 'melee');
+  const oldActions = BINDABLE_ACTIONS.filter(a => a !== 'grenade' && a !== 'crouch' && a !== 'melee' && a !== 'weapon5');
   // Migrate only the complete former factory layout. A saved custom R grenade
   // (or any other customization) remains intentional; never steal its key.
-  const formerDefault = BINDABLE_ACTIONS.filter(a=>a!=='melee').every(a => JSON.stringify(data[a]) === JSON.stringify(
+  const formerDefault = BINDABLE_ACTIONS.filter(a=>a!=='melee'&&a!=='weapon5').every(a => JSON.stringify(data[a]) === JSON.stringify(
     a === 'grenade' ? ['KeyR'] : a === 'reload' ? ['KeyF'] : a === 'aim' ? ['Mouse2'] : a === 'fire' ? ['Mouse0'] : DEFAULT_BINDINGS[a]));
   if (formerDefault) return fallback;
   // Validate saved controls first. New actions must never steal a custom key.
@@ -34,10 +34,10 @@ export function sanitizeBindings(value: unknown): KeyBindings {
     result[action] = [...candidate];
     for (const code of candidate) { if (seen.has(code)) return fallback; seen.add(code); }
   }
-  for (const action of ['grenade', 'crouch', 'melee'] as const) {
+  for (const action of ['grenade', 'crouch', 'melee', 'weapon5'] as const) {
     const candidate = data[action];
     if (candidate === undefined) {
-      const choices = [...(action === 'melee' ? ['KeyV','KeyB','KeyN'] : action === 'grenade' ? ['KeyG','KeyH','KeyN','KeyB'] : ['ControlLeft','ControlRight','KeyC','KeyV','KeyZ']),
+      const choices = [...(action === 'weapon5' ? ['Digit5','Numpad5'] : action === 'melee' ? ['KeyV','KeyB','KeyN'] : action === 'grenade' ? ['KeyG','KeyH','KeyN','KeyB'] : ['ControlLeft','ControlRight','KeyC','KeyV','KeyZ']),
         ...Array.from({ length: 26 }, (_, n) => `Key${String.fromCharCode(65 + n)}`), 'Mouse3', 'Mouse4'];
       const code = choices.find(c => !seen.has(c));
       if (!code) return fallback;

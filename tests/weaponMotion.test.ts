@@ -7,6 +7,12 @@ import { CollisionWorld } from '../src/physics/CollisionWorld';
 import { FIXED_DT } from '../src/config/constants';
 
 const idle: MotionInput = { speed: 0, grounded: true, sliding: false, crouch: 0, ads: 0, sprinting: false };
+it('peeking emphasizes the gun rather than camera roll, preserves ADS centering, and eases back',()=>{
+ const a=new WeaponMotion();advance(a,.4,{...idle,lean:1});expect(a.pose.roll).toBeLessThan(-.17);expect(a.pose.x).toBeGreaterThan(.02);
+ advance(a,.4,{...idle,lean:-1});expect(a.pose.roll).toBeGreaterThan(.17);
+ advance(a,.6,{...idle,ads:1,lean:1});expect(Math.abs(a.pose.x)).toBeLessThan(.00001);expect(a.pose.roll).toBeCloseTo(-.19,3);
+ advance(a,.6,{...idle,ads:1,lean:0});expect(Math.abs(a.pose.roll)).toBeLessThan(.0001);
+});
 function advance(m: WeaponMotion, seconds: number, input = idle, fps = 120) {
   for (let i = 0; i < Math.round(seconds * fps); i++) m.update(1 / fps, input);
   return { ...m.pose };

@@ -128,7 +128,7 @@ const shotgunClips: Partial<Record<WeaponAction, ActionClip>> = {
 };
 
 export const ACTION_CLIPS: Record<WeaponId, Partial<Record<WeaponAction, ActionClip>>> = {
-  rifle: rifleClips, smg: rifleClips, sniper: sniperClips, shotgun: shotgunClips,
+  rifle: rifleClips, smg: rifleClips, 'semi-sniper': rifleClips, sniper: sniperClips, shotgun: shotgunClips,
 };
 
 const IDLE: ActionPose = { support: 0, supportAnchor: 'mag_grip', supportOffset: [0, 0, 0], supportBody: 0, bodyPoint: 'magPouch', bolt: 0, boltMotion: [0, 0], pump: 0,

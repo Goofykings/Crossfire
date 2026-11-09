@@ -30,7 +30,13 @@ export async function patchCosmetic(c:Pick<AssetContainer,'meshes'|'materials'|'
     const copies=new Map<Material,Material>();
     for(const mesh of c.meshes){
       if(!mesh.material)continue;const name=mesh.material.name;
-      if(name==='reticle_holo')continue;
+      if(name==='reticle_holo'){
+        // The new optic's GLB placeholder is opaque white. Use its authored
+        // alpha-cutout reticle in Locker/third person; WeaponView supplies its
+        // existing additive material for first person.
+        if(item.weapon==='semi-sniper')mesh.material=materials.get(name);
+        continue;
+      }
       const source=item.asset.binding==='shared'?materials.get(name):mesh.material;
       const patch=item.asset.materials?.[name];
       if(!patch){mesh.material=source;continue;}

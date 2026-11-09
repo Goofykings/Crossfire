@@ -6,12 +6,12 @@ import {CosmeticsClient} from '../src/network/CosmeticsClient';
 import type {CareerClient} from '../src/network/CareerClient';
 const view=()=>({...normalizeInventory(),version:1,serverTime:Date.now()});
 afterEach(()=>{vi.unstubAllGlobals();vi.restoreAllMocks();});
-it('catalog keeps four gun starters and the paired Common Default Daggers starter, with separate weapon categories and original GLBs',()=>{
- const starters=COSMETICS.filter(c=>c.ownership==='starter');expect(starters).toHaveLength(5);expect(new Set(COSMETICS.map(c=>c.id)).size).toBe(COSMETICS.length);
- for(const w of WEAPON_CATEGORIES){const c=COSMETICS.find(c=>c.id===defaultCosmetic(w))!;expect(c).toMatchObject({weapon:w,name:w==='melee'?'Default Daggers':'Default',rarity:'common',ownership:'starter',compatibleWith:[w]});expect(c.asset.model).toBe(w==='melee'?'assets/models/shared/melee/dagger_r.glb':`assets/models/shared/weapons/${w}.glb`);expect(fs.existsSync('public/'+c.asset.model)).toBe(true);}
+it('catalog keeps five gun starters and the paired Common Default Daggers starter, with separate weapon categories and original GLBs',()=>{
+ const starters=COSMETICS.filter(c=>c.ownership==='starter');expect(starters).toHaveLength(WEAPON_CATEGORIES.length);expect(new Set(COSMETICS.map(c=>c.id)).size).toBe(COSMETICS.length);
+ for(const w of WEAPON_CATEGORIES){const c=COSMETICS.find(c=>c.id===defaultCosmetic(w))!;expect(c).toMatchObject({weapon:w,name:w==='melee'?'Default Daggers':'Default',rarity:'common',ownership:'starter',compatibleWith:[w]});expect(c.asset.model).toBe(w==='melee'?'assets/models/shared/melee/dagger_r.glb':`assets/models/shared/weapons/${w==='semi-sniper'?'semi_sniper':w}.glb`);expect(fs.existsSync('public/'+c.asset.model)).toBe(true);}
 });
 it('restores missing starters, repairs cross-category equipment, and separates inventory from money and combat',()=>{
- const p=normalizeInventory({owned:[],equipped:{...defaultEquipment(),rifle:'default-sniper'},revision:8});expect(p.owned).toHaveLength(5);expect(p.equipped).toEqual(defaultEquipment());expect(p.revision).toBe(8);
+ const p=normalizeInventory({owned:[],equipped:{...defaultEquipment(),rifle:'default-sniper'},revision:8});expect(p.owned).toHaveLength(WEAPON_CATEGORIES.length);expect(p.equipped).toEqual(defaultEquipment());expect(p.revision).toBe(8);
  expect(Object.keys(p).sort()).toEqual(['equipped','owned','revision']);expect(compatibleCosmetic('default-shotgun','rifle')).toBe(false);expect(compatibleCosmetic('unowned-gold','rifle')).toBe(false);
 });
 it('validates bounded inventories, ownership, exact fields and matching equipment',()=>{

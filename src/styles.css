@@ -138,10 +138,11 @@ button:disabled { cursor: default; opacity: 0.45; }
 #weapons { flex-direction: column; gap: 34px; padding: clamp(20px, 4vw, 60px); background: #0a111bce; backdrop-filter: blur(12px); }
 .weapon-select-head { display: flex; align-items: center; justify-content: space-between; width: min(1440px, 100%); }
 .weapon-select-head h2 { margin: 0; text-transform: uppercase; letter-spacing: 0.12em; font-size: clamp(22px, 3vw, 38px); }
-.weapon-grid { width: min(1440px, 100%); display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: clamp(10px, 1.5vw, 24px); padding: 10px 0 16px; }
+.weapon-grid { width: min(1440px, 100%); display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: clamp(10px, 1.5vw, 24px); padding: 10px 0 16px; }
 #weapons .btn.weapon-card { min-height: clamp(240px, 49vh, 470px); position: relative; flex-direction: column; justify-content: center; padding: clamp(14px, 2vw, 28px); gap: 24px; border: 0; background: rgba(220, 228, 238, .09); text-align: center; overflow: hidden; transition: transform 180ms ease-out, background 180ms ease-out, box-shadow 180ms ease-out; }
 .weapon-art { width: 100%; height: clamp(140px, 25vh, 240px); }
 .weapon-card img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 18px 15px #0008); }
+#weapons .weapon-card > .weapon-detail { font-size: clamp(10px, .85vw, 13px); letter-spacing: .02em; color: #c4ceda; }
 .weapon-card > span { font-size: clamp(15px, 1.5vw, 22px); line-height: 1.4; letter-spacing: 0.07em; }
 #weapons .weapon-card.selected { box-shadow: inset 0 -3px var(--accent); background: rgba(44, 101, 179, .32); }
 #weapons .weapon-card:not(:disabled):hover, #weapons .weapon-card:not(:disabled):focus-visible { transform: scale(1.025); background: rgba(130, 145, 162, .28); }
@@ -287,7 +288,7 @@ button:disabled { cursor: default; opacity: 0.45; }
 .scoreboard h3 { margin-top: 20px; font-size: 0.8em; }
 @media (max-width: 480px) { .weapon-grid { gap: 8px; } .weapon-card span { font-size: 0.75em; } .scoreboard { padding: 12px; } }
 @media (max-width: 480px) { .scoreboard-content { max-height: calc(85vh - 24px); } }
-@media (max-width: 760px) { .weapon-grid { grid-template-columns: repeat(4, minmax(210px, 1fr)); overflow-x: auto; scroll-snap-type: x mandatory; } .weapon-card { scroll-snap-align: center; } #weapons { align-items: stretch; } }
+@media (max-width: 760px) { .weapon-grid { grid-template-columns: repeat(5, minmax(210px, 1fr)); overflow-x: auto; scroll-snap-type: x mandatory; } .weapon-card { scroll-snap-align: center; } #weapons { align-items: stretch; } }
 #loading { background: #292c31; align-items: center; justify-content: center; z-index: 60; }
 .loading-word { font-weight: 800; font-size: clamp(20px, 3vw, 34px); letter-spacing: 0.2em; color: #edf0f3; }
 .loading-progress { display: flex; flex-direction: column; align-items: center; gap: 20px; }

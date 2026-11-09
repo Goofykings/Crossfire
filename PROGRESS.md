@@ -1,3 +1,208 @@
+# Playable Semi-Auto Sniper (2026-11-09)
+
+Integrated the existing gold Blender model as a fifth firearm, adapting to the
+latest shared weapon state machine, independent viewmodel projection, leaning,
+slide clearance, melee, character IK, multiplayer rooms and cosmetics. The prior
+asset-only handoff below is historical. No commit, push or deployment.
+
+## Exact final statistics
+
+- ID `semi-sniper`, original GLB `assets/models/shared/weapons/semi_sniper.glb`.
+- 15-round magazine, infinite reserve. Semi-automatic: one shot per distinct
+  press. Maximum 567 RPM (630 RPM current AR × 0.9), minimum 105.8201 ms before
+  another shot; fixed ticks round upward. No semi-auto fractional cooldown carry.
+- Authoritative body roll 32/33/34/35 at all valid ranges; head **exactly 50**,
+  replacing the standard multiplier. Range 500 m, no falloff. Current four weapons'
+  stats, damage rules and automatic cooldown carry are preserved.
+- Recoil 1.35° pitch / 0.32° yaw, stats view kick 12 and rig impulse 1.5, between
+  AR and bolt sniper. Existing AR-style ADS attenuation/recovery remains.
+- ADS 220 ms and 1.5× AR optical magnification, recomputed by tangent ratio for
+  the user's world FOV. At FOV 70/90/110, ADS is 39.0361/51.6875/65.5463°. No
+  full-screen sniper overlay/hiding/scroll zoom; independent viewmodel FOV retained.
+- Tactical/empty reload 2.1/2.6 s, current rifle clips and no first-person arms.
+  Hip/ADS spread 2°/0.035°, existing movement/bloom rules; clearance 1.21 m to
+  account for the barrel's approximately 9 cm extra length over the AR.
+
+## Integration
+
+- Fifth selection card, actual model thumbnail, capacity/range, icons, remote and
+  spectator models, last-used home weapon, current rig/lean/ADS/reload behavior.
+  Original model, materials, anchors, textures and other guns were preserved.
+- Distinct synthesized `semi_sniper_shot.wav`, existing spatial/audio settings,
+  flash, brass ejection and trails. Reproduce with
+  `python -B -I tools/make_audio.py --semi-sniper-only` without rewriting other WAVs.
+- Common default automatically migrates into existing/new inventories. Six
+  existing skin themes patch the new gold receiver. Locker groups it under
+  Sniper while equipment remains a distinct slot. Catalog regenerated; existing
+  crate availability, odds, price and gem balances unchanged.
+- Slot 5 defaults to Digit5/Numpad5 where switching is already allowed. Migration
+  preserves custom bindings and avoids stolen keys. Existing one-gun-per-life
+  online rules remain. All four bot difficulties select/tap/reload/switch the new
+  gun; Practice retains no uploads, persistent statistics or rewards.
+- Shared protocol v23 accepts the new selection, combat and cosmetic metadata.
+  Authoritative held-input edges, queues, replay rejection, fire timing, score,
+  health and resume remain in the existing Worker systems.
+
+## Verification
+
+- Baseline frontend typecheck passed before edits. Updated frontend/Worker
+  typechecks, default production build and asset verification passed. Existing
+  bundle-size warning remains. Original four weapon definitions were inspected
+  and retained; no installed dependencies or deployment configuration changed.
+- New public/private room integration: two real WebSocket clients, held input,
+  body/head damage, ammo/reload, duplicate packet rejection, elimination/feed,
+  statistics and resumed identity/state passed. A real stored old inventory also
+  gains the default without losing its equipped skin, gems, revision or stats.
+- Focused Practice/weapon/cosmetic/key/collision coverage includes every bot
+  difficulty, strict rate/ammo, empty and partial reload, default migration,
+  optical math, all five viewmodels, hand contacts and the slide passages.
+- Production Chrome under `/crossfire/`, using an isolated actual local Worker:
+  **25 checks passed**. Two genuine profiles/clients see the fifth model and shot;
+  the remote browser starts the distinct spatial WAV. FOV 70/90/110, peripheral
+  view, held fire/recoil, reload, last-used home weapon, both grips in six
+  hip/ADS/lean poses, Sniper Locker filtering and 3D preview passed. Zero browser
+  exceptions or missing assets. Inspected captured ADS, character and Locker
+  images in `test-results/semi-sniper/game/`. No fabricated multiplayer data.
+- During iteration, corrected stale four-gun/30-crate-item assertions to cover
+  five guns/36 grant skins, preserving duplicate/odds checks. One unchanged
+  Farmstead stress case exceeded 5 s during concurrent browser/build work; all
+  32 crate/collision cases then passed alone without changing that timeout.
+  Fixed browser probe issues (detached decode buffer and unified-header selector),
+  plus corrupted card punctuation found visually; no gameplay shortcut was used.
+- Final frontend suite: **848 passed, 1 existing opt-in skip** (83 files, about
+  101 s), including the original weapons plus new gameplay, model, bot, cosmetic,
+  viewmodel/hand, collision and input coverage.
+- Final backend suite: **90/90 passed**, about 381 s, with a successful Worker
+  dry-run build and no RPC disposal warnings. An intermediate run was stopped
+  after finding a crate test's old starter count and hyphen-suffix parsing; it
+  now resolves the category from the shared catalog, and all spend, ownership,
+  duplicate, equip and persistence assertions pass without changing gem rules.
+- Real frontend/Worker protocol gate: **1/1 passed**, selecting and resuming the
+  new 15-round weapon alongside the existing 64-round SMG. Deployment gate tests:
+  **7/7 passed**. Dedicated transport scaffold checks: **7/7 passed** (still
+  explicitly refuses gameplay). Final frontend/Worker typechecks passed.
+- Asset verification passed for the original GLBs/materials and **42 catalog
+  items** (6 starters + 36 grant skins). `git diff --check` passed. Final default
+  production build passed and restored the existing configured backend, replacing
+  the temporary local-test build. The existing large-bundle warning remains.
+
+## Limits and release
+
+Only local workerd/Wrangler and Chrome multiplayer have been validated. No public
+Cloudflare deployment, remote internet latency, physical Chromebook or speaker
+listening test was performed. Headless audio checks prove Web Audio playback
+starts. The Node dedicated project remains an incomplete transport scaffold.
+
+When authorized, release matching frontend/assets and Worker **v23** together
+through the existing backend-first CI. No Durable Object migration, new secrets,
+origin/URL change or server-hosting switch. Configuration files and `.env.local`
+are preserved; the test-only local URL/origin were process overrides. See
+`docs/SEMI_SNIPER.md` for architecture, exact stats and regeneration commands.
+
+# Semi-Auto Sniper weapon model handoff (historical, 2026-11-08)
+
+New original gold marksman rifle, assets only; see `docs/SEMI_SNIPER.md` for the exact file paths,
+anchors, rig presets and the Codex integration checklist. Not registered in the game: no `WeaponId`,
+stats, catalog, UI, audio or protocol change; combat, multiplayer, scoring and balance untouched.
+No commit, push or deploy.
+
+- `public/assets/models/shared/weapons/semi_sniper.glb` (1962 triangles, 164 KiB, 12 draw calls; AR
+  1836/10, Sniper 1936), `semi_sniper-thumbnail.png`, `blender/source/semi_sniper.blend`.
+  Built by `semi_sniper()` in `blender/scripts/lib/weapon.py`; `generate_semi_sniper.py` writes only these.
+  New shared material `gun_gold` (existing metal ORM, no new texture, reads right with reflections off).
+- AR-compatible frames: grip_r/grip_l/mag_grip identical, butt pad z 0.348 identical, sight (0, 0.1355,
+  -0.049), muzzle z -0.749 (between the AR and the Sniper); only `mag` moves, so the AR reload clips,
+  RIG_CONFIGS.rifle and WEAPON_HOLDS.rifle apply unchanged.
+- Verified with the real WeaponView/CharacterWeapon/Locker loaders (`node tools/review-semi-sniper.mjs`,
+  `cosmetic-asset-lab.html?semi`, dev only, nothing granted): hip, ADS (reticle centred), reload, recoil, walk,
+  third person ready/side/ADS (hand gap < 1 cm), Locker, reflections off; Blender side/three-quarter/lineup.
+  `npm run assets:verify`, assets/materialQuality/cosmeticAssets/geometry tests and new
+  `tests/semiSniper.test.ts` pass.
+- Found while reviewing: `solid()` mis-winds concave profiles (hollow side faces). The new model uses convex
+  pieces only; the AR's concave stock/lower receiver show the same hollow side and were not touched. The
+  Locker/third-person white reticle sliver is the existing `patchCosmetic` skip of `reticle_holo` (AR has it too).
+  Side details are 2.5 mm proud because 0.6-1.5 mm flickered with the view angle in the review lab.
+- `weapon.blend` was not regenerated; a full `--only weapon` run now also exports the new weapon.
+  No physical Chromebook run.
+
+# Automatic server discovery, Industrial slide passages and controlled peeking (2026-11-08)
+
+Implemented the requested update; see `docs/DISCOVERY_SLIDE_PEEK.md` for geometry,
+shared movement, test commands and release details. No commit, push or deployment.
+
+- Mode Select automatically fetches the public directory. Loading, successful
+  empty results and connection errors are distinct. Manual Refresh remains;
+  discovery is coalesced/cancellable and transient GET failures stop after three
+  exponential-backoff attempts. Admission/creation are never replayed. Existing
+  configured endpoints, session identity and bounded socket reconnects remain.
+- Industrial has two clearly marked low service openings at (2,2) and (-18,15).
+  Blender meshes and authoritative boxes come from the same authoring function.
+  Layout, collision, source blend, manifests, plan and tactical diagnostics updated.
+  One intersecting pallet was removed; the first opening was moved off spawn S06.
+- Actual sliding approaching these authored openings grants a 0.78 m body / 0.66 m
+  eye (standing 1.8 m, ordinary crouch 1.15 m). Expiry beneath a roof safely retains
+  the low shape at crouch speed until exit. Holding Slide alone cannot grant it.
+  Frontend, Worker, Practice and combat body tests share the state. Ordinary stair
+  and open-air slides keep their original posture; the initial global low-slide
+  approach broke the twelve stair-slide cases and was replaced before completion.
+- Camera lean is 3 degrees; the weapon adds about 11 degrees of cant and a small
+  hip offset. ADS rotates around the real sight anchor to keep aiming centered.
+  Third-person spine/chest/head use 4/3/4 degrees, planted feet and existing hand
+  IK. Visual inspection caught excess waist separation: lateral torso shift was
+  reduced. Low remote presentation scales body/weapon together after IK, avoiding
+  the grip errors found with nonuniform scaling before the solve. Spectator eye
+  and roll follow the same stance and camera conventions.
+- Added discovery retry/abort/error tests, all-weapon/direction slide traversal,
+  trusted restore and expiry recovery, bot-route exclusion, planted-foot/grip
+  checks, weapon cant/recovery and actual ADS anchor projection checks. The new
+  Worker integration uses two real WebSocket peers in an actual custom room.
+  The existing heavy all-stance GLB test has a targeted 15 s budget after measured
+  >6 s runs exceeded its old 5 s limit; its assertions remain intact.
+
+## Verification
+
+- Frontend/Worker typechecks, production build, Worker dry-run build and asset
+  verification passed. Production build retains the existing large-bundle warning.
+- Real frontend/Worker protocol compatibility: **1/1 passed**. Dedicated transport
+  scaffold: **7/7 passed**, including explicit refusal of unsupported gameplay.
+- Production Chrome verification under `/crossfire/`: **16 checks passed**, zero
+  browser exceptions. Directory HTTP fixtures are UI tests, not fabricated player
+  connections; Practice, model loading and rendering are real. Inspected all four
+  weapons at hip/ADS in both lean directions, both first-person leans and both
+  passage meshes. Images: `test-results/discovery-slide-peek/contact-sheet.png`.
+- Focused movement/stair/passage/tactical run: **66 passed**. New real Worker
+  passage test passed for both directions, blocked stand/crouch and peer replication.
+- Final frontend suite: **831 passed, 1 existing opt-in skip** (81 files).
+  The new pose check initially compared an ADS head against a hip baseline; it now
+  compares each lean with a neutral pose at the same ADS state. All grip/foot and
+  bounded head-displacement assertions pass.
+- One intermediate full backend run had 85 passes and two reported failures
+  (the FFA parent and its headshot-combo child): third award 150 versus 190 during
+  a slow concurrent build/browser run. All lethal headshots registered. The
+  unchanged scoring test passed in isolation and again in the final suite's FFA
+  section; this is consistent with the existing 4 s real-time combo window
+  expiring under load. Scoring logic, timings and assertions were not changed.
+- Final full backend suite: **87/87 passed** in about 376 s, including all combat,
+  reconnect, room isolation, reward, ladder/stair and new passage checks. No
+  scoring changes or arbitrary delays were needed. The Worker dry-run build
+  passed; a workspace-local Wrangler log path avoided the initial sandbox-only
+  log-file permission warning. No RPC disposal warning appeared on this run.
+- After strengthening the forged low-stance test with a valid input control,
+  `tests/slidePassages.test.ts` passed **3/3** again. `git diff --check` passed.
+
+## Limits and release
+
+The bot planner excludes mandatory-slide links and walks around these optional
+shortcuts; it does not execute planned slide crossings. The dedicated Node server
+remains an incomplete scaffold: unsupported directory requests show an error. No
+live Cloudflare/dedicated gameplay or public deployment was validated here.
+
+WebSocket protocol **v22** is necessary because v21 clients cannot predict the new
+slide collider. Persisted old motion without `lowClearance` restores safely. When
+authorized, release matching frontend/assets and Worker through the existing
+backend-first workflow. No Durable Object migration, credentials, URL or origin
+configuration changes are needed. Other maps and unrelated building GLBs preserved.
+
 # Miniflare test RPC lifecycle and masked CI exceptions (2026-11-07)
 
 Completed the test-transport fix and available verification. No production game,

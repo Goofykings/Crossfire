@@ -58,6 +58,21 @@
       ]
     },
     {
+      "id": "default-semi-sniper",
+      "name": "Default",
+      "weapon": "semi-sniper",
+      "rarity": "common",
+      "asset": {
+        "model": "assets/models/shared/weapons/semi_sniper.glb",
+        "binding": "shared"
+      },
+      "preview": "assets/models/shared/weapons/semi_sniper-thumbnail.png",
+      "ownership": "starter",
+      "compatibleWith": [
+        "semi-sniper"
+      ]
+    },
+    {
       "id": "default-melee",
       "name": "Default Daggers",
       "weapon": "melee",
@@ -186,6 +201,39 @@
       "ownership": "grant",
       "compatibleWith": [
         "shotgun"
+      ],
+      "collection": "green-camo"
+    },
+    {
+      "id": "green-camo-semi-sniper",
+      "name": "Green Camo",
+      "weapon": "semi-sniper",
+      "rarity": "uncommon",
+      "asset": {
+        "model": "assets/models/shared/weapons/semi_sniper.glb",
+        "binding": "shared",
+        "materials": {
+          "gun_black": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/green-camo/albedo.jpg",
+            "orm": "assets/cosmetics/skins/green-camo/orm.png",
+            "tile": 0.34,
+            "metallic": 1,
+            "roughness": 1
+          },
+          "gun_gold": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/green-camo/albedo.jpg",
+            "orm": "assets/cosmetics/skins/green-camo/orm.png",
+            "tile": 0.34,
+            "metallic": 1,
+            "roughness": 1
+          }
+        }
+      },
+      "ownership": "grant",
+      "compatibleWith": [
+        "semi-sniper"
       ],
       "collection": "green-camo"
     },
@@ -340,6 +388,39 @@
       "collection": "blue-camo"
     },
     {
+      "id": "blue-camo-semi-sniper",
+      "name": "Blue Camo",
+      "weapon": "semi-sniper",
+      "rarity": "uncommon",
+      "asset": {
+        "model": "assets/models/shared/weapons/semi_sniper.glb",
+        "binding": "shared",
+        "materials": {
+          "gun_black": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/blue-camo/albedo.jpg",
+            "orm": "assets/cosmetics/skins/blue-camo/orm.png",
+            "tile": 0.34,
+            "metallic": 1,
+            "roughness": 1
+          },
+          "gun_gold": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/blue-camo/albedo.jpg",
+            "orm": "assets/cosmetics/skins/blue-camo/orm.png",
+            "tile": 0.34,
+            "metallic": 1,
+            "roughness": 1
+          }
+        }
+      },
+      "ownership": "grant",
+      "compatibleWith": [
+        "semi-sniper"
+      ],
+      "collection": "blue-camo"
+    },
+    {
       "id": "blue-camo-melee",
       "name": "Blue Camo",
       "weapon": "melee",
@@ -486,6 +567,39 @@
       "ownership": "grant",
       "compatibleWith": [
         "shotgun"
+      ],
+      "collection": "red-camo"
+    },
+    {
+      "id": "red-camo-semi-sniper",
+      "name": "Red Camo",
+      "weapon": "semi-sniper",
+      "rarity": "uncommon",
+      "asset": {
+        "model": "assets/models/shared/weapons/semi_sniper.glb",
+        "binding": "shared",
+        "materials": {
+          "gun_black": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/red-camo/albedo.jpg",
+            "orm": "assets/cosmetics/skins/red-camo/orm.png",
+            "tile": 0.34,
+            "metallic": 1,
+            "roughness": 1
+          },
+          "gun_gold": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/red-camo/albedo.jpg",
+            "orm": "assets/cosmetics/skins/red-camo/orm.png",
+            "tile": 0.34,
+            "metallic": 1,
+            "roughness": 1
+          }
+        }
+      },
+      "ownership": "grant",
+      "compatibleWith": [
+        "semi-sniper"
       ],
       "collection": "red-camo"
     },
@@ -702,6 +816,55 @@
       "collection": "marble"
     },
     {
+      "id": "marble-semi-sniper",
+      "name": "Marble",
+      "weapon": "semi-sniper",
+      "rarity": "rare",
+      "asset": {
+        "model": "assets/models/shared/weapons/semi_sniper.glb",
+        "binding": "shared",
+        "materials": {
+          "gun_black": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/marble/white-albedo.jpg",
+            "orm": "assets/cosmetics/skins/marble/orm.png",
+            "tile": 0.3,
+            "metallic": 1,
+            "roughness": 1,
+            "clearcoat": 0.6
+          },
+          "gun_polymer": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/marble/black-albedo.jpg",
+            "orm": "assets/cosmetics/skins/marble/orm.png",
+            "tile": 0.3,
+            "metallic": 1,
+            "roughness": 1,
+            "clearcoat": 0.6
+          },
+          "gun_steel": {
+            "color": "#e6dfd2",
+            "metallic": 1,
+            "roughness": 0.24
+          },
+          "gun_gold": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/marble/white-albedo.jpg",
+            "orm": "assets/cosmetics/skins/marble/orm.png",
+            "tile": 0.3,
+            "metallic": 1,
+            "roughness": 1,
+            "clearcoat": 0.6
+          }
+        }
+      },
+      "ownership": "grant",
+      "compatibleWith": [
+        "semi-sniper"
+      ],
+      "collection": "marble"
+    },
+    {
       "id": "marble-melee",
       "name": "Marble",
       "weapon": "melee",
@@ -902,6 +1065,56 @@
       "ownership": "grant",
       "compatibleWith": [
         "shotgun"
+      ],
+      "collection": "rainbow-glow"
+    },
+    {
+      "id": "rainbow-glow-semi-sniper",
+      "name": "Rainbow Glow",
+      "weapon": "semi-sniper",
+      "rarity": "rare",
+      "asset": {
+        "model": "assets/models/shared/weapons/semi_sniper.glb",
+        "binding": "shared",
+        "materials": {
+          "gun_black": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/rainbow-glow/albedo.jpg",
+            "orm": "assets/cosmetics/skins/rainbow-glow/orm.png",
+            "emissive": "assets/cosmetics/skins/rainbow-glow/emissive.jpg",
+            "emissiveColor": "#ffffff",
+            "scroll": [
+              0.16,
+              0
+            ],
+            "tile": 0.5,
+            "metallic": 1,
+            "roughness": 1
+          },
+          "gun_polymer": {
+            "color": "#15131d",
+            "metallic": 0.2,
+            "roughness": 0.3
+          },
+          "gun_gold": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/rainbow-glow/albedo.jpg",
+            "orm": "assets/cosmetics/skins/rainbow-glow/orm.png",
+            "emissive": "assets/cosmetics/skins/rainbow-glow/emissive.jpg",
+            "emissiveColor": "#ffffff",
+            "scroll": [
+              0.16,
+              0
+            ],
+            "tile": 0.5,
+            "metallic": 1,
+            "roughness": 1
+          }
+        }
+      },
+      "ownership": "grant",
+      "compatibleWith": [
+        "semi-sniper"
       ],
       "collection": "rainbow-glow"
     },
@@ -1132,6 +1345,57 @@
       "ownership": "grant",
       "compatibleWith": [
         "shotgun"
+      ],
+      "collection": "rich"
+    },
+    {
+      "id": "rich-semi-sniper",
+      "name": "Rich",
+      "weapon": "semi-sniper",
+      "rarity": "legendary",
+      "asset": {
+        "model": "assets/models/shared/weapons/semi_sniper.glb",
+        "binding": "shared",
+        "materials": {
+          "gun_black": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/rich/gold-albedo.jpg",
+            "normal": "assets/cosmetics/skins/rich/gold-normal.png",
+            "orm": "assets/cosmetics/skins/rich/gold-orm.png",
+            "tile": 0.12,
+            "metallic": 1,
+            "roughness": 1,
+            "clearcoat": 0.35
+          },
+          "gun_polymer": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/rich/lacquer-albedo.jpg",
+            "orm": "assets/cosmetics/skins/rich/lacquer-orm.png",
+            "tile": 0.12,
+            "metallic": 1,
+            "roughness": 1,
+            "clearcoat": 0.8
+          },
+          "gun_steel": {
+            "color": "#f5b040",
+            "metallic": 1,
+            "roughness": 0.3
+          },
+          "gun_gold": {
+            "color": "#ffffff",
+            "albedo": "assets/cosmetics/skins/rich/gold-albedo.jpg",
+            "normal": "assets/cosmetics/skins/rich/gold-normal.png",
+            "orm": "assets/cosmetics/skins/rich/gold-orm.png",
+            "tile": 0.12,
+            "metallic": 1,
+            "roughness": 1,
+            "clearcoat": 0.35
+          }
+        }
+      },
+      "ownership": "grant",
+      "compatibleWith": [
+        "semi-sniper"
       ],
       "collection": "rich"
     },

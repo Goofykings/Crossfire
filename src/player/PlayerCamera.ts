@@ -1,7 +1,7 @@
 import { Quaternion } from '@babylonjs/core';
 import type { RenderContext } from '../rendering/RenderContext';
 import type { PlayerController, Vec3 } from './PlayerController';
-import { LEAN_ANGLE, LEAN_OFFSET, leanOffset } from '../../shared/lean';
+import { LEAN_CAMERA_ANGLE, LEAN_OFFSET, leanOffset } from '../../shared/lean';
 import { BlastShake } from './BlastShake';
 import {MeleeImpact} from './MeleeImpact';
 import { DampedSpring } from '../core/DampedSpring';
@@ -121,7 +121,7 @@ export class PlayerCamera {
     const cam = this.ctx.camera;
     const shake=this.blast.update(dt,reducedMotion);
     const heightBlend = p.prevCrouch + (p.crouch - p.prevCrouch) * alpha;
-    const desiredEye = (p.cfg.standEye + (p.cfg.crouchEye - p.cfg.standEye) * heightBlend)
+    const desiredEye = (p.cfg.standEye + ((p.lowClearance?p.cfg.slideEye:p.cfg.crouchEye) - p.cfg.standEye) * heightBlend)
       + this.groundY - pos.y + this.bobY + shake.y + this.dip.value * .1 * cosmetic;
     const eye = p.safeViewEye(pos, desiredEye);
     const lean = p.prevLean + (p.lean - p.prevLean) * alpha;
@@ -129,7 +129,7 @@ export class PlayerCamera {
     const safe = p.safeViewLean(pos, lean + (this.bobX+shake.x) / LEAN_OFFSET, eye);
     const offset = leanOffset(p.yaw, safe);
     cam.position.set(pos.x + offset.x, pos.y + eye, pos.z + offset.z);
-    const roll = this.bobX * 0.35 - lean * LEAN_ANGLE + shake.roll+this.meleeImpact.update(dt,reducedMotion);
+    const roll = this.bobX * 0.35 - lean * LEAN_CAMERA_ANGLE + shake.roll+this.meleeImpact.update(dt,reducedMotion);
     cam.rotationQuaternion ??= Quaternion.Identity();
     this.swayTime += dt;
     const aim = this.aimAngles(scopeSway);

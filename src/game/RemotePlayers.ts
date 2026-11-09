@@ -16,7 +16,7 @@ import { presentedAction, ShotTimeline } from './RemoteTimeline';
 import type { MaterialLibrary } from '../rendering/MaterialLibrary';
 import { WEAPONS, type WeaponId, type WeaponState } from '../weapons/Weapon';
 import { MOVEMENT, PLAYER_MAX_HEALTH } from '../config/constants';
-import { LEAN_ANGLE, leanOffset } from '../../shared/lean';
+import { LEAN_CAMERA_ANGLE, leanOffset } from '../../shared/lean';
 import {DeathMotion} from './DeathMotion';
 import {hashSeed} from './LimpBody';
 import type {CollisionWorld} from '../physics/CollisionWorld';
@@ -27,7 +27,7 @@ interface Avatar {
   root: TransformNode; look: TransformNode; samples: Sample[]; seen: number;
   meshes: Mesh[]; label: HTMLDivElement; nameLabel:HTMLSpanElement; healthFill:HTMLSpanElement; shownHealth:number; character: CharacterInstance | null;
   friendly: boolean; visible: boolean; clearFor: number; height: number;
-  lean: number;
+  lean: number; visualScaleY:number; crouch:number; lowAmount:number;
   weapon: CharacterWeapon | null;
   /** Dual daggers (created on first use; survive gun swaps, hidden at death). */
   melee?: CharacterMelee | null;
@@ -90,7 +90,7 @@ export class RemotePlayers {
     this.material.diffuseColor = new Color3(0.65, 0.5, 0.28);
     this.material.emissiveColor = new Color3(0.08, 0.06, 0.03);
     // Read actual animated bone positions after the engine evaluates this frame.
-    scene.onBeforeAnimationsObservable.add(() => { for (const a of this.avatars.values()) { a.weapon?.restore(); a.character?.restoreLean(); } });
+    scene.onBeforeAnimationsObservable.add(() => { for (const a of this.avatars.values()) { if(a.character&&!a.death)a.root.scaling.y=1; a.weapon?.restore(); a.character?.restoreLean(); } });
     scene.onAfterAnimationsObservable.add(() => {
       const camera = scene.activeCamera;
       const planes = camera ? Frustum.GetPlanes(camera.getTransformationMatrix()) : null;
@@ -104,6 +104,9 @@ export class RemotePlayers {
           a.weapon.solveEvery = eye ? solveInterval(Vector3.Distance(eye, a.root.position), this.animationDetail) : 1;
           a.weapon.update();
         }
+        // Solve in the unchanged rig metric, then apply the low presentation to
+        // body, hands and held model together. Nonuniform pre-IK scale twists grips.
+        if(a.character&&!a.death){a.root.scaling.y=a.visualScaleY;a.root.computeWorldMatrix(true);}
         this.trail(a, id, eye);
         this.presentation(a, this.dt);
       }
@@ -111,7 +114,7 @@ export class RemotePlayers {
     });
   }
   async prepare(signal?: AbortSignal): Promise<void> {
-    await Promise.all([this.characters.load(signal), this.meleeLibrary.load(signal), ...(['rifle', 'smg', 'shotgun', 'sniper'] as WeaponId[])
+    await Promise.all([this.characters.load(signal), this.meleeLibrary.load(signal), ...WEAPONS.map(w=>w.id)
       .map((id) => this.weapons.load(id, signal))]);
   }
   async ready(signal?: AbortSignal): Promise<void> {
@@ -172,20 +175,20 @@ export class RemotePlayers {
     }
   }
   spectatePose(id: string): { position: Vector3; rotation: Quaternion; weapon: WeaponId; cosmeticId:string; gun: WeaponState;
-    melee?:import('../../shared/melee').MeleeState;meleeCosmeticId?:string;speed: number; verticalSpeed: number; grounded: boolean; sliding: boolean; crouch: number } | null {
+    melee?:import('../../shared/melee').MeleeState;meleeCosmeticId?:string;speed: number; verticalSpeed: number; grounded: boolean; sliding: boolean; crouch: number; lean:number } | null {
     const a = this.avatars.get(id);
     if (!a || a.death || !a.samples.length) return null;
     const player = a.samples.at(-1)!.player;
     if (!player.weapon || !player.combat.gun) return null;
-    const crouch = Math.max(0, Math.min(1, (1.8 - a.height) / .65));
+    const crouch = a.crouch;
     const offset = leanOffset(a.root.rotation.y, a.lean);
     return { position: new Vector3(a.root.position.x + offset.x,
-      a.root.position.y + (MOVEMENT.standEye + (MOVEMENT.crouchEye - MOVEMENT.standEye) * crouch),
+      a.root.position.y + (MOVEMENT.standEye + ((MOVEMENT.crouchEye+(MOVEMENT.slideEye-MOVEMENT.crouchEye)*a.lowAmount) - MOVEMENT.standEye) * crouch),
       a.root.position.z + offset.z),
-      rotation: Quaternion.RotationYawPitchRoll(a.root.rotation.y, a.look.rotation.x, -a.lean * LEAN_ANGLE),
+      rotation: Quaternion.RotationYawPitchRoll(a.root.rotation.y, a.look.rotation.x, -a.lean * LEAN_CAMERA_ANGLE),
       weapon: player.weapon, cosmeticId:visualCosmetic(player.weapon,player.cosmeticId).id, gun: { ...player.combat.gun, ads: a.weaponAds },
       melee:player.combat.melee,meleeCosmeticId:player.meleeCosmeticId,speed: Math.hypot(player.motion.velocity.x, player.motion.velocity.z), verticalSpeed: player.motion.velocity.y,
-      grounded: player.motion.grounded, sliding: player.motion.slideRemaining > 0, crouch };
+      grounded: player.motion.grounded, sliding: player.motion.slideRemaining > 0, crouch, lean:a.lean };
   }
   setOutlinesEnabled(enabled: boolean): void { this.outlinesEnabled = enabled; }
   /** 1 = full third-person animation detail; lower values reduce distant arm solves. */
@@ -309,7 +312,7 @@ export class RemotePlayers {
         const healthBar=document.createElement('span');healthBar.className='remote-player-health';const healthFill=document.createElement('span');healthBar.append(healthFill);label.append(nameLabel,healthBar);
         this.labels.append(label);
         a = { root, look, samples: [], seen: performance.now(), label, nameLabel, healthFill, shownHealth:player.health/PLAYER_MAX_HEALTH, character,
-          meshes, weapon: null, weaponAds: player.combat.gun?.ads ?? 0, shots: new ShotTimeline(), friendly: false, visible: false, clearFor: 0, height: 1.8, lean: 0, life: player.life };
+          meshes, weapon: null, weaponAds: player.combat.gun?.ads ?? 0, shots: new ShotTimeline(), friendly: false, visible: false, clearFor: 0, height: 1.8, lean: 0, visualScaleY:1, crouch:0, lowAmount:0, life: player.life };
         this.avatars.set(player.id, a);
         root.setEnabled(player.id !== this.spectatedId);
       }
@@ -394,7 +397,10 @@ export class RemotePlayers {
         a.look.position.x = a.lean * .28;
       }
 
-      a.height = 1.8 - crouch * .65;
+      const low = Number(!!m.lowClearance)*(1-k)+Number(!!n.lowClearance)*k;
+      a.crouch=crouch;a.lowAmount=low;
+      a.height = 1.8 + (1.15 + (.78-1.15)*low - 1.8)*crouch;
+      a.visualScaleY = a.height/(1.8-.65*crouch);
       a.root.scaling.set(1, a.character ? 1 : a.height/1.8, 1);
       a.character?.update({ crouch, grounded: k < .5 ? m.grounded : n.grounded,
         slideRemaining: m.slideRemaining + (n.slideRemaining - m.slideRemaining) * k,

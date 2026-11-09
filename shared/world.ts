@@ -5,6 +5,7 @@ import type { CollisionFile, MapLayout, PropCatalog } from '../src/maps/types';
 /** Same generated solids in Workers and Babylon; targets are added separately in practice only. */
 export function createMapWorld(collision: CollisionFile, layout: MapLayout, catalog: PropCatalog, environment?:EnvironmentDefinition): CollisionWorld {
   const world = new CollisionWorld();
+  world.slidePassages.push(...(layout.slidePassages??[]).map(p=>({x:p.center[0],z:p.center[1],halfWidth:p.width/2,halfDepth:p.depth/2,clearance:p.clearance})));
   world.ladders.push(...(layout.ladders ?? []));
   world.addMany(collision.boxes);
   for (const [index,p] of [...layout.props, ...layout.obstacles].entries()) {

@@ -20,7 +20,7 @@ export function roundMode(seed: number, roundId: number): MatchMode {
 }
 
 export function playerHeight(m: ControllerState): number {
-  return (MOVEMENT.standHeight + (MOVEMENT.crouchHeight - MOVEMENT.standHeight) * m.crouch);
+  return MOVEMENT.standHeight + ((m.lowClearance ? MOVEMENT.slideHeight : MOVEMENT.crouchHeight) - MOVEMENT.standHeight) * m.crouch;
 }
 
 function sphere(origin: Vec3, dir: Vec3, c: Vec3, r: number): number | null {

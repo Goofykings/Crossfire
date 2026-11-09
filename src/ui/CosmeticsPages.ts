@@ -77,7 +77,7 @@ export class CosmeticsPages {
     this.grid.replaceChildren();this.equipped.replaceChildren(node('h2','','EQUIPPED'));
     if(!this.inventory)return;
     const owned=COSMETICS.filter(c=>this.inventory!.owned.includes(c.id));
-    for(const item of owned.filter(c=>this.category==='all'||c.weapon===this.category)){
+    for(const item of owned.filter(c=>this.category==='all'||c.weapon===this.category||this.category==='sniper'&&c.weapon==='semi-sniper')){
       const card=this.button('',()=>void this.open(item));card.classList.add('cosmetic-card');card.dataset.cosmetic=item.id;card.style.setProperty('--rarity',RARITIES[item.rarity].color);card.append(this.thumbnail(item),node('strong','',item.name),node('span','',CATEGORY_NAMES[item.weapon]),node('small','',RARITIES[item.rarity].name));
       if(this.inventory.equipped[item.weapon]===item.id)card.append(node('small','cosmetic-is-equipped','EQUIPPED'));this.grid.append(card);
     }

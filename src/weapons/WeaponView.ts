@@ -63,6 +63,11 @@ export const RIG_CONFIGS: Record<WeaponId, RigConfig> = {
     flash: 1.0,
     kick: 1,
   },
+  'semi-sniper': {
+    id: 'semi-sniper', file: cosmetic(defaultCosmetic('semi-sniper'))!.asset.model,
+    hip: [0.22, -0.24, -0.4], hipRot: [0.03, 0.09, -0.06],
+    eye: 0.21, casing: 'casing_rifle', flash: 1.2, kick: 1.5,
+  },
   shotgun: {
     id: 'shotgun',
     file: cosmetic(defaultCosmetic('shotgun'))!.asset.model,
@@ -439,8 +444,10 @@ export class WeaponView {
     rx += wp[3];
     ry += wp[4];
     rz += wp[5];
+    const rotation = Quaternion.RotationYawPitchRoll(ry, rx, rz);
+    pos.addInPlace(sight.subtract(sight.applyRotationQuaternion(rotation)).scale(ads));
     this.pivot.position.copyFrom(pos);
-    this.pivot.rotationQuaternion = Quaternion.RotationYawPitchRoll(ry, rx, rz);
+    this.pivot.rotationQuaternion = rotation;
 
     // moving parts
     if (rig.pump) rig.pump.position.z = pose.pump;

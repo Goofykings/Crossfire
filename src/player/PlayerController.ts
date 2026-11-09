@@ -6,7 +6,7 @@ import type { WeaponId } from '../weapons/Weapon';
 // Eye-to-muzzle distances include a small margin for view-model sway. Based on
 // the existing model anchors and the most forward of the hip and ADS poses.
 export const WEAPON_CLEARANCE: Record<WeaponId, number> = {
-  smg: .88, rifle: 1.12, shotgun: 1.13, sniper: 1.26,
+  smg: .88, rifle: 1.12, shotgun: 1.13, sniper: 1.26, 'semi-sniper': 1.21,
 };
 
 /** Per-tick intent, produced by the input layer (or a network packet in the future). */
@@ -41,6 +41,8 @@ export interface ControllerState {
   pitch: number;
   grounded: boolean;
   crouch: number;
+  /** Trusted low slide stance; retained only until crouching has headroom. Optional for old saves. */
+  lowClearance?: boolean;
   slideRemaining: number;
   slideCooldown: number;
   slideHeld: boolean;
@@ -71,6 +73,7 @@ export class PlayerController {
   grounded = false;
   /** 0 = standing, 1 = fully crouched. */
   crouch = 0;
+  lowClearance = false;
   prevCrouch = 0;
   lean = 0;
   prevLean = 0;
@@ -101,11 +104,11 @@ export class PlayerController {
   ) {}
 
   get height(): number {
-    return this.cfg.standHeight + (this.cfg.crouchHeight - this.cfg.standHeight) * this.crouch;
+    return this.cfg.standHeight + ((this.lowClearance ? this.cfg.slideHeight : this.cfg.crouchHeight) - this.cfg.standHeight) * this.crouch;
   }
 
   get eyeHeight(): number {
-    return (this.baseConfig.standEye + (this.baseConfig.crouchEye - this.baseConfig.standEye) * this.crouch);
+    return this.baseConfig.standEye + ((this.lowClearance ? this.baseConfig.slideEye : this.baseConfig.crouchEye) - this.baseConfig.standEye) * this.crouch;
   }
 
   get horizontalSpeed(): number {
@@ -114,7 +117,7 @@ export class PlayerController {
 
   capture(): ControllerState {
     return { position: { ...this.position }, velocity: { ...this.velocity }, yaw: this.yaw, pitch: this.pitch,
-      grounded: this.grounded, crouch: this.crouch, airTime: this.airTime, jumpBufferTimer: this.jumpBufferTimer,
+      grounded: this.grounded, crouch: this.crouch, lowClearance: this.lowClearance, airTime: this.airTime, jumpBufferTimer: this.jumpBufferTimer,
       slideRemaining: this.slideRemaining, slideCooldown: this.slideCooldown, slideHeld: this.slideHeld, slideYaw: this.slideYaw,
       jumpedThisAirborne: this.jumpedThisAirborne, lean: this.lean };
   }
@@ -127,6 +130,7 @@ export class PlayerController {
     this.pitch = s.pitch;
     this.grounded = s.grounded;
     this.crouch = s.crouch;
+    this.lowClearance = s.lowClearance ?? false;
     this.prevCrouch = s.crouch;
     this.lean = this.prevLean = s.lean ?? 0;
     this.slideRemaining = s.slideRemaining;
@@ -152,6 +156,7 @@ export class PlayerController {
     if (headingDeg !== undefined) this.yaw = PlayerController.headingToYaw(headingDeg);
     this.pitch = 0;
     this.crouch = 0;
+    this.lowClearance = false;
     this.prevCrouch = 0;
     this.lean = this.prevLean = 0;
     this.slideRemaining = this.slideCooldown = this.slideYaw = 0;
@@ -207,8 +212,22 @@ export class PlayerController {
       this.slideRemaining = c.slideDuration;
     }
 
-    // Held crouch and slides share the same lowered collider and headroom checks.
-    let crouchTarget = this.sliding || intent.crouch ? 1 : 0;
+    // Keep the existing open-air/stair slide posture. A real slide compresses
+    // early only when its travel path approaches a low, traversable underside.
+    if(this.sliding&&!this.lowClearance&&this.world.slidePassages.length){
+      const dx=Math.cos(this.slideYaw),dz=Math.sin(this.slideYaw);
+      for(const distance of [0,.4,.8,1.2,1.6]){
+        const x=p.x+dx*distance,z=p.z+dz*distance;
+        if(!this.world.slidePassages.some(r=>Math.abs(x-r.x)<r.halfWidth+c.radius&&Math.abs(z-r.z)<r.halfDepth+c.radius))continue;
+        const roof=this.world.ceilingHeight(x,z,c.radius,p.y+c.stepHeight+.01,p.y+c.crouchHeight+.01);
+        if(roof>=p.y+c.slideHeight+.02&&roof<p.y+c.crouchHeight){this.lowClearance=true;break;}
+      }
+    }
+
+    // A genuine slide earns the low stance. Expiry cannot force the body into
+    // a ceiling; retain it (at ordinary crouch speed) until crouching fits.
+    if (this.lowClearance && !this.sliding && this.world.ceilingHeight(p.x,p.z,c.radius,p.y+c.stepHeight+.01) >= p.y+c.crouchHeight+.01) this.lowClearance = false;
+    let crouchTarget = this.sliding || this.lowClearance || intent.crouch ? 1 : 0;
     if (crouchTarget < this.crouch) {
       // only stand up if there is head room for the taller body
       const standTop = p.y + c.standHeight;
@@ -319,7 +338,7 @@ export class PlayerController {
       this.airTime += dt;
     }
 
-    const leanTarget = this.grounded && !this.sliding && !intent.jumpPressed ? (intent.lean ?? 0) : 0;
+    const leanTarget = this.grounded && !this.lowClearance && !this.sliding && !intent.jumpPressed ? (intent.lean ?? 0) : 0;
     const nextLean = this.lean + (leanTarget - this.lean) * (1 - Math.exp(-LEAN_RATE * dt));
     this.lean = safeLean(this.world, p, this.yaw, this.eyeHeight, nextLean);
     if (Math.abs(this.lean) < .0001) this.lean = 0;
