@@ -1,3 +1,86 @@
+# Zone Control online mode (2026-11-09)
+
+Implemented a selectable public/private custom-room mode using the existing
+Cloudflare Durable Object, authoritative movement, team balancing, admission,
+2-10 capacity, combat, respawn, AFK and result lifecycle. Canonical public-main
+still cycles FFA/Teams; Practice has no unsupported objective option. See
+`docs/ZONE_CONTROL.md` for the exact rules, coordinates, local commands and release
+boundary. No commit, push or deployment.
+
+Three 3.6 m outdoor squares per eligible map, shared in `shared/zoneControl.ts`:
+
+- Industrial: A (-13,0,-15), B (-15,0,19), C (17,0,11).
+- Modern City: A (-15,0,-15), B (5,0,19), C (21,0,-9).
+- Farmstead: A (-33,0,1), B (25,0,-39), C (29,0,31).
+- European Town is unavailable only for this mode. Visual inspection of initial
+  candidates found small building areas/tight lanes; outdoor footprint validation
+  leaves no suitably separated trio. Its other modes/maps/geometry are preserved.
+
+Authoritative living, connected and assigned occupants capture at N/10 per second;
+10 s solo, 5 s with two, 3334 ms with three. Contests pause capture/decay. Partial
+attacks drain 10%/s; opponents drain existing pending work before capturing.
+Existing owners retain their border and income during incomplete takeovers.
+Integer owned-millisecond totals split at capture completion, display whole points
+and cannot double-count a timestamp. Team objective points remain separate from
+individual combat points/statistics. Team winners/draws, grouping, gem eligibility,
+abandonment and idempotent reward receipts use existing guarded systems.
+
+Protocol v26 carries validated complete objectives in welcome/spawn and ordinary
+20 Hz snapshots, including compact transport, late join and reconnect. No new
+client capture/state commands or per-frame network broadcasts. Durable state
+stores the time cursor, work, owners and scoring totals; ownership changes trigger
+a save and partial work uses existing periodic checkpoints. Recovery preserves
+owners/income but clears old occupancy before elapsed-time catch-up, preventing
+absent players completing captures. Round reset stops old scoring at the deadline
+and clears objectives; normal room closure rules remain.
+
+Ground squares have no collision. The top HUD and always-visible world markers
+share one smoothly corrected display progress. Markers have chamfered white
+outlines, actual owner/attacker colours, bottom-up fill, contested badges, screen
+edge indicators and a clear crosshair centre. World-camera projection stays
+independent of weapon FOV. Leaving/round/map transitions release old meshes/DOM.
+
+Verification (Windows / Node v24.20.0):
+
+- 18 new deterministic rule/geometry/protocol/UI cases cover 1/2/3-player
+  boundaries, contest/decay/opponent switching, integer income/transfer/deadline,
+  duplicate timestamps, dead/disconnected/unassigned/other-floor exclusion,
+  winners/draws, reward safeguards, invalid maps/forged state, compact snapshots,
+  footprints/routes/spawns/initial loose props, and four screen-edge directions.
+- `npm --prefix server test`: **94 passed**, zero failures. This includes actual
+  public/private Zone Control rooms with captures, contest, empty-zone income,
+  late join, forgery rejection, disconnect/resume, real sniper elimination/feed,
+  dead occupancy removal, individual vs objective scoring, respawn, full storage
+  restart and frozen result/neutral reset. Existing FFA/Teams, assists, grenades,
+  melee, rooms, traversal, RPC lifetime, careers, rewards and statistics passed.
+- `node --test server/tests/protocol.mjs`: **1 passed**, the actual frontend
+  transport against the rebuilt Worker. Frontend/Worker typechecks passed.
+- `npm test -- --maxWorkers=2`: **941 passed, 1 existing skip**, including a final
+  repeat after correcting the edge-arrow direction. Final production build
+  passed, including `tsc --noEmit`; existing large-bundle/plugin timing notices
+  remain. `git diff --check` passed.
+- Production Chrome at `/crossfire/` with an isolated local Worker: **22 checks
+  passed**, zero browser exceptions/missing assets. Also passed the development
+  inspector run: actual triangle picks reach the expected ground at all nine
+  objective centres, and unobstructed close-ups/overviews were captured and
+  visually inspected. Actual contested bottom-up fill agrees between HUD/world,
+  owner border stays blue during the red takeover, 640x480 HUD and Leave cleanup
+  work. Artifacts/report: `test-results/zone-control/`; geometry diagnostic:
+  `test-results/zone-visual-diagnostic.log`.
+- During iteration, fixed the review camera orientation, render-frame capture
+  barrier and local fetch routing; the first sandboxed Chrome launch timed out
+  and the permitted retry worked. No fake server responses were used. Existing
+  workerd SQLite alarm diagnostics still occur without test failures.
+
+Limits: no objective bots/Practice; Town intentionally excluded; partial progress
+can restore from the existing one-second checkpoint after abrupt loss. Geometry
+and bounded rendering were checked locally, but no broad hardware performance
+benchmark or public Cloudflare/GitHub Pages run was performed. The two normal
+online modes and their canonical rotation remain unchanged. Matching **frontend
+and Worker v26** releases are required when authorized. Worker identity, Durable
+Objects, origins, Pages base, GitHub Actions and `.env.local` are unchanged. No
+commit, push or deployment; remote CI/production verification remains outstanding.
+
 # Assist integration fixture and shot readiness fix (2026-11-09)
 
 Reproduced `Assist timeout: new life death` with the requested direct Node test.

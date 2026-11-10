@@ -4,6 +4,8 @@ import { assetUrl } from '../core/assets';
 import {MagneticSlider} from './MagneticSlider';
 import { MAPS } from '../maps/registry';
 import type { Snapshot } from '../../shared/protocol';
+import {zoneEligible} from '../../shared/zoneControl';
+import {modeName} from '../../shared/combat';
 const node=<K extends keyof HTMLElementTagNameMap>(tag:K,cls='',text=''):HTMLElementTagNameMap[K]=>{const n=document.createElement(tag);n.className=cls;n.textContent=text;return n;};
 /** Independent menu requests are cancelled on navigation; no map or gameplay socket is loaded here. */
 export class RoomMenus {
@@ -17,6 +19,7 @@ export class RoomMenus {
  private list=node('div','room-list');
  private status=node('p','room-status');
  private creationError=node('p','room-status');
+ private modeDescription=node('p','room-mode-description');
  private privateDialog=node('dialog','room-private');
  private code=node('input');
  private privateError=node('p','room-status');
@@ -43,10 +46,10 @@ export class RoomMenus {
   this.name.maxLength=48;this.name.required=true;this.name.setAttribute('aria-label','Server name');this.name.className='room-name';
   const privacy=node('div','room-options');for(const value of ['public','private'])privacy.append(this.option('privacy',value,value.toUpperCase()));
   const maps=node('div','room-map-grid');for(const map of MAPS){const b=this.option('mapId',map.id,map.name);b.classList.add('room-map');const img=node('img');img.src=assetUrl(`assets/maps/${map.id}/thumb.jpg`);img.alt='';b.prepend(img);maps.append(b);}
-  const modes=node('div','room-options');for(const value of ['ffa','teams'])modes.append(this.option('mode',value,value.toUpperCase()));
+  const modes=node('div','room-options');for(const value of ['ffa','teams','zone-control'] as const)modes.append(this.option('mode',value,value==='ffa'?'FFA':modeName(value).toUpperCase()));
   this.limit=new MagneticSlider({min:ROOM_LIMITS.playersMin,max:ROOM_LIMITS.playersMax,step:1,value:ROOM_LIMITS.defaultPlayers,label:'MAXIMUM PLAYERS',ariaLabel:'Maximum players',onChange:value=>{this.setup.maxPlayers=value;}});
   const submit=node('button','btn primary','CREATE');submit.type='submit';this.creationError.setAttribute('role','status');
-  form.append(createHead,this.name,privacy,maps,modes,this.limit.root,this.creationError,submit);this.create.append(form);
+  form.append(createHead,this.name,privacy,modes,this.modeDescription,maps,this.limit.root,this.creationError,submit);this.create.append(form);
   form.onsubmit=e=>{e.preventDefault();this.setup.name=roomName(this.name.value);void this.admit(signal=>this.needClient().create({...this.setup},signal),this.creationError);};
   this.code.type='text';this.code.inputMode='numeric';this.code.pattern='[0-9]{6}';this.code.maxLength=6;this.code.autocomplete='off';this.code.setAttribute('aria-label','Six-digit private room code');this.code.oninput=()=>{this.code.value=this.code.value.replace(/[^0-9]/g,'').slice(0,6);};
   const privateForm=node('form');privateForm.append(node('h2','','JOIN PRIVATE SERVER'),this.code,this.privateError,this.button('Cancel',()=>{this.cancel();this.privateDialog.close();}));const join=node('button','btn primary','Join');join.type='submit';privateForm.append(join);
@@ -57,7 +60,12 @@ export class RoomMenus {
  }
  private button(label:string,action:()=>void){const b=node('button','btn',label);b.type='button';b.onclick=action;return b;}
  private option(key:'privacy'|'mapId'|'mode',value:string,label:string){const b=this.button(label,()=>{(this.setup[key] as string)=value;this.sync();});this.options.push({button:b,key,value});return b;}
- private sync(){for(const o of this.options){const selected=this.setup[o.key]===o.value;o.button.classList.toggle('selected',selected);o.button.setAttribute('aria-pressed',String(selected));}}
+ private sync(){
+  if(this.setup.mode==='zone-control'&&!zoneEligible(this.setup.mapId))this.setup.mapId=MAPS.find(m=>zoneEligible(m.id as RoomSetup['mapId']))!.id as RoomSetup['mapId'];
+  this.modeDescription.textContent=this.setup.mode==='zone-control'?'Capture and defend three zones to earn points for your team.':'';
+  this.modeDescription.hidden=this.setup.mode!=='zone-control';
+  for(const o of this.options){const selected=this.setup[o.key]===o.value;o.button.classList.toggle('selected',selected);o.button.setAttribute('aria-pressed',String(selected));o.button.hidden=o.key==='mapId'&&this.setup.mode==='zone-control'&&!zoneEligible(o.value as RoomSetup['mapId']);}
+ }
  private needClient(){if(!this.client)throw Error('Multiplayer configuration is unavailable.');return this.client;}
  cancel(){this.limit.cancel();this.request?.abort();this.request=null;this.refresh.disabled=false;this.mode.querySelectorAll<HTMLButtonElement>('button').forEach(b=>b.disabled=false);this.create.querySelectorAll<HTMLButtonElement>('button').forEach(b=>b.disabled=false);}
  open(message=''){if(!message&&this.mode.classList.contains('visible')&&this.request)return;this.cancel();this.privateDialog.close();this.show('modes');void this.load(message);}
@@ -66,7 +74,7 @@ export class RoomMenus {
   if(this.request)return;
   const request=new AbortController();this.request=request;this.refresh.disabled=true;this.status.dataset.state='loading';this.status.textContent='Loading rooms...';this.list.replaceChildren();
   try{this.onOnline();const rooms=await this.needClient().list(request.signal);if(request.signal.aborted)return;this.status.dataset.state=rooms.length?'ready':'empty';this.status.textContent=[message,rooms.length?'':'No public servers available'].filter(Boolean).join(' ');
-   for(const room of rooms){const b=this.button('',()=>void this.admit(signal=>this.needClient().join({roomId:room.id},signal),this.status));b.classList.add('room-row');b.append(node('span','',room.name),node('span','room-count',`${room.players}/${room.maxPlayers} players`));this.list.append(b);}
+   for(const room of rooms){const b=this.button('',()=>void this.admit(signal=>this.needClient().join({roomId:room.id},signal),this.status));b.classList.add('room-row');b.append(node('span','',room.name),node('span','room-count',`${modeName(room.mode)} · ${room.players}/${room.maxPlayers} players`));this.list.append(b);}
   }catch(error){if(!request.signal.aborted){this.status.dataset.state='error';this.status.textContent=`Connection error: ${(error as Error).message}`;}}finally{if(this.request===request){this.request=null;this.refresh.disabled=false;}}
  }
  private async admit(action:(signal:AbortSignal)=>Promise<RoomAdmission>,error:HTMLElement){

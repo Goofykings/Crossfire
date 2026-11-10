@@ -1,3 +1,5 @@
+import {ZoneControlView} from './ZoneControlView';
+import {teamMode,modeName} from '../../shared/combat';
 import {SniperZoom} from '../player/SniperZoom';
 import {MeleeFeedback} from './melee/MeleeFeedback';
 import {meleeBlocked,meleeClip,createMeleeState,stepMelee,MELEE} from '../../shared/melee';
@@ -176,6 +178,7 @@ export class Game {
     VITE_CUSTOM_MULTIPLAYER_URL: import.meta.env.VITE_CUSTOM_MULTIPLAYER_URL,
   });
   private readonly remotePlayers: RemotePlayers;
+  private readonly zoneView:ZoneControlView;
   private readonly homeCharacter: HomeCharacter;
   private shownResult = '';
   private readonly dismissedResults = new Set<string>();
@@ -195,6 +198,7 @@ export class Game {
     this.materials = new MaterialLibrary(this.ctx.scene);
     this.maps = new MapManager(this.ctx, this.materials, () => graphicsPreset(this.settings.value), !options.multiplayer);
     this.remotePlayers = new RemotePlayers(this.ctx.scene, uiRoot, this.materials);
+    this.zoneView=new ZoneControlView(this.ctx.scene,uiRoot,this.ctx.camera);
     this.postfx = new PostFX(this.ctx.scene, this.ctx.camera);
     this.instrumentation = new SceneInstrumentation(this.ctx.scene);
     this.instrumentation.captureFrameTime = true;
@@ -641,7 +645,7 @@ export class Game {
         this.networkReady = true;
         this.acceptSnapshot(network.latest);
         if (this.ui.currentScreen === 'results') return;
-        this.ui.setMapTitle(this.map!.def.name, (this.localPractice?'Practice · ':'')+(target.match.mode === 'teams' ? 'Teams' : target.match.mode === 'ffa' ? 'Free for all' : 'Public match'));
+        this.ui.setMapTitle(this.map!.def.name, (this.localPractice?'Practice · ':'')+(modeName(target.match.mode)||'Public match'));
         this.excludeViewFromSun(this.map!);
         const self = network.latest.players.find((p) => p.id === network.selfId);
         if (!self) throw new Error('Server did not assign a player');
@@ -947,6 +951,7 @@ export class Game {
   }
 
   private quitToMenu(): void {
+    this.zoneView.clear();
     const wasPractice=!!this.practiceSetup||!!this.localPractice;
     this.practiceChallenges?.stop();this.practiceChallenges=null;
     this.practiceDebug?.dispose();this.practiceDebug=null;
@@ -1106,6 +1111,7 @@ export class Game {
     const cameraAngles = this.ctx.camera.rotationQuaternion?.toEulerAngles();
     this.ui.damage.update(cameraAngles?.y ?? this.player?.yaw ?? 0, cameraAngles?.x ?? this.player?.pitch ?? 0);
     this.updateHudMeta();
+    this.zoneView.update(this.network?.latest??null,dt,this.map?.def.id===this.network?.latest?.mapId&&(this.ui.currentScreen==='hud'||this.ui.currentScreen==='spectate'));
     this.ui.matchHud.update(this.network?.latest ?? null, Date.now() + (this.network?.clockOffset ?? 0),
       this.ui.currentScreen === 'hud' || this.ui.currentScreen === 'spectate', this.network?.selfId);
     this.audio.setListener(this.ctx.camera.globalPosition,this.ctx.camera.getDirection(Vector3.Forward(true)),this.ctx.camera.getDirection(Vector3.Up()));
@@ -1134,7 +1140,7 @@ export class Game {
     const now = Date.now() + (this.network?.clockOffset ?? 0);
     const self = this.network?.latest?.players.find(p => p.id === this.network?.selfId);
     const candidates = this.network?.latest?.players.filter(p => p.alive && p.id !== this.network?.selfId
-      && (this.network?.latest?.match.mode !== 'teams' || !self?.team || p.team === self.team)) ?? [];
+      && (!teamMode(this.network?.latest?.match.mode) || !self?.team || p.team === self.team)) ?? [];
     const current = candidates.find(p => p.id === this.selectionTarget);
     if (!current || now - this.selectionTargetAt > 6000) {
       candidates.sort((a,b) => (this.recentCombat.get(b.id) ?? 0) - (this.recentCombat.get(a.id) ?? 0) || a.id.localeCompare(b.id));
