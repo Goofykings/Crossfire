@@ -1,4 +1,3 @@
-import {teamMode,modeName} from '../../shared/combat';
 import { teamOrder } from './teamColors';
 import type { Snapshot } from '../../shared/protocol';
 import { matchCountdown } from './matchFormatting';
@@ -31,7 +30,7 @@ export class MatchHud {
   update(snapshot: Snapshot | null, serverNow: number, visible: boolean, selfId = ''): void {
     this.root.hidden = !visible || !snapshot;
     if (!snapshot) return;
-    const mode = snapshot.match.mode==='ffa'?'FFA':modeName(snapshot.match.mode).toUpperCase();
+    const mode = snapshot.match.mode === 'teams' ? 'TEAMS' : snapshot.match.mode === 'ffa' ? 'FFA' : '';
     const time = matchCountdown(snapshot.match.endsAt, serverNow);
     if (this.mode.textContent !== mode) this.mode.textContent = mode;
     if (this.timer.textContent !== time) this.timer.textContent = time;
@@ -43,10 +42,10 @@ export class MatchHud {
       if (final !== null) { this.tick = !this.tick; this.final.classList.toggle('tick-a', this.tick); this.final.classList.toggle('tick-b', !this.tick); }
     }
     const scores = snapshot.match.teamScores;
-    this.blue.hidden = this.red.hidden = !teamMode(snapshot.match.mode) || !scores;
-    const [friendly, enemy] = snapshot.match.mode==='zone-control'?['blue','red'] as const:teamOrder(snapshot.players.find(p => p.id === selfId)?.team ?? null);
+    this.blue.hidden = this.red.hidden = snapshot.match.mode !== 'teams' || !scores;
+    const [friendly, enemy] = teamOrder(snapshot.players.find(p => p.id === selfId)?.team ?? null);
     for (const [node, score] of [[this.blue, scores?.[friendly]], [this.red, scores?.[enemy]]] as const) {
-      const text = snapshot.match.mode==='zone-control'?`${node===this.blue?'BLUE':'RED'} ${score??0}`:String(score ?? ''); if (node.textContent !== text) node.textContent = text;
+      const text = String(score ?? ''); if (node.textContent !== text) node.textContent = text;
     }
   }
 }

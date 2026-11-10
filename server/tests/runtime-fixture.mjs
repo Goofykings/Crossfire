@@ -31,18 +31,6 @@ export default {
   },
 };
 export class PublicRoom extends ProductionRoom {
-  async zoneViewForTest([x,y,z]){
-    // Find an unobstructed review camera; this changes no player or game state.
-    for(const distance of [4,3,2.5])for(let i=0;i<8;i++){
-      const a=i*Math.PI/4,px=x+Math.sin(a)*distance,pz=z+Math.cos(a)*distance,py=y+2.8;
-      const clear=[[0,0],[-1.8,-1.8],[1.8,-1.8],[1.8,1.8],[-1.8,1.8]].every(([dx,dz])=>{
-        const d=[x+dx-px,y+.1-py,z+dz-pz],length=Math.hypot(...d);
-        return !this.activeMap.world.raycast(px,py,pz,...d.map(v=>v/length),length-.1);
-      });
-      if(clear)return [px,py,pz,-a*180/Math.PI,-Math.atan2(py-y-.1,distance)*180/Math.PI];
-    }
-    return [x,y+8,z+.01,0,-89.9];
-  }
   async qualifyMatchGemsForTest(ids){
     const now=Date.now();this.ledger.rewardStartedAt=now-600000;
     for(const id of ids){const e=this.players.get(id);if(!e?.session.profileId||!e.session.participation||e.session.participation.abandoned)throw Error('Requires real participating profile');e.session.participation.firstSpawn=now-120000;}
@@ -173,7 +161,6 @@ export class PublicRoom extends ProductionRoom {
   async setRemainingForTest(ms) {
     if (!Number.isFinite(ms) || ms < 1 || ms > 600000) throw new Error('Invalid test deadline');
     const endsAt = Date.now() + ms;
-    if(this.zones)this.zones.endsAt=endsAt;
     this.schedule.epoch = endsAt - (this.round.id + 1) * 600000;
     this.round.endsAt = this.ledger.endsAt = endsAt;
     await this.ctx.storage.put('map-schedule', this.schedule);
@@ -372,7 +359,6 @@ export class PublicRoom extends ProductionRoom {
   }
   async advanceMapForTest() {
     this.ledger.endsAt = Date.now();
-    if(this.zones)this.zones.endsAt=this.ledger.endsAt;
     this.schedule.epoch -= 600000;
     await this.ctx.storage.put('map-schedule', this.schedule);
     this.ensureRound();

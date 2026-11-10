@@ -10,13 +10,12 @@ import { validMap, type MapId } from './maps';
 import type { MoveIntent, ControllerState, Vec3 } from '../src/player/PlayerController';
 import {WEAPONS} from '../src/weapons/Weapon';
 import type { WeaponId, WeaponState } from '../src/weapons/Weapon';
-import {teamMode,type MatchMode,type CombatIntent} from './combat';
-import {validZoneControl,type ZoneControlState} from './zoneControl';
+import type { CombatIntent } from './combat';
 import { pointsOrder, type ScoreAward, type RoundResult, type RoundStanding } from './scoring';
 import { GRENADE, type GrenadeState, type GrenadeEvent, type GrenadeExplosion } from './grenades';
 
-// v26: authoritative Zone Control objectives and team-result semantics.
-export const PROTOCOL_VERSION = 26;
+// v25: five-card daily/weekly career views, including bot challenge objectives.
+export const PROTOCOL_VERSION = 25;
 export const validWeapon = (x: unknown): x is WeaponId => x === 'rifle' || x === 'shotgun' || x === 'sniper' || x === 'smg' || x === 'semi-sniper';
 export const PUBLIC_ROOM = 'public-main';
 export const INPUT_BATCH_LIMIT = 12;
@@ -77,7 +76,6 @@ export interface PlayerState {
   death: Elimination | null;
 }
 export interface Snapshot {
-  zoneControl?:ZoneControlState;
   environment?:EnvironmentFrame;
   grenades: GrenadeState[];
   explosions: GrenadeExplosion[];
@@ -89,7 +87,7 @@ export interface Snapshot {
   mapVersion: string;
   serverTime: number;
   players: PlayerState[];
-  match: { mode: MatchMode | null; endsAt: number | null; teamScores: { blue: number; red: number } | null };
+  match: { mode: 'ffa' | 'teams' | null; endsAt: number | null; teamScores: { blue: number; red: number } | null };
 }
 export type ClientMessage =
   | { v: typeof PROTOCOL_VERSION; type: 'join'; name: string; resumeToken?: string; profileToken?: string; roomTicket?:string; compact?:boolean }
@@ -131,7 +129,7 @@ function validStanding(x: unknown): boolean {
 }
 export function validResult(x: unknown): x is RoundResult {
   if(record(x)&&x.gemRewards!==undefined){const r=x.gemRewards;if(!record(r)||!keys(r,['matchId','awards'])||typeof r.matchId!=='string'||r.matchId.length===0||r.matchId.length>96||!record(r.awards)||Object.keys(r.awards).length>256||!Object.entries(r.awards).every(([id,gems])=>id.length>0&&id.length<=64&&natural(gems)&&gems<=32&&Array.isArray(x.players)&&x.players.some(p=>record(p)&&p.id===id)))return false;}
-  if (!record(x) || !natural(x.roundId) || !validMap(x.mapId) || !['ffa', 'teams','zone-control'].includes(x.mode as string)
+  if (!record(x) || !natural(x.roundId) || !validMap(x.mapId) || !['ffa', 'teams'].includes(x.mode as string)
     || !natural(x.endedAt) || typeof x.draw !== 'boolean' || !team(x.winningTeam)
     || !(x.winner === null || validStanding(x.winner)) || !(x.mvp === null || validStanding(x.mvp))) return false;
   if (x.players !== undefined) {
@@ -143,10 +141,10 @@ export function validResult(x: unknown): x is RoundResult {
     const same = (a: unknown, b: typeof players[number] | undefined) => a === null ? b === undefined
       : record(a) && !!b && ['id', 'name', 'team', 'score', 'kills', 'deaths', 'assists'].every((k) => a[k] === b[k as keyof typeof b]);
     if (!same(x.mvp, ranked[0])) return false;
-    if (!teamMode(x.mode as MatchMode) && (x.draw !== (!ranked[0] || (ranked.length > 1 && ranked[0].score === ranked[1].score))
+    if (x.mode !== 'teams' && (x.draw !== (!ranked[0] || (ranked.length > 1 && ranked[0].score === ranked[1].score))
       || (!x.draw && !same(x.winner, ranked[0])))) return false;
   }
-  if (!teamMode(x.mode as MatchMode)) return x.teamScores === null && x.winningTeam === null
+  if (x.mode !== 'teams') return x.teamScores === null && x.winningTeam === null
     && (x.draw ? x.winner === null : record(x.winner) && record(x.mvp) && x.winner.id === x.mvp.id && x.winner.score === x.mvp.score);
   return x.winner === null && record(x.teamScores) && natural(x.teamScores.blue) && natural(x.teamScores.red)
     && (x.draw ? x.winningTeam === null && x.teamScores.blue === x.teamScores.red
@@ -310,14 +308,9 @@ export function parseServerMessage(text: string): ServerMessage | null {
         && p.death.victimLife === p.life && p.death.roundId <= (s.roundId as number))))) return null;
   if (!(s.result === null || (validResult(s.result) && s.result.roundId < (s.roundId as number)))) return null;
   const m = s.match;
-  if (!record(m) || ![null, 'ffa', 'teams','zone-control'].includes(m.mode as null | string) || !(m.endsAt === null || finite(m.endsAt))
+  if (!record(m) || ![null, 'ffa', 'teams'].includes(m.mode as null | string) || !(m.endsAt === null || finite(m.endsAt))
     || !(m.teamScores === null || (record(m.teamScores) && ['blue', 'red'].every((k) => Number.isSafeInteger((m.teamScores as Record<string, unknown>)[k])
       && ((m.teamScores as Record<string, unknown>)[k] as number) >= 0)))) return null;
-  if(m.mode==='zone-control'){
-    if(!validZoneControl(s.zoneControl,s.mapId as MapId,s.roundId as number,m.endsAt as number)
-      ||s.zoneControl.updatedAt>(s.serverTime as number)||!record(m.teamScores)
-      ||m.teamScores.blue!==Math.floor(s.zoneControl.ownedMs.blue/1000)||m.teamScores.red!==Math.floor(s.zoneControl.ownedMs.red/1000))return null;
-  }else if(s.zoneControl!==undefined)return null;
   return x as unknown as ServerMessage;
 }
 

@@ -1,4 +1,3 @@
-import {teamMode} from './combat';
 import type { MatchMode, PlayerTeam } from './combat';
 import type { MapId } from './maps';
 import type { WeaponId } from '../src/weapons/Weapon';
@@ -41,14 +40,14 @@ export const pointsOrder = (a: Pick<RoundStanding, 'id' | 'score'>, b: Pick<Roun
 export function finalizeRound(ledger: RoundLedger, teamScores: { blue: number; red: number }): RoundResult {
   const ranked = Object.values(ledger.players).map((p) => ({ ...p, weapon: p.weapon ?? null })).sort(pointsOrder);
   const mvp = ranked[0] ? { ...ranked[0] } : null;
-  const draw = teamMode(ledger.mode) ? teamScores.blue === teamScores.red
+  const draw = ledger.mode === 'teams' ? teamScores.blue === teamScores.red
     : !mvp || (ranked.length > 1 && ranked[1].score === mvp.score);
   return { roundId: ledger.roundId, mapId: ledger.mapId, mode: ledger.mode, endedAt: ledger.endsAt, draw,
-    winner: !teamMode(ledger.mode) && !draw ? mvp : null,
-    winningTeam: teamMode(ledger.mode) && !draw ? teamScores.blue > teamScores.red ? 'blue' : 'red' : null,
-    mvp, teamScores: teamMode(ledger.mode) ? { ...teamScores } : null, players: ranked };
+    winner: ledger.mode !== 'teams' && !draw ? mvp : null,
+    winningTeam: ledger.mode === 'teams' && !draw ? teamScores.blue > teamScores.red ? 'blue' : 'red' : null,
+    mvp, teamScores: ledger.mode === 'teams' ? { ...teamScores } : null, players: ranked };
 }
 export function resultOutcome(result: RoundResult, selfId: string, team: PlayerTeam): 'VICTORY' | 'DEFEAT' | 'DRAW' {
   if (result.draw) return 'DRAW';
-  return (teamMode(result.mode) ? team !== null && team === result.winningTeam : selfId === result.winner?.id) ? 'VICTORY' : 'DEFEAT';
+  return (result.mode === 'teams' ? team !== null && team === result.winningTeam : selfId === result.winner?.id) ? 'VICTORY' : 'DEFEAT';
 }
