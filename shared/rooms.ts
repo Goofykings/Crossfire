@@ -1,9 +1,7 @@
 import { validMap, type MapId } from './maps';
-import type {MatchMode} from './combat';
-import {zoneEligible} from './zoneControl';
 export const ROOM_LIMITS = { playersMin:2, playersMax:10, defaultPlayers:6, active:100, owned:2,
   warnMs:60000, soloMs:90000, emptyMs:15000, afkWarnMs:30000, afkKickMs:45000, lobbyMs:300000, ticketMs:120000 } as const;
-export interface RoomSetup { name:string; privacy:'public'|'private'; mapId:MapId; mode:MatchMode; maxPlayers:number }
+export interface RoomSetup { name:string; privacy:'public'|'private'; mapId:MapId; mode:'ffa'|'teams'; maxPlayers:number }
 export interface RoomView extends RoomSetup { id:string; players:number; hostId:string|null; code?:string; warningAt:number|null; closesAt:number|null }
 export interface RoomAdmission { v:number; room:RoomView; ticket:string }
 export const roomId=(x:unknown):x is string=>typeof x==='string'&&(x==='public-main'||/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(x));
@@ -12,8 +10,7 @@ export const roomName=(x:string):string=>x.normalize('NFKC').replace(/[<>\u0000-
 const record=(x:unknown):x is Record<string,unknown>=>!!x&&typeof x==='object'&&!Array.isArray(x);
 export function validSetup(x:unknown):x is RoomSetup {
  return record(x)&&Object.keys(x).every(k=>['name','privacy','mapId','mode','maxPlayers'].includes(k))&&typeof x.name==='string'&&x.name===roomName(x.name)&&x.name.length>0
- &&['public','private'].includes(String(x.privacy))&&validMap(x.mapId)&&['ffa','teams','zone-control'].includes(String(x.mode))
- &&(x.mode!=='zone-control'||zoneEligible(x.mapId))&&Number.isInteger(x.maxPlayers)&&Number(x.maxPlayers)>=2&&Number(x.maxPlayers)<=10;
+ &&['public','private'].includes(String(x.privacy))&&validMap(x.mapId)&&['ffa','teams'].includes(String(x.mode))&&Number.isInteger(x.maxPlayers)&&Number(x.maxPlayers)>=2&&Number(x.maxPlayers)<=10;
 }
 export function validRoomView(x:unknown):x is RoomView {
  if(!record(x))return false;const {id,players,hostId,code,warningAt,closesAt,...setup}=x;

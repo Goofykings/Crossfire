@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Farmstead polish and Semi-Auto Sniper scope fix (2026-11-10)
 
 Visual and layout polish of the existing Farmstead plus a root-cause fix of the Semi-Auto Sniper optic. Combat,
@@ -136,6 +137,8 @@ and Worker v26** releases are required when authorized. Worker identity, Durable
 Objects, origins, Pages base, GitHub Actions and `.env.local` are unchanged. No
 commit, push or deployment; remote CI/production verification remains outstanding.
 
+=======
+>>>>>>> bb79aeff46c8721df2da722ad49080829c384ce9
 # Assist integration fixture and shot readiness fix (2026-11-09)
 
 Reproduced `Assist timeout: new life death` with the requested direct Node test.

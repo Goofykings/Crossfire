@@ -5,7 +5,7 @@ export const DIFFICULTIES:readonly BotDifficulty[]=['beginner','intermediate','a
 const preference='crossfire.practice-difficulty';
 export function loadDifficulty():BotDifficulty{try{const value=localStorage.getItem(preference) as BotDifficulty;if(DIFFICULTIES.includes(value))return value;}catch{/* Optional preference. */}return 'advanced';}
 export function saveDifficulty(value:BotDifficulty){try{localStorage.setItem(preference,value);}catch{/* Temporary selection remains usable. */}}
-export interface PracticeSetup {mapId:MapId;mode:Exclude<MatchMode,'zone-control'>;bots:number;difficulty:BotDifficulty}
+export interface PracticeSetup {mapId:MapId;mode:MatchMode;bots:number;difficulty:BotDifficulty}
 export const DEFAULT_PRACTICE:PracticeSetup={mapId:'european-town',mode:'ffa',bots:3,difficulty:'advanced'};
 export const PRACTICE_NOTICE='Practice runs locally. Bot challenges can earn account gems while connected. Practice kills, points and wins do not affect multiplayer statistics or leaderboards.';
 export function validPractice(value:unknown):value is PracticeSetup {

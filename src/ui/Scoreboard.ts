@@ -1,4 +1,3 @@
-import {teamMode,modeName} from '../../shared/combat';
 import type { PlayerState, Snapshot } from '../../shared/protocol';
 import {meleeBlocked} from '../../shared/melee';
 import { weaponIcon } from './WeaponIcons';
@@ -14,8 +13,8 @@ export function scoreboardRelationship(snapshot: Snapshot, selfId: string, playe
 export const scoreOrder = pointsOrder;
 
 export function scoreboardGroups(snapshot: Snapshot, selfTeam: PlayerState['team'] = null): { label: string; players: PlayerState[] }[] {
-  if (teamMode(snapshot.match.mode)) return (snapshot.match.mode==='zone-control'?['blue','red'] as const:teamOrder(selfTeam)).map((team) => ({
-    label: `${(snapshot.match.mode==='zone-control'?team:displayTeam(team, selfTeam))!.toUpperCase()} · ${snapshot.match.teamScores?.[team] ?? '—'}`,
+  if (snapshot.match.mode === 'teams') return teamOrder(selfTeam).map((team) => ({
+    label: `${displayTeam(team, selfTeam)!.toUpperCase()} · ${snapshot.match.teamScores?.[team] ?? '—'}`,
     players: snapshot.players.filter((p) => p.team === team).sort(scoreOrder),
   })).concat(snapshot.players.some((p) => p.team === null) ? [{ label: 'UNASSIGNED', players: snapshot.players.filter((p) => p.team === null).sort(scoreOrder) }] : []);
   return [{ label: '', players: [...snapshot.players].sort(scoreOrder) }];
@@ -45,7 +44,7 @@ export class Scoreboard {
     const mode = snapshot?.match.mode;
     this.root.dataset.mode=mode??'';
     const end = snapshot?.match.endsAt;
-    this.header.textContent = `${modeName(mode).toUpperCase()||'Mode unavailable'} · ${matchCountdown(end ?? null, serverNow)}`;
+    this.header.textContent = `${mode === 'teams' ? 'TEAMS' : mode === 'ffa' ? 'FREE FOR ALL' : 'Mode unavailable'} · ${matchCountdown(end ?? null, serverNow)}`;
     const signature = JSON.stringify([selfId, snapshot?.match, snapshot?.players.map((p) => [p.id, p.name, p.score, p.kills, p.deaths, p.assists, p.team, p.weapon, meleeBlocked(p.combat.melee)])]);
     if (signature === this.signature) return;
     this.signature = signature;
