@@ -34,13 +34,73 @@ Style `farm` in `blender/scripts/lib/underground.py`: floor -3.5 m, 3.2 m clear,
 joists, concrete piers (0.72 m), caged bulb lamps baked into vertex colours (no extra lights). Authored in
 `tools/underground_layouts.py` `farm_underground()`:
 
-- Eight rooms: Shelter Hall (hub, 6 piers, bunks, shelves), Dry Store, Cold Store (casks, racks), Generator
+- Nine rooms: Shelter Hall (hub, 6 piers, bunks, shelves), Dry Store, Cold Store (casks, racks), Generator
   Room, Pump Room (a stone cistern block), Bunk Room, Junction Room (6 piers), Tool Cellar and the Barn Root
-  Cellar, joined by ten short tunnels that are offset so no corridor is a long straight lane; every room has two
-  or more exits and the rooms form a loop.
-- Five surface entrances: the house hall and the barn's first stall (open straight stairs inside the buildings),
-  and three fieldstone storm-cellar portals under tin roofs (north meadow, east yard, south-west yard).
+  Cellar, joined by eleven short tunnels that are offset so no corridor is a long straight lane; every room has two
+  or more exits and the rooms form a loop. About 800 m2 of rooms and tunnels (see "Polish 2026-11-10").
+- Five surface entrances: the house hall and the barn's south stall (open straight stairs inside the buildings, each
+  opening from a free landing), and three fieldstone storm-cellar portals under tin roofs (north meadow, east yard,
+  south-west yard).
 - 59 floor props (shelves, bunks, barrels, crates, drums, tank, benches).
+
+## Polish 2026-11-10 (bushes, doorways, a smaller and darker shelter, chain lamps, puddles)
+
+Gameplay, movement, weapons and the protocol are untouched. Layout, collision and map revision changed (the
+shelter's rooms and two stairs moved), so frontend assets and Worker need a matching release when authorized.
+
+**Bushes and hedges.** `bush` and `hedge_long` (props_farm.py) are now leaf sprays: alpha-cut cards (material
+`leaf_bush`, atlas `public/assets/textures/farmstead/bush_leaves.png` from `tools/make_farm_textures.py`: four
+512 px sprays, long leaf, bushy fan, broadleaf, fine twig, with midribs, veins and light/dark leaves) around a small
+opaque core (`leaf_core`) and woody stems. Cards are shaded dark at the base and light at the tip with vertex colours,
+bases sit at the core surface, and tips stay inside the unchanged catalogue sizes and colliders (bush 1.4 x 0.95 m,
+hedge 3.8 x 2.9 m x 0.85 m collider), so no sightline, lane or Zone Control square moved. Each prop is built twice:
+66 / 270 cards (`leaf_bush`) and 22 / 135 larger cards (`leaf_bush_lite`, a different cutoff so the batcher keeps it as a
+separate material). `src/maps/FoliageLod.ts` draws one set per map cell: Chromebook mode draws lite everywhere, other
+presets draw detail within 42 m of a cell and lite beyond (4 m hysteresis). Both sets share the batch cells, so draw
+calls grow by about one batch per cell (8). The oak and pine canopies are unchanged.
+
+**Doorways.** `tests/farmsteadDoorways.test.ts` audits every door of every wall on both sides: 1.4 m of floor with no
+wall, stair, slab or stairwell drop in front of it, and at least one clear lane past furniture. It found exactly two
+defects, both the shelter stairs: in the house hall the stair's top landing sat 0.3 m from the living-room door with
+solid guard walls across part of it, and the barn stall door opened straight onto its stair, splitting the stall. The
+house stair now starts 1.6 m into the hall (`[-4.2, 0.95, -2.2, 7.55]`, Shelter Hall's north edge moved to 7.55) and the
+barn stair starts in the south stall with 4.6 m of floor before its mouth and runs north through the partition (cut to
+the stair's width, opening `kind: 'stairwell'`) to a short tunnel into the root cellar. Indoor guards are timber
+(`guard` on an entrance), the three outdoor portals keep fieldstone. A solid-overlap scan of the 514 structural boxes
+found only intended joins (posts into beams, rail corners, fence corners), so no other building needed geometry changes.
+
+**Smaller shelter.** Rooms and tunnels went from 922 to 802 m2 (-13.0%, -11.8% with the stairs): the Shelter Hall,
+Cold Store, Bunk Room, Root Cellar, Pump Room, Dry Store and Tool Cellar lost margins that held nothing; no route
+was removed (still a loop, five entrances, every room two or more exits). `tests/farmstead.test.ts` caps the area at
+830 m2. Props, piers, blocks and the Practice walk lanes were re-placed with the layout validators.
+
+**Atmosphere.** `blender/scripts/lib/underground.py` (style `farm`): floors, walls and ceilings are cut into 0.5 /
+0.7 / 1.5 m cells so the baked vertex lighting has detail, with broad uneven darkening, mottling, water streaks
+running down the walls and damp bands at the floor; the base light is low (0.19) and the lamp pools carry the rest.
+`Environment.configureUnderground` (layout `ambient: {sky, ambient, sun}`) scales the sky reflection, the Chromebook
+hemisphere light and the sun to 72% / 78% / 8% below the slab, fading in over the first 2 m of a stair, so the sky does
+not light the shelter. The exported colours are bytes: 1.0 is the ceiling, which is why the sky is not dimmed further.
+
+**Chain lamps.** 37 lamps (`farm_lamps`): rooms get a loose grid about 5.4 m apart, tunnels a lamp every 4.6 m, each snapped to a
+joist and 0.8 m from any pier; six are dead (no light), nine are cold (blue-white), the rest warm, brightness
+varies +-18%. Each is a ceiling plate, 5-8 alternating chain links (36-50 cm), a cap, a cone shade, a bulb
+(`bulb_warm` / `bulb_cold` / `bulb_dead`, modest emissive) and a guard ring, with its lowest point at least 2.3 m above the floor;
+visual only, no collider, no scene light (the four-light budget is unchanged). The pools are baked, so every preset
+including Chromebook mode shows them.
+
+**Puddles.** 31 irregular polygons, 16 puddles and 15 small satellites (`farm_puddles`: 3 harmonics of radius, stretched and rotated, 18-24 vertices, some
+with satellites), never under a pier, block or prop, in a stair's foot or on a tunnel join, inside a darker `concrete_wet`
+halo (plus the floor vertices near them darkened), 3 and 6 mm above the floor, no collision. Material `puddle` is managed
+by `src/rendering/PuddleReflections.ts`: Medium, High and Ultra own ONE planar MirrorTexture for the whole floor plane
+(256 / 384 / 512 px), listing only the materials that exist below ground, rendering every second frame and only while the
+camera is under the slab (idle and cheap outdoors); Low and Chromebook mode own no render target and show a dark,
+slightly glossy puddle. `Game.applySettings` re-applies the preset on any graphics or Chromebook change, so the setting
+takes effect at once without a reload (`tools/atmosphere-test.mjs` checks this in Chrome; `__crossfire.atmosphere()` reports
+the state). `MaterialLibrary.MANAGED` keeps the quality passes from overwriting it.
+
+Rebuild: `python -B -I tools/make_farm_textures.py` (only if the leaf atlas changed), `python -B -I tools/layout_farm.py --write`,
+`node tools/run-blender.mjs --only materials,props,farm`, restore the tracked `__pycache__` files and delete the new
+untracked ones, then `npm test --prefix server`. Review shots: `node tools/farm-extra-shots.mjs <url> [outDir] [quality=...] [bush|arch|shelter] [chromebook]`.
 
 ## Pipeline
 
@@ -77,7 +137,8 @@ practice bots, overhaul walks, posters, geometry/z-fight). `tools/farm-shots.mjs
 
 ## Limits
 
-- Interiors are dim (two point lights, as on every map); the shelter is deliberately darker than the yard.
+- Interiors are dim (two point lights, as on every map); the shelter is deliberately much darker than the yard, and its
+  floor props (white IBC tank, crates) are not baked-lit, so they read a little brighter than the walls around them.
 - The aerial thumbnail is a game screenshot (no Blender preview render for this map).
 - Public Cloudflare behaviour was not validated; the frontend assets and the Worker need a matching release
   (maps and revisions changed). Old tabs need a refresh.

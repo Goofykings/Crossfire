@@ -99,7 +99,7 @@ export interface UndergroundPassage {
   rect: Rect;
   segments: Rect[];
   piers?: [number, number][];
-  entrances: { id: string; type: 'dogleg' | 'straight'; rect: Rect; side: 'n' | 's' | 'e' | 'w'; hand?: 'left' | 'right' }[];
+  entrances: { id: string; type: 'dogleg' | 'straight'; rect: Rect; side: 'n' | 's' | 'e' | 'w'; hand?: 'left' | 'right'; guard?: string }[];
   route?: [number, number][];
   /** Walkable polyline from the first entrance's street side to the last one's. */
   waypoints: Vec3Tuple[];
@@ -107,6 +107,10 @@ export interface UndergroundPassage {
   walks?: [number, number][][];
   /** Solids on the floor (ticket gates, kiosks, the cistern tank...): real collision boxes. */
   blocks?: { rect: Rect; h: number; kind: string }[];
+  /** Floor prop footprints (the generator keeps puddles out from under them). */
+  propRects?: Rect[];
+  /** Fractions of the sky reflection, Chromebook hemisphere light and sun that reach below the slab (Environment.configureUnderground). */
+  ambient?: { sky: number; ambient: number; sun: number };
   name?: string;
 }
 

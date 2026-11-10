@@ -162,7 +162,8 @@ def barn():
     p = dict(inn='siding_weathered')
     els += [
         wall([-19.52, Z0 + T, -19.28, Z1 - T], [0, 2.75], [door(-35.5, -33.25, top=2.6), door(-28.6, -26.4, top=2.6)], **p),
-        wall([-19.28, -31.22, X1 - T, -30.98], [0, 2.75], [door(-17.4, -15.1, top=2.4)], **p),
+        # the cellar stair passes through this opening (its guards fill the 2 m), so the door is cut to the stair exactly
+        wall([-19.28, -31.22, X1 - T, -30.98], [0, 2.75], [door(-17.4, -15.4, top=2.4, kind='stairwell')], **p),
     ]
     # loft over the stalls and the east part of the bay; void over the loft stair; forebay deck over the yard
     loft = [-22.6, Z0 + T, X1 - T, Z1 - T]

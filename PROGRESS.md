@@ -1,3 +1,58 @@
+# Farmstead polish and Semi-Auto Sniper scope fix (2026-11-10)
+
+Visual and layout polish of the existing Farmstead plus a root-cause fix of the Semi-Auto Sniper optic. Combat,
+movement, damage, scoring, protocol (v26), Zone Control squares and the Cloudflare configuration are untouched; no
+commit, push or deployment. Details: docs/FARMSTEAD.md "Polish 2026-11-10" and docs/SEMI_SNIPER.md "Scope fix".
+
+Farmstead visuals
+- Bushes and the 20 hedgerows are alpha-cut leaf sprays (new atlas bush_leaves.png, midribbed and veined leaves in
+  four spray shapes) around a small dark core, shaded dark-to-light with vertex colours; same footprint, height and
+  collider as before. Detail (66 / 270 cards) and lite (22 / 135 cards) sets are baked side by side; FoliageLod draws
+  lite everywhere in Chromebook mode and beyond 42 m otherwise. Draw calls: about +8 (one batch per map cell).
+
+Building geometry
+- tests/farmsteadDoorways.test.ts audits every door of every building on both sides (clear 1.4 m, no stair drop, a
+  lane past furniture). It found two real defects, both shelter stairs: the house hall stair's top sat 0.3 m behind
+  the living-room door with guard walls across part of the doorway, and the barn stall door opened straight onto its
+  stair, splitting the stall. House stair now starts 1.6 m inside the hall; barn stair starts in the south stall with
+  4.6 m of floor in front and passes through the partition (cut to the stair width). Indoor guards are timber.
+  An overlap scan of all 514 structural boxes found only intended joins. Doors, windows, roofs, balconies unchanged.
+
+Underground
+- Rooms and tunnels 922 -> 802 m2 (-13.0%; -11.8% with stairs): Shelter Hall, Cold Store, Bunk Room, Root Cellar, Pump
+  Room, Dry Store and Tool Cellar trimmed, one 2.4 m tunnel added for the barn stair. Still a loop, five entrances,
+  every room two or more exits; props, walk lanes and Practice navigation re-validated.
+- Darker, damper concrete: cut-up surfaces with baked uneven stains, wall streaks and damp bands; sky reflection,
+  Chromebook hemisphere light and sun are scaled below the slab (Environment.configureUnderground).
+- 37 hanging chain lamps (ceiling plate, 5-8 links, cone shade, bulb, guard ring; six dead, nine cold, rest warm,
+  brightness varies) snapped to joists, 2.3 m or more above the floor, visual only; pools are baked.
+- 31 irregular puddles (16 + 15 satellites) with a damp halo. One planar MirrorTexture for the whole floor (256 / 384 /
+  512 px on Medium / High / Ultra) renders every second frame and only while the camera is below the slab; Low and
+  Chromebook mode have no reflection render target (dark glossy material). Presets re-apply live, no reload.
+
+Semi-Auto Sniper scope (root cause)
+- Single-sided tubes: the eyepiece funnel's inside is a back face (a hole from behind), the objective's glass faced the
+  shooter only (hollow from the front), and the eyepiece glass was a large pale disc 0.21 m from the ADS eye. Rebuilt
+  the openings (inward funnel faces, eyecup rim, faint double-sided scope_glass, recessed gun_lens objective, 16-sided
+  tubes); ADS keeps its peripheral view (rim radius 27 -> 24 mm). Stats, zoom, reticle and anchors unchanged.
+
+Tests and evidence
+- vitest: full suite, 95 files / 949 tests, including the new tests/farmsteadDoorways.test.ts and tests/farmAtmosphere.test.ts; the
+  farmstead walks, mapOverhaul, mapIntegrity, geometry/z-fight, Zone Control and navigation suites pass with the
+  new layout. Server: npm test --prefix server (94 protocol/runtime tests, rebuilds the Worker bundle). typecheck,
+  production build, assets:verify.
+- Chrome: tools/atmosphere-test.mjs (presets change puddles/foliage live, mirror idle on the surface, none in
+  Chromebook, draw calls 186 surface / 113 underground on High, 176 / 72 Chromebook), tools/scope-shots.mjs
+  (hip, ADS, reload on High, Low, Chromebook), tools/review-semi-sniper.mjs (Locker, third person, front),
+  tools/farm-extra-shots.mjs (bushes, arch, shelter), tools/farm-shots.mjs.
+
+Remaining limits
+- Oak and pine canopies are still low-poly blobs; only bushes and hedges were rebuilt.
+- Underground floor props are not baked-lit, so the white IBC tank reads brighter than the walls.
+- The shelter's puddle mirror lists 31 batches; on the dev Intel iGPU it was not profiled in isolation, and no
+  physical Chromebook run was done. Public Cloudflare behaviour was not validated; frontend assets and Worker need
+  a matching release (layout, collision and revision changed).
+
 # Zone Control online mode (2026-11-09)
 
 Implemented a selectable public/private custom-room mode using the existing

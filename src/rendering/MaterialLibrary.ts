@@ -145,6 +145,8 @@ export class MaterialLibrary {
   }
 
   private applyQuality(name: string, def: MaterialDef, m: PBRMaterial): void {
+    // Owned by PuddleReflections (planar reflection at higher presets, a dark gloss otherwise): the preset code sets it.
+    if (MaterialLibrary.MANAGED.has(name)) { m.reflectionColor = Color3.White(); return; }
     // Preserve source maps for a lossless return from the derived low-cost mode.
     if(def.albedo){const source=this.texture(def.albedo,def.tile||1,false,!def.atlas);m.albedoTexture=source;
       if(this.chromebook&&!def.atlas)this.compactTexture(source,m);}
@@ -205,8 +207,13 @@ export class MaterialLibrary {
     return tex;
   }
 
+  /** Materials whose reflection and gloss are driven by another system, not by the quality presets here. */
+  static readonly MANAGED = new Set(['puddle']);
+
   /** Materials that should not cast shadows (transparent, emissive or too small to matter). */
   static readonly NO_SHADOW = new Set([
+    // shelter puddles and their damp halo lie on the floor and are never in a light's path
+    'puddle', 'concrete_wet', 'bulb_warm', 'bulb_cold', 'bulb_dead',
     'glass', 'glass_shop', 'soil', 'flowers', 'foliage', 'lantern_glass', 'team_blue_glow', 'team_red_glow',
     'sign_blue', 'sign_red', 'slabs_inlay', 'stone_inlay', 'water', 'frame_white', 'frame_dark', 'produce', 'shop_sign', 'copper',
     // Industrial Complex / Modern City: glazing, paint and stain decals, lamps, and the alpha-tested chain-link mesh

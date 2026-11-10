@@ -133,8 +133,40 @@ Design: lower/upper receiver with ejection port, deflector, side charging handle
 and magazine release; 28.5 cm free-float octagonal handguard with vent slots, hand stop and a long top
 rail; heavy barrel, gas block with front sight blade, slotted 12.5 cm brake; fixed stock with a cheek
 riser, belly and side panels; AR-outline grip with rubber panels and finger bumps; open 4x-style scope
-(eyepiece flare, tube, objective bell, elevation/windage turrets, two-ring mount, hollow like the AR
-holo window so the sight picture is the reticle) over a curved dark magazine with a gold floor plate.
+(eyepiece flare with an eyecup rim, tube, objective bell with a recessed lens, elevation/windage turrets,
+two-ring mount; see "Scope fix (2026-11-10)" for how the openings are built) over a curved dark magazine with a gold floor plate.
+
+## Scope fix (2026-11-10)
+
+Symptom: the optic looked incomplete. From behind (hip fire, third person from the rear) the eyepiece end was an
+open hole with the world showing through it; from the front the objective was hollow; in ADS a large pale disc
+surrounded the dark ring.
+
+Root cause (found with `tools/scope-probe.mjs`, which hides the view-model primitives one at a time in the real
+game, and `tools/scope-shots.mjs` / `tools/scope-orbit.mjs`): the tubes are single-sided meshes (outward faces,
+back-face culling on), so any surface seen from the inside is culled.
+
+- The eyepiece flare narrows away from the shooter. Seen from behind it is a funnel, and a funnel's inside is a
+  back face: it never rendered, so the rear of the scope was a see-through hole. Only the objective bell (which
+  widens away from the shooter and so faces the eye) rendered, as a detached ring.
+- The two end "glasses" were single-sided `gun_glass` discs (alpha 0.16), one at the eyepiece 0.21 m in front of
+  the ADS eye and one at the objective. The eyepiece one is the pale disc: at that distance it spans about 80 px
+  and it is wider than the optic body around it. The objective one faces the shooter, so from the front it was
+  culled and the bell was hollow.
+- Not the cause: missing meshes, materials (all 13 primitives and 9 materials exported), near-plane clipping (the
+  weapon group uses 0.012), frustum culling (`alwaysSelectAsActiveMesh`), attachment or ADS alignment, presets.
+
+Fix (`semi_sniper()` in `blender/scripts/lib/weapon.py`, new material `scope_glass`, `ztube(..., inward=True)`,
+`_ring()`): the eyepiece funnel also has inward faces (a dark funnel seen from the shooter), a rubber eyecup rim
+faces the shooter at the funnel mouth (outer radius 24 mm instead of 27 mm, so ADS keeps its peripheral view), a
+faint double-sided `scope_glass` (alpha 0.07) sits at the funnel's throat instead of the big disc, and the
+objective has a front rim, a recess wall and a dark `gun_lens` disc facing forward (the same lens material as the
+bolt sniper). Inside the tube nothing blocks the view, so the sight picture is still the reticle and the world.
+Tubes are 16-sided; 2122 triangles (AR 1836, Sniper 1936; the test limit moved from 2100 to 2200). Stats, ADS
+optics, the reticle quad and every anchor are unchanged; the thumbnail was re-rendered.
+
+Checked in the real game (Practice, `tools/scope-shots.mjs`: hip, ADS, reload at High, Low and Chromebook mode)
+and in the lab (`tools/review-semi-sniper.mjs`: Locker, third person, third-person ADS, front).
 
 ## Original integration handoff (historical)
 
@@ -184,7 +216,7 @@ Blender views (including the lineup) in `test-results/semi-sniper/blender/` (ign
   0.6 mm: at 0.6-1.5 mm they flickered in and out with the camera angle at review distances on this machine's
   depth buffer. Existing weapons' 0.6 mm details have the same limit.
 - The model itself has no separate magnifying render target; current ADS uses the optical FOV calculation above.
-  The faint circular tint around the eyepiece is the end glass, same material as the AR window.
+  (The faint circular tint that used to surround the eyepiece in ADS was a defect; it is gone, see below.)
 - Blender renders use the flat preview materials, so the thumbnail is paler than in game. The game
   render (reflections on and off) is the reference for colour.
 - No physical Chromebook run; budget numbers are from headless desktop Chrome on an Intel iGPU.

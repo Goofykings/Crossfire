@@ -1,3 +1,18 @@
+## Farmstead polish and Semi-Auto Sniper scope fix (2026-11-10)
+
+See docs/FARMSTEAD.md "Polish 2026-11-10", docs/SEMI_SNIPER.md "Scope fix" and the newest PROGRESS entry. Visual and
+layout only; combat, protocol v26 and Zone Control squares untouched. Bushes/hedges are alpha-cut leaf sprays baked in
+a detail and a lite set (`leaf_bush` / `leaf_bush_lite`, FoliageLod picks one: lite everywhere in Chromebook mode, beyond
+42 m otherwise); keep the two material definitions different or the batcher merges them. The shelter lost 13% floor,
+its house and barn stairs now open from free landings (tests/farmsteadDoorways.test.ts audits every door: keep it
+green), lamps and puddles are generated in underground.py `farm_lamps` / `farm_puddles` (visual only, baked light;
+exported vertex colours are bytes, 1.0 is the ceiling). Puddle material `puddle` is MANAGED by PuddleReflections:
+one planar mirror on Medium and up, rendering only underground, none on Low or Chromebook, re-applied live from
+Game.applySettings. Environment.configureUnderground dims sky, hemisphere light and sun below the slab. Sniper optic:
+tubes are single-sided, so every opening needs a face toward the viewer (inward funnel, rim, lens); never assume a tube's
+inside renders. Rebuild with run-blender `--only materials,props,farm` (+ restore tracked `__pycache__`), then
+`npm test --prefix server`. No commit/push/deploy.
+
 ## Playable Semi-Auto Sniper (2026-11-09)
 
 The model handoff below has now been integrated. See docs/SEMI_SNIPER.md and the

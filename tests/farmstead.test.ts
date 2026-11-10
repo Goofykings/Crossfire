@@ -104,7 +104,7 @@ describe('farmstead buildings', () => {
           if (world.overlapsCylinder(alongX ? mid : a, alongX ? a : mid, MOVEMENT.radius, y + 0.45, y + MOVEMENT.standHeight)) return Infinity;
           const p = alongX ? player(mid, y, a, weapon) : player(a, y, mid, weapon);
           if (alongX) walkTo(p, mid, b); else walkTo(p, b, mid);
-          // a lane that walks down an underground stair is an entry too (the barn's stall door opens onto its stair)
+          // a lane that walks down an underground stair is an entry too (the barn's stall partition is cut for its cellar stair)
           if (p.position.y < y - 0.25) return 0;
           if (Math.abs(p.position.y - y) > 0.2) return Infinity;
           return Math.hypot(p.position.x - (alongX ? mid : b), p.position.z - (alongX ? b : mid));
@@ -222,7 +222,9 @@ describe('farmstead storm shelter', () => {
     const area = passage.segments.reduce((a, r) => a + (r[2] - r[0]) * (r[3] - r[1]), 0);
     expect(area).toBeGreaterThan(600);
     expect(passage.ceiling - passage.floor).toBeGreaterThan(2.8);
-    const rooms = passage.segments.filter((r) => (r[2] - r[0]) * (r[3] - r[1]) > 50);
+    // 2026-11-10: about 13% less floor than the first build (1012 m2 with stairs, 922 without); keep it in that range
+    expect(area).toBeLessThan(830);
+    const rooms = passage.segments.filter((r) => (r[2] - r[0]) * (r[3] - r[1]) > 40);
     expect(rooms.length).toBeGreaterThanOrEqual(8);
     expect((passage.piers ?? []).length).toBeGreaterThan(8);
   });

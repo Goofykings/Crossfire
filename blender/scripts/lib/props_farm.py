@@ -4,6 +4,7 @@ Every prop is a low-poly MeshData with its origin at the centre of its footprint
 front toward -z, like the rest of the catalogue. Sizes and colliders live in catalog.PROPS.
 """
 import math
+import random
 from meshkit import MeshData
 
 
@@ -40,10 +41,81 @@ def tree_pine():
     return m
 
 
+# --- foliage cards -----------------------------------------------------------------------------------
+# Bushes and hedges are sprays of alpha-cut leaf cards (materials `leaf_bush`, atlas bush_leaves.png) around a small opaque
+# core. Each prop is built twice, a detailed set (`leaf_bush`) and a lite set (`leaf_bush_lite`: a third of the cards, larger);
+# the runtime keeps one of them drawn (MapManager.setFoliageDetail) so Chromebook mode and far batches pay for fewer cards.
+def _unit(v):
+    n = math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]) or 1.0
+    return (v[0] / n, v[1] / n, v[2] / n)
+
+
+def _cross(a, b):
+    return (a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0])
+
+
+def _dot(a, b):
+    return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+
+
+def _rotate(v, axis, ang):
+    """Rodrigues rotation of v about the unit axis."""
+    c, s_ = math.cos(ang), math.sin(ang)
+    k = _cross(axis, v)
+    d = _dot(axis, v) * (1 - c)
+    return (v[0] * c + k[0] * s_ + axis[0] * d, v[1] * c + k[1] * s_ + axis[1] * d, v[2] * c + k[2] * s_ + axis[2] * d)
+
+
+def _spray(m, mat, base, d, hint, roll, h, w, kind, rnd, ao=.5, gain=1.0):
+    """One leaf card standing on `base`, growing along unit `d`, facing roughly along `hint` (rotated by `roll`).
+    The base is shaded dark (the inside of the bush) and the tip light, so the bush reads as a volume."""
+    n0 = _unit((hint[0] - d[0] * _dot(hint, d), hint[1] - d[1] * _dot(hint, d), hint[2] - d[2] * _dot(hint, d)))
+    if abs(_dot(hint, d)) > .97:
+        n0 = _unit(_cross(d, (1, 0, 0)))
+    n = _rotate(n0, d, roll)
+    t = _unit(_cross(d, n))
+    col, row = kind % 2, kind // 2
+    u0, u1 = col / 2 + .004, (col + 1) / 2 - .004
+    v0, v1 = 1 - (row + 1) / 2 + .004, 1 - row / 2 - .004
+    top = max(0.0, n[1]) * .25 + max(0.0, d[1]) * .15
+    lo = ao * rnd.uniform(.9, 1.12)
+    hi = min(1.18, (.9 + top) * gain * rnd.uniform(.9, 1.1))
+    pts = [(base[0] - t[0] * w / 2, base[1] - t[1] * w / 2, base[2] - t[2] * w / 2),
+           (base[0] + t[0] * w / 2, base[1] + t[1] * w / 2, base[2] + t[2] * w / 2),
+           (base[0] + t[0] * w / 2 + d[0] * h, base[1] + t[1] * w / 2 + d[1] * h, base[2] + t[2] * w / 2 + d[2] * h),
+           (base[0] - t[0] * w / 2 + d[0] * h, base[1] - t[1] * w / 2 + d[1] * h, base[2] - t[2] * w / 2 + d[2] * h)]
+    cols = [(lo, lo, lo * .96, 1.0), (lo, lo, lo * .96, 1.0), (hi, hi, hi * .93, 1.0), (hi, hi, hi * .93, 1.0)]
+    m.face(pts, mat, uv=[(u0, v0), (u1, v0), (u1, v1), (u0, v1)], col=cols)
+
+
 def bush():
+    """A shrub about 1.4 x 1.2 m and 0.95 m tall: a dark core, a few woody stems and leaf sprays growing out over a hemisphere."""
+    rnd = random.Random(404)
     m = MeshData()
-    for i, (x, z, r) in enumerate(((0, 0, .5), (.42, .15, .38), (-.4, -.1, .4), (.1, -.35, .34))):
-        m.sphere((x, r * .75, z), r, 'leaves_oak' if i % 2 == 0 else 'leaves_oak_b', rings=3, segments=7, squash=.85)
+    m.sphere((0, .34, 0), .27, 'leaf_core', rings=3, segments=7, squash=.78)
+    m.sphere((.2, .28, .1), .2, 'leaf_core', rings=3, segments=6, squash=.8)
+    m.sphere((-.22, .26, -.08), .19, 'leaf_core', rings=3, segments=6, squash=.8)
+    for i in range(6):
+        a = i * 1.047 + rnd.uniform(-.2, .2)
+        m.tube((0, 0, 0), (math.cos(a) * .22, .34 + rnd.uniform(0, .1), math.sin(a) * .2), .014, 'bark', segments=4)
+    for lite in (False, True):
+        mat = 'leaf_bush_lite' if lite else 'leaf_bush'
+        n = 22 if lite else 66
+        for i in range(n):
+            az = i * 2.39996 + rnd.uniform(-.35, .35)
+            e = math.radians(8 + 78 * ((i * 0.618) % 1.0) ** .8)
+            d = (math.cos(az) * math.cos(e), math.sin(e), math.sin(az) * math.cos(e))
+            h = rnd.uniform(.5, .72) * (1.3 if lite else 1.0)
+            base = (math.cos(az) * .2, .1 + .26 * math.sin(e), math.sin(az) * .2)
+            # keep the tips inside the 1.4 x 0.95 x 1.2 m envelope the collider and the catalogue promise
+            for _ in range(6):
+                tx, ty, tz = base[0] + d[0] * h, base[1] + d[1] * h, base[2] + d[2] * h
+                if (tx / .76) ** 2 + (ty / .98) ** 2 + (tz / .66) ** 2 <= 1.0:
+                    break
+                h *= .9
+            hint = (math.cos(az), .4, math.sin(az))
+            kind = (0, 1, 2, 1, 3, 0)[i % 6] if not lite else (0, 1, 2)[i % 3]
+            _spray(m, mat, base, d, hint, rnd.uniform(-1.1, 1.1), h, h * (1.05 if not lite else 1.0), kind, rnd, ao=.5, gain=1.0)
     return m
 
 
@@ -301,16 +373,34 @@ def tractor():
 
 
 def hedge_long():
-    """A hedgerow (3.8 m long, 2.9 m tall): overlapping leaf blobs on a few trunks, so it blocks sight and movement."""
+    """A hedgerow (3.8 m long, 2.9 m tall, under 1 m thick): a dark opaque core under layered leaf sprays, so it blocks
+    sight and movement and reads as living growth (the core and the sprays share the 0.85 m collider)."""
+    rnd = random.Random(2911)
     m = MeshData()
     for i in range(8):
         x = -1.65 + i * .471
         m.cylinder((x, 0, 0), .07, .8, 'bark', segments=5, caps=(False, False))
-    for i in range(8):
-        x = -1.65 + i * .471
-        for j, (y, r) in enumerate(((.85, .5), (1.55, .5), (2.25, .46))):
-            off = .12 if (i + j) % 2 else -.12
-            m.sphere((x, y, off * .6), r, 'leaves_oak' if (i + j) % 2 == 0 else 'leaves_oak_b', rings=3, segments=6, squash=1.05)
+    for y, r in ((.95, .27), (1.7, .25), (2.3, .2)):
+        m.tube((-1.6, y, 0), (1.6, y, 0), r, 'leaf_core', segments=9)
+    for lite in (False, True):
+        mat = 'leaf_bush_lite' if lite else 'leaf_bush'
+        n = 135 if lite else 270
+        for i in range(n):
+            # low-discrepancy (R2) points over the face: x and y must not be tied together or the sprays form a diagonal streak
+            u = (i * 0.7548776662 + .5 + rnd.uniform(-.02, .02)) % 1.0
+            v = (i * 0.5698402910 + .5 + rnd.uniform(-.02, .02)) % 1.0
+            x = -1.78 + 3.56 * u
+            y = .3 + 2.1 * v ** .92
+            s = 1 if rnd.random() < .5 else -1
+            top = y > 2.05
+            d = _unit((rnd.uniform(-.35, .35), 1.0 if not top else rnd.uniform(.5, 1.0), (s * .32 if not top else rnd.uniform(-.5, .5))))
+            h = rnd.uniform(.7, 1.05) * (1.25 if lite else 1.0)
+            # the front and back faces stay inside the 0.95 m depth, the crown inside the 2.9 m height
+            h = min(h, (2.88 - y) / max(.2, d[1]))
+            base = (x, y, s * rnd.uniform(.2, .36) if not top else s * rnd.uniform(0, .2))
+            hint = (0, .15 if not top else 1.0, s)
+            kind = (0, 1, 2, 3, 1, 0, 2)[i % 7] if not lite else (0, 1, 2)[i % 3]
+            _spray(m, mat, base, d, hint, rnd.uniform(-.55, .55), h, h * (1.1 if lite else 1.0), kind, rnd, ao=.46 + .3 * (y / 2.9), gain=1.0)
     return m
 
 

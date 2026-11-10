@@ -53,6 +53,8 @@ export class Environment {
   private wantsUltra = false;
   private wantsReflections=true;
   private ambient: HemisphericLight | null=null;
+  private underground: { top: number; sky: number; ambient: number; sun: number } | null = null;
+  private dim = 0;
 
   constructor(
     private readonly scene: Scene,
@@ -127,6 +129,34 @@ export class Environment {
     return this.hdr;
   }
 
+  /**
+   * A map whose passages should not be lit by the sky (the farm's storm shelter): below `top` the sky reflection, the
+   * Chromebook hemisphere light and the sun are scaled down to the given fractions, fading in over the first 2 m of the
+   * stair. The baked lamp pools carry the lighting there. Call `updateUnderground` each frame with the camera height.
+   */
+  configureUnderground(c: { top: number; sky: number; ambient: number; sun: number } | null): void {
+    this.underground = c;
+    this.dim = 0;
+    this.applyDim();
+  }
+
+  updateUnderground(cameraY: number): void {
+    const c = this.underground;
+    if (!c) return;
+    const f = Math.min(1, Math.max(0, (c.top + 0.5 - cameraY) / 2));
+    if (Math.abs(f - this.dim) < 0.002) return;
+    this.dim = f;
+    this.applyDim();
+  }
+
+  private applyDim(): void {
+    const c = this.underground, f = this.dim;
+    const mix = (k: number) => 1 - f * (1 - k);
+    this.scene.environmentIntensity = this.cfg.environmentIntensity * (c ? mix(c.sky) : 1);
+    this.sun.intensity = this.cfg.sunIntensity * (c ? mix(c.sun) : 1);
+    if (this.ambient) this.ambient.intensity = this.cfg.environmentIntensity * .65 * (c ? mix(c.ambient) : 1);
+  }
+
   setFog(enabled: boolean): void {
     this.scene.fogMode = enabled ? Scene.FOGMODE_EXP2 : Scene.FOGMODE_NONE;
   }
@@ -145,7 +175,8 @@ export class Environment {
       if(this.ultraSettled){this.ultraHdr?.dispose();this.ultraHdr=null;this.ultraSettled=false;this.ultraReady=false;}
       if(!this.ambient){this.ambient=new HemisphericLight('chromebook-ambient',Vector3.Up(),this.scene);
         this.ambient.diffuse=new Color3(.78,.84,1);this.ambient.groundColor=new Color3(.28,.3,.34);
-        this.ambient.specular=Color3.Black();this.ambient.intensity=this.cfg.environmentIntensity*.65;this.ambient.renderPriority=2;}
+        this.ambient.specular=Color3.Black();this.ambient.renderPriority=2;}
+      this.applyDim();
       this.ambient.setEnabled(true);
       // Babylon reorders scene.lights on a priority change, but existing meshes
       // retain their old light list. Refresh once so ambient survives the 4-light cap.
