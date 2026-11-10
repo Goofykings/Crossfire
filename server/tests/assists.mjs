@@ -52,8 +52,19 @@ test('assist expiry, respawn cleanup and retired session migration in the real D
   c.send({type:'input',roundId:c.snapshot.roundId,mapVersion:c.snapshot.mapVersion,frames:Array.from({length:6},(_,k)=>({seq:++c.seq,yaw:Math.atan2(-dx,-dz),pitch:Math.atan2(q[1]+.9-p[1]-1.64,Math.hypot(dx,dz)),
   intent:{x:0,z:0,slide:false,aim:true,jumpPressed:false},combat:{trigger:trigger&&k===0,reload:false}}))});}
  async function aim(c,b){for(let i=0;i<13;i++){frames(c,b);await delay(50);}await until(()=>self(c).ack>=c.seq,'aim');}
- async function shot(c,b){const mark=c.messages.length;frames(c,b,true);return(await until(()=>c.messages.slice(mark).find(m=>m.type==='shot'&&m.shot.shooterId===c.id),'shot')).shot;}
- async function contribute(c,b){await shot(c,b);await until(()=>self(c).ack>=c.seq&&self(c).combat.gun.cooldown===0&&self(c).combat.gun.action==='idle','acknowledged contributor ready for second bullet');await shot(c,b);}
+ async function shot(c,b){
+  // A zero cooldown in an older snapshot is not readiness: the preceding input
+  // batch must also be acknowledged, including its trigger-release frames.
+  await until(()=>self(c).ack>=c.seq&&self(c).combat.gun.cooldown===0&&self(c).combat.gun.action==='idle','acknowledged shooter ready');
+  const life=self(b).life,mark=c.messages.length;frames(c,b,true);
+  const result=(await until(()=>c.messages.slice(mark).find(m=>m.type==='shot'&&m.shot.shooterId===c.id),'shot')).shot;
+  assert.equal(result.hits.length,1,'each intended shot must register one authoritative hit');
+  const hit=result.hits[0];assert.equal(hit.id,b.id,'shot must hit the intended victim, not another participant');
+  assert.equal(hit.life,life,'damage must belong to the current victim life');assert.equal(hit.head,false);
+  assert.ok(hit.amount>0,'registered body hit must apply damage');
+  return hit;
+ }
+ async function contribute(c,b){return [await shot(c,b),await shot(c,b)];}
  try{
   await setup();let r=await room.advanceMapForTest();while(r.mapId!=='european-town')r=await room.advanceMapForTest();
   const a=await open(),b=await open(),killer=await open('sniper'),arena=await room.directionalArenaForTest();
@@ -72,15 +83,25 @@ test('assist expiry, respawn cleanup and retired session migration in the real D
   b.snapshot=b.heldSnapshot;b.holdDeathSnapshots=false;await respawn;
   assert.equal(b.spawnRequests,requests+1,'one correlated spawn after authoritative readiness');
   assert.equal(self(b).life,oldLife+1);assert.equal(self(b).death,null);
-  const other=await open('rifle');await place();other.position=arena.sources.left;await room.placeForCombatTest(other.id,other.position);
-  await aim(other,b);await shot(other,b);await aim(a,b);await contribute(a,b);
-  await until(()=>self(a).combat.gun.cooldown===0&&self(a).combat.gun.action==='idle','contributor ready');await contribute(a,b);
+  // The sniper still occupies left. Overlapping it made this rifle hit the
+  // sniper's head at distance zero, leaving only four 20-22 HP hits on b.
+  const other=await open('rifle');await place();other.position=arena.sources.right;await room.placeForCombatTest(other.id,other.position);
+  await aim(other,b);const hits=[await shot(other,b)];await aim(a,b);hits.push(...await contribute(a,b),...await contribute(a,b));
+  // Five close-range body hits kill even with every AR roll at its minimum.
+  // Check confirmed damage, not just that the server accepted five triggers.
+  let health=100;for(const [i,hit]of hits.entries()){
+   assert.ok(hit.amount<=22);if(i<4)assert.ok(hit.amount>=20);health-=hit.amount;assert.equal(hit.health,health);
+   assert.equal(hit.killed,i===4,'only the fifth current-life hit eliminates');
+  }
+  assert.equal(health,0);
   await until(()=>!self(b).alive,'new life death');assert.equal(self(a).kills,1);assert.equal(self(a).assists,1,'previous-life damage never grants another assist');
+  assert.equal(self(b).death.victimLife,oldLife+1);assert.equal(self(b).death.killerId,a.id);assert.deepEqual(self(b).death.assists,[]);
   const before=await room.snapshotForTest(),saved=before.players.find(p=>p.id===a.id);
   for(const c of clients){clearInterval(c.timer);if(c.ws.readyState===WebSocket.OPEN){c.ws.close();await new Promise(resolve=>c.ws.once('close',resolve));}}
   await room.seedRetiredStateForTest(a.id);room[Symbol.dispose]?.();await mf.dispose();mf=new Miniflare(options);await setup();
   const resumed=await open('rifle',a.token),normal=self(resumed);
   assert.equal(resumed.id,a.id);assert.equal(normal.life,saved.life);assert.equal(normal.score,saved.score);assert.equal(normal.assists,1);assert.equal(normal.health,80);
+  assert.equal(normal.kills,saved.kills);assert.equal(normal.deaths,saved.deaths);assert.equal(normal.assists,saved.assists);
   assert.equal(resumed.snapshot.match.mode,'ffa');for(const key of ['scale','eyeScale','doubleJump','extraJumpUsed','extraJumpCount'])assert.equal(key in normal.motion,false);
   assert.equal('powerup' in normal,false);assert.equal('burn' in normal,false);assert.equal((await room.retiredStorageForTest()).pickups,undefined);
  }finally{for(const c of clients){clearInterval(c.timer);c.ws.terminate();}room?.[Symbol.dispose]?.();await mf.dispose();}

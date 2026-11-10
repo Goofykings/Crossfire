@@ -1,3 +1,46 @@
+# Assist integration fixture and shot readiness fix (2026-11-09)
+
+Reproduced `Assist timeout: new life death` with the requested direct Node test.
+Temporary authoritative shot diagnostics confirmed that the new rifle attacker
+was placed at the exact same `sources.left` position as the still-alive sniper.
+Its intended victim shot actually hit that sniper's head at distance zero. Only
+four 20-22 HP body hits reached the intended victim; five successful body hits
+would have killed even at minimum damage. Weapon balance, regeneration, respawn
+and assist gameplay logic did not cause this failure.
+
+The diagnostic run also reproduced a separate `shot` timeout: before a second
+two-shot contribution, the test accepted a stale zero-cooldown snapshot without
+waiting for the preceding input batch/trigger release to be acknowledged.
+
+Only `server/tests/assists.mjs` changes behavior: place the additional attacker at
+the clear `sources.right` position, and require both input acknowledgement and
+idle/zero cooldown before every shot. Verify each authoritative hit's intended
+target, current victim life, body location and positive damage. Verify the final
+five shots' damage/health progression and fifth-shot elimination, plus death
+identity/assist list and restored kills/deaths/assists. Existing expired and
+valid 50-point assist checks, respawn/cache-order regression, life IDs, health
+migration and actual Durable Object storage restart remain covered. No random
+seed, artificial kill, timeout increase or new sleep; temporary logging removed.
+
+Verification on Windows / Node v24.20.0:
+
+- Original direct test failed at `new life death`; the diagnostic reproduction
+  also caught the stale-readiness `shot` failure described above.
+- Rebuilt the current Worker with Wrangler dry-run, then the fixed direct assist
+  test passed, followed by three consecutive successful stability runs.
+- `npm --prefix server test`: **92 passed**, zero failures (includes another
+  successful assist lifecycle run against the rebuilt production Worker).
+- `node --test server/tests/protocol.mjs`: **1 passed**, exercising the actual
+  frontend transport against the real local Worker and shared message parsers.
+- `npm test -- --maxWorkers=2`: **923 passed, 1 existing skip**.
+- `npm run build`: passed, including `tsc --noEmit`; existing large-bundle and
+  build-plugin timing warnings remain. `git diff --check` passed.
+
+No gameplay, protocol or deployment configuration changes; no frontend or Worker
+redeployment is needed for this test-only fix. GitHub Actions/Ubuntu was not run
+from this session and still requires verification after an authorized push. No
+commit, push or deployment performed.
+
 # Playable Semi-Auto Sniper (2026-11-09)
 
 Integrated the existing gold Blender model as a fifth firearm, adapting to the
