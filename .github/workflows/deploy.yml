@@ -1,5 +1,3 @@
-# Check and deploy one matching Worker + GitHub Pages release.
-# Generated assets (GLB, textures, audio) are committed, so CI does not need Blender.
 name: Deploy Crossfire
 
 on:
@@ -14,20 +12,22 @@ permissions:
 
 concurrency:
   group: pages
-  # Never cancel between updating the Worker and publishing its frontend.
   cancel-in-progress: false
 
+# Keep release preparation on Cloudflare because the existing
+# prepare-release.mjs currently requires the Cloudflare provider.
 env:
-  VITE_MULTIPLAYER_PROVIDER: ${{ vars.VITE_MULTIPLAYER_PROVIDER }}
+  VITE_MULTIPLAYER_PROVIDER: cloudflare
   VITE_MULTIPLAYER_URL: ${{ vars.VITE_MULTIPLAYER_URL }}
-  VITE_CUSTOM_MULTIPLAYER_URL: ${{ vars.VITE_CUSTOM_MULTIPLAYER_URL }}
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     outputs:
       protocol: ${{ steps.release.outputs.protocol }}
-      health-url: ${{ steps.release.outputs.health-url }}
+      health-url: ${{ steps.backend.outputs.health }}
+
     steps:
       - uses: actions/checkout@v4
 
@@ -78,19 +78,59 @@ jobs:
       - name: Verify generated assets
         run: npm run assets:verify
 
+      # Check the self-hosted backend before choosing the frontend configuration.
+      - name: Check self-hosted backend
+        id: custom
+        continue-on-error: true
+        run: |
+          response=$(curl --fail --silent --show-error \
+            --max-time 15 "$CUSTOM_HEALTH_URL")
+
+          node -e '
+            const data = JSON.parse(process.argv[1]);
+            const expected = Number(process.argv[2]);
+
+            if (!data.ok || Number(data.protocol) !== expected) {
+              console.error("Self-hosted backend protocol mismatch.");
+              process.exit(1);
+            }
+
+            console.log("Self-hosted backend is healthy.");
+          ' "$response" "$EXPECTED_PROTOCOL"
+        env:
+          CUSTOM_HEALTH_URL: ${{ vars.CUSTOM_MULTIPLAYER_HEALTH_URL }}
+          EXPECTED_PROTOCOL: ${{ steps.release.outputs.protocol }}
+
+      - name: Select backend
+        id: backend
+        run: |
+          if [ "${{ steps.custom.outcome }}" = "success" ]; then
+            echo "provider=custom" >> "$GITHUB_OUTPUT"
+            echo "url=${{ vars.VITE_CUSTOM_MULTIPLAYER_URL }}" >> "$GITHUB_OUTPUT"
+            echo "health=${{ vars.CUSTOM_MULTIPLAYER_HEALTH_URL }}" >> "$GITHUB_OUTPUT"
+            echo "Using self-hosted backend."
+          else
+            echo "provider=cloudflare" >> "$GITHUB_OUTPUT"
+            echo "url=${{ vars.VITE_MULTIPLAYER_URL }}" >> "$GITHUB_OUTPUT"
+            echo "health=${{ steps.release.outputs.health-url }}" >> "$GITHUB_OUTPUT"
+            echo "Self-hosted backend unavailable. Using Cloudflare."
+          fi
+
       - name: Build
         run: npm run build
         env:
-          # "./" works for any repository name. Set e.g. "/my-repo/" to force absolute URLs.
           BASE_PATH: ./
+          VITE_MULTIPLAYER_PROVIDER: ${{ steps.backend.outputs.provider }}
+          VITE_MULTIPLAYER_URL: ${{ vars.VITE_MULTIPLAYER_URL }}
+          VITE_CUSTOM_MULTIPLAYER_URL: ${{ vars.VITE_CUSTOM_MULTIPLAYER_URL }}
 
       - name: Record frontend release
         run: node tools/prepare-release.mjs manifest
 
       - uses: actions/configure-pages@v5
 
-      # Stage the artifact before changing the live backend; this does not publish Pages.
-      - uses: actions/upload-pages-artifact@v3
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
         with:
           path: dist
 
@@ -108,7 +148,8 @@ jobs:
             exit 1
           fi
 
-      - name: Deploy existing Cloudflare Worker
+      # Keep the Cloudflare Worker updated as a working fallback.
+      - name: Deploy Cloudflare Worker
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -117,31 +158,51 @@ jobs:
           wranglerVersion: ${{ steps.release.outputs.wrangler-version }}
           command: deploy --var RELEASE_SHA:${{ github.sha }}
 
-      - name: Verify deployed Worker protocol and release
+      - name: Verify deployed Cloudflare Worker
         run: node tools/verify-release.mjs
         env:
           MULTIPLAYER_HEALTH_URL: ${{ steps.release.outputs.health-url }}
           EXPECTED_PROTOCOL: ${{ steps.release.outputs.protocol }}
           EXPECTED_RELEASE: ${{ github.sha }}
 
+      - name: Verify selected backend before publishing
+        run: |
+          response=$(curl --fail --silent --show-error \
+            --max-time 15 "$HEALTH_URL")
+
+          node -e '
+            const data = JSON.parse(process.argv[1]);
+            const expected = Number(process.argv[2]);
+
+            if (!data.ok || Number(data.protocol) !== expected) {
+              console.error("Selected backend is unhealthy or incompatible.");
+              process.exit(1);
+            }
+          ' "$response" "$EXPECTED_PROTOCOL"
+        env:
+          HEALTH_URL: ${{ steps.backend.outputs.health }}
+          EXPECTED_PROTOCOL: ${{ steps.release.outputs.protocol }}
+
   deploy:
     needs: build
     runs-on: ubuntu-latest
+
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 24
 
-      - name: Recheck Worker before publishing Pages
+      - name: Recheck selected backend before publishing Pages
         run: node tools/verify-release.mjs
         env:
           MULTIPLAYER_HEALTH_URL: ${{ needs.build.outputs.health-url }}
           EXPECTED_PROTOCOL: ${{ needs.build.outputs.protocol }}
-          EXPECTED_RELEASE: ${{ github.sha }}
 
       - id: deployment
         uses: actions/deploy-pages@v4
