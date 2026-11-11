@@ -1015,8 +1015,6 @@ export class Game {
       this.remotePlayers.setTrailsReduced(v.chromebookMode);
       this.meleeView?.setReducedTrails(v.chromebookMode);
       this.map?.environment.applyGraphicsPreset(p);
-      this.map?.puddles?.apply(p.puddleReflections ?? 0);
-      this.map?.foliage?.setLite(v.chromebookMode);
     }
     if (changed.includes('shadowQuality') && this.map) {
       this.map.environment.applyShadowPreset(SHADOW_PRESETS[v.shadowQuality], this.ctx.camera);
@@ -1107,7 +1105,6 @@ export class Game {
     this.effects?.setReduced(this.settings.value.chromebookMode);
     this.trails.setReduced(this.settings.value.chromebookMode);
     this.effects?.update(dt);
-    if(this.map){const cam=this.ctx.camera.globalPosition;this.map.foliage?.update(cam);this.map.puddles?.update(cam.y);this.map.environment.updateUnderground(cam.y);}
     if(this.map&&this.state!=='loading')this.map.props.update(dt,Date.now()+(this.network?.clockOffset??0),!this.options.multiplayer);
     if (this.map && this.state !== 'loading' && this.state !== 'results') {
       if (!this.options.multiplayer) this.updatePracticeGrenades();
@@ -1723,13 +1720,6 @@ export class Game {
       },
       /** Change a weapon's view-model placement live (hip position, rotation, sight distance) while tuning. */
       tuneView: (id: keyof typeof RIG_CONFIGS, patch: Record<string, unknown>) => Object.assign(RIG_CONFIGS[id], patch),
-      /** View-model meshes with their materials (and an optional visibility patch by mesh-name prefix), for scope/material audits. */
-      viewMeshDebug: (hide: string[] = [], show = false) => (this.weaponView?.meshes ?? []).filter((m) => m.getTotalVertices() > 0 && m.parent).map((m) => {
-        if (hide.some((h) => m.name.startsWith(h))) m.isVisible = show;
-        const mat = m.material as { name: string; alpha: number; backFaceCulling: boolean; transparencyMode: number | null; needDepthPrePass?: boolean } | null;
-        return { name: m.name, enabled: m.isEnabled(), visible: m.isVisible, group: m.renderingGroupId, material: mat?.name, alpha: mat?.alpha, cull: mat?.backFaceCulling,
-          mode: mat?.transparencyMode, tris: m.getTotalIndices() / 3 };
-      }),
       /** Ejected cases in the world: enabled count and positions (tests). */
       casingInfo: () =>
         this.ctx.scene.meshes
@@ -1763,8 +1753,6 @@ export class Game {
       sounds: () => [...this.audio.recent],
       spatialSounds: () => [...this.audio.recentSpatial],
       environmentProps:()=>this.map?.props.inspect(),
-      /** Foliage detail sets and puddle reflection state (tests, quality review). */
-      atmosphere:()=>({foliage:this.map?.foliage?.inspect()??null,puddles:this.map?.puddles?.inspect()??null}),
       environmentState:()=>this.network?.environment,
       grenades: () => ({ count: this.grenadeCount, charge:this.grenadeCharge.presentationProgress(Date.now()),charging:this.grenadeCharge.active,shake:this.cameraRig?.blastState(), ...this.grenadeView?.inspect(), lower: this.weaponView?.debug.lower }),
       aimAssist:()=>({enabled:this.settings.value.aimAssist,...this.aimAssist.inspect()}),

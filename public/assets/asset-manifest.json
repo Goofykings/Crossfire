@@ -1,7 +1,11 @@
 {
  "generator": "blender/scripts/generate_all.py",
  "blender": "5.2.3 LTS",
+<<<<<<< HEAD
  "generated": "2026-11-10 18:12:10",
+=======
+ "generated": "2026-11-09 13:02:59",
+>>>>>>> 97024229bbb1207c78cec5683407e5e2a09fce69
  "assets": [
   {
    "path": "assets/characters/player-albedo.png",
@@ -36,7 +40,11 @@
   {
    "path": "assets/materials.json",
    "kind": "materials",
+<<<<<<< HEAD
    "bytes": 64912,
+=======
+   "bytes": 62129,
+>>>>>>> 97024229bbb1207c78cec5683407e5e2a09fce69
    "description": "Material table (names, texture sets, tiling, tint, PBR factors)",
    "script": "blender/scripts/lib/materials.py"
   },
@@ -176,17 +184,17 @@
   {
    "path": "assets/models/farmstead/collision.json",
    "kind": "collision",
-   "bytes": 76339,
-   "description": "894 oriented collision boxes (runtime physics)",
+   "bytes": 75133,
+   "description": "879 oriented collision boxes (runtime physics)",
    "script": "blender/scripts/lib/collision_gen.py"
   },
   {
    "path": "assets/models/farmstead/collision_debug.glb",
    "kind": "collision-debug",
-   "bytes": 1063040,
+   "bytes": 1044096,
    "description": "Collision boxes as meshes for in-game debug view (F2)",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 10728
+   "triangles": 10548
   },
   {
    "path": "assets/models/farmstead/environment.json",
@@ -205,10 +213,10 @@
   {
    "path": "assets/models/farmstead/terrain.glb",
    "kind": "map-terrain",
-   "bytes": 3382156,
+   "bytes": 2543476,
    "description": "Meadow and dirt paths, the farmhouse, barn, cabin, garage and open shacks, the perimeter fence and the storm shelter",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 66995
+   "triangles": 48959
   },
   {
    "path": "assets/models/industrial-complex/buildings/block_01.glb",
@@ -903,10 +911,10 @@
   {
    "path": "assets/models/shared/props/bush.glb",
    "kind": "prop",
-   "bytes": 33456,
+   "bytes": 13800,
    "description": "bush (1.4 x 0.95 x 1.2 m)",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 324
+   "triangles": 112
   },
   {
    "path": "assets/models/shared/props/cable_reel.glb",
@@ -1247,10 +1255,10 @@
   {
    "path": "assets/models/shared/props/hedge_long.glb",
    "kind": "prop",
-   "bytes": 88160,
+   "bytes": 71360,
    "description": "hedge_long (3.8 x 2.9 x 0.95 m)",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 986
+   "triangles": 656
   },
   {
    "path": "assets/models/shared/props/ibc_tank.glb",
@@ -1766,10 +1774,14 @@
   {
    "path": "assets/models/shared/weapons/semi_sniper.glb",
    "kind": "weapon",
+<<<<<<< HEAD
    "bytes": 180120,
+=======
+   "bytes": 167728,
+>>>>>>> 97024229bbb1207c78cec5683407e5e2a09fce69
    "description": "semi_sniper first-person model: moving parts (mag) and anchors (muzzle, sight, eject, grip_r, grip_l, mag_grip)",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 2122
+   "triangles": 1962
   },
   {
    "path": "assets/models/shared/weapons/shotgun.glb",
@@ -1833,7 +1845,7 @@
   {
    "path": "blender/source/farmstead.blend",
    "kind": "blend",
-   "bytes": 2159475,
+   "bytes": 1709473,
    "description": "Editable source: buildings, terrain, collision, markers, prop preview",
    "script": "blender/scripts/generate_all.py"
   },
@@ -1868,14 +1880,14 @@
   {
    "path": "blender/source/props.blend",
    "kind": "blend",
-   "bytes": 939755,
+   "bytes": 913586,
    "description": "Editable source: all street props",
    "script": "blender/scripts/generate_all.py"
   },
   {
    "path": "blender/source/semi_sniper.blend",
    "kind": "blend",
-   "bytes": 154754,
+   "bytes": 149914,
    "description": "Editable source: semi-automatic sniper",
    "script": "blender/scripts/generate_all.py"
   },

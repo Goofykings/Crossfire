@@ -14,19 +14,17 @@ export interface GraphicsPreset {
   ultraMaterials?: boolean;
   reflectionSize?: 256 | 512;
   noReflections?:boolean;
-  /** Planar reflection size of the shelter puddles (0: a dark gloss, no render target). Medium and up reflect. */
-  puddleReflections?: 0 | 256 | 384 | 512;
   bloomWeight?: number;
   aoSamples?: number;
   aoStrength?: number;
 }
 
 export const GRAPHICS_PRESETS: Record<GraphicsQuality, GraphicsPreset> = {
-  low: { msaa: 1, fxaa: true, bloom: false, sharpen: false, ssao: false, anisotropy: 2, fog: true, batchCell: 40, puddleReflections: 0 },
-  medium: { msaa: 2, fxaa: true, bloom: true, sharpen: false, ssao: false, anisotropy: 4, fog: true, batchCell: 40, puddleReflections: 256 },
-  high: { msaa: 4, fxaa: false, bloom: true, sharpen: true, ssao: true, anisotropy: 8, fog: true, batchCell: 40, puddleReflections: 384 },
+  low: { msaa: 1, fxaa: true, bloom: false, sharpen: false, ssao: false, anisotropy: 2, fog: true, batchCell: 40 },
+  medium: { msaa: 2, fxaa: true, bloom: true, sharpen: false, ssao: false, anisotropy: 4, fog: true, batchCell: 40 },
+  high: { msaa: 4, fxaa: false, bloom: true, sharpen: true, ssao: true, anisotropy: 8, fog: true, batchCell: 40 },
   ultra: { msaa: 4, fxaa: false, bloom: true, sharpen: true, ssao: true, anisotropy: 16, fog: true, batchCell: 40,
-    ultraMaterials: true, reflectionSize: 512, bloomWeight: .12, aoSamples: 20, aoStrength: .7, puddleReflections: 512 },
+    ultraMaterials: true, reflectionSize: 512, bloomWeight: .12, aoSamples: 20, aoStrength: .7 },
 };
 
 export interface ShadowPreset {
@@ -50,7 +48,7 @@ export const SHADOW_PRESETS: Record<ShadowQuality, ShadowPreset> = {
   high: { enabled: true, mode: 'cascaded', mapSize: 2048, cascades: 3, filtering: 'high', maxZ: 90 },
 };
 
-export const CHROMEBOOK_PRESET: GraphicsPreset = {...GRAPHICS_PRESETS.low, fxaa:false, anisotropy:2, noReflections:true, puddleReflections:0};
+export const CHROMEBOOK_PRESET: GraphicsPreset = {...GRAPHICS_PRESETS.low, fxaa:false, anisotropy:2, noReflections:true};
 export function graphicsPreset(s:Readonly<Settings>):GraphicsPreset {
   return s.chromebookMode?CHROMEBOOK_PRESET:GRAPHICS_PRESETS[s.graphicsQuality];
 }

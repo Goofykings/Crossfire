@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # New weapon skins and default appearances (2026-11-10)
 
 Seven skin families (31 catalog items) and new default looks for the SMG, shotgun and bolt sniper. Visual only:
@@ -112,6 +113,8 @@ Remaining limits
   physical Chromebook run was done. Public Cloudflare behaviour was not validated; frontend assets and Worker need
   a matching release (layout, collision and revision changed).
 
+=======
+>>>>>>> 97024229bbb1207c78cec5683407e5e2a09fce69
 # Zone Control online mode (2026-11-09)
 
 Implemented a selectable public/private custom-room mode using the existing
@@ -195,8 +198,6 @@ and Worker v26** releases are required when authorized. Worker identity, Durable
 Objects, origins, Pages base, GitHub Actions and `.env.local` are unchanged. No
 commit, push or deployment; remote CI/production verification remains outstanding.
 
-=======
->>>>>>> bb79aeff46c8721df2da722ad49080829c384ce9
 # Assist integration fixture and shot readiness fix (2026-11-09)
 
 Reproduced `Assist timeout: new life death` with the requested direct Node test.

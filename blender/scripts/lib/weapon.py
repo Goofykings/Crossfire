@@ -75,10 +75,8 @@ def box(md: MeshData, x0, y0, z0, x1, y1, z1, mat: str):
 
 
 def ztube(md: MeshData, z0: float, z1: float, y: float, r0: float, mat: str, sides: int = 12, r1: float | None = None,
-          x: float = 0.0, caps: tuple[bool, bool] = (True, True), cap_mat: str | None = None, phase: float = 0.0,
-          inward: bool = False):
-    """Tube (or cone) along z from z0 to z1 (z0 > z1 or z0 < z1), outward faces (inward: faces toward the axis, so the
-    inside of a funnel or bore is visible), optional end caps."""
+          x: float = 0.0, caps: tuple[bool, bool] = (True, True), cap_mat: str | None = None, phase: float = 0.0):
+    """Tube (or cone) along z from z0 to z1 (z0 > z1 or z0 < z1), outward faces, optional end caps."""
     r1 = r0 if r1 is None else r1
     ring0, ring1 = [], []
     for i in range(sides):
@@ -88,8 +86,7 @@ def ztube(md: MeshData, z0: float, z1: float, y: float, r0: float, mat: str, sid
     for i in range(sides):
         j = (i + 1) % sides
         a = 2 * math.pi * (i + 0.5) / sides + phase
-        k = -1.0 if inward else 1.0
-        md.face_toward([ring0[i], ring0[j], ring1[j], ring1[i]], mat, (k * math.cos(a), k * math.sin(a), 0.0))
+        md.face_toward([ring0[i], ring0[j], ring1[j], ring1[i]], mat, (math.cos(a), math.sin(a), 0.0))
     d = 1.0 if z1 > z0 else -1.0
     if caps[0]:
         md.face_toward(ring0, cap_mat or mat, (0.0, 0.0, -d))
@@ -515,16 +512,6 @@ def _rect(md: MeshData, x: float, y0: float, y1: float, z0: float, z1: float, ma
     _panel(md, x, [(z0, y0), (z1, y0), (z1, y1), (z0, y1)], mat)
 
 
-def _ring(md: MeshData, z: float, r_in: float, r_out: float, sign: int, mat: str, sides: int, y: float):
-    """Flat annulus at z around the axis (0, y) facing +z (sign 1) or -z (sign -1): eyecups, rims and lens frames."""
-    for i in range(sides):
-        j = (i + 1) % sides
-        a0, a1 = 2 * math.pi * i / sides, 2 * math.pi * j / sides
-        quad = [(math.cos(a0) * r_in, y + math.sin(a0) * r_in, z), (math.cos(a1) * r_in, y + math.sin(a1) * r_in, z),
-                (math.cos(a1) * r_out, y + math.sin(a1) * r_out, z), (math.cos(a0) * r_out, y + math.sin(a0) * r_out, z)]
-        md.face_toward(quad, mat, (0.0, 0.0, float(sign)))
-
-
 def _rail(md: MeshData, z0: float, z1: float, y: float, half: float = 0.0105):
     """Picatinny rail like rail(), with a 15.5 mm slot pitch and no hidden bottom faces (fewer triangles for Chromebook)."""
     box(md, -half, y, z1, half, y + 0.005, z0, "gun_black")
@@ -612,31 +599,20 @@ def semi_sniper():
     box(body, -0.0145, -0.127, 0.0235, 0.0145, -0.119, 0.0615, "gun_black")
     # --- scope: open 4x optic, bigger than the AR's holo sight, on a black two-ring mount -----------------------------
     TR = 0.0178
-    SS = 16
     for z in (-0.092, -0.205):
         box(body, -0.0145, 0.093, z - 0.0125, 0.0145, SY - 0.012, z + 0.0125, "gun_black")
-        ztube(body, z + 0.0125, z - 0.0125, SY, TR + 0.0022, "gun_black", sides=SS, caps=(False, False))
+        ztube(body, z + 0.0125, z - 0.0125, SY, TR + 0.0022, "gun_black", sides=14, caps=(False, False))
         for sx in (-1, 1):
             xtube(body, sx * (TR + 0.0022), sx * (TR + 0.0072), SY - 0.003, z, 0.0033, "gun_steel", sides=6)
-    # The tubes are single sided (outward faces), so every opening needs a visible part facing the viewer: from the eye
-    # (ADS, 0.2 m behind the eyepiece) the inside of a tube is culled and the optic stays see-through for peripheral view,
-    # while from the front and the sides the lenses and rims read as a solid optic.
-    ztube(body, -0.049, -0.095, SY, 0.0240, "gun_black", sides=SS, r1=TR, caps=(False, False))               # eyepiece flare
-    ztube(body, -0.0495, -0.0945, SY, 0.0230, "gun_black", sides=SS, r1=TR - 0.0008, caps=(False, False), inward=True)  # its inside: a funnel seen from the shooter
-    _ring(body, -0.049, 0.0212, 0.0240, 1, "gun_rubber", SS, SY)                                              # eyecup rim, faces the shooter
-    ztube(body, -0.095, -0.25, SY, TR, "gun_black", sides=SS, caps=(False, False))
-    ztube(body, -0.25, -0.282, SY, TR, "gun_black", sides=SS, r1=0.0285, caps=(False, False))                # objective bell
-    ztube(body, -0.282, -0.292, SY, 0.0285, "gun_black", sides=SS, caps=(False, False))
-    _ring(body, -0.292, 0.0252, 0.0285, -1, "gun_black", SS, SY)                                              # front rim
-    for i in range(SS):                                                                                       # lens recess wall, faces the axis
-        j, a = (i + 1) % SS, 2 * math.pi * (i + 0.5) / SS
-        pt = lambda k, z: (math.cos(2 * math.pi * k / SS) * 0.0252, SY + math.sin(2 * math.pi * k / SS) * 0.0252, z)
-        body.face_toward([pt(i, -0.2845), pt(j, -0.2845), pt(j, -0.292), pt(i, -0.292)], "gun_black", (-math.cos(a), -math.sin(a), 0.0))
-    body.face_toward([(math.cos(2 * math.pi * i / SS) * 0.0252, SY + math.sin(2 * math.pi * i / SS) * 0.0252, -0.2845) for i in range(SS)],
-                     "gun_lens", (0, 0, -1))                                                                  # objective lens, seen from the front
-    body.face_toward([(math.cos(2 * math.pi * i / SS) * (TR - 0.0008), SY + math.sin(2 * math.pi * i / SS) * (TR - 0.0008), -0.0935) for i in range(SS)],
-                     "scope_glass", (0, 0, 1))                                                                # eyepiece glass at the funnel's throat (faint, both sides)
-    ztube(body, -0.1476, -0.1488, SY, 0.0152, "gun_steel", sides=SS, caps=(False, False))                    # erector ring
+    ztube(body, -0.049, -0.095, SY, 0.0272, "gun_black", sides=14, r1=TR, caps=(False, False))               # eyepiece flare
+    ztube(body, -0.095, -0.25, SY, TR, "gun_black", sides=14, caps=(False, False))
+    ztube(body, -0.25, -0.282, SY, TR, "gun_black", sides=14, r1=0.0285, caps=(False, False))                # objective bell
+    ztube(body, -0.282, -0.292, SY, 0.0285, "gun_black", sides=14, caps=(False, False))
+    for z in (-0.049, -0.282):
+        r = 0.0262 if z > -0.1 else 0.0271
+        body.face_toward([(math.cos(2 * math.pi * i / 14) * r, SY + math.sin(2 * math.pi * i / 14) * r, z) for i in range(14)],
+                         "gun_glass", (0, 0, 1))
+    ztube(body, -0.1476, -0.1488, SY, 0.0152, "gun_steel", sides=14, caps=(False, False))                    # erector ring
     r = 0.0115
     zr = -0.13
     body.face_toward([(-r, SY - r, zr), (r, SY - r, zr), (r, SY + r, zr), (-r, SY + r, zr)], "reticle_holo", (0, 0, 1),

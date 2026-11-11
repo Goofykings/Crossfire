@@ -129,8 +129,6 @@ MATERIALS: dict[str, dict] = {
                   "metallic": 0.0, "normal": 0.18},
     "gun_rubber": {"tint": [0.028, 0.028, 0.028], "roughness": 0.95, "metallic": 0.0},
     "gun_glass": {"tint": [0.1, 0.16, 0.17], "roughness": 0.03, "metallic": 0.4, "alpha": 0.16},
-    # the semi-sniper's eyepiece: a faint pane seen from both sides (the eye sits 0.2 m behind it in ADS, so it must not haze the view)
-    "scope_glass": {"tint": [0.16, 0.24, 0.26], "roughness": 0.03, "metallic": 0.0, "alpha": 0.07, "double_sided": True},
     "gun_lens": {"tint": [0.015, 0.025, 0.045], "roughness": 0.04, "metallic": 0.65},
     # replaced at runtime by an additive emissive material (rendering it like a real holographic reticle)
     "reticle_holo": {"albedo": WEAPON_DIR + "reticle_holo.png", "tile": 1.0, "tint": [1.0, 1.0, 1.0], "roughness": 1.0,
@@ -312,21 +310,6 @@ MATERIALS.update({
     "leaves_oak_b": {"albedo": FARM_DIR + "leaves.jpg", "tile": 1.7, "tint": [1.0, 1.0, 0.58], "roughness": 0.85},
     "leaves_pine": {"albedo": FARM_DIR + "leaves.jpg", "tile": 1.3, "tint": [0.38, 0.62, 0.5], "roughness": 0.9},
     "hay": {"albedo": FARM_DIR + "hay.jpg", "tile": 0.9, "roughness": 1.0},
-    # Bush and hedge foliage: alpha-cut leaf sprays (four per atlas, `atlas`: UV (0,0) is the bottom left of the image). The
-    # lite twin differs only in its cutoff, which gives it its own batch: the runtime shows one set or the other (Chromebook
-    # mode and distance), so keep the two definitions different. `leaf_core` is the opaque dark mass inside a bush.
-    "leaf_bush": {"albedo": FARM_DIR + "bush_leaves.png", "tile": 1.0, "tint": [1.1, 1.16, 0.92], "roughness": 0.78, "alpha_cutoff": 0.42,
-                  "double_sided": True, "atlas": True},
-    "leaf_bush_lite": {"albedo": FARM_DIR + "bush_leaves.png", "tile": 1.0, "tint": [1.1, 1.16, 0.92], "roughness": 0.9, "alpha_cutoff": 0.5,
-                       "double_sided": True, "atlas": True},
-    "leaf_core": {"albedo": FARM_DIR + "leaves.jpg", "tile": 1.2, "tint": [0.3, 0.44, 0.24], "roughness": 1.0},
-    # Storm shelter: hanging lamp bulbs (emissive, no light source: the pools are baked), damp concrete and the puddles.
-    # `puddle` is managed by src/rendering/PuddleReflections.ts (planar reflection at higher presets, a dark gloss otherwise).
-    "bulb_warm": {"tint": [1.0, 0.82, 0.55], "roughness": 0.25, "metallic": 0.0, "emissive": [1.25, 0.86, 0.48]},
-    "bulb_cold": {"tint": [0.8, 0.92, 1.0], "roughness": 0.25, "metallic": 0.0, "emissive": [0.8, 1.0, 1.3]},
-    "bulb_dead": {"tint": [0.1, 0.1, 0.11], "roughness": 0.3, "metallic": 0.0},
-    "concrete_wet": {"tex": "concrete_floor", "tile": 3.2, "tint": [0.3, 0.31, 0.33], "roughness": 1.0, "decal": True},
-    "puddle": {"tint": [0.02, 0.03, 0.035], "roughness": 0.3, "metallic": 0.0, "alpha": 0.92, "decal": True},
     # Walls and roofs.
     "siding_red": {"tex": "siding", "tile": 1.8, "tint": [2.2, 0.55, 0.42], "normal": 1.0},
     "siding_weathered": {"tex": "siding", "tile": 1.8, "tint": [1.5, 1.35, 1.2], "normal": 1.0},

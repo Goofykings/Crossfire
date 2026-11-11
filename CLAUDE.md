@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ## New weapon skins and default appearances (2026-11-10)
 
 See docs/WEAPON_SKINS.md and the newest PROGRESS entry. Visual only; combat, protocol v26 and the Worker are untouched.
@@ -29,6 +30,8 @@ tubes are single-sided, so every opening needs a face toward the viewer (inward 
 inside renders. Rebuild with run-blender `--only materials,props,farm` (+ restore tracked `__pycache__`), then
 `npm test --prefix server`. No commit/push/deploy.
 
+=======
+>>>>>>> 97024229bbb1207c78cec5683407e5e2a09fce69
 ## Playable Semi-Auto Sniper (2026-11-09)
 
 The model handoff below has now been integrated. See docs/SEMI_SNIPER.md and the

@@ -8,7 +8,6 @@ import {
   LoadAssetContainerAsync,
   Matrix,
   Mesh,
-  PBRMaterial,
   PointLight,
   Quaternion,
   StandardMaterial,
@@ -21,8 +20,6 @@ import { TargetSystem } from '../game/Targets';
 import type { CollisionWorld } from '../physics/CollisionWorld';
 import { createMapWorld, mapVersion } from '../../shared/world';
 import { Environment } from '../rendering/Environment';
-import { FoliageLod } from './FoliageLod';
-import { PuddleReflections } from '../rendering/PuddleReflections';
 import { MaterialLibrary } from '../rendering/MaterialLibrary';
 import type { RenderContext } from '../rendering/RenderContext';
 import { GeometryBatcher } from '../rendering/StaticBatcher';
@@ -53,10 +50,6 @@ export interface LoadedMap {
   /** Overhead map for the Tab overlay, derived from the same layout as the geometry and collision. */
   readonly tactical: TacticalMapData;
   readonly stats: MapStats;
-  /** Bush and hedge detail sets (null when the map has no foliage cards). */
-  readonly foliage: FoliageLod | null;
-  /** The shelter's puddle reflections (null when the map has none). */
-  readonly puddles: PuddleReflections | null;
   /** Toggle the collision debug view (boxes from collision_debug.glb). */
   toggleCollisionDebug(): Promise<void>;
   dispose(): void;
@@ -226,16 +219,6 @@ export class MapManager {
       active.throwIfAborted();
       this.materials.trim();
 
-      // bush/hedge cards: detailed and lite sets, one of which is drawn (Chromebook mode, distance)
-      const foliage = new FoliageLod(batched);
-      const puddleMeshes = batched.filter((m) => (m.metadata as { canonical?: string }).canonical === 'puddle');
-      const floorY = def.layout.underground?.[0]?.floor;
-      const puddles = puddleMeshes.length && floorY !== undefined
-        ? new PuddleReflections(scene, this.materials.get('puddle') as PBRMaterial, batched, floorY, puddleMeshes) : null;
-      puddles?.apply(graphics.puddleReflections ?? 0);
-      const dim = def.layout.underground?.find((u) => u.ambient !== undefined);
-      if (dim) environment.configureUnderground({ top: dim.ceiling ?? -0.3, ...dim.ambient! });
-
       let debugMeshes: AbstractMesh[] | null = null;
       let debugVisible = false;
       const stats: MapStats = {
@@ -257,8 +240,6 @@ export class MapManager {
         spawns: def.layout.spawns,
         tactical,
         stats,
-        foliage: foliage.count ? foliage : null,
-        puddles,
         toggleCollisionDebug: async () => {
           if (!debugMeshes) {
             if (!index.collisionDebug) return;
@@ -279,7 +260,6 @@ export class MapManager {
           for (const m of debugMeshes) m.setEnabled(debugVisible);
         },
         dispose: () => {
-          puddles?.dispose();
           props.dispose();
           targets.dispose();
           for (const l of lights) l.dispose();
