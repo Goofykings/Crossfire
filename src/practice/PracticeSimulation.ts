@@ -8,7 +8,8 @@ import type {MapLayout} from '../maps/types';
 import type {MapId} from '../../shared/maps';
 import {ROUND_MS} from '../../shared/maps';
 import {RESPAWN_DELAY_MS,type Snapshot,type InputFrame,type ShotResult,type Elimination} from '../../shared/protocol';
-import {teammates,NO_COMBAT} from '../../shared/combat';
+import {teammates,teamMode,NO_COMBAT} from '../../shared/combat';
+import {createZoneControl,advanceZoneControl,zoneScores,type ZoneControlState} from '../../shared/zoneControl';
 import {traceWeaponShot} from '../../shared/hitscan';
 import {regenerate,REGEN_DELAY_MS} from '../../shared/health';
 import {selectSpawn} from '../../shared/spawns';
@@ -35,10 +36,11 @@ export class PracticeSimulation {
  now:number;started=false;endsAt:number|null=null;result:RoundResult|null=null;private serial=0;private environmentSeq=0;
  readonly teamScores={blue:0,red:0};private readonly damage=new DamageSystem();private readonly contributions=new DamageContributions();private botContext:BotContext;private nextBotGrenade=0;
  grenades:GrenadeState[]=[];explosions:GrenadeExplosion[]=[];
+ private zoneControl:ZoneControlState|undefined;
  constructor(readonly setup:PracticeSetup,readonly data:PracticeWorld,name:string,options:{seed?:number;now?:number;roundId?:number;navigation?:PracticeNavigation}={}){
   if(!validPractice(setup))throw Error('Invalid Practice settings.');this.now=options.now??Date.now();this.roundId=options.roundId??1;this.random=new PracticeRandom(options.seed??12345);this.nav=options.navigation??new PracticeNavigation(data.world,data.layout);
-  this.actors.push(this.create(this.selfId,name,setup.mode==='teams'?'blue':null));
-  for(let i=0;i<setup.bots;i++)this.actors.push(this.create('practice-bot-'+(i+1),'Bot '+(i+1),setup.mode==='teams'?(i%2===0?'red':'blue'):null));
+  this.actors.push(this.create(this.selfId,name,teamMode(setup.mode)?'blue':null));
+  for(let i=0;i<setup.bots;i++)this.actors.push(this.create('practice-bot-'+(i+1),'Bot '+(i+1),teamMode(setup.mode)?(i%2===0?'red':'blue'):null));
   for(const a of this.actors.slice(1))a.brain=new BotBrain(a,setup.difficulty,this.random);
   this.botContext={actors:this.actors,nav:this.nav,now:this.now,mode:setup.mode,random:this.random,reserveGrenade:()=>{if(this.now<this.nextBotGrenade)return false;this.nextBotGrenade=this.now+3500;return true;},switchWeapon:(a,w)=>this.switchWeapon(a,w),obscured:(from,to)=>this.explosions.some(e=>smokeObscures(from,to,e.position,this.now-e.at))};
  }
@@ -58,7 +60,10 @@ export class PracticeSimulation {
  spawnHuman(weapon:WeaponId):Snapshot{
   if(!WEAPONS.some(w=>w.id===weapon))throw Error('Choose a valid weapon.');const human=this.actors[0];
   if(!human.state.alive&&!this.spawn(human,weapon))throw Error('Wait for a valid respawn.');
-  if(!this.started){this.started=true;this.endsAt=this.now+ROUND_MS;for(const bot of this.actors.slice(1))this.spawn(bot,this.random.pick(WEAPONS).id);}
+  if(!this.started){this.started=true;this.endsAt=this.now+ROUND_MS;for(const bot of this.actors.slice(1))this.spawn(bot,this.random.pick(WEAPONS).id);
+   if(this.setup.mode==='zone-control'){this.zoneControl=createZoneControl(this.setup.mapId,this.roundId,Math.floor(this.now),Math.floor(this.endsAt));this.botContext.zones=this.zoneControl;}
+  }
+  this.updateZones();
   return this.snapshot();
  }
  switchWeapon(a:PracticeActor,weapon:WeaponId){if(!a.state.alive||a.gun?.reloading||a.state.weapon===weapon)return;a.gun=new Weapon(WEAPONS.find(w=>w.id===weapon)!);a.gun.equip();a.state.weapon=weapon;a.state.cosmeticId=defaultCosmetic(weapon);a.controller.weaponClearance=weapon;a.state.combat={gun:a.gun.capture(),triggerHeld:false,reloadHeld:false,aimHeld:false,grenadeHeld:false};}
@@ -108,7 +113,7 @@ export class PracticeSimulation {
  step(input:InputFrame|null=null,dt=FIXED_DT){
   if(!this.started||this.result)return;this.now+=dt*1000;
   if(this.endsAt!==null&&this.now>=this.endsAt){this.finish();return;}
-  this.botContext.now=this.now;
+  this.updateZones();this.botContext.now=this.now;
   for(const a of this.actors){expireCombo(a.state,this.now);regenerate(a.state,this.now);if(a.brain&&!a.state.alive&&a.state.death&&this.now>=a.state.death.respawnAt)this.spawn(a,this.random.pick(WEAPONS).id);}
   for(const a of this.actors){
    if(!a.state.alive)continue;const frame=a===this.actors[0]?input:a.brain?.input(this.botContext,dt)??null;a.input=frame;
@@ -133,10 +138,15 @@ export class PracticeSimulation {
    c.triggerHeld=control.trigger;c.reloadHeld=control.reload;c.aimHeld=f?.intent.aim??false;c.grenadeHeld=!!control.grenade;
    for(const event of events)if(event.type==='fire')this.fire(a,event.spread,control);
   }
-  this.updateGrenades();this.data.environment?.advance(dt);
+  this.updateGrenades();this.updateZones();this.data.environment?.advance(dt);
  }
- finish(){if(this.result)return;const players:Record<string,RoundStanding>={};for(const a of this.actors)players[a.state.id]={id:a.state.id,name:a.state.name,team:a.state.team,weapon:a.state.weapon,kills:a.state.kills,deaths:a.state.deaths,assists:a.state.assists??0,score:a.state.score};this.result=finalizeRound({roundId:this.roundId,mapId:this.setup.mapId,mode:this.setup.mode,endsAt:Math.floor(this.endsAt??this.now),players},this.teamScores);this.grenades=[];}
+ private updateZones(){
+  if(!this.zoneControl)return;
+  advanceZoneControl(this.zoneControl,this.now,this.actors.map(a=>({alive:a.state.alive,connected:true,team:a.state.team,position:a.controller.position})));
+  Object.assign(this.teamScores,zoneScores(this.zoneControl));
+ }
+ finish(){if(this.result)return;this.updateZones();const players:Record<string,RoundStanding>={};for(const a of this.actors)players[a.state.id]={id:a.state.id,name:a.state.name,team:a.state.team,weapon:a.state.weapon,kills:a.state.kills,deaths:a.state.deaths,assists:a.state.assists??0,score:a.state.score};this.result=finalizeRound({roundId:this.roundId,mapId:this.setup.mapId,mode:this.setup.mode,endsAt:Math.floor(this.endsAt??this.now),players},this.teamScores);this.grenades=[];}
  environment(full=false):EnvironmentFrame|null{const env=this.data.environment;if(!env)return null;const states=full?env.capture():env.takeChanges();if(full)env.takeChanges();return !full&&!states.length?null:{roundId:this.roundId,mapVersion:this.data.revision,seq:++this.environmentSeq,at:Math.floor(this.now),full,states};}
- snapshot():Snapshot{return {room:'practice-local',roundId:this.roundId,mapId:this.setup.mapId as MapId,mapVersion:this.data.revision,serverTime:Math.floor(this.now),match:{mode:this.setup.mode,endsAt:this.endsAt===null?null:Math.floor(this.endsAt),teamScores:this.setup.mode==='teams'?{...this.teamScores}:null},players:this.actors.map(a=>({...a.state,motion:a.controller.capture(),combat:{...a.state.combat,gun:a.gun?.capture()??null}})),grenades:structuredClone(this.grenades),explosions:structuredClone(this.explosions),result:this.result};}
+ snapshot():Snapshot{return {...(this.zoneControl?{zoneControl:structuredClone(this.zoneControl)}:{}),room:'practice-local',roundId:this.roundId,mapId:this.setup.mapId as MapId,mapVersion:this.data.revision,serverTime:Math.floor(this.now),match:{mode:this.setup.mode,endsAt:this.endsAt===null?null:Math.floor(this.endsAt),teamScores:teamMode(this.setup.mode)?{...this.teamScores}:null},players:this.actors.map(a=>({...a.state,motion:a.controller.capture(),combat:{...a.state.combat,gun:a.gun?.capture()??null}})),grenades:structuredClone(this.grenades),explosions:structuredClone(this.explosions),result:this.result};}
  inspect(){return {policy:this.policy,setup:this.setup,now:this.now,started:this.started,nav:this.nav.inspect(),bots:this.actors.slice(1).map(a=>({id:a.state.id,name:a.state.name,health:a.state.health,weapon:a.state.weapon,position:{...a.controller.position},...a.brain!.inspect()}))};}
 }

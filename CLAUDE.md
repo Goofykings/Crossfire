@@ -1,3 +1,19 @@
+## New weapon skins and default appearances (2026-11-10)
+
+See docs/WEAPON_SKINS.md and the newest PROGRESS entry. Visual only; combat, protocol v26 and the Worker are untouched.
+Seven families live in `EXTRA_COLLECTIONS` (shared/cosmetics.ts): catalogued and renderable but NOT in the crate pool;
+do not add them to `COLLECTIONS`/`crateItems` or change odds: obtaining them is a separate backend task. One shared
+shader plugin (src/rendering/SkinFx.ts, modes flow/frost/shade) serves Hydro Dip, Frosted and Darkness; add modes or
+parameters there, never a second shader, and keep `copyTo` (the elimination fade clones weapon materials). Every UV
+offset wraps on the CPU so the flow never jumps. Frosted icicles come from blender/cosmetics/icicle_design.py (reads
+`FROST_LINE` from shared/cosmetics.ts) and sit on the static body only; SnowBurst is disabled while idle (a thin-instance
+mesh with count 0 draws its template) and never emits while aiming. Defaults: SMG `gun_white`, sniper `gun_green`,
+shotgun walnut `gun_wood` with `grain_along()`; `MATERIAL_ALIAS` maps the default-only colours to a family's body finish,
+so add any new default-only material there. Weapon rebuild: `--only materials,weapon`, then `git checkout` hands.glb
+and semi_sniper.glb and run generate_smg.py; refresh the base hashes in foundry-collection.json. Run vitest from
+PowerShell with an upper-case `C:` working directory. Tools: skin-fx-test, skins-game-test, review-skins (dev server
+on 4210). No commit/push/deploy.
+
 ## Farmstead polish and Semi-Auto Sniper scope fix (2026-11-10)
 
 See docs/FARMSTEAD.md "Polish 2026-11-10", docs/SEMI_SNIPER.md "Scope fix" and the newest PROGRESS entry. Visual and

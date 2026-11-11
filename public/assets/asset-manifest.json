@@ -1,7 +1,7 @@
 {
  "generator": "blender/scripts/generate_all.py",
  "blender": "5.2.3 LTS",
- "generated": "2026-11-10 07:31:56",
+ "generated": "2026-11-10 18:12:10",
  "assets": [
   {
    "path": "assets/characters/player-albedo.png",
@@ -36,7 +36,7 @@
   {
    "path": "assets/materials.json",
    "kind": "materials",
-   "bytes": 64289,
+   "bytes": 64912,
    "description": "Material table (names, texture sets, tiling, tint, PBR factors)",
    "script": "blender/scripts/lib/materials.py"
   },
@@ -1766,7 +1766,7 @@
   {
    "path": "assets/models/shared/weapons/semi_sniper.glb",
    "kind": "weapon",
-   "bytes": 180116,
+   "bytes": 180120,
    "description": "semi_sniper first-person model: moving parts (mag) and anchors (muzzle, sight, eject, grip_r, grip_l, mag_grip)",
    "script": "blender/scripts/generate_all.py",
    "triangles": 2122
@@ -1774,23 +1774,23 @@
   {
    "path": "assets/models/shared/weapons/shotgun.glb",
    "kind": "weapon",
-   "bytes": 68212,
+   "bytes": 69664,
    "description": "shotgun first-person model: moving parts (pump, shell) and anchors (muzzle, sight, eject, grip_r, grip_l, port)",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 790
+   "triangles": 810
   },
   {
    "path": "assets/models/shared/weapons/smg.glb",
    "kind": "weapon",
-   "bytes": 37232,
-   "description": "smg first-person model: moving parts (mag) and anchors (muzzle, sight, eject, grip_r, grip_l, mag_grip)",
+   "bytes": 42756,
+   "description": "Original compact SMG with detachable magazine and first-person anchors",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 396
+   "triangles": 458
   },
   {
    "path": "assets/models/shared/weapons/sniper.glb",
    "kind": "weapon",
-   "bytes": 162648,
+   "bytes": 163728,
    "description": "sniper first-person model: moving parts (bolt, mag) and anchors (muzzle, sight, eject, grip_r, grip_l, mag_grip, bolt_grip)",
    "script": "blender/scripts/generate_all.py",
    "triangles": 1936
@@ -1882,14 +1882,14 @@
   {
    "path": "blender/source/smg.blend",
    "kind": "blend",
-   "bytes": 110361,
+   "bytes": 114694,
    "description": "Editable source: original SMG",
    "script": "blender/scripts/generate_all.py"
   },
   {
    "path": "blender/source/weapon.blend",
    "kind": "blend",
-   "bytes": 338231,
+   "bytes": 353266,
    "description": "Editable source: rifle, shotgun, sniper, SMG, hands, casings",
    "script": "blender/scripts/generate_all.py"
   }

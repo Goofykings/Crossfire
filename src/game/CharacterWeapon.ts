@@ -1,4 +1,6 @@
 import { visualCosmetic, loadCosmeticAsset } from '../rendering/CosmeticAssets';
+import { fireEffect } from '../../shared/cosmetics';
+import { SnowBurst } from '../weapons/SnowBurst';
 import { RemoteMuzzleFlash } from '../weapons/RemoteMuzzleFlash';
 import { meshesReady } from '../core/assetReadiness';
 import { Matrix, Mesh, Quaternion, Space, TransformNode, Vector3, VertexBuffer, type AssetContainer, type Bone, type InstantiatedEntries, type Scene } from '@babylonjs/core';
@@ -328,7 +330,13 @@ export class CharacterWeaponLibrary {
   private readonly containers = new Map<string, AssetContainer>();
   private readonly butts = new Map<string, Vector3>();
   private readonly pending = new Map<string, Promise<void>>();
+  private snow: SnowBurst | null = null;
   constructor(private readonly scene: Scene, private readonly materials: MaterialLibrary) {}
+  /** One shared world-space emitter for every Frosted gun in this scene (created at the first load). */
+  private readonly snowBurst = (): SnowBurst => {
+    if (!this.snow || this.snow.meshes()[0].isDisposed()) this.snow = new SnowBurst(this.scene, { scale: 1.25 });
+    return this.snow;
+  };
   load(id: WeaponId, signal?: AbortSignal, cosmeticId?:string): Promise<void> {
     const item=visualCosmetic(id,cosmeticId),key=item.id;
     const cached = this.containers.get(key);
@@ -343,6 +351,7 @@ export class CharacterWeaponLibrary {
       if (signal?.aborted || this.scene.isDisposed) { container.dispose(); return; }
       this.containers.set(key, container);
       this.butts.set(key, measureButt(container));
+      if (fireEffect(key) === 'snow') void this.snowBurst().warm().catch(() => {});
     }).finally(() => { if (this.pending.get(key) === work) this.pending.delete(key); });
     this.pending.set(key, work);
     return work;
@@ -353,7 +362,7 @@ export class CharacterWeaponLibrary {
   create(character: CharacterInstance, id: WeaponId, cosmeticId?:string): CharacterWeapon | null {
     const key=visualCosmetic(id,cosmeticId).id;
     const container = this.containers.get(key);
-    return container ? new CharacterWeapon(this.scene, character, id, container, this.butts.get(key)!,key) : null;
+    return container ? new CharacterWeapon(this.scene, character, id, container, this.butts.get(key)!,key, fireEffect(key) === 'snow' ? this.snowBurst : undefined) : null;
   }
 }
 
@@ -429,7 +438,9 @@ export class CharacterWeapon {
   private readonly cachedRoot = { position: Vector3.Zero(), rotation: Quaternion.Identity(), valid: false };
   solves = 0;
 
-  constructor(scene: Scene, private readonly character: CharacterInstance, readonly id: WeaponId, container: AssetContainer, butt: Vector3, readonly cosmeticId=visualCosmetic(id).id) {
+  constructor(private readonly scene: Scene, private readonly character: CharacterInstance, readonly id: WeaponId, container: AssetContainer, butt: Vector3, readonly cosmeticId=visualCosmetic(id).id,
+    /** Frosted firing effect (cosmetic); undefined for every other skin. */
+    private readonly snow?: () => SnowBurst) {
     this.hold = WEAPON_HOLDS[id];
     this.recoil = new DampedSpring(this.hold.recoil.frequency, .72);
     this.root = new TransformNode(`held:${id}`, scene);
@@ -488,6 +499,11 @@ export class CharacterWeapon {
   /** One cosmetic recoil impulse at the actual firing cadence. */
   fire(): void {
     this.shots++; this.flash.fire();
+    if (this.snow) {
+      const world = this.root.computeWorldMatrix(true), at = Vector3.TransformCoordinates(this.anchors.muzzle, world), camera = this.scene.activeCamera;
+      // Too small to see from afar: skip the work beyond 40 m.
+      if (camera && Vector3.DistanceSquared(camera.globalPosition, at) < 1600) this.snow().emit(at, Vector3.TransformNormal(Vector3.Forward(true), world));
+    }
     this.sinceShot = 0; this.pull = 1;
     // Unit-peak impulse for a single shot; rapid fire accumulates up to a cap below.
     this.recoil.velocity += this.hold.recoil.frequency * Math.E * .55;

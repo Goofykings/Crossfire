@@ -1,5 +1,6 @@
 import {WEAPONS} from './Weapon';
-import { cosmetic, defaultCosmetic, defaultEquipment, type Equipment } from '../../shared/cosmetics';
+import { cosmetic, defaultCosmetic, defaultEquipment, fireEffect, type Equipment } from '../../shared/cosmetics';
+import { SnowBurst } from './SnowBurst';
 import { loadCosmeticAsset, visualCosmetic } from '../rendering/CosmeticAssets';
 import {
   Color3,
@@ -165,6 +166,8 @@ export class WeaponView {
   /** Dual daggers: how far the gun is lowered (0..1) and whether it is put away. */
   private meleeLower = 0;
   private meleeHidden = false;
+  private snow: SnowBurst | null = null;
+  private adsBlend = 0;
   private savedNear: number | null = null;
   private readonly viewmodelProjection = Matrix.Identity();
   private readonly beforeGroup;
@@ -265,11 +268,20 @@ export class WeaponView {
     flash.parent = muzzle;
     const rig: Rig = { cosmeticId:item.id,cfg, root, meshes, anchors, pump: node('pump'), bolt, muzzle, eject, flash };
     root.setEnabled(false);
+    if (fireEffect(item.id) === 'snow') void this.snowBurst().warm().catch(() => {});
     this.meshes.push(...meshes, ...flash.getChildMeshes(false), flash);
     // includedOnlyMeshes shares this array, including newly equipped skins.
     if(this.fillLight)for(const m of meshes)m._resyncLightSources();
     this.rigs.set(item.id, rig);
   }
+
+  /** Frosted firing effect, in camera space and in the weapon's render group (created once). */
+  private snowBurst(): SnowBurst {
+    return this.snow ??= new SnowBurst(this.ctx.scene, { parent: this.ctx.camera, group: WEAPON_RENDER_GROUP, scale: 1 });
+  }
+
+  /** Debug/test: live Frosted flakes. */
+  snowInfo() { return this.snow?.inspect() ?? null; }
 
   private prepare(m: AbstractMesh): void {
     m.renderingGroupId = WEAPON_RENDER_GROUP;
@@ -374,6 +386,15 @@ export class WeaponView {
       this.flashLight.position.copyFrom(this.muzzleWorld());
       this.flashLight.intensity = 5 * rig.cfg.flash;
     }
+    // Aimed, the barrel lies on the sight line: no flakes in the shooter's own sight picture (others still see them).
+    if (fireEffect(rig.cosmeticId) === 'snow' && !this.hidden && !this.meleeHidden && this.adsBlend < .5) {
+      const muzzle = this.muzzleWorld();
+      rig.eject.computeWorldMatrix(true);
+      const eject = rig.eject.getAbsolutePosition();
+      // The flakes come off the barrel, between the ejection port and the muzzle.
+      const at = Vector3.Lerp(eject, muzzle, .2 + Math.random() * .8);
+      this.snowBurst().emit(at, muzzle.subtract(eject));
+    }
   }
 
   /** Debug: keep the muzzle flash on (checking its look in screenshots). */
@@ -440,6 +461,7 @@ export class WeaponView {
     this.throwTime = Math.max(0, this.throwTime - dt);
     const throwLower = Math.sin(Math.PI * (1 - this.throwTime / .36)) * .20;
     const ads = smooth(w.ads);
+    this.adsBlend = ads;
     const motion = this.motion.update(dt, { ...s, ads });
     const sight = rig.anchors.get('sight') ?? Vector3.Zero();
     const hip = v3(rig.cfg.hip);
@@ -537,6 +559,7 @@ export class WeaponView {
     this.ctx.scene.onAfterRenderingGroupObservable.remove(this.afterGroup);
     this.flashLight?.dispose();
     this.fillLight?.dispose();
+    this.snow?.dispose(); this.snow = null;
     for (const container of this.containers) container.dispose();
     this.containers.length = 0;
     this.root.dispose(false, false);

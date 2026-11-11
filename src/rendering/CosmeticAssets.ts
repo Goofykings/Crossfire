@@ -4,6 +4,8 @@ import { loadContainer } from '../core/loadContainer';
 import { assetUrl } from '../core/assets';
 import { texturesReady } from '../core/assetReadiness';
 import type { MaterialLibrary } from './MaterialLibrary';
+import { SkinFxPlugin } from './SkinFx';
+import { addIcicles } from './Icicles';
 
 export function visualCosmetic(weapon:CosmeticCategory,id?:string):CosmeticDefinition {
   const item=cosmetic(id);return item?.weapon===weapon&&item.compatibleWith.includes(weapon)?item:cosmetic(defaultCosmetic(weapon))!;
@@ -22,12 +24,15 @@ export async function loadCosmeticAsset(item:CosmeticDefinition,scene:Scene,mate
       c.transformNodes.push(pair);c.rootNodes=[pair];
     }
     await patchCosmetic(c,item,scene,materials,signal);
+    if(item.asset.icicles)await addIcicles(c,item.asset.icicles,scene,signal);
     await Promise.all([materials.ready(signal),texturesReady(c.textures,signal)]);return c;
   } catch(error){c.dispose();throw error;}
 }
 
 export async function patchCosmetic(c:Pick<AssetContainer,'meshes'|'materials'|'textures'>,item:CosmeticDefinition,scene:Scene,materials:MaterialLibrary,signal?:AbortSignal):Promise<void>{
-    const copies=new Map<Material,Material>();
+    const copies=new Map<Material,Material>(),fxTextures=new Map<string,Texture>();
+    // Skin effect maps are linear data read by the plugin itself; one Texture per file and item.
+    const fxTexture=(path:string):Texture=>{let t=fxTextures.get(path);if(!t){t=new Texture(assetUrl(path),scene,false,false);t.gammaSpace=false;fxTextures.set(path,t);c.textures.push(t);}return t;};
     for(const mesh of c.meshes){
       if(!mesh.material)continue;const name=mesh.material.name;
       if(name==='reticle_holo'){
@@ -44,6 +49,8 @@ export async function patchCosmetic(c:Pick<AssetContainer,'meshes'|'materials'|'
       if(!copy){
         copy=source.clone(`cosmetic:${item.id}:${name}`)!;copies.set(source,copy);c.materials.push(copy);
         if(!(copy instanceof PBRMaterial))throw Error(`Cosmetic material must use PBR: ${name}`);
+        // A flat finish (Darkness) drops the source's maps before any override is applied.
+        if(patch.plain){copy.albedoTexture=null;copy.bumpTexture=null;copy.metallicTexture=null;copy.emissiveTexture=null;copy.emissiveColor=Color3.Black();copy.clearCoat.isEnabled=false;}
         if(patch.color)copy.albedoColor=Color3.FromHexString(patch.color);
         if(patch.metallic!==undefined)copy.metallic=patch.metallic;
         if(patch.roughness!==undefined)copy.roughness=patch.roughness;
@@ -64,6 +71,14 @@ export async function patchCosmetic(c:Pick<AssetContainer,'meshes'|'materials'|'
         if(patch.orm)copy.useRoughnessFromMetallicTextureAlpha=false;
         if(patch.clearcoat!==undefined){copy.clearCoat.isEnabled=patch.clearcoat>0;copy.clearCoat.intensity=patch.clearcoat;copy.clearCoat.roughness=.08;}
         copy.useRoughnessFromMetallicTextureGreen=true;copy.useMetallnessFromMetallicTextureBlue=true;copy.useAmbientOcclusionFromMetallicTextureRed=true;
+        if(patch.fx){
+          const fx=patch.fx,plugin=new SkinFxPlugin(copy);
+          plugin.configure(fx,fx.type==='shade'?null:fxTexture(fx.map),fx.type==='flow'?fxTexture(fx.ramp):null);
+          // The flowing colour replaces the source's own albedo image (the shotgun's walnut); its normal and ORM detail stay.
+          if(fx.type==='flow'){copy.albedoTexture=null;copy.emissiveTexture=null;}
+          // A shadow barely mirrors its surroundings: dim the image-based and direct specular response.
+          if(fx.type==='shade'){copy.environmentIntensity=.1;copy.metallicF0Factor=.12;copy.specularIntensity=.2;copy.directIntensity=.45;}
+        }
       }
       mesh.material=copy;
     }

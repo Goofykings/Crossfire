@@ -1,3 +1,4 @@
+import {teamMode,modeName} from '../../shared/combat';
 import { playerColor, displayTeam, teamOrder } from './teamColors';
 import { type PlayerTeam } from '../../shared/combat';
 import { pointsOrder, resultOutcome, type RoundResult, type RoundStanding } from '../../shared/scoring';
@@ -17,7 +18,7 @@ export function updateResultGems(panel:HTMLElement,result:RoundResult,selfId:str
 
 export function resultGroups(result: RoundResult, selfTeam: PlayerTeam = null): { team: PlayerTeam; players: RoundStanding[] }[] {
   const players = [...(result.players ?? [])].sort(pointsOrder);
-  return result.mode === 'teams' ? teamOrder(selfTeam).map((team) => ({ team, players: players.filter((p) => p.team === team) }))
+  return teamMode(result.mode) ? (result.mode==='zone-control'?['blue','red'] as const:teamOrder(selfTeam)).map((team) => ({ team, players: players.filter((p) => p.team === team) }))
     : [{ team: null, players }];
 }
 
@@ -27,20 +28,21 @@ function node<K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', text = ''
 
 /** Built once per immutable server result. No polling, animation timers or live-round data. */
 export function createRoundResults(result: RoundResult, selfId: string, team: PlayerTeam, next: () => void, home: () => void,practice?:{settings:()=>void}): HTMLElement {
+  const shownTeam=(value:PlayerTeam)=>result.mode==='zone-control'?value:displayTeam(value,team);
   const outcome = resultOutcome(result, selfId, team);
   const panel = node('div', 'round-results'); panel.dataset.outcome = outcome.toLowerCase();
   panel.dataset.mode=result.mode;
   const banner = node('header', 'result-banner');
-  banner.append(node('small', 'result-mode', practice?'PRACTICE · BOT CHALLENGES COUNT WHEN CONNECTED':result.mode === 'teams' ? 'TEAMS · MATCH COMPLETE' : 'FREE FOR ALL · MATCH COMPLETE'), node('h1', 'result-title', outcome));
-  const winner = node('p', 'result-winner', result.draw ? 'Match drawn' : result.mode === 'teams'
-    ? `${displayTeam(result.winningTeam, team)?.toUpperCase()} TEAM WINS` : `${result.winner?.name} wins`);
+  banner.append(node('small', 'result-mode', practice?'PRACTICE · BOT CHALLENGES COUNT WHEN CONNECTED':`${modeName(result.mode).toUpperCase()} \u00b7 MATCH COMPLETE`), node('h1', 'result-title', outcome));
+  const winner = node('p', 'result-winner', result.draw ? 'Match drawn' : teamMode(result.mode)
+    ? `${shownTeam(result.winningTeam)?.toUpperCase()} TEAM WINS` : `${result.winner?.name} wins`);
   banner.append(winner); panel.append(banner);
   updateResultGems(panel,result,selfId,!!practice);
   const boards = node('div', 'result-boards'); boards.dataset.mode = result.mode;
   if (!result.players) boards.append(node('p', 'result-unavailable', 'Detailed results unavailable for this earlier round.'));
   else for (const group of resultGroups(result, team)) {
-    const section = node('section', 'result-board'); section.dataset.team = displayTeam(group.team, team) ?? 'ffa';
-    const heading = node('h2', 'result-board-heading', group.team ? `${displayTeam(group.team, team)!.toUpperCase()} TEAM` : 'FINAL RANKING');
+    const section = node('section', 'result-board'); section.dataset.team = shownTeam(group.team) ?? 'ffa';
+    const heading = node('h2', 'result-board-heading', group.team ? `${shownTeam(group.team)!.toUpperCase()} TEAM` : 'FINAL RANKING');
     if (group.team && result.teamScores) heading.append(node('strong', 'result-team-score', String(result.teamScores[group.team])));
     section.append(heading);
     const scroll = node('div', 'result-table-scroll'); scroll.tabIndex = 0; scroll.setAttribute('aria-label', `${group.team ?? 'FFA'} match results`);
@@ -64,7 +66,7 @@ export function createRoundResults(result: RoundResult, selfId: string, team: Pl
   panel.append(boards);
   const mvp = node('div', 'result-mvp');
   if (result.mvp) mvp.classList.add(`score-name-${playerColor(result.mode, selfId, team, result.mvp.id, result.players?.find(p => p.id === result.mvp?.id)?.team ?? null)}`);
-  if (!result.draw) winner.classList.add(`score-name-${result.mode === 'teams' ? (result.winningTeam === team ? 'friendly' : 'opponent') : playerColor(result.mode, selfId, team, result.winner?.id ?? null, null)}`);
+  if (!result.draw) winner.classList.add(`score-name-${teamMode(result.mode) ? (result.winningTeam === team ? 'friendly' : 'opponent') : playerColor(result.mode, selfId, team, result.winner?.id ?? null, null)}`);
   mvp.append(node('small', '', 'MVP'), node('strong', '', result.mvp?.name ?? 'No participants'), node('span', '', result.mvp ? `${result.mvp.score} points` : ''));
   panel.append(mvp);
   const actions = node('div', 'result-actions');

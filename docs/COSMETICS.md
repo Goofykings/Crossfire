@@ -104,3 +104,9 @@ disabled EQUIPPED. Equipping a future alternative uses the same validated endpoi
 full artwork/grant/equip-switch testing awaits actual alternate assets and a grant
 feature. Cached rigs are limited by the current four-item catalog; a large future
 catalog should add a bounded eviction policy and be profiled on target devices.
+
+## 2026-11-10 skin families
+
+Blossom, Carbon Fiber, Hydro Dip (Nebula, Inferno, Abyss), Darkness and Frosted, the shared skin shader, icicles,
+snowflakes and the new default SMG, shotgun and sniper looks are documented in [WEAPON_SKINS.md](WEAPON_SKINS.md).
+They are catalogued in `EXTRA_COLLECTIONS` and are not granted by the crate.

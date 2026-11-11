@@ -119,7 +119,14 @@ MATERIALS: dict[str, dict] = {
     # anodised gold receiver and furniture of the semi-automatic sniper; same metal ORM as the other guns
     "gun_gold": {"tex": "metal", "albedo": None, "orm": WEAPON_DIR + "gun_metal_orm.png", "tile": 0.22, "tint": [0.6, 0.355, 0.06],
                  "roughness": 0.72, "metallic": 0.42, "normal": 0.2},
-    "gun_wood": {"tex": "wood_dark", "tile": 0.4, "tint": [0.78, 0.52, 0.32], "roughness": 0.42, "metallic": 0.0, "normal": 0.5},
+    # oiled walnut of the shotgun (blender/cosmetics/skin_textures.py walnut()): straight grain along u, no plank seams
+    "gun_wood": {"tex": "walnut", "tex_dir": WEAPON_DIR, "tile": 0.125, "tint": [0.8, 0.71, 0.64], "roughness": 1.0, "metallic": 0.0,
+                 "normal": 0.55},
+    # default finishes: the SMG's white receiver and the bolt sniper's dark olive chassis (same polymer surface as gun_fde)
+    "gun_white": {"tex": "concrete_smooth", "albedo": None, "tile": 0.3, "tint": [0.7, 0.7, 0.68], "roughness": 0.62,
+                  "metallic": 0.0, "normal": 0.14},
+    "gun_green": {"tex": "concrete_smooth", "albedo": None, "tile": 0.3, "tint": [0.046, 0.072, 0.036], "roughness": 0.8,
+                  "metallic": 0.0, "normal": 0.18},
     "gun_rubber": {"tint": [0.028, 0.028, 0.028], "roughness": 0.95, "metallic": 0.0},
     "gun_glass": {"tint": [0.1, 0.16, 0.17], "roughness": 0.03, "metallic": 0.4, "alpha": 0.16},
     # the semi-sniper's eyepiece: a faint pane seen from both sides (the eye sits 0.2 m behind it in ADS, so it must not haze the view)

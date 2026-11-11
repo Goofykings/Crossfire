@@ -3,14 +3,16 @@ import type { ControllerState, Vec3 } from '../src/player/PlayerController';
 import type { HitZone } from '../src/game/Damage';
 import { leanOffset } from './lean';
 
-export type MatchMode = 'ffa' | 'teams';
+export type MatchMode = 'ffa' | 'teams' | 'zone-control';
+export const teamMode=(mode:MatchMode|null|undefined):boolean=>mode==='teams'||mode==='zone-control';
+export const modeName=(mode:MatchMode|null|undefined):string=>mode==='zone-control'?'Zone Control':mode==='teams'?'Teams':mode==='ffa'?'Free for all':'';
 export type PlayerTeam = 'blue' | 'red' | null;
 export interface CombatIntent { trigger: boolean; reload: boolean; grenade?: boolean; grenadeCancel?: boolean; melee?: boolean; aimYaw?: number; aimPitch?: number }
 export const NO_COMBAT: CombatIntent = { trigger: false, reload: false };
 
 /** Teams are relative to the viewer; an unassigned participant is never a teammate. */
 export const teammates = (mode: MatchMode | null, a: PlayerTeam, b: PlayerTeam): boolean =>
-  mode === 'teams' && a !== null && a === b;
+  teamMode(mode) && a !== null && a === b;
 
 /** Server-seeded and stable across eviction/restart, with no client mode selection. */
 export function roundMode(seed: number, roundId: number): MatchMode {

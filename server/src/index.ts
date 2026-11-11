@@ -1,3 +1,4 @@
+import {advanceZoneControl,createZoneControl,validZoneControl,zoneScores,zoneEligible,type ZoneControlState} from '../../shared/zoneControl';
 import {createMeleeState,stepMelee,meleeBlocked,traceMelee,meleeKnockback,MELEE,validMelee} from '../../shared/melee';
 import { traceWeaponShot } from '../../shared/hitscan';
 import {MotionHistory,shotViewTime} from '../../shared/lagCompensation';
@@ -31,7 +32,7 @@ import { WORLDS, MOVEMENT } from './world';
 import { mapRound, type MapSchedule, type MapRound } from '../../shared/maps';
 import { Weapon, WEAPONS, type WeaponId } from '../../src/weapons/Weapon';
 import { DamageSystem } from '../../src/game/Damage';
-import { NO_COMBAT, roundMode, teammates, type PlayerTeam, type MatchMode } from '../../shared/combat';
+import { NO_COMBAT, roundMode, teammates,teamMode, type PlayerTeam, type MatchMode } from '../../shared/combat';
 import { normalizeUsername } from '../../shared/username';
 import { regenerate, REGEN_DELAY_MS } from './health';
 import { selectSpawn } from '../../shared/spawns';
@@ -244,7 +245,9 @@ export class PublicRoom extends DurableObject<Bindings> {
     return this.ctx.blockConcurrencyWhile(async()=>{
       if(this.config){if(this.config.id!==config.id)throw Error('Room already configured');return;}
       if(this.players.size)throw Error('Cannot reconfigure an active room');
+      if(config.mode==='zone-control'&&!zoneEligible(config.mapId))throw Error('Map does not support Zone Control');
       this.config=structuredClone(config);this.schedule={epoch:config.createdAt,seed:crypto.getRandomValues(new Uint32Array(1))[0]};this.round=this.scheduledRound();this.activeMap=WORLDS[this.round.mapId];
+      this.zones=this.mode==='zone-control'?createZoneControl(this.round.mapId,this.round.id,Date.now(),this.round.endsAt):null;
       this.ledger=this.emptyLedger();this.lastResult=null;this.scores={roundId:this.round.id,blue:0,red:0};this.environment=new EnvironmentSimulation(this.activeMap.environment,this.activeMap.world);
       await this.ctx.storage.put('map-schedule',this.schedule);await this.persist();await this.scheduleCleanup();
     });
@@ -405,6 +408,16 @@ export class PublicRoom extends DurableObject<Bindings> {
   private round!: MapRound;
   private activeMap!: typeof WORLDS[keyof typeof WORLDS];
   private scores = { roundId: -1, blue: 0, red: 0 };
+  private zones:ZoneControlState|null=null;
+  private zoneRevision=0;
+  private zoneSaved=0;
+  private advanceZones(at=Date.now()):void {
+    if(!this.zones)return;
+    const owners=this.zones.zones.map(z=>z.owner).join(',');
+    advanceZoneControl(this.zones,at,this.connected().map(e=>({alive:e.session.alive,connected:true,team:e.session.team,position:e.controller.position})));
+    if(owners!==this.zones.zones.map(z=>z.owner).join(','))this.zoneRevision++;
+    Object.assign(this.scores,zoneScores(this.zones));
+  }
   private ledger!: MatchLedger;
   private lastResult: RoundResult | null = null;
   private readonly damage = new DamageSystem();
@@ -429,6 +442,14 @@ export class PublicRoom extends DurableObject<Bindings> {
       this.activeMap = WORLDS[this.round.mapId];
       const scores = await ctx.storage.get<typeof this.scores>('team-scores');
       const ledger = migrateResult(await ctx.storage.get<MatchLedger>('round-ledger'));
+      const zoneState=await ctx.storage.get<ZoneControlState>('zone-control');
+      if(ledger?.mode==='zone-control'&&validZoneControl(zoneState,ledger.mapId,ledger.roundId,ledger.endsAt)){
+        this.zones=zoneState;
+        // Never credit persisted occupants while their connections were absent.
+        for(const z of this.zones.zones){z.blue=z.red=0;z.contested=false;}
+        advanceZoneControl(this.zones,Math.min(Date.now(),ledger.endsAt),[]);
+        if(scores?.roundId===ledger.roundId)Object.assign(scores,zoneScores(this.zones));
+      }
       const gemState=await ctx.storage.get<{pending:RewardPresentation|null;confirmed:RewardPresentation|null}>('round-gem-state');this.pendingMatchGems=gemState?.pending??null;this.confirmedMatchGems=gemState?.confirmed??null;
       await ctx.storage.delete('powerups');
       this.contributions=new DamageContributions(positive(env.ASSIST_WINDOW_MS??'',ASSIST_WINDOW_MS),await ctx.storage.get<Contribution[]>('damage-contributions')??[],Date.now());
@@ -438,6 +459,7 @@ export class PublicRoom extends DurableObject<Bindings> {
       this.ledger = ledger?.roundId === this.round.id ? ledger : this.emptyLedger();
       if (scores?.roundId === this.round.id) this.scores = scores;
       else this.scores.roundId = this.round.id;
+      this.zones=this.mode==='zone-control'?(this.zones?.roundId===this.round.id?this.zones:createZoneControl(this.round.mapId,this.round.id,Date.now(),this.round.endsAt)):null;
       this.environment=new EnvironmentSimulation(this.activeMap.environment,this.activeMap.world);
       const props=await ctx.storage.get<{roundId:number;mapVersion?:string;seq:number;states:PropState[]}>('environment');
       if(props?.roundId===this.round.id){
@@ -499,7 +521,7 @@ export class PublicRoom extends DurableObject<Bindings> {
     return this.ledger?.roundId===this.round.id ? this.ledger.mode : roundMode(this.schedule.seed,this.round.id);
   }
   private chooseTeam(): PlayerTeam {
-    if (this.mode !== 'teams') return null;
+    if (!teamMode(this.mode)) return null;
     const all = [...this.players.values()];
     return all.filter((p) => p.session.team === 'blue').length <= all.filter((p) => p.session.team === 'red').length ? 'blue' : 'red';
   }
@@ -532,7 +554,7 @@ export class PublicRoom extends DurableObject<Bindings> {
     if (session.regenAt === undefined) session.regenAt = session.alive && session.health < PLAYER_MAX_HEALTH ? Date.now() + REGEN_DELAY_MS : null;
     session.combat ??= { melee:createMeleeState(), gun: null, triggerHeld: false, reloadHeld: false, aimHeld: false, grenadeHeld: false };
     session.combat.grenadeHeld ??= false;
-    session.team = this.mode === 'teams' ? session.team ?? this.chooseTeam() : null;
+    session.team = teamMode(this.mode) ? session.team ?? this.chooseTeam() : null;
     // Stored protocol-v6 sessions have no lean state; keep their lives intact.
     if (session.motion && session.motion.lean === undefined) session.motion.lean = 0;
     const controller = new PlayerController(this.activeMap.world);
@@ -596,7 +618,7 @@ export class PublicRoom extends DurableObject<Bindings> {
   }
 
   private simulationNeeded(): boolean {
-    return this.environment.active>0 || this.grenades.length>0 || [...this.players.values()].some((e) => e.socket && e.session.alive && (e.queue.length > 0 || !!unsafeMovement(e.controller.position, this.activeMap.layout) || !e.controller.grounded
+    return this.zones!==null&&this.connected().length>0 || this.environment.active>0 || this.grenades.length>0 || [...this.players.values()].some((e) => e.socket && e.session.alive && (e.queue.length > 0 || !!unsafeMovement(e.controller.position, this.activeMap.layout) || !e.controller.grounded
       || (e.controller.crouch !== Number(e.crouchHeld) && (e.crouchHeld || this.activeMap.world.ceilingHeight(
           e.controller.position.x, e.controller.position.z, MOVEMENT.radius * .95,
           e.controller.position.y + MOVEMENT.stepHeight + .01) >= e.controller.position.y + MOVEMENT.standHeight))
@@ -804,6 +826,7 @@ export class PublicRoom extends DurableObject<Bindings> {
   }
 
   private snapshot(full=false): Snapshot {
+    this.advanceZones();
     for (const e of this.players.values()) expireCombo(e.session, Date.now());
     const serverTime=Date.now();
     const players: PlayerState[] = this.connected().map((e) => {
@@ -818,7 +841,8 @@ export class PublicRoom extends DurableObject<Bindings> {
       meleeCosmeticId:e.session.equipment?.melee??defaultCosmetic('melee'), weapon: e.session.weapon, kills: e.session.kills, deaths: e.session.deaths, assists:e.session.assists, afkDeadline:e.session.alive?this.afkDeadline(e):null, team: e.session.team, death: e.session.death });});
     const result=this.lastResult&&this.confirmedMatchGems?.roundId===this.lastResult.roundId?{...this.lastResult,gemRewards:{matchId:this.confirmedMatchGems.matchId,awards:this.confirmedMatchGems.awards}}:this.lastResult;
     return { ...(full?{environment:this.environmentFrame(true)}:{}),grenades: this.grenades, explosions: this.explosions, result, room: this.roomId, ...(this.config?{roomInfo:this.roomStatus()??undefined}:{}), mapId: this.round.mapId, roundId: this.round.id, mapVersion: this.activeMap.revision, serverTime, players,
-      match: { mode: this.mode, endsAt: this.round.endsAt, teamScores: this.mode === 'teams' ? { blue: this.scores.blue, red: this.scores.red } : null } };
+      ...(this.zones?{zoneControl:this.zones}:{}),
+      match: { mode: this.mode, endsAt: this.round.endsAt, teamScores: teamMode(this.mode) ? { blue: this.scores.blue, red: this.scores.red } : null } };
   }
 
   private emptyLedger(): MatchLedger {
@@ -833,6 +857,7 @@ export class PublicRoom extends DurableObject<Bindings> {
 
   /** One canonical persisted schedule; clients never choose the public map. */
   private ensureRound(): void {
+    this.advanceZones();
     const next = this.scheduledRound();
     if (next.id === this.round.id) return;
     for (const e of this.players.values()) this.recordStanding(e);
@@ -845,6 +870,7 @@ export class PublicRoom extends DurableObject<Bindings> {
     this.activeMap = WORLDS[next.mapId];
     this.environment=new EnvironmentSimulation(this.activeMap.environment,this.activeMap.world);this.environmentSeq=0;this.environmentSent=0;
     this.scores = { roundId: next.id, blue: 0, red: 0 };
+    this.zones=this.mode==='zone-control'?createZoneControl(next.mapId,next.id,Date.now(),next.endsAt):null;
     this.accumulator = 0;
     this.grenades = [];this.explosions = [];
     this.lastTick = Date.now();
@@ -869,7 +895,7 @@ export class PublicRoom extends DurableObject<Bindings> {
     }
     let team = 0;
     for (const e of [...this.players.values()].sort((a, b) => a.session.id.localeCompare(b.session.id))) {
-      e.session.team = this.mode === 'teams' ? team++ % 2 ? 'red' : 'blue' : null;
+      e.session.team = teamMode(this.mode) ? team++ % 2 ? 'red' : 'blue' : null;
       this.attach(e);
     }
     void this.persist();
@@ -1143,7 +1169,7 @@ export class PublicRoom extends DurableObject<Bindings> {
     if(!this.deferred) {
       for (const e of this.players.values()) if (e.socket) this.attach(e);
       this.broadcast();
-      if (this.contributions.dirty || environmentSettled || eliminated || regeneratedToFull || now - this.lastSave >= 1000) { this.lastSave = now; void this.persist(); }
+      if (this.zoneRevision>this.zoneSaved || this.contributions.dirty || environmentSettled || eliminated || regeneratedToFull || now - this.lastSave >= 1000) { this.lastSave = now; void this.persist(); }
     }
     if (!this.simulationNeeded()) {
       if (this.timer) clearInterval(this.timer);
@@ -1153,6 +1179,7 @@ export class PublicRoom extends DurableObject<Bindings> {
   }
 
   private async disconnect(socket: WebSocket, forget = false): Promise<void> {
+    this.advanceZones();
     const e = this.current(socket);
     if (!e) return;
     this.trace('disconnect', { id: e.session.id, intentional: forget, lastSeen: e.lastSeen });
@@ -1199,6 +1226,8 @@ export class PublicRoom extends DurableObject<Bindings> {
     this.membershipChanged();
   }
   private persist(): Promise<void> {
+    this.advanceZones();
+    const zoneRevision=this.zoneRevision;
     for (const e of this.players.values()) {
       e.session.crouchHeld=e.crouchHeld;
       expireCombo(e.session, Date.now());
@@ -1209,8 +1238,8 @@ export class PublicRoom extends DurableObject<Bindings> {
     const views = this.careers.views(Date.now()), pending = this.careers.capture(), stats=this.statistics.capture(), contributions=this.contributions.capture();
     const rewards=structuredClone(this.rewardState);
     const gemState={pending:structuredClone(this.pendingMatchGems),confirmed:structuredClone(!this.config||this.pendingMatchGems&&Object.keys(this.pendingMatchGems.identities).length===0?this.pendingMatchGems:this.confirmedMatchGems)};
-    return this.ctx.storage.put({ 'round-gem-state':gemState,...(this.config?{'room-config':this.config,'room-rewards':rewards}:{}),...pending.records, ...stats.records, 'damage-contributions':contributions.data, environment:{roundId:this.round.id,mapVersion:this.activeMap.revision,seq:this.environmentSeq,states:this.environment.capture()},grenades:this.grenades,explosions:this.explosions,'team-scores': this.scores, 'round-ledger': this.ledger, 'round-result': this.lastResult,
-      sessions: [...this.players.values()].map((e) => e.session) }).then(() => { const notify=gemState.confirmed?.matchId!==this.confirmedMatchGems?.matchId;this.confirmedMatchGems=gemState.confirmed;if(notify)this.broadcast();this.contributions.committed(contributions.revision); this.ctx.waitUntil(this.statistics.project()); this.careers.committed(pending.versions); this.statistics.committed(stats.versions,new Set([...this.players.values()].flatMap(e=>e.session.profileId?[e.session.profileId]:[]))); if(!this.config)this.sendCareerViews(views);this.rewardSaved=Math.max(this.rewardSaved,rewards.next);if(this.config&&this.rewardState.events.length)this.ctx.waitUntil(this.flushRewards().catch(()=>this.scheduleCleanup())); });
+    return this.ctx.storage.put({ 'zone-control':this.zones, 'round-gem-state':gemState,...(this.config?{'room-config':this.config,'room-rewards':rewards}:{}),...pending.records, ...stats.records, 'damage-contributions':contributions.data, environment:{roundId:this.round.id,mapVersion:this.activeMap.revision,seq:this.environmentSeq,states:this.environment.capture()},grenades:this.grenades,explosions:this.explosions,'team-scores': this.scores, 'round-ledger': this.ledger, 'round-result': this.lastResult,
+      sessions: [...this.players.values()].map((e) => e.session) }).then(() => { this.zoneSaved=Math.max(this.zoneSaved,zoneRevision); const notify=gemState.confirmed?.matchId!==this.confirmedMatchGems?.matchId;this.confirmedMatchGems=gemState.confirmed;if(notify)this.broadcast();this.contributions.committed(contributions.revision); this.ctx.waitUntil(this.statistics.project()); this.careers.committed(pending.versions); this.statistics.committed(stats.versions,new Set([...this.players.values()].flatMap(e=>e.session.profileId?[e.session.profileId]:[]))); if(!this.config)this.sendCareerViews(views);this.rewardSaved=Math.max(this.rewardSaved,rewards.next);if(this.config&&this.rewardState.events.length)this.ctx.waitUntil(this.flushRewards().catch(()=>this.scheduleCleanup())); });
   }
   private finishMatchGems(result:RoundResult,ledger:MatchLedger):void{
     const requests=matchRewardRequests(this.roomId,result,ledger),presentation:RewardPresentation={roundId:result.roundId,matchId:matchIdentity(this.roomId,result.roundId),awards:Object.fromEntries((result.players??[]).map(p=>[p.id,0])),identities:{}};
@@ -1237,7 +1266,7 @@ export class PublicRoom extends DurableObject<Bindings> {
       const standing=result.players?.find(s=>s.id===e.session.id);
       if(!standing)continue;
       eligible.add(id);p.lastMatchRound=result.roundId;this.careers.mark(id);
-      const event:ChallengeEvent={kind:'round',won:!result.draw&&(result.mode==='teams'?standing.team===result.winningTeam:result.winner?.id===standing.id),
+      const event:ChallengeEvent={kind:'round',won:!result.draw&&(teamMode(result.mode)?standing.team===result.winningTeam:result.winner?.id===standing.id),
         mvp:result.mvp?.id===standing.id,complete:participation.firstSpawn<=result.endedAt-600000+30000};
       const gems=this.advanceCareer(e,event,result.endedAt);
       this.recordStatistics(id,{...event,round:result.roundId,id:`round:${result.roundId}`,at:result.endedAt,gems});

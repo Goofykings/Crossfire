@@ -1,5 +1,6 @@
 import {validMap,type MapId} from '../../shared/maps';
 import type {MatchMode} from '../../shared/combat';
+import {zoneEligible} from '../../shared/zoneControl';
 export type BotDifficulty='beginner'|'intermediate'|'advanced'|'absurd';
 export const DIFFICULTIES:readonly BotDifficulty[]=['beginner','intermediate','advanced','absurd'];
 const preference='crossfire.practice-difficulty';
@@ -10,7 +11,7 @@ export const DEFAULT_PRACTICE:PracticeSetup={mapId:'european-town',mode:'ffa',bo
 export const PRACTICE_NOTICE='Practice runs locally. Bot challenges can earn account gems while connected. Practice kills, points and wins do not affect multiplayer statistics or leaderboards.';
 export function validPractice(value:unknown):value is PracticeSetup {
  if(!value||typeof value!=='object')return false;const v=value as PracticeSetup;
- return validMap(v.mapId)&&['ffa','teams'].includes(v.mode)&&Number.isInteger(v.bots)&&v.bots>=0&&v.bots<=5&&DIFFICULTIES.includes(v.difficulty);
+ return validMap(v.mapId)&&['ffa','teams','zone-control'].includes(v.mode)&&(v.mode!=='zone-control'||zoneEligible(v.mapId))&&Number.isInteger(v.bots)&&v.bots>=0&&v.bots<=5&&DIFFICULTIES.includes(v.difficulty);
 }
 /** No reward adapter/profile identity/token is accepted by the local simulation. */
 export const PRACTICE_POLICY=Object.freeze({kind:'practice',rewards:false,persistStatistics:false,uploadResults:false} as const);

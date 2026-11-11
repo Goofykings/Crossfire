@@ -18,9 +18,16 @@ export class CombatFeed {
     this.root.className = 'combat-events'; this.root.hidden = true;
     this.feed.className = 'kill-feed'; this.feed.setAttribute('aria-live', 'polite');
     this.confirmation.className = 'elimination-confirmation'; this.confirmation.hidden = true;
+    this.confirmation.addEventListener('animationend', (event) => {
+      if (event.target === this.confirmation) this.hideConfirmation();
+    });
     this.root.append(this.feed, this.confirmation); parent.appendChild(this.root);
   }
-  setVisible(visible: boolean): void { this.root.hidden = !visible; }
+  setVisible(visible: boolean): void {
+    this.root.hidden = !visible;
+    if (!visible) this.hideConfirmation();
+  }
+  private hideConfirmation(): void { this.confirmation.hidden = true; this.confirmation.classList.remove('active'); }
   add(event: Elimination, snapshot: Snapshot, selfId: string): void {
     if (this.seen.has(event.id)) return;
     this.seen.add(event.id);
@@ -37,7 +44,7 @@ export class CombatFeed {
     row.append(killer, icon, victim); this.feed.appendChild(row);
     while (this.feed.childElementCount > 5) this.feed.firstElementChild?.remove();
     window.setTimeout(() => row.remove(), 5500);
-    if (event.killerId === selfId && event.victimId !== selfId) {
+    if (!this.root.hidden && event.killerId === selfId && event.victimId !== selfId) {
       const heading = document.createElement('strong'); heading.textContent = 'ELIMINATED';
       const name = document.createElement('span'); name.textContent = event.victimName;
       this.confirmation.replaceChildren(heading, name);
@@ -51,7 +58,7 @@ export class CombatFeed {
         this.confirmation.append(score, breakdown);
       }
       this.confirmation.hidden = false;
-      // Replacing the node restarts the animation even for rapid confirmed kills.
+      // Restart the animation even for rapid confirmed kills.
       this.confirmation.classList.remove('active'); void this.confirmation.offsetWidth; this.confirmation.classList.add('active');
     }
   }
@@ -63,5 +70,5 @@ export class CombatFeed {
       node.className = `combat-name-${playerColor(snapshot.match.mode, selfId, team, node.dataset.id || null, targetTeam)}`;
     }
   }
-  clear(): void { this.feed.replaceChildren(); this.confirmation.hidden = true; this.confirmation.classList.remove('active'); }
+  clear(): void { this.feed.replaceChildren(); this.hideConfirmation(); }
 }

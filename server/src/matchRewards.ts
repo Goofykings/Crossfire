@@ -1,3 +1,4 @@
+import {teamMode} from '../../shared/combat';
 import type {CareerProfile} from '../../shared/challenges';
 import {pointsOrder,type RoundLedger,type RoundResult} from '../../shared/scoring';
 export const MATCH_GEM_RULES=Object.freeze({placement:[10,6,3] as readonly number[],pointsPerGem:500,performanceCap:20,winningTeam:2,minParticipationMs:60000,minDurationMs:600000});
@@ -14,11 +15,11 @@ export function matchRewardRequests(source:string,result:RoundResult,ledger:Matc
  const requests=new Map<string,MatchRewardRequest>(),players=result.players,participants=ledger.rewardParticipants;
  if(!players?.length||!participants||ledger.roundId!==result.roundId||!Number.isFinite(ledger.rewardStartedAt)||result.endedAt-ledger.rewardStartedAt!<MATCH_GEM_RULES.minDurationMs)return requests;
  const identities=new Set(players.flatMap(p=>participants[p.id]?[participants[p.id].identity]:[]));
- if(identities.size<2||!players.some(p=>p.kills>0)||result.mode==='teams'&&!['blue','red'].every(team=>players.some(p=>p.team===team&&participants[p.id])))return requests;
- const groups=result.mode==='teams'?['blue','red'].map(team=>players.filter(p=>p.team===team)):[players];
+ if(identities.size<2||!players.some(p=>p.kills>0)||teamMode(result.mode)&&!['blue','red'].every(team=>players.some(p=>p.team===team&&participants[p.id])))return requests;
+ const groups=teamMode(result.mode)?['blue','red'].map(team=>players.filter(p=>p.team===team)):[players];
  for(const group of groups)for(const [index,p]of [...group].sort(pointsOrder).slice(0,3).entries()){
   const participant=participants[p.id];if(!participant||participant.abandoned||participant.firstSpawn>result.endedAt-MATCH_GEM_RULES.minParticipationMs||p.kills+p.deaths+(p.assists??0)===0)continue;
-  requests.set(p.id,{matchId:matchIdentity(source,result.roundId),roundId:result.roundId,rank:index+1,points:p.score,won:result.mode==='teams'&&!result.draw&&p.team===result.winningTeam});
+  requests.set(p.id,{matchId:matchIdentity(source,result.roundId),roundId:result.roundId,rank:index+1,points:p.score,won:teamMode(result.mode)&&!result.draw&&p.team===result.winningTeam});
  }
  return requests;
 }

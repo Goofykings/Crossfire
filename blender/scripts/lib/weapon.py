@@ -10,7 +10,7 @@ up +y, right +x. Each weapon is a dict of parts (MeshData): `body` plus the piec
   bolt_grip  sniper bolt knob (right hand during the bolt cycle)
 
 Materials: gun_black (anodised aluminium), gun_steel (blued / parkerised steel), gun_polymer, gun_fde (tan polymer),
-gun_wood (walnut), gun_rubber, gun_glass (optic windows), gun_lens (scope lenses), reticle_holo (holographic reticle,
+gun_wood (walnut), gun_white (the SMG's white receiver), gun_green (the sniper's olive chassis), gun_rubber, gun_glass (optic windows), gun_lens (scope lenses), reticle_holo (holographic reticle,
 replaced by an additive emissive material at runtime), sight_dot, brass, shell_red.
 """
 from __future__ import annotations
@@ -143,6 +143,19 @@ def side_detail(md: MeshData, x: float, y0: float, y1: float, z0: float, z1: flo
     md.face_toward([(xx, y0, z0), (xx, y0, z1), (xx, y1, z1), (xx, y1, z0)], mat, (s, 0.0, 0.0))
 
 
+def grain_along(md: MeshData, mat: str = "gun_wood"):
+    """Turn the metre UVs of `mat` so u runs along the barrel (z) on every face.
+
+    world_uv() puts u along z only on the side faces; on the top, bottom and sloped faces of an extrusion u runs across
+    the part, so a wood grain texture (grain along u) would cross the stock there."""
+    for fi, m in enumerate(md.face_mat):
+        if m != mat:
+            continue
+        n = face_normal([md.verts[i] for i in md.faces[fi]])
+        if abs(n[0]) < 0.7:
+            md.face_uv[fi] = [(v, u) for (u, v) in md.face_uv[fi]]
+
+
 # =====================================================================================================================
 # Assault rifle (AR-pattern carbine with a holographic sight)
 # =====================================================================================================================
@@ -256,7 +269,7 @@ def rifle():
 
 
 # =====================================================================================================================
-# Pump shotgun (walnut furniture, ghost-ring sights, tube magazine)
+# Pump shotgun (oiled walnut grip, stock and forend; blued barrel and magazine tube; ghost-ring sights)
 # =====================================================================================================================
 SHOT_BORE = 0.058
 
@@ -306,10 +319,12 @@ def shotgun():
     box(body, -0.02, -0.068, 0.368, 0.02, 0.064, 0.384, "gun_rubber")
     # sling swivel stud
     ytube(body, -0.067, -0.061, 0.0, 0.33, 0.004, "gun_steel", sides=8)
-    # pump forend (walnut, grooved) and the action bars that run back into the receiver
+    # pump forend (walnut, grooved): a long hand guard under the barrel and the magazine tube, and the action bars
+    # that run back into the receiver. Its underside stays at y = 0.008 (the support hand's contact point).
     pump = MeshData()
-    solid(pump, [(-0.25, 0.008), (-0.25, 0.05), (-0.42, 0.05), (-0.42, 0.008)], -0.0235, 0.0235, "gun_wood", 0.006)
-    for k in range(9):
+    solid(pump, [(-0.25, 0.008), (-0.25, 0.05), (-0.49, 0.05), (-0.49, 0.018), (-0.474, 0.008)], -0.0235, 0.0235,
+          "gun_wood", 0.006)
+    for k in range(12):
         z = -0.268 - k * 0.017
         for sx in (-1, 1):
             side_detail(pump, sx * 0.0235, 0.014, 0.044, z, z - 0.006, "gun_polymer")
@@ -320,6 +335,8 @@ def shotgun():
     ztube(shell, 0.0, -0.052, 0.0, 0.0104, "shell_red", sides=12)
     ztube(shell, 0.014, 0.0, 0.0, 0.0108, "brass", sides=12)
     ztube(shell, 0.0155, 0.014, 0.0, 0.0118, "brass", sides=12)
+    grain_along(body)
+    grain_along(pump)
     anchors = {
         "muzzle": (0.0, B, -0.67), "sight": (0.0, GY, -0.012), "eject": (0.018, 0.05, -0.135),
         "grip_r": (0.0, -0.05, 0.034), "grip_l": (0.0, 0.008, -0.335), "port": (0.0, -0.004, -0.15),
@@ -336,14 +353,14 @@ SNIPER_BORE = 0.062
 def sniper():
     body = MeshData()
     B = SNIPER_BORE
-    # chassis: forend with lightening slots, action bed, pistol grip, buttstock with cheek riser
+    # chassis (dark olive, gun_green): forend with lightening slots, action bed, buttstock; black grip and cheek riser
     solid(body, [(-0.06, 0.0), (-0.06, 0.05), (-0.44, 0.05), (-0.45, 0.04), (-0.45, 0.006), (-0.44, 0.0)],
-          -0.022, 0.022, "gun_black", 0.004)
+          -0.022, 0.022, "gun_green", 0.004)
     for k in range(4):
         z = -0.17 - k * 0.065
         for sx in (-1, 1):
             side_detail(body, sx * 0.022, 0.016, 0.034, z, z - 0.045, "gun_polymer")
-    solid(body, [(0.06, 0.0), (0.06, 0.05), (-0.06, 0.05), (-0.06, 0.0)], -0.02, 0.02, "gun_black", 0.003)
+    solid(body, [(0.06, 0.0), (0.06, 0.05), (-0.06, 0.05), (-0.06, 0.0)], -0.02, 0.02, "gun_green", 0.003)
     solid(body, [(0.004, 0.0), (0.04, 0.0), (0.074, -0.11), (0.06, -0.122), (0.028, -0.119), (0.01, -0.03)],
           -0.0135, 0.0135, "gun_polymer", 0.004)
     for k in range(3):
@@ -353,7 +370,7 @@ def sniper():
     box(body, -0.004, -0.036, -0.044, 0.004, -0.03, -0.0, "gun_black")
     box(body, -0.003, -0.02, -0.028, 0.003, -0.002, -0.022, "gun_steel")
     solid(body, [(0.06, 0.04), (0.39, 0.05), (0.4, 0.04), (0.4, -0.07), (0.34, -0.07), (0.16, -0.012), (0.06, 0.0)],
-          -0.019, 0.019, "gun_black", 0.004)
+          -0.019, 0.019, "gun_green", 0.004)
     solid(body, [(0.16, 0.05), (0.33, 0.054), (0.33, 0.07), (0.17, 0.068)], -0.016, 0.016, "gun_polymer", 0.003)
     box(body, -0.021, -0.072, 0.395, 0.021, 0.053, 0.41, "gun_rubber")
     # monopod knob under the butt
@@ -432,10 +449,19 @@ def casings():
 
 
 def smg():
-    """Original compact blowback design; same anchor convention as existing guns."""
+    """Original compact blowback design; same anchor convention as existing guns.
+
+    White receiver (gun_white) framed in black: top cover, end plate, nose cap, grip and handguard; the stock rods and
+    the magazine stay dark steel (gun_steel), so collection skins colour exactly the parts they did before."""
     body, mag = MeshData(), MeshData()
     solid(body, [(0.06, 0.02), (0.06, 0.10), (-0.26, 0.10), (-0.29, 0.075), (-0.29, 0.025)],
-          -0.027, 0.027, 'gun_black', 0.004)
+          -0.027, 0.027, 'gun_white', 0.004)
+    # black trim on the white body: top cover, rear end plate, nose cap, ejection port
+    box(body, -0.0245, 0.0985, -0.25, 0.0245, 0.1032, 0.052, 'gun_black')
+    box(body, -0.0282, 0.0185, 0.056, 0.0282, 0.1015, 0.0635, 'gun_black')
+    solid(body, [(-0.262, 0.0985), (-0.2935, 0.0745), (-0.2935, 0.0255), (-0.286, 0.0215), (-0.262, 0.0215)],
+          -0.0282, 0.0282, 'gun_black', 0.002)
+    side_detail(body, 0.027, 0.064, 0.09, -0.125, -0.06, 'gun_black')
     solid(body, [(0.03, 0.025), (-0.015, 0.025), (0.005, -0.10), (0.045, -0.10), (0.06, -0.075)],
           -0.014, 0.014, 'gun_polymer', 0.004)
     box(body, -0.006, -0.025, -0.075, 0.006, -0.019, -0.018, 'gun_steel')

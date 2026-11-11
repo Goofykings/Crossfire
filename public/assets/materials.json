@@ -715,18 +715,46 @@
    "normal_strength": 0.2
   },
   "gun_wood": {
-   "tile": 0.4,
+   "tile": 0.125,
    "tint": [
-    0.78,
-    0.52,
-    0.32
+    0.8,
+    0.71,
+    0.64
    ],
-   "albedo": "assets/textures/shared/wood_dark_albedo.jpg",
-   "normal": "assets/textures/shared/wood_dark_normal.jpg",
-   "orm": "assets/textures/shared/wood_dark_orm.jpg",
-   "roughness": 0.42,
+   "albedo": "assets/textures/weapons/walnut_albedo.jpg",
+   "normal": "assets/textures/weapons/walnut_normal.jpg",
+   "orm": "assets/textures/weapons/walnut_orm.jpg",
+   "roughness": 1.0,
    "metallic": 0.0,
-   "normal_strength": 0.5
+   "normal_strength": 0.55
+  },
+  "gun_white": {
+   "tile": 0.3,
+   "tint": [
+    0.7,
+    0.7,
+    0.68
+   ],
+   "albedo": null,
+   "normal": "assets/textures/shared/concrete_smooth_normal.jpg",
+   "orm": "assets/textures/shared/concrete_smooth_orm.jpg",
+   "roughness": 0.62,
+   "metallic": 0.0,
+   "normal_strength": 0.14
+  },
+  "gun_green": {
+   "tile": 0.3,
+   "tint": [
+    0.046,
+    0.072,
+    0.036
+   ],
+   "albedo": null,
+   "normal": "assets/textures/shared/concrete_smooth_normal.jpg",
+   "orm": "assets/textures/shared/concrete_smooth_orm.jpg",
+   "roughness": 0.8,
+   "metallic": 0.0,
+   "normal_strength": 0.18
   },
   "gun_rubber": {
    "tile": 1.0,

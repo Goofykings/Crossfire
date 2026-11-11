@@ -1,3 +1,61 @@
+# New weapon skins and default appearances (2026-11-10)
+
+Seven skin families (31 catalog items) and new default looks for the SMG, shotgun and bolt sniper. Visual only:
+weapon statistics, hitboxes, anchors, animation and melee timing, protocol (v26) and every Worker endpoint are
+untouched. Crate pool, odds, prices, balances, ownership persistence and inventory logic were NOT changed: the new
+families are catalogued (`EXTRA_COLLECTIONS`) but outside `crateItems()`/`drawCrate()`, so nobody can obtain them
+until the separate backend task adds a grant path. No commit, push or deployment. Details: docs/WEAPON_SKINS.md.
+
+Skins (references: references_images/CarbonFiber.png, HydroDip.png, Blossom.png, Frosted.png)
+- Blossom (Uncommon), Carbon Fiber (Rare), Hydro Dip — Nebula / Inferno / Abyss (Epic, three separate items),
+  Darkness (Epic, also the dual daggers), Frosted (Legendary). All five firearms each, as material overrides on the
+  original GLBs: first person, characters, Locker preview, thumbnails and the crate reveal work without new rigs.
+- One shared shader plugin (src/rendering/SkinFx.ts) with three modes: `flow` (Hydro Dip: a shared flow map indexes a
+  per-variant colour ramp at slowly drifting, wrap-free offsets), `frost` (object-space snow cap above a per-weapon
+  line and on upward faces) and `shade` (Darkness edge sheen). Carbon Fiber and Blossom are plain tileable textures.
+- Frosted: 13 to 34 icicles per gun (at most 510 triangles, one draw call) placed from the gun's own side faces at the
+  snow edge by blender/cosmetics/icicle_design.py, on the static body only; a restrained snowflake flurry when firing
+  (src/weapons/SnowBurst.ts: 7 flakes per shot, at most 72, none while aiming; other players within 40 m see it).
+- Darkness: maps removed, albedo #010101, almost no specular or environment response, opaque and not emissive.
+- Chromebook mode (live): Hydro Dip 2 texture reads instead of 4, Frosted snow edge without a texture read, 3 opaque
+  flakes per shot and at most 20.
+
+Default appearances
+- SMG: white receiver (new material gun_white) framed by a black top cover, end plate, nose cap and port.
+- Shotgun: gun_wood is a generated walnut texture set with the grain along the gun; forend 7 cm longer, under the
+  barrel and the magazine tube. Metal unchanged.
+- Sniper: dark olive chassis (new material gun_green); scope, barrel, grip, bipod and magazine unchanged.
+- The six older families map gun_white/gun_green to their body finish, so existing skins look as before.
+
+Found and fixed while verifying
+- The idle snow emitter drew its unit-size template mesh at the world origin (thin instance count 0): it is now
+  disabled while idle. The older MoneyBurst has the same pattern with 3 cm meshes and was left alone.
+- Hydro Dip was tinted by the shotgun's wood albedo: the flow mode drops the source albedo image.
+- Flakes did not age under manual rendering (engine frame delta): the emitter uses its own clock.
+- The staged Foundry collection records hashes of the default GLBs: updated for the three changed models (its anchor
+  and envelope checks pass unchanged).
+
+Tests and evidence
+- vitest: full suite, 97 files / 964 tests, including the new tests/newSkins.test.ts (catalog, crate isolation, materials, plugin survives
+  Material.clone, icicles, bounded snow). Server: npm test --prefix server, 94 of 94 (one melee timing test failed once
+  while Chrome and the build ran alongside; it passed alone and in a clean full re-run). typecheck, assets:verify, production build.
+- Chrome: tools/skin-fx-test.mjs (58 checks with a controlled clock: flow moves, no jump at any offset wrap-around,
+  identical frames on a frozen clock, silhouette unchanged, snow and ice shares on every gun in both shader paths,
+  Darkness below 10% luminance yet readable on a dark backdrop, all meshes drawn), tools/skins-game-test.mjs (25
+  checks in an offline Practice match: every family in first person, firing flurry bounded and gone after 1.4 s,
+  none while aiming, Darkness daggers, Chromebook switch live), tools/review-skins.mjs contact sheets
+  (test-results/skins/: Locker, first person, third person, Chromebook path for all 36 variants).
+
+Remaining limits
+- Not obtainable until the backend grant path exists; the Shop still lists only the six crate families.
+- Patterns are world-space tiled on box-projected UVs, so they do not continue across face edges; the snow cap is a
+  per-weapon height rule, not hand-painted.
+- No physical Chromebook or desktop GPU was measured (headless Chrome on the Intel iGPU only); public Cloudflare
+  behaviour was not validated. Frontend assets changed; the Worker bundle only gains catalog entries.
+- Vitest must be started from a shell whose working directory has an upper-case drive letter (PowerShell
+  `Set-Location 'C:/Users/Public/Crossfire'`); from the Git Bash tool every suite fails to register.
+- PROGRESS.md still contains committed merge-conflict markers below this entry (from an earlier merge); left as is.
+
 <<<<<<< HEAD
 # Farmstead polish and Semi-Auto Sniper scope fix (2026-11-10)
 
