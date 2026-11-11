@@ -26,9 +26,10 @@ jobs:
           node-version: 24
           cache: npm
 
-      - run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Build
+      - name: Build frontend
         run: npm run build
         env:
           BASE_PATH: ./
@@ -53,65 +54,3 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
-
-  update-backend:
-    needs: deploy
-    runs-on: [self-hosted, Linux, X64]
-    timeout-minutes: 10
-
-    steps:
-      - name: Update and restart local Wrangler backend
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          REPO="$HOME/Crossfire"
-          SERVER="$REPO/server"
-
-          if [ ! -d "$REPO/.git" ]; then
-            echo "Repository not found at $REPO"
-            exit 1
-          fi
-
-          BRANCH="$(git -C "$REPO" branch --show-current)"
-          if [ "$BRANCH" != "main" ]; then
-            echo "Expected main branch, found $BRANCH"
-            exit 1
-          fi
-
-          git -C "$REPO" pull --ff-only origin main
-
-          npm ci --prefix "$REPO"
-          npm ci --prefix "$SERVER"
-
-          # Stop the existing Wrangler process on port 8787.
-          OLD_PID="$(ss -lptn 'sport = :8787' | sed -n 's/.*pid=\([0-9][0-9]*\).*/\1/p' | head -n 1 || true)"
-
-          if [ -n "$OLD_PID" ]; then
-            kill "$OLD_PID"
-
-            for _ in {1..15}; do
-              if ! kill -0 "$OLD_PID" 2>/dev/null; then
-                break
-              fi
-              sleep 1
-            done
-          fi
-
-          # Start Wrangler in the background.
-          cd "$SERVER"
-          nohup npm run dev > "$SERVER/wrangler.log" 2>&1 < /dev/null &
-          echo "$!" > "$SERVER/wrangler.pid"
-
-          # Confirm the backend starts successfully.
-          for _ in {1..30}; do
-            if ss -ltn 'sport = :8787' | grep -q LISTEN; then
-              echo "Backend is running on port 8787."
-              exit 0
-            fi
-            sleep 1
-          done
-
-          echo "Backend failed to start. Recent logs:"
-          tail -n 80 "$SERVER/wrangler.log"
-          exit 1
