@@ -1,3 +1,4 @@
+```yaml
 name: Deploy Crossfire
 
 on:
@@ -34,8 +35,8 @@ jobs:
         env:
           BASE_PATH: ./
           VITE_MULTIPLAYER_PROVIDER: custom
-          VITE_MULTIPLAYER_URL: wss://dust-tracy-heavily-encouraging.trycloudflare.com/ws
-          VITE_CUSTOM_MULTIPLAYER_URL: wss://dust-tracy-heavily-encouraging.trycloudflare.com/ws
+          VITE_MULTIPLAYER_URL: wss://relate-hundred-block-smile.trycloudflare.com/ws
+          VITE_CUSTOM_MULTIPLAYER_URL: wss://relate-hundred-block-smile.trycloudflare.com/ws
 
       - uses: actions/configure-pages@v5
 
@@ -54,3 +55,4 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+```
