@@ -58,8 +58,7 @@ describe('semi-automatic sniper model', () => {
     const used = semi.json.materials.map((m) => m.name);
     expect(used).toEqual(expect.arrayContaining(['gun_gold', 'gun_black', 'gun_steel', 'reticle_holo']));
     for (const n of used) expect(n in materials, n).toBe(true);
-    // the 2026-11-10 optic (eyecup, funnel, lens recess, 16-sided tubes) cost about 160 triangles over the first build
-    expect(triangles(semi)).toBeLessThan(2200);
+    expect(triangles(semi)).toBeLessThan(2100);
     expect(triangles(semi)).toBeGreaterThan(triangles(ar));
   });
 });

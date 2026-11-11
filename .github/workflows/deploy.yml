@@ -26,11 +26,10 @@ jobs:
           node-version: 24
           cache: npm
 
-      - name: Install dependencies
-        run: npm ci
+      - run: npm ci
 
-      - name: Build frontend
-        run: npm run build
+      - name: Build
+        run: npx vite build
         env:
           BASE_PATH: ./
           VITE_MULTIPLAYER_PROVIDER: custom

@@ -1,0 +1,71 @@
+import assert from 'node:assert/strict';
+import {test} from 'node:test';
+import {harness,until,self,aim,frames,ack} from './room-harness.mjs';
+import {ZONE_MAPS} from '../../shared/zoneControl.ts';
+
+for(const privacy of ['public','private'])test(`Zone Control: ${privacy} room, real capture, contest, score, late join, resume, restart and round reset`,{timeout:45000},async t=>{
+ const h=await harness(t),tokens=await Promise.all(Array.from({length:4},()=>h.profile()));
+ const admission=await h.create(tokens[0],{mode:'zone-control',privacy,mapId:privacy==='public'?'industrial-complex':'modern-city'}),roomId=admission.room.id;
+ let room=h.room(roomId);
+ const join=token=>h.admission(token,privacy==='private'?{code:admission.room.code}:{roomId});
+ let a=await h.open(admission,tokens[0]),b=await h.open(await join(tokens[1]),tokens[1]),c=await h.open(await join(tokens[2]),tokens[2]);
+ assert.equal(self(a).team,'blue');assert.equal(self(b).team,'red');assert.equal(self(c).team,'blue');
+ const zone=c=>c.snapshot.zoneControl.zones[0],point=ZONE_MAPS[admission.room.mapId][0].position;
+ for(const client of [a,b,c])await h.spawn(client,'sniper');
+ const homes=[a,b,c].map(client=>Object.values(self(client).motion.position));
+ assert.deepEqual(a.snapshot.zoneControl.zones.map(z=>z.id),['A','B','C']);assert.ok(a.snapshot.zoneControl.zones.every(z=>z.owner===null));
+ await room.placeManyForCombatTest([{id:a.id,pos:[point[0]-.5,point[1],point[2]]},{id:c.id,pos:[point[0]+.5,point[1],point[2]]}]);
+ await until(()=>zone(a).blue===2,'two authoritative occupants');
+ assert.equal(zone(a).owner,null);assert.equal(self(a).score,0,'entering is not a combat score award');
+ await until(()=>zone(a).owner==='blue'&&zone(b).owner==='blue'&&zone(c).owner==='blue','two-player five-second capture');
+ assert.equal(zone(a).progress,0);assert.equal(zone(a).capturing,null);assert.equal(self(a).kills,0);
+ await room.placeManyForCombatTest([{id:a.id,pos:homes[0]},{id:c.id,pos:homes[2]}]);
+ const score=a.snapshot.match.teamScores.blue;
+ await until(()=>a.snapshot.match.teamScores.blue>=score+1,'empty controlled zone scores');
+ assert.equal(self(a).score,0);assert.equal(self(a).kills,0);
+ await room.placeForCombatTest(b.id,point);
+ await until(()=>zone(a).capturing==='red'&&zone(a).progress>.02,'opponent partial capture');
+ assert.equal(zone(a).owner,'blue');
+ await room.placeForCombatTest(a.id,[point[0]-.5,point[1],point[2]]);
+ await until(()=>zone(a).contested,'contested');
+ const paused=structuredClone(a.snapshot.zoneControl);
+ await until(()=>a.snapshot.zoneControl.updatedAt>=paused.updatedAt+250,'contested authoritative time');
+ assert.equal(zone(a).progress,paused.zones[0].progress,'contest pauses progression');
+ assert.ok(a.snapshot.match.teamScores.blue>=Math.floor(paused.ownedMs.blue/1000));
+ const d=await h.open(await join(tokens[3]),tokens[3]);assert.equal(self(d).alive,false);
+ assert.equal(zone(d).owner,'blue');assert.equal(zone(d).contested,true);assert.equal(zone(d).red,1,'unspawned spectator never counts');
+ const mark=a.messages.length;a.send({type:'capture',zone:'A',owner:'red',progress:1});
+ await until(()=>a.messages.slice(mark).some(m=>m.type==='error'),'forged objective state rejected');assert.equal(zone(a).owner,'blue');
+ const oldA=a;a.ws.close();await until(()=>!b.snapshot.players.some(p=>p.id===oldA.id)&&zone(b).blue===0,'disconnected player removed from capture');
+ a=await h.open(admission,tokens[0],{resumeToken:oldA.token,roomTicket:undefined});
+ assert.equal(a.id,oldA.id);assert.equal(self(a).life,self(oldA).life);assert.equal(self(a).health,self(oldA).health);
+ assert.equal(a.snapshot.players.filter(p=>p.id===a.id).length,1);assert.equal(zone(a).owner,'blue');
+ // A genuine enemy elimination removes the body from occupancy immediately;
+ // combat score/feed/respawn remain independent from objective team points.
+ b.position=point;a.position=[point[0]-.5,point[1],point[2]];
+ const look=await aim(b,a),shotMark=b.messages.length;frames(b,{...look,trigger:true});await ack(b);
+ const shot=await until(()=>b.messages.slice(shotMark).find(m=>m.type==='shot'&&m.shot.shooterId===b.id),'real zone combat hit');
+ assert.equal(shot.shot.hits[0].id,a.id);assert.equal(shot.shot.hits[0].killed,true);
+ await until(()=>!self(a).alive&&zone(b).blue===0,'eliminated player stops capturing');
+ assert.equal(self(b).kills,1);assert.equal(self(b).score,100);assert.equal(b.snapshot.match.teamScores.red,0,'combat does not add objective points');
+ assert.ok(b.messages.some(m=>m.type==='elimination'&&m.elimination.victimId===a.id));
+ const life=self(a).life;await until(()=>a.snapshot.serverTime>=self(a).death.respawnAt,'authoritative respawn deadline');await h.spawn(a,'rifle');assert.equal(self(a).life,life+1);
+ const saved=structuredClone(self(a));
+ const oldB=b,oldC=c,before=(await room.snapshotForTest()).match.teamScores.blue;
+ await h.restart();room=h.room(roomId);
+ a=await h.open(admission,tokens[0],{resumeToken:a.token,roomTicket:undefined});
+ b=await h.open(admission,tokens[1],{resumeToken:oldB.token,roomTicket:undefined});
+ c=await h.open(admission,tokens[2],{resumeToken:oldC.token,roomTicket:undefined});
+ assert.equal(a.id,oldA.id);assert.equal(zone(a).owner,'blue');assert.ok(a.snapshot.match.teamScores.blue>=before,'integer scoring survives storage reconstruction');
+ assert.equal(self(a).life,saved.life);assert.equal(self(a).score,0);assert.equal(self(a).deaths,1);
+ // Retain real room lifecycle and result finalization; moving the deadline is
+ // the existing test clock seam, not a fabricated capture or score.
+ const round=a.snapshot.roundId,deadline=await room.setRemainingForTest(100),shortened=await room.snapshotForTest();
+ assert.equal(shortened.zoneControl.endsAt,shortened.match.endsAt);if(shortened.roundId===round)assert.equal(shortened.match.endsAt,deadline);
+ await until(()=>a.snapshot.roundId>round,'round reset');
+ const result=a.snapshot.result;assert.equal(result.mode,'zone-control');assert.equal(result.winningTeam,'blue');assert.equal(result.winner,null);
+ assert.equal(result.teamScores.red,0);assert.ok(result.teamScores.blue>0);assert.equal(result.players.find(p=>p.id===a.id).score,0);
+ assert.ok(a.snapshot.zoneControl.zones.every(z=>z.owner===null&&z.progress===0));assert.deepEqual(a.snapshot.match.teamScores,{blue:0,red:0});assert.equal(self(a).alive,false);
+ // Canonical room remains unchanged by either custom public/private objective room.
+ const canonical=await h.central.snapshotForTest();assert.equal(canonical.match.mode,'ffa');assert.equal(canonical.zoneControl,undefined);
+});

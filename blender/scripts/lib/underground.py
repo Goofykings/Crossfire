@@ -46,7 +46,7 @@ STYLES = {
     # Farmstead storm shelter: poured concrete, a fieldstone portal under tin, timber joists, caged bulb lamps.
     'farm': {'wall': 'concrete_wall_stained', 'floor': 'concrete_floor', 'ceiling': 'concrete_wall', 'stair': 'concrete_floor',
              'portal': 'stone_stacked', 'roof': 'roof_barn', 'trim': 'trim_brown', 'beam': 'wood_beam',
-             'metal': 'iron', 'lamp': 'lantern_glass', 'pier': 'concrete_wall', 'base': .19,
+             'metal': 'iron', 'lamp': 'lantern_glass', 'pier': 'concrete_wall', 'base': .36,
              'floor_y': -3.5, 'risers': 20, 'run': .24, 'pier_size': .72, 'accent': 'trim_brown', 'door': 'wood_door'},
     'metro': {'wall': 'facade_tiles_light', 'floor': 'pavers', 'ceiling': 'concrete_smooth_light', 'stair': 'granite',
               'portal': 'concrete_smooth_light', 'roof': 'concrete_floor', 'trim': 'concrete_trim', 'beam': None,
@@ -170,7 +170,7 @@ def entrance_parts(e, style):
         for u in (0, W - T):
             yield [u, fl - T, 0, u + T, 0, L], s['wall'], 'wall', 'inner'
         # Street guards: two long sides and the far end above the continuing passage.
-        guard = e.get('guard') or (s['portal'] if style in ('cellar', 'farm') else s['metal'])
+        guard = s['portal'] if style in ('cellar', 'farm') else s['metal']
         for u in (0, W - T):
             yield [u, 0, 0, u + T, 1.0, L], guard, 'guard', 'guard'
         # The far guard also closes the street slab's edge above the passage mouth.
@@ -461,227 +461,6 @@ def decor_items_overlap(p):
     return bad
 
 
-# --- farm shelter atmosphere (2026-11): hanging chain lamps, grime and puddles -----------------------------------
-# Baked like every other passage (vertex colours, no scene lights), but with an uneven pattern: lamps hang from the joists
-# on short chains, a few are dead, some are cold, and the concrete is darker and stained. Puddles are low irregular
-# polygons (material `puddle`, reflective at higher presets in src/rendering/PuddleReflections.ts) inside a darker
-# `concrete_wet` halo; neither has collision.
-import random as _random
-
-
-def _hash(ix, iz, seed):
-    n = (ix * 374761393 + iz * 668265263 + seed * 1442695041) & 0xFFFFFFFF
-    n = ((n ^ (n >> 13)) * 1274126177) & 0xFFFFFFFF
-    return ((n ^ (n >> 16)) & 0xFFFF) / 65535.0
-
-
-def _vnoise(x, z, seed=0):
-    ix, iz = math.floor(x), math.floor(z)
-    fx, fz = x - ix, z - iz
-    fx, fz = fx * fx * (3 - 2 * fx), fz * fz * (3 - 2 * fz)
-    a, b = _hash(ix, iz, seed), _hash(ix + 1, iz, seed)
-    c, d = _hash(ix, iz + 1, seed), _hash(ix + 1, iz + 1, seed)
-    return (a * (1 - fx) + b * fx) * (1 - fz) + (c * (1 - fx) + d * fx) * fz
-
-
-def _in_rects(x, z, rects, m=0.0):
-    return any(r[0] - m < x < r[2] + m and r[1] - m < z < r[3] + m for r in rects)
-
-
-def _joists(r):
-    """Axis and positions of the timber joists of one segment (see generate): they run across the long axis."""
-    x0, z0, x1, z1 = r
-    along_x = x1 - x0 >= z1 - z0
-    span = (x1 - x0) if along_x else (z1 - z0)
-    n = int(span // 1.25)
-    base = x0 if along_x else z0
-    return ('x' if along_x else 'z'), [base + i * span / (n + 1) for i in range(1, n + 1)]
-
-
-def farm_lamps(p):
-    """Hanging lamps: dicts {pos (x, z), top (attachment y), kind warm|cold|dead, k (brightness), chain (m)}. Rooms get a loose
-    grid about 5.4 m apart, tunnels a lamp every ~4.6 m on the centre line; each snaps to a joist and keeps clear of piers."""
-    rnd = _random.Random(2611)
-    piers = [(q[0], q[1]) for q in p.get('piers', [])]
-    pts = []
-    for r in p['segments']:
-        x0, z0, x1, z1 = r
-        w, d = x1 - x0, z1 - z0
-        along_x = w >= d
-        long, short = (w, d) if along_x else (d, w)
-        if short < 3.2:
-            n = max(1, round(long / 4.6))
-            for i in range(n):
-                t = (i + .5) / n * long
-                pts.append((x0 + t, (z0 + z1) / 2, r) if along_x else ((x0 + x1) / 2, z0 + t, r))
-        else:
-            nl, ns = max(1, round(long / 5.4)), max(1, round(short / 5.4))
-            for i in range(nl):
-                for j in range(ns):
-                    a, b = (i + .5) / nl * long, (j + .5) / ns * short
-                    jit = (rnd.uniform(-.55, .55), rnd.uniform(-.55, .55))
-                    pts.append((x0 + a + jit[0], z0 + b + jit[1], r) if along_x else (x0 + b + jit[1], z0 + a + jit[0], r))
-    lamps = []
-    for x, z, r in pts:
-        axis, js = _joists(r)
-        if js:
-            if axis == 'x':
-                x = min(js, key=lambda v: abs(v - x))
-            else:
-                z = min(js, key=lambda v: abs(v - z))
-        top = CEIL - (.162 if js else .0)
-        if any(math.hypot(x - q[0], z - q[1]) < .8 for q in piers) or any(math.hypot(x - l['pos'][0], z - l['pos'][1]) < 2.6 for l in lamps):
-            continue
-        roll = rnd.random()
-        kind = 'dead' if roll < .13 else 'cold' if roll < .38 else 'warm'
-        lamps.append({'pos': (round(x, 3), round(z, 3)), 'top': top, 'kind': kind, 'k': rnd.uniform(.82, 1.18), 'chain': rnd.uniform(.36, .5)})
-    return lamps
-
-
-def lamp_bulb_y(l):
-    return l['top'] - .022 - l['chain'] - .155
-
-
-def farm_puddles(p):
-    """Irregular puddles: dicts {c (x, z), pts [(x, z)...], r}. Placed on the open floor, never under a pier, block or prop,
-    never in a stair's foot, and kept apart (small satellites excepted)."""
-    rnd = _random.Random(1103)
-    segs = list(p['segments'])
-    keep_out = [[q[0] - q[2] / 2 - .25, q[1] - q[2] / 2 - .25, q[0] + q[2] / 2 + .25, q[1] + q[2] / 2 + .25] for q in pier_list(p)]
-    keep_out += [[b['rect'][0] - .35, b['rect'][1] - .35, b['rect'][2] + .35, b['rect'][3] + .35] for b in block_list(p)]
-    keep_out += [[r[0] - .15, r[1] - .15, r[2] + .15, r[3] + .15] for r in p.get('propRects', [])]
-    keep_out += [[o[0] - 1.6, o[1] - 1.6, o[2] + 1.6, o[3] + 1.6] for o in (entrance_opening(e) for e in p['entrances'])]
-    keep_out += [[o[0] - 1.6, o[1] - 1.6, o[2] + 1.6, o[3] + 1.6] for o in (entrance_connector(e) for e in p['entrances'])]
-    floor_rects = [[r[0] + .22, r[1] + .22, r[2] - .22, r[3] - .22] for r in segs]
-    areas = [(r[2] - r[0]) * (r[3] - r[1]) for r in segs]
-
-    def shape(cx, cz, r0):
-        k = rnd.randint(18, 24)
-        ph = [rnd.uniform(0, 6.28) for _ in range(3)]
-        amp = (rnd.uniform(.14, .28), rnd.uniform(.08, .17), rnd.uniform(.04, .1))
-        sx = rnd.uniform(.85, 1.6)
-        rot = rnd.uniform(0, math.pi)
-        out = []
-        for i in range(k):
-            a = 2 * math.pi * i / k
-            rr = r0 * (1 + amp[0] * math.sin(2 * a + ph[0]) + amp[1] * math.sin(3 * a + ph[1]) + amp[2] * math.sin(5 * a + ph[2]))
-            x, z = math.cos(a) * rr * sx, math.sin(a) * rr
-            out.append((cx + x * math.cos(rot) - z * math.sin(rot), cz + x * math.sin(rot) + z * math.cos(rot)))
-        return out
-
-    def valid(pts):
-        return all(_in_rects(x, z, floor_rects) and not _in_rects(x, z, keep_out) for x, z in pts)
-
-    out = []
-    tries = 0
-    while len(out) < 30 and tries < 900:
-        tries += 1
-        seg = rnd.choices(segs, weights=areas)[0]
-        x0, z0, x1, z1 = seg
-        near_wall = rnd.random() < .4
-        cx, cz = rnd.uniform(x0 + .9, x1 - .9), rnd.uniform(z0 + .9, z1 - .9)
-        if near_wall:
-            side = rnd.choice('nsew')
-            cx, cz = {'n': (cx, z0 + rnd.uniform(.6, 1.1)), 's': (cx, z1 - rnd.uniform(.6, 1.1)),
-                      'w': (x0 + rnd.uniform(.6, 1.1), cz), 'e': (x1 - rnd.uniform(.6, 1.1), cz)}[side]
-        r0 = rnd.choice((.34, .42, .5, .6, .75, .9)) * (.8 if near_wall else 1.0)
-        pts = shape(cx, cz, r0)
-        if not valid(pts) or any(math.hypot(cx - o['c'][0], cz - o['c'][1]) < o['r'] * 1.9 + r0 * 1.9 + .6 for o in out):
-            continue
-        out.append({'c': (cx, cz), 'pts': pts, 'r': r0})
-        for _ in range(rnd.choice((0, 1, 1, 2))):
-            a = rnd.uniform(0, 6.28)
-            d = r0 * rnd.uniform(1.7, 2.4)
-            sx, sz = cx + math.cos(a) * d, cz + math.sin(a) * d
-            r1 = rnd.uniform(.1, .2)
-            sp = shape(sx, sz, r1)
-            if valid(sp) and not any(math.hypot(sx - o['c'][0], sz - o['c'][1]) < o['r'] * 1.5 + r1 + .1 for o in out[:-1]):
-                out.append({'c': (sx, sz), 'pts': sp, 'r': r1, 'satellite': True})
-    return out
-
-
-def light_farm(p, lamps, puddles):
-    """Vertex colour of a point of the shelter: dark damp concrete, uneven stains, warm and cold lamp pools, daylight in the stairs."""
-    base = STYLES[p['style']]['base']
-    fl = p['floor']
-    live = [(l['pos'][0], lamp_bulb_y(l), l['pos'][1], l['k'], l['kind']) for l in lamps if l['kind'] != 'dead']
-    tints = {'warm': (1.0, .76, .46), 'cold': (.7, .86, 1.0)}
-    wet = [(q['c'][0], q['c'][1], q['r']) for q in puddles if not q.get('satellite')]
-    entrances = [entrance_opening(e) for e in p['entrances']]
-
-    def colour(pt):
-        x, y, z = pt
-        if y > -.05:
-            return (1.0, 1.0, 1.0, 1.0)  # street-level portal masonry: ordinary daylight
-        h = y - fl                        # height above the floor
-        # broad uneven coloration, finer mottling, and water stains running down the walls from the ceiling
-        k0 = .6 + .55 * _vnoise(x * .22, z * .22, 3) + .2 * (_vnoise(x * 1.3, z * 1.3, 5) - .5)
-        if 0.05 < h < 3.15:
-            streak = _vnoise((x + z) * 2.1 + x * .6, 0.5, 9)
-            k0 *= 1 - max(0.0, streak - .56) * 1.25 * (.45 + .55 * (h / 3.2))
-            k0 *= 1 - .22 * max(0.0, 1 - h / .55)      # damp climbing from the floor
-        r = base * k0
-        g = base * k0 * .98
-        b = base * k0 * 1.02
-        for lx, ly, lz, k, kind in live:
-            d = math.sqrt((x - lx) ** 2 + (y - ly) ** 2 * .55 + (z - lz) ** 2)
-            f = max(0.0, 1 - d / 5.0) ** 2 * 2.3 * k
-            tr, tg, tb = tints[kind]
-            r += f * tr
-            g += f * tg
-            b += f * tb
-        # the floor is darker and wetter near puddles
-        if abs(h) < .02:
-            for cx, cz, rr in wet:
-                dd = math.hypot(x - cx, z - cz)
-                if dd < rr * 2.3:
-                    w = max(0.0, 1 - dd / (rr * 2.3)) ** 1.5
-                    r, g, b = r * (1 - .42 * w), g * (1 - .4 * w), b * (1 - .36 * w)
-        # Daylight reaches a little way down each stairwell.
-        for o in entrances:
-            cx, cz = min(max(x, o[0]), o[2]), min(max(z, o[1]), o[3])
-            dd = math.hypot(x - cx, z - cz) + max(0.0, -y) * .45
-            f = .5 * max(0.0, 1 - dd / 3.2)
-            r, g, b = r + f, g + f, b + f
-        lim = 1.0     # the exported colours are bytes: 1.0 is the ceiling
-        return (max(.1, min(lim, r)), max(.1, min(lim, g)), max(.1, min(lim, b)), 1.0)
-    return colour
-
-
-def _grid_face(md, quad, mat, step):
-    """A quad (wound as the caller wrote it) cut into ~`step` m cells, so per-vertex lighting and stains have detail."""
-    a, b, c, d = quad
-    nu, nv = max(1, round(math.dist(a, b) / step)), max(1, round(math.dist(a, d) / step))
-
-    def pt(i, j):
-        s_, t = i / nu, j / nv
-        return tuple((a[k] * (1 - s_) + b[k] * s_) * (1 - t) + (d[k] * (1 - s_) + c[k] * s_) * t for k in range(3))
-    for i in range(nu):
-        for j in range(nv):
-            md.face([pt(i, j), pt(i + 1, j), pt(i + 1, j + 1), pt(i, j + 1)], mat)
-
-
-def _farm_lamp_mesh(md, l):
-    """A caged shade on a short chain: ceiling plate, alternating links, cap, cone shade, bulb and guard ring. Visual only."""
-    x, z = l['pos']
-    top, chain = l['top'], l['chain']
-    md.cylinder((x, top - .022, z), .055, .022, 'iron', segments=8, caps=(False, True))
-    n = max(4, int(chain / .062))
-    pitch = chain / n
-    for i in range(n):
-        yc = top - .022 - (i + .5) * pitch
-        if i % 2:
-            md.box(x - .007, yc - pitch * .62, z - .019, x + .007, yc + pitch * .62, z + .019, 'iron')
-        else:
-            md.box(x - .019, yc - pitch * .62, z - .007, x + .019, yc + pitch * .62, z + .007, 'iron')
-    y0 = top - .022 - chain
-    md.cylinder((x, y0 - .04, z), .03, .04, 'iron', segments=8)
-    md.cylinder((x, y0 - .13, z), .17, .09, 'iron', segments=10, radius_top=.045, caps=(False, False))      # cone shade
-    bulb = {'warm': 'bulb_warm', 'cold': 'bulb_cold', 'dead': 'bulb_dead'}[l['kind']]
-    md.sphere((x, y0 - .155, z), .056, bulb, rings=3, segments=8, squash=1.1)
-    md.cylinder((x, y0 - .215, z), .122, .012, 'iron', segments=10, caps=(False, False), radius_top=.122)   # guard ring
-
-
 # --- visible mesh ------------------------------------------------------------------------------
 def light_at(p, lamps):
     base = STYLES[p['style']]['base']
@@ -715,21 +494,11 @@ def generate(p):
     s = STYLES[p['style']]
     fl = p['floor']
     metro = p['style'] == 'metro'
-    farm = p['style'] == 'farm'
-    if farm:
-        lamps = farm_lamps(p)
-        puddles = farm_puddles(p)
-        md = MeshData(color_fn=light_farm(p, lamps, puddles))
-    else:
-        lamps = lamp_positions(p)
-        md = MeshData(color_fn=light_at(p, lamps))
+    lamps = lamp_positions(p)
+    md = MeshData(color_fn=light_at(p, lamps))
     for x0, z0, x1, z1 in p['segments']:
-        if farm:
-            _grid_face(md, [(x0, fl, z0), (x0, fl, z1), (x1, fl, z1), (x1, fl, z0)], s['floor'], .5)
-            _grid_face(md, [(x0, CEIL, z0), (x1, CEIL, z0), (x1, CEIL, z1), (x0, CEIL, z1)], s['ceiling'], 1.5)
-        else:
-            md.face([(x0, fl, z0), (x0, fl, z1), (x1, fl, z1), (x1, fl, z0)], s['floor'])
-            md.face([(x0, CEIL, z0), (x1, CEIL, z0), (x1, CEIL, z1), (x0, CEIL, z1)], s['ceiling'])
+        md.face([(x0, fl, z0), (x0, fl, z1), (x1, fl, z1), (x1, fl, z0)], s['floor'])
+        md.face([(x0, CEIL, z0), (x1, CEIL, z0), (x1, CEIL, z1), (x0, CEIL, z1)], s['ceiling'])
         if s['beam']:
             along_x = x1 - x0 >= z1 - z0
             # Timber joists across the short span; above head height, no collision needed.
@@ -757,34 +526,21 @@ def generate(p):
     # Walls: tiled inner face, plinth course, accent stripe and ceiling cornice.
     for side, line, a, b in edges(p):
         # Inner face only (normal toward the passage): the outside is buried.
-        wall_face = (lambda q: _grid_face(md, q, s['wall'], .7)) if farm else (lambda q: md.face(q, s['wall']))
         if side == 'n':
-            wall_face([(b, fl, line), (b, CEIL, line), (a, CEIL, line), (a, fl, line)])
+            md.face([(b, fl, line), (b, CEIL, line), (a, CEIL, line), (a, fl, line)], s['wall'])
         elif side == 's':
-            wall_face([(a, fl, line), (a, CEIL, line), (b, CEIL, line), (b, fl, line)])
+            md.face([(a, fl, line), (a, CEIL, line), (b, CEIL, line), (b, fl, line)], s['wall'])
         elif side == 'w':
-            wall_face([(line, fl, a), (line, CEIL, a), (line, CEIL, b), (line, fl, b)])
+            md.face([(line, fl, a), (line, CEIL, a), (line, CEIL, b), (line, fl, b)], s['wall'])
         else:
-            wall_face([(line, fl, b), (line, CEIL, b), (line, CEIL, a), (line, fl, a)])
+            md.face([(line, fl, b), (line, CEIL, b), (line, CEIL, a), (line, fl, a)], s['wall'])
         _wall_trim(md, s, side, line, a, b, fl, metro)
     for x, z, size in pier_list(p):
         _pier_mesh(md, s, x, z, size, fl, metro)
     for b in block_list(p):
         _block_mesh(md, s, b, fl)
-    if farm:
-        for l in lamps:
-            _farm_lamp_mesh(md, l)
-        for q in puddles:
-            ring = [(x, fl + .006, z) for x, z in q['pts']]
-            cx, cz = q['c']
-            k = 1.3 if q.get('satellite') else 1.5
-            halo = [(cx + (x - cx) * k, fl + .003, cz + (z - cz) * k) for x, z in q['pts']]
-            for pts, mat in ((halo, 'concrete_wet'), (ring, 'puddle')):
-                for i in range(len(pts)):
-                    md.face_toward([(cx, pts[0][1], cz), pts[i], pts[(i + 1) % len(pts)]], mat, (0, 1, 0))
-    else:
-        for (x, y, z), facing in lamps:
-            _lamp_mesh(md, s, x, y, z, facing, p, metro)
+    for (x, y, z), facing in lamps:
+        _lamp_mesh(md, s, x, y, z, facing, p, metro)
     for pts, normal, item in decor_quads(p):
         _decor_mesh(md, pts, normal, item, s, p)
     for e in p['entrances']:

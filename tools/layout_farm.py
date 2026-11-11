@@ -295,17 +295,6 @@ def build():
             assert kind in catalog, kind
             assert any(r[0] < x < r[2] and r[1] < z < r[3] for r in p['segments']), f'{kind} at {x},{z} is outside the shelter'
             layout['props'].append({'type': kind, 'pos': [x, p['floor'], z], 'heading': heading})
-        # footprints of the floor props: the generator keeps puddles out from under them
-        rects = []
-        for kind, x, z, heading in ul._FARM_PROPS:
-            col = catalog[kind]['collider']
-            if not col:
-                continue
-            r = math.radians(heading)
-            ex = abs(math.cos(r)) * col[0] / 2 + abs(math.sin(r)) * col[2] / 2
-            ez = abs(math.sin(r)) * col[0] / 2 + abs(math.cos(r)) * col[2] / 2
-            rects.append([round(x - ex, 3), round(z - ez, 3), round(x + ex, 3), round(z + ez, 3)])
-        p['propRects'] = rects
     boxes = obstruction_boxes(layout, catalog)
     holes = [underground.entrance_footprint(e) for p in underground_passages for e in p['entrances']]
     # spawns and targets: snapped to clear ground, away from stairwells
