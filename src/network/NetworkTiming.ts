@@ -1,13 +1,13 @@
 /** Clock probes favor a recent low-RTT sample, preventing queued Wi-Fi pongs from
  * moving the world clock by hundreds of milliseconds. Playback never goes backwards. */
 export class NetworkTiming {
- offset=0;rtt=0;delay=100;
+ offset=0;rtt=0;delay=100;jitter=0;
  private probes:{at:number;rtt:number;offset:number}[]=[];
  private arrivals:number[]=[];
  private previous:{server:number;local:number}|null=null;
  private playhead=0;private previousLocal=0;
  reset(server:number,local:number):void {
-  this.offset=server-local;this.rtt=0;this.delay=100;this.probes=[];this.arrivals=[];this.previous=null;this.playhead=0;this.previousLocal=0;
+  this.offset=server-local;this.rtt=0;this.jitter=0;this.delay=100;this.probes=[];this.arrivals=[];this.previous=null;this.playhead=0;this.previousLocal=0;
  }
  probe(sent:number,server:number,local:number):boolean {
   const rtt=local-sent;if(rtt<0||rtt>5000)return false;
@@ -23,6 +23,7 @@ export class NetworkTiming {
    const excess=Math.max(0,(local-this.previous.local)-(server-this.previous.server));
    this.arrivals.push(excess);if(this.arrivals.length>40)this.arrivals.shift();
    const sorted=[...this.arrivals].sort((a,b)=>a-b),jitter=sorted[Math.floor((sorted.length-1)*.9)]??0;
+   this.jitter=jitter;
    // Low-latency links use ~one snapshot of padding; noisy links get more.
    const wanted=Math.max(65,Math.min(160,65+jitter));
    this.delay+=Math.max(-1,Math.min(15,(wanted-this.delay)*.25));
@@ -38,5 +39,5 @@ export class NetworkTiming {
   }
   this.previousLocal=local;return this.playhead;
  }
- inspect(){return{rtt:this.rtt,interpolationMs:this.delay,clockOffset:this.offset,playhead:this.playhead};}
+ inspect(){return{rtt:this.rtt,jitter:this.jitter,interpolationMs:this.delay,clockOffset:this.offset,playhead:this.playhead};}
 }

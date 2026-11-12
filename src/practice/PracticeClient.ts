@@ -10,11 +10,12 @@ import type {Weapon,WeaponId} from '../weapons/Weapon';
 import type {EnvironmentFrame} from '../../shared/environment';
 import {PracticeSimulation,type PracticeWorld} from './PracticeSimulation';
 import type {PracticeSetup} from './config';
-type SessionFields='latency'|'presentationTime'|'melee'|'onMelee'|'state'|'selfId'|'latest'|'environment'|'clockOffset'|'onRoomExit'|'onCareer'|'onSnapshot'|'onShot'|'onElimination'|'onGrenade'|'onEnvironment'|'onChat'|'onSystem'|'onChatError'|'onState'|'spawn'|'fixedInput'|'reconcile'|'sendChat'|'disconnect'|'leaveRoom'|'reconnect';
+type SessionFields='canPredict'|'latency'|'presentationTime'|'melee'|'onMelee'|'state'|'selfId'|'latest'|'environment'|'clockOffset'|'onRoomExit'|'onCareer'|'onSnapshot'|'onShot'|'onElimination'|'onGrenade'|'onEnvironment'|'onChat'|'onSystem'|'onChatError'|'onState'|'spawn'|'fixedInput'|'reconcile'|'sendChat'|'disconnect'|'leaveRoom'|'reconnect';
 /** Presentation contract only. A local session never manufactures a WebSocket handshake. */
 export type MatchSession=Pick<MultiplayerClient,SessionFields>&{connect():Promise<unknown>;inspect():unknown};
 export class PracticeClient implements MatchSession {
  readonly latency=0;
+ get canPredict():boolean{return this.state==='connected';}
  presentationTime():number{return this.simulation.now-100;}
  melee=createMeleeState();private inputTimes=new Map<number,number>();
  onMelee:MatchSession['onMelee']=()=>{};

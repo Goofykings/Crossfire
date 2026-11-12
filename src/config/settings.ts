@@ -22,6 +22,7 @@ export interface Settings {
   showFps: boolean;
   reducedEffects: boolean;
   chromebookMode: boolean;
+  adaptiveResolution: boolean;
   keyBindings: KeyBindings;
 }
 
@@ -38,6 +39,7 @@ export const DEFAULT_SETTINGS: Settings = {
   showFps: true,
   reducedEffects: false,
   chromebookMode: false,
+  adaptiveResolution: true,
   keyBindings: defaultBindings(),
 };
 
@@ -75,6 +77,7 @@ export function sanitizeSettings(raw: unknown): Settings {
   num('resolutionScale');
   if (typeof r.invertY === 'boolean') s.invertY = r.invertY;
   if (typeof r.aimAssist === 'boolean') s.aimAssist = r.aimAssist;
+  if(typeof r.adaptiveResolution==='boolean')s.adaptiveResolution=r.adaptiveResolution;
   if (typeof r.chromebookMode === 'boolean') s.chromebookMode = r.chromebookMode;
   if (typeof r.reducedEffects === 'boolean') s.reducedEffects = r.reducedEffects;
   if (typeof r.showFps === 'boolean') s.showFps = r.showFps;

@@ -715,6 +715,7 @@ export class UI {
         title: 'Graphics',
         rows: [
           ['chromebookMode', this.toggleRow('chromebookMode', 'CHROMEBOOK MODE')],
+          ['adaptiveResolution',this.toggleRow('adaptiveResolution','ADAPTIVE CHROMEBOOK RESOLUTION')],
           [
             'graphicsQuality',
             this.selectRow('graphicsQuality', 'Graphics quality', [
@@ -948,7 +949,7 @@ export class UI {
     return row;
   }
 
-  private toggleRow(key: 'invertY' | 'aimAssist' | 'showFps' | 'reducedEffects' | 'chromebookMode', label: string): HTMLElement {
+  private toggleRow(key: 'invertY' | 'aimAssist' | 'showFps' | 'reducedEffects' | 'chromebookMode' | 'adaptiveResolution', label: string): HTMLElement {
     const id = `set-${key}`;
     const { row, lab } = this.settingRow(label, id);
     const input = el('input', 'switch');

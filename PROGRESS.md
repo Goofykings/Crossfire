@@ -1,3 +1,68 @@
+# Chromebook responsiveness, prediction and combat stalls (2026-11-12)
+
+Completed the focused request without changing authoritative damage, movement
+values, collision geometry, hitboxes, match rules or WebSocket protocol 27.
+Investigation, measurements, complete changed-file list, reproduction commands
+and limitations: `docs/RESPONSIVENESS.md`.
+
+- Reproduced stale `spawned` snapshots restoring an older life/orientation and
+  previous-round snapshots replacing newer state. Both snapshot paths now guard
+  round/time/life/ACK ordering; late spawn receipts resolve against newer valid
+  state without rolling it back. Ordinary reconciliation already preserved
+  current mouse yaw/pitch and continues to do so. These are reproduced code
+  defects, not a confirmed trace of every camera jerk on the user's device.
+- Fixed prediction advancing after the transport stopped retaining inputs.
+  Admission now gates the fixed step, bounded at 48 pending inputs to match the
+  existing server queue. Mouse look stays live; action edges survive until an
+  admitted tick. Existing 20 Hz flushes drain the available window in legal
+  12-frame batches instead of adding 50 ms per catch-up packet. Ordinary living
+  snapshots coalesce once per rendered frame; life/round/result/combat events
+  retain immediate handling. Tiny interpolation corrections require a grounded,
+  collision-clear path and never change authoritative current position.
+- Measured a 613.5 ms first-death presentation call in local Chrome at 4x CPU
+  throttle: material cloning and transparent fade compilation were expensive.
+  Chromebook mode retains the same collision-safe ragdoll and 2.2-second lifetime
+  using original opaque materials, then removes the body. Two post-fix calls
+  measured 11.4/8.8 ms; regression coverage checks zero clones and duplicate
+  protection. Normal graphics retain their fade. Impact and Frosted variants
+  warm during loading; existing pools and cosmetic/skin persistence remain intact.
+- Added opt-in `?perf=1` diagnostics: bounded frame samples/percentiles/1% lows,
+  long frames/tasks, GPU timing when supported, CPU sections, RTT/jitter, snapshot
+  age, pending inputs and reconciliation metrics. Default logging/observers/GPU
+  instrumentation remain off. Added a persisted opt-out for the existing adaptive
+  Chromebook resolution controller, retaining its bounds and hysteresis.
+
+Verification completed locally:
+
+- Frontend full suite: **993 passed**, one existing performance-test skip
+  (`test-results/responsiveness-vitest.log`). Final diagnostics/transport/camera/
+  lightweight-death rerun after the last metric edits: **40 passed**
+  (`test-results/responsiveness-final-validation.log`).
+- Complete rebuilt backend suite: **100 passed**, zero failures, 503.5 seconds
+  (`test-results/responsiveness-backend-final.log`). Includes two real frontend
+  transports against local workerd at 60/30/20 FPS, delayed/jittered snapshots,
+  a 250 ms input-production stall, bounded queues, ACK convergence, retained life/
+  health/identity and no camera reversal or extra connection. The integration
+  fixture resolves its Vite root from its own URL; it also passes when started
+  from `server/`, fixing the first full run's test-only path error.
+- Frontend TypeScript + final production build, Worker typecheck + dry-run build:
+  **passed**. Existing bundle-size notices remain. Real frontend/shared-parser/
+  Worker protocol compatibility: **1 passed**.
+- Production Chrome Practice smoke test: **all four maps passed** loading-time
+  effect readiness, Pages asset paths, diagnostics opt-in and adaptive opt-out,
+  without gameplay sockets, missing assets or page exceptions. Browser tool
+  syntax checks and `git diff --check` passed. Own preview process stopped.
+- Local CPU profiles and raw frame data are in ignored
+  `test-results/responsiveness/`. Whole-scene timings varied substantially and
+  some >600 ms frames remain. The targeted death cost reduction is measured;
+  aggregate FPS/stall elimination and actual Chromebook/school-Wi-Fi performance
+  are **not verified**. No public server or GitHub Actions run was performed.
+
+Release when authorized: frontend changes only, against an already matching
+protocol-27 Worker. No Worker gameplay/configuration migration is required.
+No commit, push, deployment or credentials change was performed. Stopped after
+this request; actual device profiling remains necessary for remaining stalls.
+
 # Match gems, low-health grading, and respawn skins (2026-11-11)
 
 Completed this request without changing damage, movement, challenge rewards,

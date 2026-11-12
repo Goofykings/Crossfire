@@ -8,6 +8,7 @@ export class RenderContext {
   readonly camera: FreeCamera;
   private resolutionScale = 1;
   private chromebook=false;
+  private automaticResolution=true;
   private readonly adaptive=new AdaptiveResolution();
 
   constructor(readonly canvas: HTMLCanvasElement, opts: { preserveDrawingBuffer?: boolean } = {}) {
@@ -48,7 +49,8 @@ export class RenderContext {
   }
 
   /** Render at a fraction of the display's device-pixel resolution (1 = native). */
-  setResolutionScale(scale: number,chromebook=false): void {
+  setResolutionScale(scale: number,chromebook=false,automatic=true): void {
+    this.automaticResolution=automatic;
     this.resolutionScale = scale;
     this.chromebook=chromebook;this.adaptive.reset();
     this.applyRenderSize();
@@ -61,11 +63,11 @@ export class RenderContext {
   }
 
   updateResolution(dt:number,playing:boolean):void {
-    if(this.chromebook&&playing&&this.adaptive.sample(dt))this.applyRenderSize();
+    if(this.chromebook&&this.automaticResolution&&playing&&this.adaptive.sample(dt))this.applyRenderSize();
   }
 
   resolutionStats(){
-    return {adaptive:this.chromebook,scale:this.chromebook?this.adaptive.scale:this.resolutionScale,
+    return {adaptive:this.chromebook&&this.automaticResolution,scale:this.chromebook?this.adaptive.scale:this.resolutionScale,
       width:this.engine.getRenderWidth(),height:this.engine.getRenderHeight(),pixelBudget:this.chromebook?1280*720:null};
   }
 

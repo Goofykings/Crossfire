@@ -1,3 +1,4 @@
+import {PerformanceDiagnostics} from '../core/PerformanceDiagnostics';
 import {HealthSaturation} from '../rendering/HealthSaturation';
 import {ZoneControlView} from './ZoneControlView';
 import {teamMode,modeName} from '../../shared/combat';
@@ -21,7 +22,7 @@ import { GrenadeCharge } from '../../shared/grenadeCharge';
 import { CareerClient } from '../network/CareerClient';
 import { meshesReady } from '../core/assetReadiness';
 import { abortable } from '../core/cancellation';
-import { ArcRotateCamera, Color3, Mesh, MeshBuilder, PBRMaterial, Quaternion, SceneInstrumentation, StandardMaterial, Vector3 } from '@babylonjs/core';
+import { ArcRotateCamera, Color3, Mesh, MeshBuilder, PBRMaterial, Quaternion, EngineInstrumentation, SceneInstrumentation, StandardMaterial, Vector3 } from '@babylonjs/core';
 import { AudioManager, type SoundName } from '../audio/AudioManager';
 import { FIXED_DT, MAX_FRAME_DT, MOVEMENT, PLAYER_MAX_HEALTH } from '../config/constants';
 import { SettingsStore, effectiveSettings, type Settings } from '../config/settings';
@@ -105,6 +106,8 @@ export class Game {
   readonly maps: MapManager;
   private readonly postfx: PostFX;
   private readonly instrumentation: SceneInstrumentation;
+  private readonly performanceDiagnostics=new PerformanceDiagnostics(new URLSearchParams(location.search).get('perf')==='1');
+  private gpuInstrumentation:EngineInstrumentation|null=null;
   map: LoadedMap | null = null;
   player: PlayerController | null = null;
   private cameraRig: PlayerCamera | null = null;
@@ -120,6 +123,7 @@ export class Game {
   private meleeSoundSequence=-1;
   private meleeFlourishKey='';
   private meleeTogglePending=false;
+  private edgesPending={jump:false,fire:false,reload:false,grenade:false};
   private meleeShown = false;
   private moneyView: MoneyBurst | null = null;
   private moneyWorld: MoneyBurst | null = null;
@@ -135,6 +139,7 @@ export class Game {
   private readonly damage = new DamageSystem();
   state: State = 'menu';
   private acc = 0;
+  private pendingSnapshot:{session:MatchSession;snapshot:Snapshot}|null=null;
   private health = PLAYER_MAX_HEALTH;
   private stepDistance = 0;
   private stats = { shots: 0, hits: 0, downs: 0, headshots: 0, grenadesThrown: 0, grenadeHits: 0 };
@@ -207,6 +212,8 @@ export class Game {
     this.postfx = new PostFX(this.ctx.scene, this.ctx.camera);
     this.instrumentation = new SceneInstrumentation(this.ctx.scene);
     this.instrumentation.captureFrameTime = true;
+    if(this.performanceDiagnostics.enabled){this.gpuInstrumentation=new EngineInstrumentation(this.ctx.engine);this.gpuInstrumentation.captureGPUFrameTime=true;}
+    this.ctx.scene.onDisposeObservable.addOnce(()=>{this.performanceDiagnostics.dispose();this.gpuInstrumentation?.dispose();});
     this.attacker = {
       id: 'player',
       position: () => {
@@ -228,7 +235,7 @@ export class Game {
 
   async init(): Promise<void> {
     const s = effectiveSettings(this.settings.value);
-    this.ctx.setResolutionScale(s.resolutionScale,s.chromebookMode);
+    this.ctx.setResolutionScale(s.resolutionScale,s.chromebookMode,s.adaptiveResolution);
     this.ctx.setFov(s.fov);
     this.audio.setVolume(s.masterVolume);
     this.audio.setSfxVolume(s.sfxVolume);
@@ -237,13 +244,14 @@ export class Game {
     this.materials.setUltra(!!graphicsPreset(s).ultraMaterials);
     this.remotePlayers.setAnimationDetail(s.chromebookMode ? .25 : s.graphicsQuality === 'low' ? .5 : 1);
     this.remotePlayers.setTrailsReduced(s.chromebookMode);
+    this.remotePlayers.setLightweightDeaths(s.chromebookMode);
     this.materials.setChromebook(s.chromebookMode);
     setSkinFxLite(s.chromebookMode);
     this.settings.onChange((v, changed) => this.applySettings(v, changed));
 
     // Public Play has no silent practice fallback.
     this.input.onWheel=direction=>{if(this.state!=='playing'||!this.weapon.stats.scope||this.weapon.ads<.72||meleeBlocked(this.network?.melee??this.localMelee))return false;this.sniperZoom.scroll(-direction);return true;};
-    this.input.onClear = () => {this.meleeTogglePending=false;this.cancelGrenadeCharge();};
+    this.input.onClear = () => {this.edgesPending={jump:false,fire:false,reload:false,grenade:false};this.meleeTogglePending=false;this.cancelGrenadeCharge();};
     this.ui.onGrenade = (held, cancel) => {
       if (cancel) { this.cancelGrenadeCharge(); return; }
       if (this.state !== 'playing') return;
@@ -396,6 +404,7 @@ export class Game {
       this.ui.setLoading(0, 'Loading weapon materials');
       await this.materials.ready(signal);
       await view.setCosmetics(this.cosmetics?.view?.equipped??defaultEquipment());
+      await view.warmEffects();
       await weaponPreviews((id, url) => this.ui.setWeaponPreview(id, url, signal), signal);
       signal?.throwIfAborted();
       this.ui.setWeaponName(this.weapon.stats.name);
@@ -573,12 +582,20 @@ export class Game {
         };
         network.onElimination = (event) => {
           if (signal.aborted || this.network !== network) return;
-          this.remotePlayers.eliminate(event);
+          const deathStarted=this.performanceDiagnostics.start();this.remotePlayers.eliminate(event);this.performanceDiagnostics.end('death',deathStarted);
           if(event.assists?.some(a=>a.id===network.selfId))this.ui.showToast('+50 ASSIST','blue',1.8);
           if (event.killerId === network.selfId && event.victimId !== network.selfId && event.award) this.ui.grenadeReward();
           if (network.latest) { this.ui.combatFeed.add(event, network.latest, network.selfId); this.killEffect(event, network.latest, network.selfId); }
         };
-        network.onSnapshot = (snapshot) => { if (!signal.aborted && this.network === network) this.acceptSnapshot(snapshot); };
+        network.onSnapshot = (snapshot) => {
+          if(signal.aborted||this.network!==network)return;
+          const own=snapshot.players.find(p=>p.id===network.selfId);
+          // Coalesce only ordinary living updates; deaths, spawns, results and
+          // map changes remain immediate and all confirmed combat events still run.
+          if(this.state==='playing'&&this.networkReady&&!snapshot.result&&snapshot.roundId===this.loadedRound&&own?.alive&&own.life===this.networkLife&&own.id===this.appliedPlayerId){
+            this.pendingSnapshot={session:network,snapshot};
+          }else{this.pendingSnapshot=null;this.acceptSnapshot(snapshot);}
+        };
         network.onState = (state, message) => {
           if (signal.aborted || this.network !== network) return;
           if (state !== 'connected') { this.cancelGrenadeCharge(); this.remotePlayers.clear(); this.ui.scoreboard.setVisible(false); }
@@ -601,7 +618,7 @@ export class Game {
       signal.throwIfAborted();
       if (this.map?.def.id !== id) return;
       this.ui.setLoading(0, 'Preparing weapons and character shaders');
-      await Promise.all([meshesReady(this.weaponView?.meshes ?? [], signal), this.remotePlayers.ready(signal)]);
+      await Promise.all([meshesReady(this.weaponView?.meshes ?? [], signal), this.remotePlayers.ready(signal),this.effects?.ready(signal),this.weaponView?.warmEffects()]);
       signal.throwIfAborted();
       this.showPreSpawn();
       if (this.options.autoplay) await this.spawnSelected();
@@ -643,7 +660,7 @@ export class Game {
         this.map!.props.resetSynchronization();
         this.ui.setLoading(0, 'Preparing weapons and character shaders');
         await this.materials.ready(signal);
-        await Promise.all([meshesReady(this.weaponView?.meshes ?? [], signal), this.remotePlayers.ready(signal)]);
+        await Promise.all([meshesReady(this.weaponView?.meshes ?? [], signal), this.remotePlayers.ready(signal),this.effects?.ready(signal),this.weaponView?.warmEffects()]);
         signal.throwIfAborted();
         if (!network.latest || network.state !== 'connected') return;
         if (target.roundId !== network.latest.roundId || target.mapId !== network.latest.mapId) continue;
@@ -713,6 +730,7 @@ export class Game {
     this.moneyWorld!.emit(world.add(new Vector3(0, .25, 0)));
   }
   private acceptSnapshot(snapshot: Snapshot): void {
+    const snapshotStarted=this.performanceDiagnostics.start();
     if (this.presentRoundResult(snapshot) || this.state === 'results') return;
     if (!this.networkReady || !this.player || !this.map || this.network?.state !== 'connected') return;
     if (snapshot.roundId !== this.loadedRound || snapshot.mapId !== this.map.def.id) {
@@ -767,6 +785,7 @@ export class Game {
     } else if (this.state === 'playing' || this.state === 'spectating' || (this.state === 'paused' && !this.preSpawnPaused)) this.showPreSpawn();
     this.ui.damage.observeHealth({ id: self.id, life: self.life, round: snapshot.roundId,
       at: snapshot.serverTime, health: self.health, max: PLAYER_MAX_HEALTH, alive: self.alive });
+    this.performanceDiagnostics.end('snapshot',snapshotStarted);
   }
 
   private presentRoundResult(snapshot: Snapshot): boolean {
@@ -875,6 +894,7 @@ export class Game {
     this.preSpawnPaused = false;
     this.spectatingDeath = null; this.remotePlayers.setSpectated(null);
     this.state = 'playing';
+    this.performanceDiagnostics.reset();
     this.input.enabled = true;
     this.input.clearState();
     this.ui.show('hud');
@@ -928,6 +948,7 @@ export class Game {
   private async enterPlay(): Promise<void> {
     if (this.options.multiplayer && !this.network?.latest?.players.find((p) => p.id === this.network?.selfId)?.alive) return;
     this.audio.unlock();
+    if(this.state==='start')this.performanceDiagnostics.reset();
     this.preSpawnPaused = false;
     this.cameraRig?.snapFov(this.settings.value.fov);
     await this.input.requestLock();
@@ -1012,7 +1033,7 @@ export class Game {
     const v=effectiveSettings(raw);
     if(changed.includes('chromebookMode'))changed=[...new Set([...changed,'resolutionScale','graphicsQuality','shadowQuality'] as (keyof Settings)[])];
     if (changed.includes('keyBindings')) { this.input.setBindings(v.keyBindings); this.ui.setChatBinding(v.keyBindings.chat[0]); }
-    if (changed.includes('resolutionScale')) this.ctx.setResolutionScale(v.resolutionScale,v.chromebookMode);
+    if (changed.includes('resolutionScale')||changed.includes('adaptiveResolution')) this.ctx.setResolutionScale(v.resolutionScale,v.chromebookMode,v.adaptiveResolution);
     if (changed.includes('masterVolume')) this.audio.setVolume(v.masterVolume);
     if (changed.includes('sfxVolume')) this.audio.setSfxVolume(v.sfxVolume);
     if (changed.includes('graphicsQuality')) {
@@ -1025,6 +1046,7 @@ export class Game {
       setSkinFxLite(v.chromebookMode);
       this.remotePlayers.setAnimationDetail(v.chromebookMode ? .25 : v.graphicsQuality === 'low' ? .5 : 1);
       this.remotePlayers.setTrailsReduced(v.chromebookMode);
+      this.remotePlayers.setLightweightDeaths(v.chromebookMode);
       this.meleeView?.setReducedTrails(v.chromebookMode);
       this.map?.environment.applyGraphicsPreset(p);
     }
@@ -1040,6 +1062,10 @@ export class Game {
 
   // --- main loop -------------------------------------------------------------------------------
   private frame(rawDt: number): void {
+    if(this.state==='playing')this.performanceDiagnostics.frame(rawDt);
+    const frameStarted=this.performanceDiagnostics.start();
+    const pending=this.pendingSnapshot;this.pendingSnapshot=null;
+    if(pending&&this.network===pending.session)this.acceptSnapshot(pending.snapshot);
     this.ctx.updateResolution(rawDt,this.state==='playing'&&!document.hidden);
     this.ui.rooms.update(this.network?.latest??null,this.network?.selfId??'',Date.now()+(this.network?.clockOffset??0),!['menu','loading','results'].includes(this.state));
     this.ui.challenges.update(this.guestProfile.value.username, this.career?.serverNow ?? null);
@@ -1060,7 +1086,8 @@ export class Game {
       this.fps.time = 0;
     }
     if (this.state === 'playing' && this.player && this.map) {
-      this.simulate(dt);
+      const simulationStarted=this.performanceDiagnostics.start();
+      this.simulate(dt);this.performanceDiagnostics.end('simulation',simulationStarted);
     } else if (this.map && (this.state === 'start' || this.state === 'loading')) {
       this.selectionCamera(dt);
     }
@@ -1140,7 +1167,9 @@ export class Game {
     // The first-person daggers only show while this player is simulated (not spectating/menus).
     if (!this.meleeShown && this.meleeView?.root.isEnabled()) { this.meleeView.setVisible(false); this.meleeView.update(this.weaponView?.motion.pose ?? { x: 0, y: 0, z: 0, pitch: 0, yaw: 0, roll: 0 }); }
     this.meleeShown = false;
+    const renderStarted=this.performanceDiagnostics.start();
     this.ctx.scene.render();
+    this.performanceDiagnostics.end('render',renderStarted);this.performanceDiagnostics.end('frame',frameStarted);
     this.input.endFrame();
   }
 
@@ -1247,14 +1276,14 @@ export class Game {
     if (input.wasPressed('slide') && player.slideHeld) this.slideReleasePending = true;
     it.aim = !blockedMelee&&input.isDown('aim');
     it.lean = ((input.isDown('leanRight') ? 1 : 0) - (input.isDown('leanLeft') ? 1 : 0)) as -1 | 0 | 1;
-    let jumpEdge = input.wasPressed('jump');
-    let fireEdge = input.wasPressed('fire');
-    let reloadEdge = input.wasPressed('reload');
-    let grenadeEdge = input.wasPressed('grenade');
+    const edges=this.edgesPending;
+    edges.jump ||= input.wasPressed('jump');edges.fire ||= input.wasPressed('fire');edges.reload ||= input.wasPressed('reload');edges.grenade ||= input.wasPressed('grenade');
+    let jumpEdge=edges.jump,fireEdge=edges.fire,reloadEdge=edges.reload,grenadeEdge=edges.grenade;
 
     for (const e of events) this.onWeaponEvent(e);
     this.acc += dt;
     while (this.acc >= FIXED_DT) {
+      if(this.network&&!this.network.canPredict){this.acc=0;break;}
       it.slide = input.isDown('slide') && !this.slideReleasePending;
       this.slideReleasePending = false;
       it.jumpPressed = jumpEdge;
@@ -1299,6 +1328,7 @@ export class Game {
       map.targets.update(FIXED_DT);
       this.footsteps(FIXED_DT);
       if (!this.options.multiplayer && (unsafeMovement(player.position, map.def.layout) || player.position.y < map.def.collision.killY)) this.spawn();
+      edges.jump=edges.fire=edges.reload=edges.grenade=false;
       jumpEdge = fireEdge = reloadEdge = grenadeEdge = false;
       this.acc -= FIXED_DT;
     }
@@ -1426,6 +1456,7 @@ export class Game {
   }
 
   private fireShot(spreadDeg: number): void {
+    const shotStarted=this.performanceDiagnostics.start();
     const map = this.map!;
     const cam = this.ctx.camera;
     const w = this.weapon;
@@ -1483,6 +1514,7 @@ export class Game {
       this.sound(shot.head ? 'hit_head' : 'hit', 0.65);
     }
     this.lastShot = shot;
+    this.performanceDiagnostics.end('shot',shotStarted);
   }
 
   private footsteps(dt: number): void {
@@ -1526,6 +1558,10 @@ export class Game {
   // --- automation hooks (used by tools/browser-test.mjs) ---------------------------------------
   debugApi() {
     return {
+      resetPerformance:()=>this.performanceDiagnostics.reset(),
+      performance:()=>({frames:this.performanceDiagnostics.inspect(),network:this.network?.inspect()??null,
+        gpuFrameMs:this.gpuInstrumentation&&this.gpuInstrumentation.gpuFrameTimeCounter.count>0?this.gpuInstrumentation.gpuFrameTimeCounter.current/1e6:null,
+        renderCpuMs:this.instrumentation.frameTimeCounter.current}),
       ready: () => this.state === 'playing' && !!this.map && (!this.options.multiplayer || this.network?.state === 'connected'),
       /** Local GPU inspection only; never expose the live scene in production. */
       renderScene: () => import.meta.env.DEV ? this.ctx.scene : null,

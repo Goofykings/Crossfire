@@ -1,3 +1,4 @@
+import {texturesReady} from '../core/assetReadiness';
 import { loadContainer } from '../core/loadContainer';
 import {
   Color3,
@@ -137,6 +138,22 @@ export class Effects {
       d.start();
       this.dust.push(d);
     }
+  }
+
+  /** Warm pooled impact shaders without emitting anything or drawing a loading-time flash. */
+  async ready(signal?:AbortSignal):Promise<void>{
+    const systems=[...this.sparks,...this.dust];
+    await texturesReady([...new Set(systems.flatMap(p=>p.particleTexture?[p.particleTexture]:[]))],signal);
+    await Promise.all([
+      this.decal.material!.forceCompilationAsync(this.decal,{useInstances:true}),
+      this.surfaceDecal.material!.forceCompilationAsync(this.surfaceDecal),
+      new Promise<void>((resolve,reject)=>{
+        const end=Date.now()+10000;
+        const done=(error?:unknown)=>{clearInterval(timer);signal?.removeEventListener('abort',cancel);error?reject(error):resolve();};
+        const cancel=()=>done(signal?.reason??new DOMException('Cancelled','AbortError'));
+        const check=()=>{if(signal?.aborted)return cancel();if(systems.every(p=>p.isReady()))return done();if(Date.now()>end)done(Error('Impact shaders failed to become ready'));};
+        const timer=setInterval(check,25);signal?.addEventListener('abort',cancel,{once:true});check();
+      })]);
   }
 
   /** Load the case models (casings.glb) and build the pool. */

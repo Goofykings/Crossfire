@@ -15,6 +15,7 @@ export function propImpactMark(hit:RayHit,size=.1,angle=0):SurfaceMark|null {
  const local=[(p[0]-c.cx)*c.cos-(p[2]-c.cz)*c.sin,p[1]-c.cy,(p[0]-c.cx)*c.sin+(p[2]-c.cz)*c.cos];
  const triangles=surfaceTriangles(mesh,local.map(x=>x-radius),local.map(x=>x+radius)),positions:number[]=[],uvs:number[]=[],normals:number[]=[];
  for(const t of triangles){
+  if(positions.length/3>=MARK_VERTICES)break; // The pooled mark cannot emit any further triangles.
   if(mesh.masked?.[t])continue;
   const original=[0,1,2].map(k=>{const i=mesh.indices[t*3+k]*3,x=mesh.vertices[i],y=mesh.vertices[i+1],z=mesh.vertices[i+2];return [x*c.cos+z*c.sin+c.cx,y+c.cy,-x*c.sin+z*c.cos+c.cz];});
   let normal=norm(cross(original[1].map((x,i)=>x-original[0][i]),original[2].map((x,i)=>x-original[0][i])));const facing=dot(normal,n);if(Math.abs(facing)<.2||!Number.isFinite(facing))continue;if(facing<0)normal=normal.map(x=>-x);

@@ -103,7 +103,7 @@ export class SnowBurst {
   meshes(): Mesh[] { return [this.mesh]; }
   inspect() { return { active: this.flakes.length, blended: this.blended, capacity: skinFxLite() ? LITE_CAPACITY : CAPACITY }; }
   /** Compile up front so the first shot never hitches. */
-  warm(): Promise<void> { return this.mesh.material!.forceCompilationAsync(this.mesh, { useInstances: true }).then(() => {}); }
+  warm(): Promise<void> { this.blended=!skinFxLite();this.mesh.hasVertexAlpha=this.blended;return this.mesh.material!.forceCompilationAsync(this.mesh, { useInstances: true }).then(() => {}); }
   dispose(): void {
     this.scene.onBeforeRenderObservable.remove(this.observer);
     this.mesh.material?.dispose(); this.mesh.dispose(); this.root.dispose(); this.flakes.length = 0;

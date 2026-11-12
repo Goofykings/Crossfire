@@ -84,3 +84,11 @@ describe('camera stairs and impulses', () => {
     expect(run(30)).toBeCloseTo(run(60), 10); expect(run(60)).toBeCloseTo(run(144), 10);
   });
 });
+
+it('tiny correction interpolation keeps authority unchanged and refuses a path across a wall',()=>{
+ const {world,player}=setup();player.grounded=true;player.position.x=.02;const authority=player.capture();
+ expect(player.retainInterpolation({x:0,y:0,z:0})).toBe(true);expect(player.capture()).toEqual(authority);expect(player.prevPosition.x).toBe(0);
+ world.add({c:[.5,1,0],h:[.1,1,2]});
+ expect(player.retainInterpolation({x:1,y:0,z:0})).toBe(false);expect(player.capture()).toEqual(authority);
+ player.grounded=false;expect(player.retainInterpolation({x:0,y:0,z:0})).toBe(false);
+});

@@ -239,13 +239,17 @@ export class RemotePlayers {
       const avatar=this.avatars.get(hit.id);if(avatar?.life===hit.life)avatar.death?.motion.emphasize();
     }
   }
+  private lightweightDeaths=false;
+  setLightweightDeaths(value:boolean):void {this.lightweightDeaths=value;}
   eliminate(event: Elimination): void {
     this.avatars.get(event.victimId)?.weapon?.stopFiring();
     const a = this.avatars.get(event.victimId);
     if (!a || a.life !== event.victimLife || a.death) return;
     const materials = new Map<Material, Material>();
     const textures = new Set<BaseTexture>();
-    for (const mesh of [...a.meshes, ...(a.weapon?.meshes ?? [])]) if (mesh.material) {
+    // Low-spec death still uses the same collision-safe ragdoll and lifetime.
+    // An opaque body avoids DeepCopy and new transparent shader variants mid-fight.
+    if(!this.lightweightDeaths)for (const mesh of [...a.meshes, ...(a.weapon?.meshes ?? [])]) if (mesh.material) {
       const source = mesh.material;
       let copy = materials.get(source);
       if (!copy) {

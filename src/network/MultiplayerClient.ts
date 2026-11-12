@@ -80,6 +80,12 @@ export class MultiplayerClient {
   private connectedAt = 0;
   private resumedAt = 0;
   private ackLatency = 0;
+  private staleSnapshots=0;
+  private readonly correctionCounterSince=Date.now();
+  private corrections={count:0,significant:0,last:0,max:0,replayed:0,ms:0,smoothed:0};
+  /** Never simulate ticks that cannot be retained and replayed. Same budget on every device. */
+  get canPredict():boolean {return this.state==='connected'&&this.pending.length<48;}
+
   private readonly sentAt = new Map<number, number>();
   private readonly events: NetworkEvent[] = [];
   private opens = 0;
@@ -130,7 +136,8 @@ export class MultiplayerClient {
       attempts: this.attempts, lastMessage: this.lastMessage, lastPing: this.lastPing, lastPong: this.lastPong,
       lastAck: this.lastAck, lastAckAt: this.lastAckAt, pending: this.pending.length, unsent: this.unsent.length,
       inFlight: this.sentSequence - this.lastAck, ackLatency: this.ackLatency, inputWindow: this.inputWindow,
-      timing:this.timing.inspect(),bufferedBytes:this.socket?.bufferedAmount??0,
+      timing:this.timing.inspect(),corrections:{...this.corrections,perSecond:this.corrections.count/Math.max(1,(Date.now()-this.correctionCounterSince)/1000)},staleSnapshots:this.staleSnapshots,
+      snapshotAge:this.latest?Math.max(0,Date.now()+this.clockOffset-this.latest.serverTime):null,bufferedBytes:this.socket?.bufferedAmount??0,
       events: [...this.events] };
   }
   // Even if all packets arrive together, outstanding input must fit the server's
@@ -235,7 +242,13 @@ export class MultiplayerClient {
         this.onSnapshot(m.snapshot);
         this.grenadeHistory(m.snapshot);
       } else if (m.type === 'snapshot' || m.type === 'spawned') {
-        if(m.type==='snapshot'&&this.latest?.roundId===m.snapshot.roundId&&m.snapshot.serverTime<this.latest.serverTime)return;
+        const previous=this.latest,own=m.snapshot.players.find(p=>p.id===this.selfId),old=previous?.players.find(p=>p.id===this.selfId);
+        // Both regular and spawn snapshots must respect round/life/ack monotonicity.
+        if(previous&&(m.snapshot.roundId<previous.roundId||m.snapshot.roundId===previous.roundId&&(
+          m.snapshot.serverTime<previous.serverTime||!!own&&!!old&&(own.life<old.life||own.life===old.life&&(
+            own.ack<old.ack||!old.alive&&!!old.death&&own.alive))))){this.staleSnapshots++;
+          if(m.type==='spawned'&&m.snapshot.roundId===previous.roundId&&old?.alive)this.finishSpawn(m.requestId,previous);
+          return;}
         this.timing.snapshot(m.snapshot.serverTime,Date.now());
         if (m.snapshot.roundId !== this.round) this.cancelSpawn('The map changed. Select a loadout after loading.');
         this.latest = m.snapshot;
@@ -266,10 +279,7 @@ export class MultiplayerClient {
         this.onSnapshot(m.snapshot);
         this.grenadeHistory(m.snapshot);
         if (m.type === 'spawned' && this.spawning?.id === m.requestId) {
-          const pending = this.spawning;
-          this.spawning = null;
-          window.clearTimeout(pending.timeout);
-          pending.resolve(m.snapshot);
+          this.finishSpawn(m.requestId,m.snapshot);
         }
       } else if(m.type==='sync'){this.send({v:PROTOCOL_VERSION,type:'sync',nonce:m.nonce});
       } else if(m.type==='career'){ this.onCareer(m.profile);
@@ -376,11 +386,16 @@ export class MultiplayerClient {
   private flushInput():void {
     if(this.state!=='connected'||!this.unsent.length||!this.latest||(this.socket?.bufferedAmount??0)>=8192)return;
     const ack=this.latest.players.find(p=>p.id===this.selfId)?.ack??0;
-    const count=Math.min(INPUT_BATCH_LIMIT,this.unsent.length,Math.max(0,this.inputWindow-(this.sentSequence-ack)));
+    // A stalled render can collect several legal batches. Drain the available
+    // window now, rather than adding 50 ms per packet to a catch-up burst.
+    let available=Math.max(0,this.inputWindow-(this.sentSequence-ack));
+    while(available>0&&this.unsent.length){
+    const count=Math.min(INPUT_BATCH_LIMIT,this.unsent.length,available);
     if(!count)return;
     const frames=this.unsent.splice(0,count);
     this.send({v:PROTOCOL_VERSION,type:'input',roundId:this.latest.roundId,mapVersion:this.latest.mapVersion,frames});
-    this.sentSequence=frames[frames.length-1].seq;this.sentAt.set(this.sentSequence,Date.now());
+    this.sentSequence=frames[frames.length-1].seq;this.sentAt.set(this.sentSequence,Date.now());available-=count;
+    }
   }
 
   sendChat(text: string): boolean {
@@ -392,6 +407,14 @@ export class MultiplayerClient {
 
   fixedInput(player: PlayerController, intent: MoveIntent, combat: CombatIntent = NO_COMBAT): void {
     if (this.state !== 'connected' || !this.latest?.players.find((p) => p.id === this.selfId)?.alive) return;
+    if (!this.canPredict) {
+      if (Date.now() - this.lastBackpressure >= 1000) {
+        this.lastBackpressure = Date.now();
+        this.trace('input_backpressure', { pending: this.pending.length, lastAckAt: this.lastAckAt,
+          lastMessage: this.lastMessage, socketState: this.socket?.readyState });
+      }
+      return;
+    }
     stepMelee(this.melee,Math.floor(Date.now()+this.clockOffset),combat,this.latest?.players.find(p=>p.id===this.selfId)?.combat.gun?.action==='idle');
     const yaw = Math.atan2(Math.sin(player.yaw), Math.cos(player.yaw));
     // No need to stream 120 identical standing frames per second. The room's
@@ -401,14 +424,6 @@ export class MultiplayerClient {
       && !intent.aim && !this.lastAim && !intent.lean && !this.lastLean && player.lean === 0
       && !combat.melee && !this.lastCombat.melee && !combat.grenadeCancel && !combat.grenade && !this.lastCombat.grenade && !combat.trigger && !combat.reload && !this.lastCombat.trigger && !this.lastCombat.reload
       && yaw === this.lastYaw && player.pitch === this.lastPitch) return;
-    if (this.pending.length >= 120) {
-      if (Date.now() - this.lastBackpressure >= 1000) {
-        this.lastBackpressure = Date.now();
-        this.trace('input_backpressure', { pending: this.pending.length, lastAckAt: this.lastAckAt,
-          lastMessage: this.lastMessage, socketState: this.socket?.readyState });
-      }
-      return;
-    }
     const urgent=intent.jumpPressed||intent.slide&&!this.lastSlide||combat.trigger&&!this.lastCombat.trigger||combat.reload&&!this.lastCombat.reload
       ||combat.melee&&!this.lastCombat.melee||combat.grenade&&!this.lastCombat.grenade||combat.grenadeCancel;
     this.lastYaw = yaw;
@@ -430,6 +445,7 @@ export class MultiplayerClient {
   reconcile(player: PlayerController, snapshot: Snapshot, gun?: Weapon): void {
     const self = snapshot.players.find((p) => p.id === this.selfId);
     if (!self?.alive) return;
+    const started=performance.now(),before={...player.position},previous={...player.prevPosition};let replayed=0;
     this.melee=structuredClone(self.combat.melee??createMeleeState());
     for(const seq of this.inputTimes.keys())if(seq<=self.ack)this.inputTimes.delete(seq);
     const yaw = player.yaw, pitch = player.pitch;
@@ -439,6 +455,7 @@ export class MultiplayerClient {
     let trigger = self.combat.triggerHeld, reload = self.combat.reloadHeld;
     for (const frame of this.pending) {
       if (frame.seq <= self.ack) continue;
+      replayed++;
       // Movement uses the equipment at the start of the tick, just like authority.
       player.weaponClearance = meleeBlocked(this.melee)?null:self.weapon;
       stepMelee(this.melee,Math.max(this.melee.startedAt,this.inputTimes.get(frame.seq)??snapshot.serverTime),frame.combat,gun?.action==='idle');
@@ -454,6 +471,9 @@ export class MultiplayerClient {
     // Snapshots must not overwrite mouse look that has not reached a fixed tick yet.
     player.yaw = yaw;
     player.pitch = pitch;
+    const delta=Math.hypot(player.position.x-before.x,player.position.y-before.y,player.position.z-before.z),c=this.corrections;
+    if(delta>.0001&&delta<.04&&player.retainInterpolation(previous))c.smoothed++;
+    c.count++;if(delta>.01)c.significant++;c.last=delta;c.max=Math.max(c.max,delta);c.replayed=replayed;c.ms=performance.now()-started;
   }
 
   /** Deliberate transport interruption for diagnostics; resumes the existing authenticated session. */
@@ -498,6 +518,10 @@ export class MultiplayerClient {
       this.spawning = { id, resolve, reject, timeout: window.setTimeout(() => this.cancelSpawn('Spawn request timed out. Try again.'), 5000) };
       this.send({ v: PROTOCOL_VERSION, type: 'spawn', requestId: id, weapon, roundId: this.latest!.roundId, mapVersion: this.latest!.mapVersion });
     });
+  }
+
+  private finishSpawn(id:string,snapshot:Snapshot):void {
+    if(this.spawning?.id!==id)return;const pending=this.spawning;this.spawning=null;window.clearTimeout(pending.timeout);pending.resolve(snapshot);
   }
 
   private cancelSpawn(message: string): void {

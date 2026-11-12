@@ -143,6 +143,17 @@ export class PlayerController {
     this.stepUpDelta = this.landedSpeed = 0;
   }
 
+  /** Retain one frame of interpolation for tiny reconciliation errors, only on
+   * a clear grounded cylinder path. Authority/current position is never changed. */
+  retainInterpolation(previous:Vec3):boolean {
+    if(!this.grounded||this.sliding||Math.abs(previous.y-this.position.y)>.02)return false;
+    const p=this.position,r=this.cfg.radius;
+    if(this.world.overlapsCylinder(previous.x,previous.z,r,p.y+.01,p.y+this.height))return false;
+    const safe=this.world.moveCylinder(p.x,p.z,previous.x-p.x,previous.z-p.z,r,p.y+.01,p.y+this.height);
+    if(Math.hypot(safe.x-previous.x,safe.z-previous.z)>1e-6)return false;
+    Object.assign(this.prevPosition,previous);return true;
+  }
+
   /** Compass heading in degrees (0 = north, 90 = east) -> internal yaw. */
   static headingToYaw(headingDeg: number): number {
     return (-headingDeg * Math.PI) / 180;

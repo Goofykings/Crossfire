@@ -168,6 +168,8 @@ it('bounds catch-up batches and outstanding input to the server queue capacity',
   expect(frames(socket)).toHaveLength(48);
   expect(frames(socket).at(-1)?.seq).toBe(48);
   p.ack = 36; socket.receive({ v: PROTOCOL_VERSION, type: 'snapshot', snapshot: snapshot(p) });
+  // Only admitted ticks were recorded. Resume real input production after the ACK.
+  for(let i=0;i<24;i++)client.fixedInput(controller,{...NO_INTENT,z:1});
   vi.advanceTimersByTime(100);
   expect(frames(socket)).toHaveLength(72);
   expect(socket.sent.filter((m) => m.type === 'input').every((m) => m.frames!.length <= 12)).toBe(true);
@@ -193,7 +195,7 @@ it('applies bounded input backpressure without closing a socket receiving valid 
     vi.advanceTimersByTime(2000);
     client.fixedInput(controller, { ...NO_INTENT, aim: true });
   }
-  expect(client.state).toBe('connected'); expect(client.inspect().pending).toBe(120);
+  expect(client.state).toBe('connected'); expect(client.inspect().pending).toBe(48);
   expect(client.inspect().events.some((e) => e.event === 'input_backpressure')).toBe(true);
   p.ack = 24; socket.receive({ v: PROTOCOL_VERSION, type: 'snapshot', snapshot: snapshot(p) });
   vi.advanceTimersByTime(100);
@@ -312,4 +314,49 @@ it('server room removal closes transport state and never retries the kicked sess
  const {socket,client}=await connect(),exit=vi.fn();client.onRoomExit=exit;
  socket.receive({v:PROTOCOL_VERSION,type:'room_exit',reason:'afk',message:'You may rejoin.'});
  expect(client.state).toBe('closed');expect(exit).toHaveBeenCalledWith('You may rejoin.');socket.close(4003,'afk');vi.advanceTimersByTime(60000);expect(SocketFixture.instances).toHaveLength(1);
+});
+
+it('a stale spawned response cannot roll a newer life and mouse orientation backwards',async()=>{
+ const {client,socket,p}=await connect();let life=p.life;
+ client.onSnapshot=s=>{const own=s.players[0];if(own.life!==life){life=own.life;controller.restore(own.motion);}else client.reconcile(controller,s);};
+ const at=Date.now();socket.receive({v:PROTOCOL_VERSION,type:'snapshot',snapshot:{...snapshot({...p,life:2}),serverTime:at+100}});
+ controller.yaw=.8;controller.pitch=.3;
+ socket.receive({v:PROTOCOL_VERSION,type:'spawned',requestId:'stale',snapshot:{...snapshot(p),serverTime:at+50}});
+ expect(client.latest!.players[0].life).toBe(2);expect(controller.yaw).toBe(.8);expect(controller.pitch).toBe(.3);
+});
+it('a delayed previous-round snapshot cannot revert the map or reset local camera ownership',async()=>{
+ const {client,socket,p}=await connect();const at=Date.now();
+ socket.receive({v:PROTOCOL_VERSION,type:'snapshot',snapshot:{...snapshot(p),roundId:2,serverTime:at+100}});
+ socket.receive({v:PROTOCOL_VERSION,type:'snapshot',snapshot:{...snapshot(p),roundId:1,serverTime:at+200}});
+ expect(client.latest!.roundId).toBe(2);
+});
+
+it.each([60,30,20])('preserves current mouse look across delayed reconciliation at %i FPS and bounds severe stalls',async fps=>{
+ const {client,p,socket}=await connect(),world=new CollisionWorld();world.add({c:[0,-.5,0],h:[100,.5,100]});
+ const local=new PlayerController(world);local.teleport({x:0,y:0,z:0});
+ let total=0;
+ for(let frame=0;frame<fps;frame++){
+  local.yaw+=.001;local.pitch=.12;
+  const dt=frame===3?.25:1/fps;
+  for(let time=0;time+1/120<=dt+1e-9;time+=1/120){if(!client.canPredict)break;local.fixedUpdate(1/120,{...NO_INTENT,z:1});client.fixedInput(local,{...NO_INTENT,z:1});total++;}
+  vi.advanceTimersByTime(dt*1000);
+  if(frame%3===2){const ack=Math.max(0,total-12);p.ack=ack;const yaw=local.yaw;socket.receive({v:PROTOCOL_VERSION,type:'snapshot',snapshot:snapshot(p)});client.reconcile(local,client.latest!);expect(local.yaw).toBe(yaw);expect(local.pitch).toBe(.12);}
+  expect(client.inspect().pending).toBeLessThanOrEqual(48);expect(client.inspect().inFlight).toBeLessThanOrEqual(48);
+ }
+ expect(client.state).toBe('connected');expect(client.inspect().corrections.count).toBeGreaterThan(0);
+});
+it('backpressure never advances unrecorded movement and input resumes after acknowledgment',async()=>{
+ const {client,socket,p}=await connect(),local=new PlayerController(new CollisionWorld());
+ for(let i=0;i<48;i++){expect(client.canPredict).toBe(true);local.fixedUpdate(1/120,{...NO_INTENT,z:1});client.fixedInput(local,{...NO_INTENT,z:1});}
+ const before=local.capture();for(let i=0;i<90;i++)if(client.canPredict){local.fixedUpdate(1/120,{...NO_INTENT,z:1});client.fixedInput(local,{...NO_INTENT,z:1});}
+ expect(local.capture()).toEqual(before);expect(client.canPredict).toBe(false);
+ vi.advanceTimersByTime(100);p.ack=24;socket.receive({v:PROTOCOL_VERSION,type:'snapshot',snapshot:snapshot(p)});expect(client.canPredict).toBe(true);
+});
+
+it('an older spawn confirmation resolves the request against the newer state without rolling it back',async()=>{
+ const {client,socket,p}=await connect(),pending=client.spawn('rifle'),id=(socket.sent.at(-1) as unknown as {requestId:string}).requestId,at=Date.now();
+ socket.receive({v:PROTOCOL_VERSION,type:'snapshot',snapshot:{...snapshot({...p,life:2,ack:1}),serverTime:at+100}});
+ const current=client.latest;
+ socket.receive({v:PROTOCOL_VERSION,type:'spawned',requestId:id,snapshot:{...snapshot({...p,life:2}),serverTime:at+50}});
+ expect(await pending).toBe(current);expect(client.latest).toBe(current);
 });

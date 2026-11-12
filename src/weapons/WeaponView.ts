@@ -281,6 +281,7 @@ export class WeaponView {
   }
 
   /** Debug/test: live Frosted flakes. */
+  warmEffects():Promise<void>{return this.snow?.warm()??Promise.resolve();}
   snowInfo() { return this.snow?.inspect() ?? null; }
 
   private prepare(m: AbstractMesh): void {
