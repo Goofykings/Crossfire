@@ -12,6 +12,8 @@ import industrialLayout from '../../src/maps/industrial-complex/layout.json';
 import cityLayout from '../../src/maps/modern-city/layout.json';
 import farmLayout from '../../src/maps/farmstead/layout.json';
 import catalog from '../../public/assets/models/shared/props/props.json';
+import bullets from '../../public/assets/models/shared/props/bullet-surfaces.json';
+import type {BulletCatalog} from '../../src/physics/BulletMesh';
 import type { CollisionFile, MapLayout, PropCatalog } from '../../src/maps/types';
 import { createMapWorld, mapVersion } from '../../shared/world';
 
@@ -20,8 +22,8 @@ export { MOVEMENT } from '../../src/config/constants';
 
 function makeWorld(collision: CollisionFile, data: unknown, environment:EnvironmentDefinition) {
   const layout = data as MapLayout;
-  return { layout, environment, world: createMapWorld(collision, layout, catalog as unknown as PropCatalog,environment),
-    revision: mapVersion(collision, layout, catalog as unknown as PropCatalog,environment) };
+  return { layout, environment, world: createMapWorld(collision, layout, catalog as unknown as PropCatalog,environment,bullets as BulletCatalog),
+    revision: mapVersion(collision, layout, catalog as unknown as PropCatalog,environment,bullets as BulletCatalog) };
 }
 
 export const WORLDS = {

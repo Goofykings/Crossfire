@@ -1,10 +1,10 @@
-import { Matrix, Mesh, Quaternion, TransformNode, Vector3, type Material, type BaseTexture, type AbstractMesh, type AssetContainer,
+import {CosmeticMaterials} from '../../rendering/CosmeticMaterials';
+import { Matrix, Mesh, Quaternion, TransformNode, Vector3, type AbstractMesh, type AssetContainer,
   type InstantiatedEntries, type Scene } from '@babylonjs/core';
 import { meshesReady } from '../../core/assetReadiness';
 import { assetUrl, fetchJson } from '../../core/assets';
 import { abortable } from '../../core/cancellation';
 import { loadContainer } from '../../core/loadContainer';
-import { patchCosmetic } from '../../rendering/CosmeticAssets';
 import { MaterialLibrary } from '../../rendering/MaterialLibrary';
 import { cosmetic } from '../../../shared/cosmetics';
 import { broadenCharacter } from '../CharacterProportions';
@@ -85,8 +85,7 @@ export class DaggerPair {
   visible = false;
   private cosmeticId='default-melee';
   private skinReady:Promise<void>=Promise.resolve();
-  private readonly baseMaterials=new Map<Mesh,Material|null>();
-  private readonly skinResources:{materials:Material[];textures:BaseTexture[]}={materials:[],textures:[]};
+  private readonly skins:CosmeticMaterials;
   private readonly materialLibrary:MaterialLibrary;
   constructor(scene: Scene, containers: [AssetContainer, AssetContainer], readonly name: string, readonly meta: MeleeMetadata) {
     this.materialLibrary=new MaterialLibrary(scene);
@@ -96,11 +95,12 @@ export class DaggerPair {
       root.rotationQuaternion = Quaternion.Identity();
       for (const node of this.entries[i].rootNodes) node.parent = root;
       for (const mesh of root.getChildMeshes(false)) if (mesh instanceof Mesh && mesh.getTotalVertices() > 0) {
-        mesh.isPickable = false; this.meshes.push(mesh);this.baseMaterials.set(mesh,mesh.material);
+        mesh.isPickable = false; this.meshes.push(mesh);
       }
       root.setEnabled(false);
       return root;
     }) as [TransformNode, TransformNode];
+    this.skins=new CosmeticMaterials(this.meshes,scene,this.materialLibrary,'melee');
   }
   /** Parent to the hand bone nodes; `axes` are each bone's local IK axes. */
   bind(hands: [TransformNode, TransformNode], axes: [HandAxes, HandAxes]): void {
@@ -114,11 +114,8 @@ export class DaggerPair {
   setCosmetic(id='default-melee'):Promise<void> {
     const item=cosmetic(id);if(this.cosmeticId===id||item?.weapon!=='melee')return this.skinReady;
     this.cosmeticId=id;
-    for(const [mesh,material]of this.baseMaterials)mesh.material=material;
-    this.skinResources.materials.splice(0).forEach(m=>m.dispose());this.skinResources.textures.splice(0).forEach(t=>t.dispose());
-    this.skinReady=patchCosmetic({meshes:this.meshes,...this.skinResources},item,this.roots[0].getScene(),this.materialLibrary)
-      .then(()=>meshesReady(this.meshes))
-      .catch(()=>{if(this.cosmeticId===id){this.cosmeticId='default-melee';for(const [mesh,material]of this.baseMaterials)if(!mesh.isDisposed())mesh.material=material;}});
+    this.skinReady=this.skins.apply(id).then(()=>meshesReady(this.meshes))
+      .catch(()=>{if(this.cosmeticId===id){this.cosmeticId='default-melee';return this.skins.apply();}});
     return this.skinReady;
   }
   update(pose: MeleePose): void {
@@ -141,7 +138,7 @@ export class DaggerPair {
     }) as [Vector3, Vector3];
   }
   setRenderingGroup(group: number): void { for (const mesh of this.meshes) mesh.renderingGroupId = group; }
-  dispose(): void { for (const entry of this.entries) entry.dispose(); for (const root of this.roots) root.dispose();this.skinResources.materials.forEach(m=>m.dispose());this.skinResources.textures.forEach(t=>t.dispose()); }
+  dispose(): void { for (const entry of this.entries) entry.dispose(); for (const root of this.roots) root.dispose();this.skins.dispose(); }
 }
 
 /** One character's daggers and their animator, kept across gun swaps (CharacterWeapon reads it). */

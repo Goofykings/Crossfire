@@ -10,12 +10,15 @@ import {
   StandardMaterial,
   Texture,
   Vector3,
+  VertexData,
   type AbstractMesh,
   type AssetContainer,
   type Scene,
 } from '@babylonjs/core';
 import { assetUrl } from '../core/assets';
 import type { MaterialLibrary } from '../rendering/MaterialLibrary';
+import {MARK_VERTICES,propImpactMark} from '../physics/ImpactMark';
+import type {RayHit} from '../physics/CollisionWorld';
 
 const DECALS = 128;
 const SPARK_SYSTEMS = 6;
@@ -41,6 +44,13 @@ export class Effects {
   private readonly decal: Mesh;
   private readonly decalMatrices: Float32Array;
   private decalCursor = 0;
+  private readonly surfaceDecal:Mesh;
+  private readonly surfacePositions=new Float32Array(DECALS*MARK_VERTICES*3);
+  private readonly surfaceNormals=new Float32Array(DECALS*MARK_VERTICES*3);
+  private readonly surfaceUvs=new Float32Array(DECALS*MARK_VERTICES*2);
+  private readonly decalLife=new Float32Array(DECALS);
+  private readonly surfaceSlots=new Uint8Array(DECALS);
+  private activeSurfaces=0;
   private readonly sparks: ParticleSystem[] = [];
   private readonly dust: ParticleSystem[] = [];
   private sparkCursor = 0;
@@ -74,6 +84,10 @@ export class Effects {
     for (let i = 0; i < DECALS; i++) hidden.copyToArray(this.decalMatrices, i * 16);
     this.decal.thinInstanceSetBuffer('matrix', this.decalMatrices, 16, false);
     this.decal.alwaysSelectAsActiveMesh = true;
+    this.surfaceDecal=new Mesh('fx-surface-marks',scene);
+    const data=new VertexData();data.positions=this.surfacePositions;data.uvs=this.surfaceUvs;data.normals=this.surfaceNormals;data.indices=Array.from({length:DECALS*MARK_VERTICES},(_,i)=>i);data.applyToMesh(this.surfaceDecal,true);
+    this.surfaceDecal.material=decalMat;this.surfaceDecal.isPickable=false;this.surfaceDecal.alwaysSelectAsActiveMesh=true;
+    this.surfaceDecal.setEnabled(false);
 
     const sparkTex = new Texture(assetUrl('assets/textures/shared/fx/spark.png'), scene);
     const dustTex = new Texture(assetUrl('assets/textures/shared/fx/glow.png'), scene);
@@ -192,16 +206,30 @@ export class Effects {
     c.bounced = false;
   }
 
-  impact(point: Vector3, normal: Vector3, spark = true): void {
+  impact(point: Vector3, normal: Vector3, spark = true,hit?:RayHit): void {
     // align the quad with the surface, slightly off it, with a random roll
     const n = normal.normalizeToNew();
-    const pos = point.add(n.scale(0.008));
+    const pos = point.add(n.scale(0.001));
+    // Thin alpha-cut wires/sign edges get a precise spark, never an opaque
+    // decal that could bridge the material's transparent holes.
+    if(hit?.surfaceMasked){if(spark)this.burst(pos,n,4,true);return;}
     const up = Math.abs(n.y) > 0.95 ? Vector3.Forward() : Vector3.Up();
     const rot = Quaternion.FromLookDirectionRH(n.scale(-1), up);
     const roll = Quaternion.RotationAxis(n, Math.random() * Math.PI * 2);
     const s = 0.8 + Math.random() * 0.45;
     const m = Matrix.Compose(new Vector3(s, s, s), roll.multiply(rot), pos);
-    m.copyToArray(this.decalMatrices, this.decalCursor * 16);
+    const slot=this.decalCursor,mark=hit?propImpactMark(hit,.11*s,Math.random()*Math.PI*2):null;
+    if(this.surfaceSlots[slot])this.activeSurfaces--;
+    this.surfaceSlots[slot]=mark&&mark.positions.length?1:0;this.activeSurfaces+=this.surfaceSlots[slot];this.surfaceDecal.setEnabled(this.activeSurfaces>0);
+    this.surfacePositions.fill(0,slot*MARK_VERTICES*3,(slot+1)*MARK_VERTICES*3);
+    if(mark){
+      this.surfacePositions.set(mark.positions,slot*MARK_VERTICES*3);this.surfaceUvs.set(mark.uvs,slot*MARK_VERTICES*2);this.surfaceNormals.set(mark.normals,slot*MARK_VERTICES*3);
+      Matrix.Scaling(0,0,0).copyToArray(this.decalMatrices,slot*16);
+    }else m.copyToArray(this.decalMatrices,slot*16);
+    this.surfaceDecal.getVertexBuffer('position')!.updateDirectly(this.surfacePositions.subarray(slot*MARK_VERTICES*3,(slot+1)*MARK_VERTICES*3),slot*MARK_VERTICES*3);
+    if(mark)this.surfaceDecal.getVertexBuffer('uv')!.updateDirectly(this.surfaceUvs.subarray(slot*MARK_VERTICES*2,(slot+1)*MARK_VERTICES*2),slot*MARK_VERTICES*2);
+    if(mark)this.surfaceDecal.getVertexBuffer('normal')!.updateDirectly(this.surfaceNormals.subarray(slot*MARK_VERTICES*3,(slot+1)*MARK_VERTICES*3),slot*MARK_VERTICES*3);
+    this.decalLife[slot]=20;
     this.decalCursor = (this.decalCursor + 1) % DECALS;
     this.decal.thinInstanceBufferUpdated('matrix');
     if (spark) this.burst(pos, n, 6, true);
@@ -227,6 +255,9 @@ export class Effects {
   }
 
   update(dt: number): void {
+    let expired=false;
+    for(let i=0;i<DECALS;i++)if(this.decalLife[i]>0){this.decalLife[i]-=dt;if(this.decalLife[i]<=0){expired=true;if(this.surfaceSlots[i]){this.surfaceSlots[i]=0;this.activeSurfaces--;}Matrix.Scaling(0,0,0).copyToArray(this.decalMatrices,i*16);this.surfacePositions.fill(0,i*MARK_VERTICES*3,(i+1)*MARK_VERTICES*3);}}
+    if(expired){this.decal.thinInstanceBufferUpdated('matrix');this.surfaceDecal.updateVerticesData('position',this.surfacePositions);this.surfaceDecal.setEnabled(this.activeSurfaces>0);}
     for (const c of this.casings) {
       if (c.life <= 0 || !c.mesh) continue;
       c.life -= dt;
@@ -254,6 +285,8 @@ export class Effects {
   }
 
   clearDecals(): void {
+    this.surfaceSlots.fill(0);this.activeSurfaces=0;this.surfaceDecal.setEnabled(false);
+    this.decalLife.fill(0);this.surfacePositions.fill(0);this.surfaceDecal.updateVerticesData('position',this.surfacePositions);
     const hidden = Matrix.Scaling(0, 0, 0);
     for (let i = 0; i < DECALS; i++) hidden.copyToArray(this.decalMatrices, i * 16);
     this.decal.thinInstanceBufferUpdated('matrix');
@@ -264,6 +297,7 @@ export class Effects {
   }
 
   dispose(): void {
+    this.surfaceDecal.dispose();
     this.decal.dispose(false, true);
     for (const s of this.sparks) s.dispose();
     for (const d of this.dust) d.dispose();

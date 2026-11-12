@@ -1,3 +1,4 @@
+import {compatibleCosmetic,defaultCosmetic,defaultEquipment,type Equipment} from '../../shared/cosmetics';
 import {createMeleeState,stepMelee,meleeBlocked} from '../../shared/melee';
 import type {MultiplayerClient,ConnectionState} from '../network/MultiplayerClient';
 import type {Snapshot,InputFrame} from '../../shared/protocol';
@@ -23,10 +24,15 @@ export class PracticeClient implements MatchSession {
  onSnapshot:MatchSession['onSnapshot']=()=>{};onShot:MatchSession['onShot']=()=>{};onElimination:MatchSession['onElimination']=()=>{};onGrenade:MatchSession['onGrenade']=()=>{};onEnvironment:MatchSession['onEnvironment']=()=>{};
  onChat:MatchSession['onChat']=()=>{};onSystem:MatchSession['onSystem']=()=>{};onChatError:MatchSession['onChatError']=()=>{};onState:MatchSession['onState']=()=>{};
  private queue:InputFrame[]=[];private pending:InputFrame[]=[];private sequence=0;private accumulator=0;private sinceSnapshot=0;
- constructor(setup:PracticeSetup,world:PracticeWorld,name:string){this.simulation=new PracticeSimulation(setup,world,name,{seed:crypto.getRandomValues(new Uint32Array(1))[0],roundId:Date.now()});}
+ constructor(setup:PracticeSetup,world:PracticeWorld,name:string,private equipment:()=>Equipment=defaultEquipment){this.simulation=new PracticeSimulation(setup,world,name,{seed:crypto.getRandomValues(new Uint32Array(1))[0],roundId:Date.now()});}
  async connect():Promise<void>{if(this.state==='connected')return;this.state='connected';this.publish(true);this.onState('connected');}
  private publish(full=false){
   if(this.state!=='connected')return;
+  // Practice has no inventory authority of its own. Present the already loaded local inventory,
+  // never the simulation's default bot appearance, on every human spawn/switch snapshot.
+  const human=this.simulation.actors[0].state,equipped=this.equipment();
+  if(human.weapon){const id=equipped[human.weapon];human.cosmeticId=compatibleCosmetic(id,human.weapon)?id:defaultCosmetic(human.weapon);}
+  human.meleeCosmeticId=compatibleCosmetic(equipped.melee,'melee')?equipped.melee:defaultCosmetic('melee');
   this.clockOffset=this.simulation.now-Date.now();this.latest=this.simulation.snapshot();const ack=this.latest.players[0].ack;this.pending=this.pending.filter(f=>f.seq>ack);
   const frame=this.simulation.environment(full);if(frame){this.environment={...frame,full:true,states:frame.full?frame.states:[...(this.environment?.states??[]).filter(s=>!frame.states.some(n=>n.id===s.id)),...frame.states]};this.onEnvironment(frame);}
   for(const event of this.simulation.events.splice(0)){if(event.type==='melee')this.onMelee(event.event);else if(event.type==='shot')this.onShot(event.shot);else if(event.type==='elimination')this.onElimination(event.elimination);else this.onGrenade(event.event);}

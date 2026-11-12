@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {harness,until,self,frames,ack,origin} from './room-harness.mjs';
+import {harness,until,self,frames,ack,aim,origin} from './room-harness.mjs';
 import {cosmetic} from '../../shared/cosmetics.ts';
 const defaults=['default-rifle','default-smg','default-sniper','default-shotgun','default-semi-sniper','default-melee'];
 
@@ -44,4 +44,33 @@ test('cosmetics: server crate spends gems and grants one unowned item atomically
  assert.equal((await h.api('/profile',token)).data.profile.gems,150);assert.deepEqual((await h.api('/stats',token)).data.totals,stats,'spending never changes lifetime earned statistics');
  const item=opened[0],weapon=cosmetic(item).weapon;const eq=await request('/cosmetics/equip',{version:1,id:item});assert.equal(eq.status,200);assert.equal(eq.data.equipped[weapon],item);
  await h.restart();const restored=await request('/cosmetics');for(const id of opened)assert.ok(restored.data.owned.includes(id));assert.equal(restored.data.equipped[weapon],item);assert.equal((await h.api('/profile',token)).data.profile.gems,150);
+});
+
+// Test-only grants feed the normal authenticated equip endpoint; no gameplay endpoint grants skins.
+test('cosmetics: all equipped firearms and daggers survive actual eliminations, respawns and resumed remote snapshots',{timeout:60000},async t=>{
+ const h=await harness(t),token=await h.profile(),otherToken=await h.profile();
+ const ids=['hydro-nebula-rifle','frosted-smg','darkness-sniper','blossom-shotgun','carbon-fiber-semi-sniper','darkness-melee'];
+ await h.central.inventoryForTest(token,ids);
+ const equip=(credential,id)=>fetch(new URL('/cosmetics/equip',h.base),{method:'POST',headers:{Origin:origin,Authorization:'Bearer '+credential,'Content-Type':'application/json'},body:JSON.stringify({version:1,id})});
+ for(const id of ids)assert.equal((await equip(token,id)).status,200);
+ assert.equal((await equip(otherToken,'darkness-melee')).status,403,'ownership still required');
+ const ad=await h.create(token),room=h.room(ad.room.id);let a=await h.open(ad,token);const b=await h.open(await h.admission(otherToken,{roomId:ad.room.id}),otherToken);await h.spawn(b,'sniper');
+ const arena=await room.directionalArenaForTest();let life=0;
+ for(const id of ids.slice(0,5)){
+  const weapon=cosmetic(id).weapon;
+  if(self(a).death)await until(()=>Date.now()>=self(a).death.respawnAt,'authoritative respawn eligibility');
+  await h.spawn(a,weapon);assert.ok(self(a).life>life);life=self(a).life;
+  await until(()=>b.snapshot.players.some(p=>p.id===a.id&&p.life===life&&p.cosmeticId===id&&p.meleeCosmeticId==='darkness-melee'),'remote equipped new life');
+  assert.equal(self(a).cosmeticId,id);assert.equal(self(a).meleeCosmeticId,'darkness-melee');
+  const old=a;a=await h.open(ad,token,{resumeToken:a.token,roomTicket:undefined});assert.equal(a.id,old.id);assert.equal(self(a).life,life);assert.equal(self(a).cosmeticId,id);assert.equal(self(a).meleeCosmeticId,'darkness-melee');
+  assert.equal(a.snapshot.players.filter(p=>p.id===a.id).length,1);
+  a.position=arena.center;b.position=arena.sources.front;
+  await room.placeManyForCombatTest([{id:a.id,pos:a.position},{id:b.id,pos:b.position}]);
+  await until(()=>self(b).combat.gun.cooldown===0&&self(b).combat.gun.action==='idle','killer ready');
+  const look=await aim(b,a),mark=b.messages.length;frames(b,{...look,trigger:true});await ack(b);
+  await until(()=>!self(a).alive,'actual lethal sniper hit');
+  assert.ok(b.messages.slice(mark).some(m=>m.type==='shot'&&m.shot.hits.some(hit=>hit.id===a.id&&hit.killed)),'real confirmed lethal hit');
+  assert.equal(self(a).cosmeticId,id);assert.equal(self(a).meleeCosmeticId,'darkness-melee');
+ }
+ await h.leave(a);await h.leave(b);
 });

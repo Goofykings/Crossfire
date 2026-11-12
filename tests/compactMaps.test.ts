@@ -1,3 +1,4 @@
+import bulletSurfaces from '../public/assets/models/shared/props/bullet-surfaces.json';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { MAP_IDS } from '../shared/maps';
@@ -15,14 +16,14 @@ describe.each(MAP_IDS.filter((id) => id !== 'farmstead'))('%s compact routes', (
   const layout = JSON.parse(readFileSync(`src/maps/${id}/layout.json`,'utf8')) as MapLayout;
   const collision = JSON.parse(readFileSync(`public/assets/models/${id}/collision.json`,'utf8')) as CollisionFile;
   const environment=JSON.parse(readFileSync(`public/assets/models/${id}/environment.json`,'utf8')) as EnvironmentDefinition;
-  const world = createMapWorld(collision, layout, catalog,environment);
+  const world = createMapWorld(collision, layout, catalog,environment,bulletSurfaces);
   it('reduces each playable dimension by 15–25%, with matching backend revisions', () => {
     const old = id === 'european-town' ? 66 : 68;
     for (const size of [layout.playArea[2]-layout.playArea[0],layout.playArea[3]-layout.playArea[1]]) {
       expect(size / old).toBeGreaterThanOrEqual(.75);
       expect(size / old).toBeLessThanOrEqual(.85);
     }
-    expect(WORLDS[id].revision).toBe(mapVersion(collision,layout,catalog,environment));
+    expect(WORLDS[id].revision).toBe(mapVersion(collision,layout,catalog,environment,bulletSurfaces));
     expect(layout.navigation?.groundRoutes.length).toBeGreaterThan(15);
   });
   it('walks upstairs, across a real upper floor and downstairs in both directions', () => {

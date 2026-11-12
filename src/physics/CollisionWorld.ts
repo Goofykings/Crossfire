@@ -11,6 +11,7 @@
  */
 
 import type { LadderRegion } from '../maps/types';
+import {rayBulletMesh,type BulletMesh} from './BulletMesh';
 
 export interface BoxDesc {
   c: [number, number, number];
@@ -41,6 +42,10 @@ export interface Collider {
   solid: boolean;
   /** Can be hit by hitscan rays. */
   shootable: boolean;
+  /** Bullet surfaces use a separate spatial index; movement keeps its original boxes. */
+  bulletOnly?:boolean;
+  bulletReplacement?:boolean;
+  bulletMesh?:BulletMesh;
   userData?: unknown;
   /** @internal query de-duplication stamp */
   stamp: number;
@@ -49,6 +54,7 @@ export interface Collider {
 }
 
 export interface RayHit {
+  surfaceMasked?:boolean;
   collider: Collider;
   distance: number;
   point: { x: number; y: number; z: number };
@@ -75,6 +81,7 @@ export class CollisionWorld {
   readonly ladders: LadderRegion[] = [];
   private readonly colliders = new Map<number, Collider>();
   private readonly grid = new Map<number, Collider[]>();
+  private readonly bulletGrid=new Map<number,Collider[]>();
   private nextId = 1;
   private stampCounter = 1;
   private readonly scratch: Collider[] = [];
@@ -132,6 +139,7 @@ export class CollisionWorld {
     this.ladders.length = 0;
     this.colliders.clear();
     this.grid.clear();
+    this.bulletGrid.clear();
   }
 
   /** Move/rotate a dynamic collider (e.g. a practice target that tips over). */
@@ -161,6 +169,7 @@ export class CollisionWorld {
   }
 
   private insert(c: Collider): void {
+    const grid=c.bulletOnly?this.bulletGrid:this.grid;
     const x0 = Math.floor(c.minX / CELL);
     const x1 = Math.floor(c.maxX / CELL);
     const z0 = Math.floor(c.minZ / CELL);
@@ -169,10 +178,10 @@ export class CollisionWorld {
     for (let ix = x0; ix <= x1; ix++) {
       for (let iz = z0; iz <= z1; iz++) {
         const k = cellKey(ix, iz);
-        let list = this.grid.get(k);
+        let list = grid.get(k);
         if (!list) {
           list = [];
-          this.grid.set(k, list);
+          grid.set(k, list);
         }
         list.push(c);
         c.cells.push(k);
@@ -181,8 +190,9 @@ export class CollisionWorld {
   }
 
   private unlink(c: Collider): void {
+    const grid=c.bulletOnly?this.bulletGrid:this.grid;
     for (const k of c.cells) {
-      const list = this.grid.get(k);
+      const list = grid.get(k);
       if (!list) continue;
       const i = list.indexOf(c);
       if (i >= 0) list.splice(i, 1);
@@ -191,7 +201,7 @@ export class CollisionWorld {
   }
 
   /** Colliders whose world AABB overlaps the query box. The returned array is reused between calls. */
-  query(minX: number, minY: number, minZ: number, maxX: number, maxY: number, maxZ: number): Collider[] {
+  query(minX: number, minY: number, minZ: number, maxX: number, maxY: number, maxZ: number,includeBullets=false): Collider[] {
     const out = this.scratch;
     out.length = 0;
     const stamp = ++this.stampCounter;
@@ -201,7 +211,8 @@ export class CollisionWorld {
     const z1 = Math.floor(maxZ / CELL);
     for (let ix = x0; ix <= x1; ix++) {
       for (let iz = z0; iz <= z1; iz++) {
-        const list = this.grid.get(cellKey(ix, iz));
+        for(let grid=0;grid<(includeBullets?2:1);grid++){
+        const list = (grid?this.bulletGrid:this.grid).get(cellKey(ix, iz));
         if (!list) continue;
         for (const c of list) {
           if (c.stamp === stamp) continue;
@@ -210,6 +221,7 @@ export class CollisionWorld {
             continue;
           }
           out.push(c);
+        }
         }
       }
     }
@@ -387,6 +399,7 @@ export class CollisionWorld {
     dz: number,
     maxDist: number,
     filter?: (c: Collider) => boolean,
+    precise = false,
   ): RayHit | null {
     const ex = ox + dx * maxDist;
     const ey = oy + dy * maxDist;
@@ -398,11 +411,12 @@ export class CollisionWorld {
       Math.max(ox, ex),
       Math.max(oy, ey),
       Math.max(oz, ez),
+      precise,
     );
     let best: RayHit | null = null;
     let bestT = maxDist;
     for (const c of cands) {
-      if (!c.shootable || (filter && !filter(c))) continue;
+      if (!c.shootable || (precise?c.bulletReplacement:c.bulletOnly) || (filter && !filter(c))) continue;
       const rx = ox - c.cx;
       const rz = oz - c.cz;
       const lox = rx * c.cos - rz * c.sin;
@@ -411,6 +425,11 @@ export class CollisionWorld {
       const ldx = dx * c.cos - dz * c.sin;
       const ldz = dx * c.sin + dz * c.cos;
       const ldy = dy;
+      if(precise&&c.bulletMesh){
+        const contact=rayBulletMesh(c.bulletMesh,[lox,loy,loz],[ldx,ldy,ldz],bestT);
+        if(contact){bestT=contact.distance;const n=contact.normal;best={collider:c,surfaceMasked:contact.masked,distance:bestT,point:{x:ox+dx*bestT,y:oy+dy*bestT,z:oz+dz*bestT},normal:{x:n.x*c.cos+n.z*c.sin,y:n.y,z:-n.x*c.sin+n.z*c.cos}};}
+        continue;
+      }
       let tmin = 0;
       let tmax = bestT;
       let axis = -1;
@@ -465,6 +484,19 @@ export class CollisionWorld {
       };
     }
     return best;
+  }
+
+  /** Hitscan surfaces; movement, lean clearance and grenade sweeps keep boxes. */
+  raycastBullet(ox:number,oy:number,oz:number,dx:number,dy:number,dz:number,maxDist:number,filter?:(c:Collider)=>boolean):RayHit|null {
+    return this.raycast(ox,oy,oz,dx,dy,dz,maxDist,filter,true);
+  }
+
+  addBulletSurface(mesh:BulletMesh,position:readonly number[],yaw:number,tag:string,replaces:readonly Collider[]):void {
+    for(const c of replaces)c.bulletReplacement=true;
+    if(!mesh.indices.length)return; // Transparent foliage is not solid cover.
+    const [x,y,z]=mesh.center,cos=Math.cos(yaw),sin=Math.sin(yaw);
+    const proxy=this.add({c:[position[0]+x*cos+z*sin,position[1]+y,position[2]-x*sin+z*cos],h:mesh.half as [number,number,number],yaw,tag},{solid:false});
+    this.unlink(proxy);proxy.bulletOnly=true;proxy.bulletMesh=mesh;this.insert(proxy);
   }
 
   /** Is the point inside any solid collider? */

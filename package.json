@@ -14,6 +14,7 @@
     "test:deployment": "node --test tools/tests/release.test.mjs",
     "test:protocol": "npm run build --prefix server && node --test server/tests/protocol.mjs",
     "assets": "node tools/run-blender.mjs",
+    "assets:bullets": "node tools/generate-bullet-surfaces.mjs",
     "assets:player": "node tools/run-blender.mjs --player",
     "assets:verify": "node tools/verify-assets.mjs && node tools/verify-cosmetics.mjs",
     "layout:plan": "python -I tools/layout_design.py && python -I tools/plan_overlay.py"

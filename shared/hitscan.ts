@@ -13,7 +13,7 @@ export function traceWeaponShot<T>(world:CollisionWorld,origin:Vec3,yaw:number,p
  const cp=Math.cos(pitch),aim=applySpread({x:-Math.sin(yaw)*cp,y:Math.sin(pitch),z:-Math.cos(yaw)*cp},spread,random),traces:{from:Vec3;to:Vec3}[]=[];
  for(let k=0;k<stats.pellets;k++){
   const direction=stats.pellets>1?applySpread(aim,pelletSpreadAt(stats,ads),random):aim;
-  const wall=world.raycast(origin.x,origin.y,origin.z,direction.x,direction.y,direction.z,stats.range);
+  const wall=world.raycastBullet(origin.x,origin.y,origin.z,direction.x,direction.y,direction.z,stats.range);
   let nearest:{target:T;distance:number;zone:'head'|'body'}|null=null;
   for(const body of targets()){const contact=rayPlayer(origin,direction,body.motion);if(contact&&contact.distance<=stats.range&&(!nearest||contact.distance<nearest.distance))nearest={target:body.value,...contact};}
   const distance=Math.min(stats.range,wall?.distance??Infinity,nearest?.distance??Infinity),point={x:origin.x+direction.x*distance,y:origin.y+direction.y*distance,z:origin.z+direction.z*distance};

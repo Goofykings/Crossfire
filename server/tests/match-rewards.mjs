@@ -23,7 +23,7 @@ for(const mode of ['ffa','teams'])for(const custom of [false,true])test(`match g
  if(custom)await h.central.loseRewardAckForTest();
  await room.advanceMapForTest();if(custom){await room.flushRoomRewardsForTest().catch(()=>{});await room.flushRoomRewardsForTest();}
  const finished=await until(async()=>{const s=await room.snapshotForTest();return s.result?.gemRewards?s:null;},'durably confirmed gem receipt'),result=finished.result;
- const expected=mode==='ffa'?{[a.id]:10,[c.id]:6,[b.id]:3}:{[a.id]:12,[c.id]:8,[b.id]:10};assert.deepEqual(result.gemRewards.awards,expected);assert.equal(result.gemRewards.matchId,`${ad.room.id}:round:${result.roundId}`);
+ const expected=mode==='ffa'?{[a.id]:40,[c.id]:24,[b.id]:12}:{[a.id]:48,[c.id]:32,[b.id]:40};assert.deepEqual(result.gemRewards.awards,expected);assert.equal(result.gemRewards.matchId,`${ad.room.id}:round:${result.roundId}`);
  const after=await Promise.all(tokens.map(async(token,i)=>{const profile=(await h.api('/profile',token)).data.profile,stats=(await h.api('/stats',token)).data.totals;assert.ok(profile.gems-before[i]>=expected[[a,b,c][i].id]);assert.equal(stats.gems,profile.gems);return profile.gems;}));
  // Repeated result/alarm/outbox reads cannot grant another reward.
  await room.alarmForTest();if(custom)await room.flushRoomRewardsForTest();assert.deepEqual(await Promise.all(tokens.map(async token=>(await h.api('/profile',token)).data.profile.gems)),after);
@@ -48,5 +48,5 @@ test('intentional Leave forfeits placement, preserves standings and does not pro
  const look=await aim(a,b);look.pitch=Math.atan2(b.position[1]+1.6-a.position[1]-1.64,Math.hypot(b.position[0]-a.position[0],b.position[2]-a.position[2]));frames(a,{...look,trigger:true});await until(()=>self(a).kills===1,'confirmed real elimination');
  await room.qualifyMatchGemsForTest([a.id,b.id]);await h.leave(a);const before=(await h.api('/profile',tokens[0])).data.profile.gems;
  await room.advanceMapForTest();await room.flushRoomRewardsForTest();const result=(await room.snapshotForTest()).result;
- assert.equal(result.players.find(p=>p.id===a.id).score,150);assert.equal(result.gemRewards.awards[a.id],0);assert.equal(result.gemRewards.awards[b.id],6);assert.equal((await h.api('/profile',tokens[0])).data.profile.gems,before);
+ assert.equal(result.players.find(p=>p.id===a.id).score,150);assert.equal(result.gemRewards.awards[a.id],0);assert.equal(result.gemRewards.awards[b.id],24);assert.equal((await h.api('/profile',tokens[0])).data.profile.gems,before);
 });

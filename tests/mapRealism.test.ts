@@ -1,3 +1,4 @@
+import bulletSurfaces from '../public/assets/models/shared/props/bullet-surfaces.json';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { MAP_IDS } from '../shared/maps';
@@ -15,10 +16,10 @@ describe.each(MAP_IDS.filter(id=>id!=='farmstead'))('%s enclosed circulation', i
   const layout=JSON.parse(readFileSync(`src/maps/${id}/layout.json`,'utf8')) as MapLayout;
   const collision=JSON.parse(readFileSync(`public/assets/models/${id}/collision.json`,'utf8')) as CollisionFile;
   const environment=JSON.parse(readFileSync(`public/assets/models/${id}/environment.json`,'utf8')) as EnvironmentDefinition;
-  const world=createMapWorld(collision,layout,catalog,environment);
+  const world=createMapWorld(collision,layout,catalog,environment,bulletSurfaces);
   const route=layout.circulationRoutes![0],building=layout.buildings.find(b=>b.id===route.id)!;
   it('uses matching generated collision and backend map revisions with thick enclosed walls',()=>{
-    expect(WORLDS[id].revision).toBe(mapVersion(collision,layout,catalog,environment));
+    expect(WORLDS[id].revision).toBe(mapVersion(collision,layout,catalog,environment,bulletSurfaces));
     const boxes=collision.boxes.filter(b=>b.tag.startsWith(`circulation:${route.id}:`));
     const walls=boxes.filter(b=>b.tag.endsWith(':wall'));
     expect(walls.length).toBeGreaterThan(7);

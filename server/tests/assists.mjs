@@ -94,7 +94,11 @@ test('assist expiry, respawn cleanup and retired session migration in the real D
    assert.equal(hit.killed,i===4,'only the fifth current-life hit eliminates');
   }
   assert.equal(health,0);
-  await until(()=>!self(b).alive,'new life death');assert.equal(self(a).kills,1);assert.equal(self(a).assists,1,'previous-life damage never grants another assist');
+  await until(()=>!self(b).alive,'new life death');
+  // The victim's death snapshot can arrive before the shooter's standings.
+  // A confirmed lethal shot is not a delivery barrier for another cached packet.
+  await until(()=>self(a).kills===1,'attacker elimination standing');
+  assert.equal(self(a).kills,1);assert.equal(self(a).assists,1,'previous-life damage never grants another assist');
   assert.equal(self(b).death.victimLife,oldLife+1);assert.equal(self(b).death.killerId,a.id);assert.deepEqual(self(b).death.assists,[]);
   const before=await room.snapshotForTest(),saved=before.players.find(p=>p.id===a.id);
   for(const c of clients){clearInterval(c.timer);if(c.ws.readyState===WebSocket.OPEN){c.ws.close();await new Promise(resolve=>c.ws.once('close',resolve));}}

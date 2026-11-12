@@ -1,3 +1,4 @@
+import {defaultEquipment,GUN_CATEGORIES} from '../shared/cosmetics';
 import {botThrow} from '../src/practice/botGrenades';
 import {DIFFICULTIES,BOT_GRENADES,loadDifficulty,saveDifficulty,validPractice} from '../src/practice/config';
 import {expect,it,vi,afterEach} from 'vitest';
@@ -197,4 +198,15 @@ it('every bot difficulty taps the semi-auto, respects its rate/ammo, reloads and
   for(let i=1;i<times.length;i++)expect(times[i]-times[i-1]+.0001).toBeGreaterThanOrEqual(60000/(630*.9));
   for(let i=0;i<400&&bot.gun!.reloading;i++)sim.step(input());sim.switchWeapon(bot,'rifle');expect(bot.state.weapon).toBe('rifle');
  }
+});
+
+it('Practice publishes equipped human cosmetics on every life and weapon without changing bot defaults',async()=>{
+ const equipped=defaultEquipment();for(const w of GUN_CATEGORIES)equipped[w]=`hydro-nebula-${w}`;equipped.melee='darkness-melee';
+ const client=new PracticeClient({...DEFAULT_PRACTICE,bots:1},arena(),'Local',()=>equipped);await client.connect();
+ try{for(let life=0;life<3;life++)for(const w of GUN_CATEGORIES){
+  const actor=client.simulation.actors[0];actor.state.alive=false;actor.state.death=null;
+  await client.spawn(w);const human=client.latest!.players[0],bot=client.latest!.players[1];
+  expect(human.cosmeticId).toBe(equipped[w]);expect(human.meleeCosmeticId).toBe('darkness-melee');
+  expect(bot.cosmeticId).toBe(`default-${bot.weapon}`);
+ }}finally{await client.leaveRoom();}
 });

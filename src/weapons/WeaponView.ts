@@ -363,6 +363,8 @@ export class WeaponView {
     rig.root.setEnabled(!this.hidden && !this.meleeHidden);
   }
 
+  get currentCosmetic():string|null {return this.current?.cosmeticId??null;}
+
   get currentId(): WeaponId | null {
     return this.current?.cfg.id ?? null;
   }

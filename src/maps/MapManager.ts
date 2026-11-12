@@ -19,6 +19,7 @@ import { assetUrl, fetchJson } from '../core/assets';
 import { TargetSystem } from '../game/Targets';
 import type { CollisionWorld } from '../physics/CollisionWorld';
 import { createMapWorld, mapVersion } from '../../shared/world';
+import type {BulletCatalog} from '../physics/BulletMesh';
 import { Environment } from '../rendering/Environment';
 import { MaterialLibrary } from '../rendering/MaterialLibrary';
 import type { RenderContext } from '../rendering/RenderContext';
@@ -64,6 +65,7 @@ export type ProgressFn = (fraction: number, label: string) => void;
 export class MapManager {
   current: LoadedMap | null = null;
   private propCatalog: PropCatalog | null = null;
+  private bulletCatalog:BulletCatalog|null=null;
 
   constructor(
     private readonly ctx: RenderContext,
@@ -90,6 +92,7 @@ export class MapManager {
       const index = await fetchJson<MapAssetIndex>(base + def.assetIndex, active);
       const collision = await fetchJson<CollisionFile>(base + index.collision, active);
       this.propCatalog ??= await fetchJson<PropCatalog>(assetUrl('assets/models/shared/props/props.json'), active);
+      this.bulletCatalog ??= await fetchJson<BulletCatalog>(assetUrl('assets/models/shared/props/bullet-surfaces.json'), active);
       const catalog = this.propCatalog;
       const interactive=index.environment?await fetchJson<EnvironmentDefinition>(base+index.environment,active):EMPTY_ENVIRONMENT;
 
@@ -137,7 +140,7 @@ export class MapManager {
       onProgress(0.7, 'Placing props');
 
       // --- props --------------------------------------------------------------------------------
-      const world = createMapWorld(collision, def.layout, catalog,interactive);
+      const world = createMapWorld(collision, def.layout, catalog,interactive,this.bulletCatalog);
       cleanup.push(() => world.clear());
       const placements: PropPlacement[] = [...def.layout.props, ...def.layout.obstacles];
       const byType = new Map<string, PropPlacement[]>();
@@ -232,7 +235,7 @@ export class MapManager {
       };
       const map: LoadedMap = {
         props,
-        revision: mapVersion(collision, def.layout, catalog,interactive),
+        revision: mapVersion(collision, def.layout, catalog,interactive,this.bulletCatalog),
         def,
         world,
         targets,

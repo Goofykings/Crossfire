@@ -1,3 +1,4 @@
+import {MAX_MATCH_GEMS} from './matchRewards';
 import {validMelee, type MeleeState} from './melee';
 import {expandServerMessage} from './snapshotWire';
 import {expandClientMessage} from './inputWire';
@@ -15,8 +16,8 @@ import {validZoneControl,type ZoneControlState} from './zoneControl';
 import { pointsOrder, type ScoreAward, type RoundResult, type RoundStanding } from './scoring';
 import { GRENADE, type GrenadeState, type GrenadeEvent, type GrenadeExplosion } from './grenades';
 
-// v26: authoritative Zone Control objectives and team-result semantics.
-export const PROTOCOL_VERSION = 26;
+// v27: match receipts accept the new authoritative 4x rewards (maximum 128).
+export const PROTOCOL_VERSION = 27;
 export const validWeapon = (x: unknown): x is WeaponId => x === 'rifle' || x === 'shotgun' || x === 'sniper' || x === 'smg' || x === 'semi-sniper';
 export const PUBLIC_ROOM = 'public-main';
 export const INPUT_BATCH_LIMIT = 12;
@@ -130,7 +131,7 @@ function validStanding(x: unknown): boolean {
     && (x.weapon === undefined || x.weapon === null || validWeapon(x.weapon));
 }
 export function validResult(x: unknown): x is RoundResult {
-  if(record(x)&&x.gemRewards!==undefined){const r=x.gemRewards;if(!record(r)||!keys(r,['matchId','awards'])||typeof r.matchId!=='string'||r.matchId.length===0||r.matchId.length>96||!record(r.awards)||Object.keys(r.awards).length>256||!Object.entries(r.awards).every(([id,gems])=>id.length>0&&id.length<=64&&natural(gems)&&gems<=32&&Array.isArray(x.players)&&x.players.some(p=>record(p)&&p.id===id)))return false;}
+  if(record(x)&&x.gemRewards!==undefined){const r=x.gemRewards;if(!record(r)||!keys(r,['matchId','awards'])||typeof r.matchId!=='string'||r.matchId.length===0||r.matchId.length>96||!record(r.awards)||Object.keys(r.awards).length>256||!Object.entries(r.awards).every(([id,gems])=>id.length>0&&id.length<=64&&natural(gems)&&gems<=MAX_MATCH_GEMS&&Array.isArray(x.players)&&x.players.some(p=>record(p)&&p.id===id)))return false;}
   if (!record(x) || !natural(x.roundId) || !validMap(x.mapId) || !['ffa', 'teams','zone-control'].includes(x.mode as string)
     || !natural(x.endedAt) || typeof x.draw !== 'boolean' || !team(x.winningTeam)
     || !(x.winner === null || validStanding(x.winner)) || !(x.mvp === null || validStanding(x.mvp))) return false;

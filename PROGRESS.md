@@ -1,3 +1,172 @@
+# Match gems, low-health grading, and respawn skins (2026-11-11)
+
+Completed this request without changing damage, movement, challenge rewards,
+crate prices, ownership rules, hosting settings, or existing player balances.
+Prior uncommitted prop-bullet work is preserved. Implementation and reproduction
+notes: `docs/GEM_HEALTH_SKIN_FIXES.md`.
+
+- New completed multiplayer match rewards are exactly four times the final
+  placement + capped performance + team-victory sum. New maximum: 128 gems.
+  Source-qualified durable receipts still prevent duplicate/older rewards.
+  New internal commands carry reward version 2; previously queued unversioned
+  commands retain their old payout, including retries after an update. Existing
+  paid receipts and frozen results are not recalculated. Practice challenges
+  and multiplayer challenges are unchanged.
+- Results already render the authoritative receipt directly; no client multiplier
+  was added. Browser checks confirm `+128 GEMS EARNED` and the Practice no-match-
+  gems label. Shared rules now supply the protocol receipt bound. Protocol 27 is
+  required because version 26 rejects valid new receipts above 32 gems.
+- Health uses the requested saturation anchors and smooth frame-rate-independent
+  interpolation. Healing restores color; new lives, menu, pre-spawn, results and
+  spectating reset normal color. Grading shares the existing last silhouette
+  pass; team contours are colored afterwards and DOM HUD/nametags/crosshair/Zone
+  markers retain color. Without contours, grading adds no mask/world render;
+  at full health with no contours, its pass detaches. Chromebook remains supported.
+- Skin causes: Practice overwrote the human appearance with defaults on each
+  spawn/swap; spectator rendering also mutated the local view's cosmetic map
+  using a presentation cache not scoped to a life. Practice now publishes the
+  loaded equipped inventory for the human, leaving bots alone. New authoritative
+  lives restore the local loadout, active skin and daggers, invalidate stale
+  presentation state, and immediately stop old spectator rendering.
+- Firearm rigs/materials/SkinFx/icicles and the singleton snow effect keep their
+  caches. Dagger variants now cache their own materials/textures off-mesh, apply
+  only the latest request, retry failed loads and release resources on disposal.
+  Repeated restores do not add meshes, materials, fetches or effect observers.
+  Server ownership validation and remote authoritative cosmetic fields remain intact.
+
+Verification completed locally:
+
+- Final frontend suite: **982 passed**, one existing performance-test skip
+  (`test-results/reward-health-skins-vitest-final.log`). Includes the added legacy
+  queued-reward, exact 4x formula/receipt, health easing/reset, actual cached
+  firearm rigs, dagger material races and Practice inventory regressions.
+- Complete backend suite: **99 passed**
+  (`test-results/reward-health-skins-backend.log`). Final rebuilt reward/cosmetic
+  integration rerun: **10 passed**. Real Worker WebSockets exercise public/custom
+  FFA/Teams rewards, durable retries/restarts, ownership rejection, five successive
+  equipped lives with real lethal shots, remote snapshots and session resumes.
+- Frontend TypeScript + production build, Worker typecheck + dry-run build:
+  **passed**. Existing bundle-size/plugin timing notices remain.
+- Real frontend transport/shared-parser/Worker compatibility: **1 passed**.
+  Dedicated scaffold typecheck/build/tests: **7 passed**; it remains an explicitly
+  incomplete transport scaffold, not a replacement authoritative server.
+- Final Chrome review: all five graphics configurations passed scene pixel
+  comparisons, healing/reset, preserved HUD colors, colored contours, color-only
+  rendering without contours and exact results labels. Five real firearm variants
+  survived three cached restore cycles each with no mesh/material growth or page
+  exceptions. Reviewed low-health and restored-weapon screenshots. Artifacts:
+  `test-results/health-skins-browser/`.
+- Actual production build served under `/crossfire/`: all four Practice maps loaded
+  in Chromebook mode, matching map revisions and base-aware assets, without a
+  gameplay socket, missing assets or browser exceptions. This is a full-health
+  Practice smoke test; low-health pixel inspection used the isolated review scene.
+- `git diff --check`: passed. No public server/GitHub Actions run was performed.
+  No commit, push, deployment or account/credential changes were made.
+
+Files for this request (in addition to preserved prior work):
+
+- Rewards: `shared/matchRewards.ts`, `shared/protocol.ts`,
+  `server/src/matchRewards.ts`, `tests/matchRewards.test.ts`,
+  `server/tests/match-rewards.mjs`.
+- Presentation/lifecycle: `src/game/Game.ts`, `src/game/RemotePlayers.ts`,
+  `src/game/melee/MeleeAssets.ts`, `src/practice/PracticeClient.ts`,
+  `src/rendering/HealthSaturation.ts`, `src/rendering/PlayerSilhouettes.ts`,
+  `src/rendering/CosmeticMaterials.ts`, `src/rendering/CosmeticAssets.ts`,
+  `src/weapons/WeaponView.ts`.
+- Regression/review: `tests/healthSaturation.test.ts`, `tests/skinRespawn.test.ts`,
+  `tests/practice.test.ts`, `server/tests/cosmetics.mjs`,
+  `tools/health-skin-lab.html`, `tools/health-skin-lab.ts`,
+  `tools/health-skin-browser-test.mjs`, this progress entry and the linked document.
+
+When deployment is authorized, release matching protocol-27 authoritative game
+backend and frontend; verify `/health` reports protocol 27 before publishing the
+frontend. Preserve Durable Object storage and old receipts. If custom hosting is
+used, update its actual game backend, not the incomplete dedicated scaffold.
+Existing old clients need a refresh after the coordinated release. Current hosting
+configuration was not altered. Public validation remains a deployment-time step.
+
+---
+
+# Accurate prop bullet surfaces (2026-11-11)
+
+Implemented separate, shared bullet geometry for solid map props. Movement OBBs,
+weapon clearance, lean, grenade physics, damage, scoring and protocol v26 remain
+unchanged. Details and reproduction commands: docs/PROP_BULLET_SURFACES.md.
+
+- Generated reusable surfaces for 104 colliding prop types directly from the
+  shipped GLBs, including node transforms, actual gaps and curved/angled faces.
+  Source hashes and a deterministic regeneration test prevent stale geometry.
+- Frontend runtime loading and the Worker use the same generated catalog. Bullet
+  proxies have their own spatial grid; original movement queries and solids are
+  preserved. Per-asset triangle BVHs are reused across every instance/map.
+- Signs/wire mesh use UV-addressed, full-resolution opacity masks; invisible
+  texels do not block bullets. Opaque foliage remains solid. Alpha-cut decorative
+  leaf/flower cards are excluded. Thin masked surfaces receive precise sparks
+  without a persistent mark that could bridge a transparent gap.
+- Practice and online authority share the revised hitscan path. Nearest-surface
+  selection, range, weapon spread, damage, player hitboxes and authoritative
+  validation are unchanged. Moving cosmetic props keep their existing policy.
+- Prop marks clip original triangles instead of drawing flat box-aligned quads.
+  Surface normals, a 1 mm offset, 128 pooled slots, a 192-vertex bound per mark,
+  a 20-second lifetime and map/leave cleanup keep marks attached and bounded.
+- Asset URLs use the existing base-aware loader. Bullet data contributes to map
+  revisions, so matching frontend assets and backend code must be released when
+  authorized. No protocol schema/version, hosting settings or endpoints changed.
+
+Verification:
+
+- Frontend: 973 tests passed, one existing performance-test skip. This includes
+  17 prop-surface cases: independent ray comparisons across the solid catalog,
+  curved silhouettes, furniture gaps, rotated/angled cover, long-range/oblique
+  shots, texel cutouts, nearest backing surfaces, clipped marks, source freshness,
+  map coverage and identical movement trajectories for four guns on four maps.
+- Frontend production build (including TypeScript), Worker typecheck and Worker
+  dry-run build passed; existing large-bundle/plugin notices remain. Existing
+  real frontend/Worker protocol transport compatibility test passed.
+- Built Chrome graphics lab: 300 renderer/authority hit comparisons passed with
+  zero hit/miss disagreements or page exceptions; reviewed barrel and pipe
+  close-ups. The bounded mark pool expires after 20 seconds and disables its
+  extra draw mesh when empty. Artifacts: test-results/prop-bullet-browser/.
+- Actual production game under /crossfire/: all four Practice maps loaded in
+  Chromebook mode with matching bullet-data revisions, a single cached catalog
+  request, no gameplay sockets, no missing assets and no browser exceptions.
+- Local CPU diagnostic: 1,000 indexed bullet rays took about 30-40 ms per map;
+  this is not a broad device/FPS benchmark or public-server validation.
+- The first complete backend run had 97 passes and one pre-existing assist-test
+  packet-order race: its victim death arrived before the attacker's kill-count
+  snapshot (line 97, expected 1 / observed 0), despite confirmed lethal damage.
+  An isolated repeat passed. The fixture now waits for the authoritative attacker
+  standing using the existing until helper; all scoring/assist assertions and
+  timeouts are preserved. The focused repeat passed, followed by a clean complete backend run:
+  **98 passed,
+  zero failures**, including all four real-room prop tests, FFA/Teams combat,
+  assists, grenades, melee, synchronization, traversal, persistence and Zone
+  Control. The final run used the rebuilt Worker and no parallel graphics/build
+  workload. Evidence: test-results/prop-bullets-backend-release.log.
+- The standalone PNG alpha decoder was independently checked against Pillow:
+  every alpha byte matched for all three opacity source images. Final
+  `git diff --check` passed.
+
+Completed locally. No public backend/Pages validation or physical Chromebook FPS
+benchmark was performed. Matching frontend assets and backend need release when
+approved; no commit, push or deployment was performed.
+The earlier mixed tool run was stopped after slow traversal checks while the
+review server was optimizing; isolated traversal checks passed in the subsequent
+complete frontend run. The initial Vite graphics-lab navigation also timed out;
+a self-contained built lab subsequently passed. No assertions/timeouts were
+weakened, and no installed dependencies were patched.
+
+## Previous Practice Zone Control verification completed
+
+The authorized restoration and Practice integration from the preceding request
+finished verification: 955 frontend tests passed (one existing skip), 94 backend
+tests passed, protocol compatibility passed, frontend/backend typechecks and the
+production build passed. Nine actual Chrome checks passed, including eligible-map
+selection, real bot objective capture, local results, no gameplay sockets and
+cleanup. Evidence: test-results/practice-zone-*.log and
+test-results/practice-zone-browser/report.json. The user's later edits are
+preserved. No commit, push or deployment was performed by this agent.
+
 <<<<<<< HEAD
 # New weapon skins and default appearances (2026-11-10)
 

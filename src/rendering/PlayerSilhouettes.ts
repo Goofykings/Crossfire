@@ -11,8 +11,11 @@ uniform sampler2D textureSampler;
 uniform sampler2D playerMask;
 uniform vec2 stepUV;
 uniform float enabled;
+uniform float saturation;
 void main(void) {
   vec4 scene = texture2D(textureSampler, vUV);
+  scene.rgb=mix(vec3(dot(scene.rgb,vec3(0.2126,0.7152,0.0722))),scene.rgb,saturation);
+  if(enabled<0.5){gl_FragColor=scene;return;}
   vec3 c = texture2D(playerMask, vUV).rgb;
   float interior = 1.0;
   for (int y=-1; y<=1; y++) for (int x=-1; x<=1; x++) {
@@ -37,6 +40,7 @@ export class PlayerSilhouettes {
   private occluders: AbstractMesh[] = [];
   private players = new Map<AbstractMesh, boolean>();
   private enabled = false;
+  private saturation=1;
   private submittedOccluders=0;
   constructor(private readonly scene: Scene, private readonly camera: Camera) {
     const flat = (name: string, color: Color3) => {
@@ -58,12 +62,13 @@ export class PlayerSilhouettes {
     this.mask.clearColor = new Color4(0, 0, 0, 1);
     this.mask.renderParticles = false;
     this.mask.renderList = [];
-    this.composite = new PostProcess('silhouette:contour', 'crossfireSilhouette', ['stepUV', 'enabled'], ['playerMask'], 1, camera);
+    this.composite = new PostProcess('silhouette:contour', 'crossfireSilhouette', ['stepUV', 'enabled', 'saturation'], ['playerMask'], 1, camera);
     this.composite.onApply = (effect) => {
       effect.setTexture('playerMask', this.mask);
       const canvas = scene.getEngine().getRenderingCanvas();
       effect.setFloat2('stepUV', 1.5 / (canvas?.clientWidth || 1280), 1.5 / (canvas?.clientHeight || 720));
       effect.setFloat('enabled', this.enabled ? 1 : 0);
+      effect.setFloat('saturation',this.saturation);
     };
     camera.detachPostProcess(this.composite);
   }
@@ -79,11 +84,13 @@ export class PlayerSilhouettes {
     }
   }
   remove(meshes: readonly AbstractMesh[]): void { for (const mesh of meshes) this.players.delete(mesh); }
+  setSaturation(value:number):void {this.saturation=Math.max(0,Math.min(1,value));}
+  private get grading():boolean {return this.enabled||this.saturation<1;}
   update(enabled: boolean): void {
     // Default/SSAO pipelines can rebuild again after a quality change. Repair
     // ordering only when needed, before this frame's camera pass is prepared.
     this.enabled = enabled && this.players.size > 0;
-    if(this.enabled){if(this.camera._postProcesses.filter(p=>p!==null).at(-1)!==this.composite)this.keepLast();}
+    if(this.grading){if(this.camera._postProcesses.filter(p=>p!==null).at(-1)!==this.composite)this.keepLast();}
     else this.camera.detachPostProcess(this.composite);
     const targets = this.scene.customRenderTargets;
     const index = targets.indexOf(this.mask);
@@ -110,7 +117,7 @@ export class PlayerSilhouettes {
     // Quality changes rebuild the default pipeline; the contour must follow
     // bloom/sharpen/AA so those effects never turn it into a glow or wide halo.
     this.camera.detachPostProcess(this.composite);
-    if(this.enabled)this.camera.attachPostProcess(this.composite);
+    if(this.grading)this.camera.attachPostProcess(this.composite);
   }
   async interiorPixels(): Promise<{ x: number; y: number }[]> {
     const pixels = await this.mask.readPixels();
@@ -127,9 +134,9 @@ export class PlayerSilhouettes {
     }
     return points;
   }
-  inspect() { return { enabled: this.enabled, players: this.players.size, occluders: this.occluders.length, submittedOccluders:this.submittedOccluders, size: this.mask.getSize(), passes: this.enabled?1:0,
-    last: !this.enabled||this.camera._postProcesses.filter((p) => p !== null).at(-1) === this.composite,
+  inspect() { return { enabled: this.enabled, players: this.players.size, occluders: this.occluders.length, submittedOccluders:this.submittedOccluders, size: this.mask.getSize(), saturation:this.saturation, passes: this.grading?1:0,
+    last: !this.grading||this.camera._postProcesses.filter((p) => p !== null).at(-1) === this.composite,
     chain: this.camera._postProcesses.filter((p) => p !== null).map((p) => p.name) }; }
-  clear(): void { this.players.clear(); this.occluders = []; this.update(false); this.mask.renderList = []; }
+  clear(): void { this.saturation=1;this.players.clear(); this.occluders = []; this.update(false); this.mask.renderList = []; }
   dispose(): void { this.clear(); this.composite.dispose(); this.mask.dispose(); this.world.dispose(); this.red.dispose(); this.blue.dispose(); }
 }

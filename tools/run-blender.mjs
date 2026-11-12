@@ -56,4 +56,5 @@ const r = spawnSync(blender, ['-b', '--factory-startup', '-P', 'blender/scripts/
   cwd: root,
   stdio: 'inherit',
 });
+if(r.status===0){const bullets=spawnSync(process.execPath,['tools/generate-bullet-surfaces.mjs'],{cwd:root,stdio:'inherit'});if(bullets.status!==0)process.exit(bullets.status??1);}
 process.exit(r.status ?? 1);

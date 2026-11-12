@@ -163,6 +163,7 @@ export class RemotePlayers {
   }
   releaseVisibility(): void { this.visibilityWorld = null;this.collisionWorld=null; this.silhouettes?.clear(); }
   silhouetteStats() { return this.silhouettes?.inspect() ?? null; }
+  setWorldSaturation(value:number):void {this.silhouettes?.setSaturation(value);}
   refreshEffects(): void { this.silhouettes?.keepLast(); }
   silhouetteInterior() { return this.silhouettes?.interiorPixels() ?? Promise.resolve([]); }
   visibilityStats() { return this.visibilityWorld?.inspect() ?? null; }

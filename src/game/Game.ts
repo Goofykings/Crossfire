@@ -1,3 +1,4 @@
+import {HealthSaturation} from '../rendering/HealthSaturation';
 import {ZoneControlView} from './ZoneControlView';
 import {teamMode,modeName} from '../../shared/combat';
 import {SniperZoom} from '../player/SniperZoom';
@@ -91,6 +92,7 @@ export class Game {
   readonly settings = new SettingsStore();
   private cosmetics:CosmeticsClient|null=null;
   private shownCosmetic='';
+  private readonly healthSaturation=new HealthSaturation();
   /** DEV preview hook only (previewSkin): a local dagger skin shown instead of the synchronized one. */
   private previewMelee?:string;
   private career: CareerClient | null = null;
@@ -336,7 +338,7 @@ export class Game {
       this.ui.leaderboard.request = (period,metric,signal) => {this.enableOnline();return this.career!.statistics(period,metric,signal);};
       this.cosmetics=new CosmeticsClient(this.multiplayerBackend.url,this.career);this.ui.cosmetics.client=this.cosmetics;
       this.ui.cosmetics.onRefreshAccount=()=>{this.enableOnline();void this.career!.ensure().catch(()=>{});};
-      this.cosmetics.onChange=()=>{if(this.weaponView&&this.cosmetics?.view)void this.weaponView.setCosmetics(this.cosmetics.view.equipped).then(()=>{if(this.map)this.excludeViewFromSun(this.map);}).catch(error=>this.ui.showToast((error as Error).message,'warn'));};
+      this.cosmetics.onChange=()=>{this.shownCosmetic='';if(this.weaponView&&this.cosmetics?.view)void this.weaponView.setCosmetics(this.cosmetics.view.equipped).then(()=>{if(this.map)this.excludeViewFromSun(this.map);}).catch(error=>this.ui.showToast((error as Error).message,'warn'));};
       this.career.onChange = () => {this.ui.challenges.set(this.career!.view, this.career!.error, this.career!.temporary);this.ui.cosmetics.setBalance(this.career!.view?.gems??null);};
       this.ui.challenges.onRetry = this.ui.challenges.onReset = () => {this.enableOnline();void this.career?.ensure().catch(() => {});};
       this.ui.challenges.set(null,'Online data not loaded.');
@@ -458,7 +460,7 @@ export class Game {
     }, signal);
     signal?.throwIfAborted();
     this.map = map;
-    if (this.options.multiplayer) this.remotePlayers.prepareVisibility(map.world);
+    this.remotePlayers.prepareVisibility(map.world);
     this.player = new PlayerController(map.world);
     this.cameraRig = new PlayerCamera(this.ctx, this.player);
     const s = effectiveSettings(this.settings.value);
@@ -506,7 +508,7 @@ export class Game {
         if(this.practiceSetup){
           this.ui.setPractice(true);await this.prepareGameAssets(signal);await this.requestMap(id,signal);signal.throwIfAborted();
           this.map!.props.resetSynchronization();
-          network=new PracticeClient(this.practiceSetup,{world:this.map!.world,layout:this.map!.def.layout,revision:this.map!.revision,environment:new EnvironmentSimulation(this.map!.props.definition,this.map!.world)},this.guestProfile.value.username);
+          network=new PracticeClient(this.practiceSetup,{world:this.map!.world,layout:this.map!.def.layout,revision:this.map!.revision,environment:new EnvironmentSimulation(this.map!.props.definition,this.map!.world)},this.guestProfile.value.username,()=>this.cosmetics?.view?.equipped??defaultEquipment());
           if(this.career){this.practiceChallenges=new PracticeChallenges(this.career,(network as PracticeClient).simulation);void this.practiceChallenges.start();}
         }else{
           this.ui.setPractice(false);this.enableOnline();
@@ -731,8 +733,18 @@ export class Game {
     this.health = self.health;
     this.ui.setHealth(self.health, PLAYER_MAX_HEALTH);
     if (self.alive) {
-      if(self.weapon&&self.cosmeticId&&this.shownCosmetic!==`${self.weapon}:${self.cosmeticId}`){this.shownCosmetic=`${self.weapon}:${self.cosmeticId}`;void this.weaponView?.setCosmetic(self.weapon,self.cosmeticId).then(()=>{if(this.map)this.excludeViewFromSun(this.map);this.prepareMoney();}).catch(error=>this.ui.showToast((error as Error).message,'warn'));}
-      if ((self.life !== this.networkLife || self.id !== this.appliedPlayerId) && self.weapon) {
+      // Spectating temporarily changes the displayed rigs. Restore the whole local loadout,
+      // then let this authoritative snapshot decide the active weapon's appearance.
+      const newLife=self.life!==this.networkLife||self.id!==this.appliedPlayerId;
+      if(newLife&&this.cosmetics?.view)void this.weaponView?.setCosmetics(this.cosmetics.view.equipped)
+        .catch(error=>this.ui.showToast((error as Error).message,'warn'));
+      const ownCosmetic=self.cosmeticId;
+      const appearanceKey=`self:${snapshot.roundId}:${self.id}:${self.life}:${self.weapon}:${ownCosmetic}`;
+      if(self.weapon&&ownCosmetic&&this.shownCosmetic!==appearanceKey){this.shownCosmetic=appearanceKey;void this.weaponView?.setCosmetic(self.weapon,ownCosmetic).then(()=>{if(this.map)this.excludeViewFromSun(this.map);this.prepareMoney();}).catch(error=>this.ui.showToast((error as Error).message,'warn'));}
+      if (newLife && self.weapon) {
+        this.spectatingDeath=null;this.remotePlayers.setSpectated(null);
+        this.remotePlayers.setWorldSaturation(this.healthSaturation.reset());
+        void this.meleeView?.setCosmetic(self.meleeCosmeticId);
         this.lastUsedWeapon.remember(self.weapon);
         this.ui.damage.clear();
         this.networkLife = self.life;
@@ -1038,7 +1050,7 @@ export class Game {
     if(this.state!=='playing')this.aimAssist.reset();
     if (this.grenadeCharge.active && (this.state !== 'playing' || !this.input.enabled
       || (this.options.multiplayer && this.network?.state !== 'connected'))) this.cancelGrenadeCharge();
-    if (this.state === 'menu') { this.ui.update(rawDt); this.input.endFrame(); return; }
+    if (this.state === 'menu') { this.remotePlayers.setWorldSaturation(this.healthSaturation.reset());this.ui.update(rawDt); this.input.endFrame(); return; }
     const dt = Math.min(MAX_FRAME_DT, Math.max(0, rawDt));
     this.fps.frames++;
     this.fps.time += rawDt;
@@ -1056,17 +1068,21 @@ export class Game {
     this.practiceChallenges?.update();
     if(this.practiceDebug&&this.localPractice)this.practiceDebug.update(this.localPractice.simulation,this.fps.value);
     this.updateScoreboard();
+    const localState=this.network?.latest?.players.find(p=>p.id===this.network?.selfId);
+    this.remotePlayers.setWorldSaturation(this.healthSaturation.update(dt,this.health,PLAYER_MAX_HEALTH,
+      (this.state==='playing'||this.state==='paused'&&!this.preSpawnPaused)&&(!this.options.multiplayer||!!localState?.alive),
+      `${this.loadedRound}:${localState?.id??'local'}:${localState?.life??0}`));
     this.remotePlayers.setPresentationVisible(this.ui.currentScreen === 'hud' || this.state === 'spectating');
     // Inputs above refer to the previously drawn pose. Advance the remote
     // playhead only when that new pose is actually about to be presented.
     if (this.network?.state === 'connected') this.remotePlayers.update(this.network.presentationTime(), dt);
     this.ui.combatFeed.setVisible(this.ui.currentScreen === 'hud' || this.ui.currentScreen === 'spectate');
     let spectatorScoped = false;
-    if (this.state === 'spectating' && this.spectatingDeath) {
+    if (this.state === 'spectating' && this.spectatingDeath && !localState?.alive) {
       const death = this.spectatingDeath;
       const pose = death.killerId && this.network?.state === 'connected' ? this.remotePlayers.spectatePose(death.killerId) : null;
       if (pose) {
-        if(this.shownCosmetic!==`${pose.weapon}:${pose.cosmeticId}`){this.shownCosmetic=`${pose.weapon}:${pose.cosmeticId}`;void this.weaponView?.setCosmetic(pose.weapon,pose.cosmeticId).then(()=>{if(this.map)this.excludeViewFromSun(this.map);}).catch(error=>this.ui.showToast((error as Error).message,'warn'));}
+        if(this.shownCosmetic!==`spectator:${pose.weapon}:${pose.cosmeticId}`){this.shownCosmetic=`spectator:${pose.weapon}:${pose.cosmeticId}`;void this.weaponView?.setCosmetic(pose.weapon,pose.cosmeticId).then(()=>{if(this.map)this.excludeViewFromSun(this.map);}).catch(error=>this.ui.showToast((error as Error).message,'warn'));}
         const camera = this.ctx.camera, blend = 1 - Math.exp(-dt * 7);
         camera.position = Vector3.Lerp(camera.position, pose.position, blend);
         camera.rotationQuaternion ??= Quaternion.Identity();
@@ -1430,13 +1446,13 @@ export class Game {
     const shot = { weapon: st.id, pellets: st.pellets, hits: 0, damage: 0, head: false, target: '' };
     for (let k = 0; k < st.pellets; k++) {
       const dir = st.pellets > 1 ? applySpread(aim, pelletSpreadAt(st,w.ads)) : aim;
-      const hit = map.world.raycast(origin.x, origin.y, origin.z, dir.x, dir.y, dir.z, st.range);
+      const hit = map.world.raycastBullet(origin.x, origin.y, origin.z, dir.x, dir.y, dir.z, st.range);
       if(!this.options.multiplayer)map.props.practice.shoot({x:origin.x,y:origin.y,z:origin.z},dir,hit?.distance??st.range,st.id);
       if (!hit) continue;
       const end = new Vector3(hit.point.x, hit.point.y, hit.point.z);
       const normal = new Vector3(hit.normal.x, hit.normal.y, hit.normal.z);
       if (this.options.multiplayer) {
-        this.effects?.impact(end, normal, k % 2 === 0 || st.pellets === 1);
+        this.effects?.impact(end, normal, k % 2 === 0 || st.pellets === 1,hit);
         continue;
       }
       const t = map.targets.find(hit.collider);
@@ -1457,7 +1473,7 @@ export class Game {
           shot.target = t.target.id;
         }
       } else {
-        this.effects?.impact(end, normal, k % 2 === 0 || st.pellets === 1);
+        this.effects?.impact(end, normal, k % 2 === 0 || st.pellets === 1,hit);
       }
     }
     if (shot.hits > 0) {

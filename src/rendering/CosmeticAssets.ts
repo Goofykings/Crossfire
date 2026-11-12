@@ -1,4 +1,4 @@
-import { Color3, TransformNode, PBRMaterial, Texture, type Scene, type AssetContainer, type Material } from '@babylonjs/core';
+import { Color3, TransformNode, PBRMaterial, Texture, type Scene, type AssetContainer, type Material, type AbstractMesh } from '@babylonjs/core';
 import { cosmetic, defaultCosmetic, type CosmeticDefinition, type CosmeticCategory } from '../../shared/cosmetics';
 import { loadContainer } from '../core/loadContainer';
 import { assetUrl } from '../core/assets';
@@ -29,7 +29,7 @@ export async function loadCosmeticAsset(item:CosmeticDefinition,scene:Scene,mate
   } catch(error){c.dispose();throw error;}
 }
 
-export async function patchCosmetic(c:Pick<AssetContainer,'meshes'|'materials'|'textures'>,item:CosmeticDefinition,scene:Scene,materials:MaterialLibrary,signal?:AbortSignal):Promise<void>{
+export async function patchCosmetic(c:Pick<AssetContainer,'materials'|'textures'>&{meshes:readonly Pick<AbstractMesh,'material'>[]},item:CosmeticDefinition,scene:Scene,materials:MaterialLibrary,signal?:AbortSignal):Promise<void>{
     const copies=new Map<Material,Material>(),fxTextures=new Map<string,Texture>();
     // Skin effect maps are linear data read by the plugin itself; one Texture per file and item.
     const fxTexture=(path:string):Texture=>{let t=fxTextures.get(path);if(!t){t=new Texture(assetUrl(path),scene,false,false);t.gammaSpace=false;fxTextures.set(path,t);c.textures.push(t);}return t;};

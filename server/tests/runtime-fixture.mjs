@@ -31,6 +31,13 @@ export default {
   },
 };
 export class PublicRoom extends ProductionRoom {
+  async propBulletRayForTest(type,origin,direction,range=100){
+    const p=[...this.activeMap.layout.props,...this.activeMap.layout.obstacles].find(p=>p.type===type);
+    if(!p)throw Error('Requires actual authored prop');
+    const yaw=-p.heading*Math.PI/180,c=Math.cos(yaw),s=Math.sin(yaw),o=[p.pos[0]+origin[0]*c+origin[2]*s,p.pos[1]+origin[1],p.pos[2]-origin[0]*s+origin[2]*c],d=[direction[0]*c+direction[2]*s,direction[1],-direction[0]*s+direction[2]*c];
+    const hit=this.activeMap.world.raycastBullet(...o,...d,range,col=>col.tag===`prop:${type}`&&col.bulletMesh&&Math.abs(col.cx-(p.pos[0]+col.bulletMesh.center[0]*c+col.bulletMesh.center[2]*s))<1e-6&&Math.abs(col.cz-(p.pos[2]-col.bulletMesh.center[0]*s+col.bulletMesh.center[2]*c))<1e-6&&Math.abs(col.cy-p.pos[1]-col.bulletMesh.center[1])<1e-6);
+    return hit?{distance:hit.distance,point:hit.point,normal:hit.normal,tag:hit.collider.tag}:null;
+  }
   async zoneViewForTest([x,y,z]){
     // Find an unobstructed review camera; this changes no player or game state.
     for(const distance of [4,3,2.5])for(let i=0;i<8;i++){
