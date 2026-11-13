@@ -1,3 +1,14 @@
+## Legendary kill effects: Blossom and Frosted (2026-11-12)
+
+See docs/KILL_EFFECTS.md and the newest PROGRESS entry. Visual only; combat, protocol v28 and the Worker are untouched. Effects are drawn by
+`src/weapons/KillBursts.ts` from the confirmed `cosmeticEffect` on an elimination (`game.legendaryEffects.onEffect` -> `Game.playLegendary`): never decide
+the effect from the weapon currently held and never accept a client claim. Four thin-instanced meshes of procedural geometry with preallocated pools: no
+allocation per emit/frame, no textures, no lights. Keep the budgets (`BURST_BUDGET`, 3 concurrent bursts per effect, Chromebook 2 with opaque shrink-out and
+about a quarter of the particles), the mesh-disabled-while-idle rule (a thin-instance mesh with count 0 draws its template), the 150 m cutoff, reduced motion
+and `clear()` on leaving a match / new round. A new effect id needs `KILL_EFFECTS`, `killEffect` on its collection and a branch in KillBursts, and a
+retired burst fades, it never pops. Review: `node tools/kill-effects-test.mjs <vite url> [--chromebook]` (use `localhost`, Vite listens on IPv6) steps a
+frozen effect clock to exact ages; run the detached `freeCam` views last because they pause the game. No commit/push/deploy.
+
 ## Weapon rendering fix and crate odds (2026-11-12)
 
 See docs/WEAPON_RENDERING.md and the newest PROGRESS entry. Firearm GLBs carry RGBA vertex colours, which Babylon turns into

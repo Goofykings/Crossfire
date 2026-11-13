@@ -13,6 +13,7 @@ import {EnvironmentSimulation} from '../../shared/environment';
 import type { PracticeSetup } from '../practice/config';
 import { cosmetic, defaultEquipment } from '../../shared/cosmetics';
 import { MoneyBurst } from '../weapons/MoneyBurst';
+import { KillBursts, type KillBurstEffect } from '../weapons/KillBursts';
 import { setSkinFxLite, skinFxInfo } from '../rendering/SkinFx';
 import { RoomClient } from '../network/RoomClient';
 import type { RoomAdmission } from '../../shared/rooms';
@@ -127,6 +128,7 @@ export class Game {
   private meleeShown = false;
   private moneyView: MoneyBurst | null = null;
   private moneyWorld: MoneyBurst | null = null;
+  private killBursts: KillBursts | null = null;
   private effects: Effects | null = null;
   private readonly trails: BulletTrails;
   private grenadeView: GrenadeView | null = null;
@@ -270,6 +272,7 @@ export class Game {
       else void this.enterPlay();
     };
     this.ui.onQuit = () => this.quitToMenu();
+    this.legendaryEffects.onEffect = (effect) => this.playLegendary(effect.effect, effect.position);
     this.ui.onCancelLoading = () => {const practice=!!this.practiceSetup,selected=!!this.admission;this.quitToMenu();if(practice)this.ui.practice.open();else if(selected)this.ui.rooms.open();};
     this.ui.onChatSend = (text) => this.network?.sendChat(text) ?? false;
     this.ui.onChatClose = () => {
@@ -405,6 +408,7 @@ export class Game {
       await this.materials.ready(signal);
       await view.setCosmetics(this.cosmetics?.view?.equipped??defaultEquipment());
       await view.warmEffects();
+      await this.prepareKillBursts();
       await weaponPreviews((id, url) => this.ui.setWeaponPreview(id, url, signal), signal);
       signal?.throwIfAborted();
       this.ui.setWeaponName(this.weapon.stats.name);
@@ -637,7 +641,7 @@ export class Game {
     if (this.roundLoad) return this.roundLoad;
     let failed = false;
     const work = (async () => {
-      this.grenadeView?.clear();
+      this.grenadeView?.clear();this.killBursts?.clear();
       this.networkReady = false;
       this.state = 'loading';
       this.tabHeld = false;
@@ -706,6 +710,21 @@ export class Game {
     const at = this.remotePlayers.muzzle(event.killerId);
     if (at && at.subtract(this.ctx.camera.globalPosition).length() < 45) this.emitMoney(at);
   }
+  /** Legendary Blossom / Frosted eliminations. `position` is the authoritative event position (the victim's feet), never read from the
+   * killer's current weapon. LegendaryEffects already delivered each confirmed event once. */
+  private playLegendary(effect: string, position: { x: number; y: number; z: number }): void {
+    if (effect !== 'blossom-flower-burst' && effect !== 'frosted-blizzard') return;
+    const camera = this.ctx.camera, at = new Vector3(position.x, position.y, position.z);
+    const bursts = this.ensureKillBursts();
+    bursts.emit(effect as KillBurstEffect, at, { distance: at.subtract(camera.globalPosition).length(), reduced: this.reducedMotion.matches });
+  }
+  private killBurstWarm: Promise<void> | null = null;
+  private ensureKillBursts(): KillBursts {
+    if (!this.killBursts) { this.killBursts = new KillBursts(this.ctx.scene); this.killBurstWarm = this.killBursts.warm().catch(() => {}); }
+    return this.killBursts;
+  }
+  /** Creates (once) and pre-compiles the Legendary burst pools; called when the match assets load. */
+  private async prepareKillBursts(): Promise<void> { this.ensureKillBursts(); await this.killBurstWarm; }
   /** Creates (once) and pre-compiles both Rich effect emitters; called when a match weapon loads. */
   private prepareMoney(): void {
     const scene = this.ctx.scene;
@@ -990,7 +1009,7 @@ export class Game {
   }
 
   private quitToMenu(): void {
-    this.zoneView.clear();
+    this.zoneView.clear();this.killBursts?.clear();
     const wasPractice=!!this.practiceSetup||!!this.localPractice;
     this.practiceChallenges?.stop();this.practiceChallenges=null;
     this.practiceDebug?.dispose();this.practiceDebug=null;
@@ -1802,6 +1821,13 @@ export class Game {
         else { await this.weaponView?.setCosmetic(item.weapon, id); if (this.map) this.excludeViewFromSun(this.map); }
         return true;
       },
+      /** DEV only: runs a fabricated confirmed elimination through the real kill-effect path (dedupe, effect filtering, drawing). */
+      deliverElimination: (event: Elimination) => { if (!import.meta.env.DEV || !this.network?.latest) return false; this.killEffect(event, this.network.latest, this.network.selfId); return true; },
+      clearKillBursts: () => this.killBursts?.clear(),
+      freezeKillBursts: (on: boolean) => this.killBursts?.freeze(on),
+      stepKillBursts: (seconds: number) => this.killBursts?.step(seconds),
+      killBurstInfo: () => this.killBursts?.inspect() ?? null,
+      emitKillBurst: (effect: KillBurstEffect, x: number, y: number, z: number) => { this.ensureKillBursts().emit(effect, new Vector3(x, y, z), { distance: new Vector3(x, y, z).subtract(this.ctx.camera.globalPosition).length(), reduced: this.reducedMotion.matches }); },
       moneyInfo: () => ({ view: this.moneyView?.active ?? 0, world: this.moneyWorld?.active ?? 0 }),
       /** The last shot's pellets, hits, damage and whether it was a headshot. */
       lastShot: () => ({ ...this.lastShot }),

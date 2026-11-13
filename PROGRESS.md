@@ -1,3 +1,21 @@
+# Legendary Blossom flower burst and Frosted blizzard kill effects (2026-11-12)
+
+Completed and verified locally. Nothing committed, pushed or deployed. Details: `docs/KILL_EFFECTS.md`.
+
+- Codex's pieces were verified present first: Blossom/Frosted Legendary, `blossom-flower-burst` / `frosted-blizzard` ids, confirmed-event
+  `cosmeticEffect` (validated inventory of the weapon that scored the kill, victim position), protocol validation, once-per-id `LegendaryEffects` hook.
+- New `src/weapons/KillBursts.ts`: four thin-instanced meshes of procedural geometry (flower, petal, snowflake, sparkle), preallocated pools, no textures.
+  Blossom: 26 flowers + 44 petals/burst, pop 0.11 s, hold 0.15-0.24 s, outward burst, fluttering fall, 1.5-2.05 s. Frosted: 54 flakes + 10 sparkles/burst,
+  swirl 0.85-1.03 s on varied tilted orbits with turbulence, outward dispersal, 1.1-1.35 s total.
+- Budgets: 3 concurrent bursts per effect (oldest fades in 0.16 s); Chromebook mode 2 bursts with 25/26 particles per burst, opaque shrink-out, no blending;
+  reduced motion halves the effect; nothing beyond 150 m; both shader variants compiled with the match assets; `clear()` on leaving/new round.
+- Game.ts wiring only (`playLegendary`, `prepareKillBursts`, DEV hooks); combat, scoring, rewards, respawn, protocol v28 and the Worker untouched.
+- Tests: `tests/killBursts.test.ts` (8) plus the related suites (82 passed together), typecheck and production build pass. Real Chrome:
+  `tools/kill-effects-test.mjs` (15 checks in each of High and `--chromebook`) with frozen/stepped frames from first-person, near and distant viewpoints (inspected by eye: High first person for both, near for both, far for Frosted; Chromebook first person for both).
+  Frame time with six bursts stacked: +2.4 ms on High (39.4 -> 41.8 ms headless iGPU), +0.4 ms Chromebook.
+- Limits: Town alley only, no victim model in the frames, no real owned-skin kill (dev profile owns neither), no real Chromebook hardware, no separate
+  spectator session. Frontend needs a release; the Worker is unchanged by this change.
+
 # Cosmetics, hourly sales, rewards, Developer tags and Farmstead roofs (2026-11-12)
 
 Completed and verified locally. Nothing committed, pushed or deployed.
