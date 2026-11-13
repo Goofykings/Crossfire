@@ -75,7 +75,7 @@ test('rooms: server lifecycle deadlines, AFK validation, no-op resistance and re
  frames(b,{yaw:.3});await ack(b);assert.ok(self(b).afkDeadline-Date.now()>44000,'validated looking resets activity');
  frames(b,{x:1});await ack(b);await rr.ageActivityForTest(b.id,31000);for(let i=0;i<4;i++){frames(b,{x:1});await delay(50);}await ack(b);assert.ok(self(b).afkDeadline-Date.now()<15000,'constant held input cannot keep alive');
  await rr.ageActivityForTest(b.id,46000);await rr.alarmForTest();await until(()=>b.messages.some(m=>m.type==='room_exit'&&m.reason==='afk'),'AFK kick');
- const rejoined=await h.open(await h.admission(q,{roomId:live.room.id}),q);assert.equal(rejoined.welcome.type,'welcome');assert.notEqual(rejoined.id,b.id);assert.equal(rejoined.snapshot.players.length,2);
+ const rejoined=await h.open(await h.admission(q,{roomId:live.room.id}),q);assert.equal(rejoined.welcome.type,'welcome');assert.equal(rejoined.id,b.id,'one verified participant per round survives room re-entry');assert.notEqual(rejoined.token,b.token,'re-entry issues a fresh session credential');assert.equal(rejoined.welcome.resumed,false);assert.equal(rejoined.snapshot.players.length,2);
  await h.leave(aa);await h.leave(rejoined);await rr.ageRoomForTest(200000); // hadGuest remains true: use the actual 15s empty grace.
  const empty=await rr.roomStatus();assert.ok(empty);await rr.ageEmptyRoomForTest(16000);await rr.alarmForTest();assert.equal(await rr.roomStatus(),null);assert.ok(!(await h.api('/rooms')).data.rooms.some(r=>r.id===live.room.id));
 });

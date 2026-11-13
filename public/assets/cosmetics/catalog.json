@@ -966,7 +966,7 @@
       "id": "rainbow-glow-rifle",
       "name": "Rainbow Glow",
       "weapon": "rifle",
-      "rarity": "rare",
+      "rarity": "epic",
       "asset": {
         "model": "assets/models/shared/weapons/rifle.glb",
         "binding": "shared",
@@ -1016,7 +1016,7 @@
       "id": "rainbow-glow-smg",
       "name": "Rainbow Glow",
       "weapon": "smg",
-      "rarity": "rare",
+      "rarity": "epic",
       "asset": {
         "model": "assets/models/shared/weapons/smg.glb",
         "binding": "shared",
@@ -1066,7 +1066,7 @@
       "id": "rainbow-glow-sniper",
       "name": "Rainbow Glow",
       "weapon": "sniper",
-      "rarity": "rare",
+      "rarity": "epic",
       "asset": {
         "model": "assets/models/shared/weapons/sniper.glb",
         "binding": "shared",
@@ -1116,7 +1116,7 @@
       "id": "rainbow-glow-shotgun",
       "name": "Rainbow Glow",
       "weapon": "shotgun",
-      "rarity": "rare",
+      "rarity": "epic",
       "asset": {
         "model": "assets/models/shared/weapons/shotgun.glb",
         "binding": "shared",
@@ -1166,7 +1166,7 @@
       "id": "rainbow-glow-semi-sniper",
       "name": "Rainbow Glow",
       "weapon": "semi-sniper",
-      "rarity": "rare",
+      "rarity": "epic",
       "asset": {
         "model": "assets/models/shared/weapons/semi_sniper.glb",
         "binding": "shared",
@@ -1216,7 +1216,7 @@
       "id": "rainbow-glow-melee",
       "name": "Rainbow Glow",
       "weapon": "melee",
-      "rarity": "rare",
+      "rarity": "epic",
       "asset": {
         "model": "assets/models/shared/melee/dagger_r.glb",
         "secondaryModel": "assets/models/shared/melee/dagger_l.glb",
@@ -1550,7 +1550,7 @@
       "id": "blossom-rifle",
       "name": "Blossom",
       "weapon": "rifle",
-      "rarity": "uncommon",
+      "rarity": "legendary",
       "asset": {
         "model": "assets/models/shared/weapons/rifle.glb",
         "binding": "shared",
@@ -1585,7 +1585,7 @@
       "id": "blossom-smg",
       "name": "Blossom",
       "weapon": "smg",
-      "rarity": "uncommon",
+      "rarity": "legendary",
       "asset": {
         "model": "assets/models/shared/weapons/smg.glb",
         "binding": "shared",
@@ -1620,7 +1620,7 @@
       "id": "blossom-sniper",
       "name": "Blossom",
       "weapon": "sniper",
-      "rarity": "uncommon",
+      "rarity": "legendary",
       "asset": {
         "model": "assets/models/shared/weapons/sniper.glb",
         "binding": "shared",
@@ -1655,7 +1655,7 @@
       "id": "blossom-shotgun",
       "name": "Blossom",
       "weapon": "shotgun",
-      "rarity": "uncommon",
+      "rarity": "legendary",
       "asset": {
         "model": "assets/models/shared/weapons/shotgun.glb",
         "binding": "shared",
@@ -1690,7 +1690,7 @@
       "id": "blossom-semi-sniper",
       "name": "Blossom",
       "weapon": "semi-sniper",
-      "rarity": "uncommon",
+      "rarity": "legendary",
       "asset": {
         "model": "assets/models/shared/weapons/semi_sniper.glb",
         "binding": "shared",
@@ -1960,7 +1960,7 @@
       "id": "hydro-nebula-rifle",
       "name": "Hydro Dip — Nebula",
       "weapon": "rifle",
-      "rarity": "epic",
+      "rarity": "uncommon",
       "asset": {
         "model": "assets/models/shared/weapons/rifle.glb",
         "binding": "shared",
@@ -2024,7 +2024,7 @@
       "id": "hydro-nebula-smg",
       "name": "Hydro Dip — Nebula",
       "weapon": "smg",
-      "rarity": "epic",
+      "rarity": "uncommon",
       "asset": {
         "model": "assets/models/shared/weapons/smg.glb",
         "binding": "shared",
@@ -2088,7 +2088,7 @@
       "id": "hydro-nebula-sniper",
       "name": "Hydro Dip — Nebula",
       "weapon": "sniper",
-      "rarity": "epic",
+      "rarity": "uncommon",
       "asset": {
         "model": "assets/models/shared/weapons/sniper.glb",
         "binding": "shared",
@@ -2152,7 +2152,7 @@
       "id": "hydro-nebula-shotgun",
       "name": "Hydro Dip — Nebula",
       "weapon": "shotgun",
-      "rarity": "epic",
+      "rarity": "uncommon",
       "asset": {
         "model": "assets/models/shared/weapons/shotgun.glb",
         "binding": "shared",
@@ -2216,7 +2216,7 @@
       "id": "hydro-nebula-semi-sniper",
       "name": "Hydro Dip — Nebula",
       "weapon": "semi-sniper",
-      "rarity": "epic",
+      "rarity": "uncommon",
       "asset": {
         "model": "assets/models/shared/weapons/semi_sniper.glb",
         "binding": "shared",
@@ -2280,7 +2280,7 @@
       "id": "hydro-inferno-rifle",
       "name": "Hydro Dip — Inferno",
       "weapon": "rifle",
-      "rarity": "epic",
+      "rarity": "rare",
       "asset": {
         "model": "assets/models/shared/weapons/rifle.glb",
         "binding": "shared",
@@ -2344,7 +2344,7 @@
       "id": "hydro-inferno-smg",
       "name": "Hydro Dip — Inferno",
       "weapon": "smg",
-      "rarity": "epic",
+      "rarity": "rare",
       "asset": {
         "model": "assets/models/shared/weapons/smg.glb",
         "binding": "shared",
@@ -2408,7 +2408,7 @@
       "id": "hydro-inferno-sniper",
       "name": "Hydro Dip — Inferno",
       "weapon": "sniper",
-      "rarity": "epic",
+      "rarity": "rare",
       "asset": {
         "model": "assets/models/shared/weapons/sniper.glb",
         "binding": "shared",
@@ -2472,7 +2472,7 @@
       "id": "hydro-inferno-shotgun",
       "name": "Hydro Dip — Inferno",
       "weapon": "shotgun",
-      "rarity": "epic",
+      "rarity": "rare",
       "asset": {
         "model": "assets/models/shared/weapons/shotgun.glb",
         "binding": "shared",
@@ -2536,7 +2536,7 @@
       "id": "hydro-inferno-semi-sniper",
       "name": "Hydro Dip — Inferno",
       "weapon": "semi-sniper",
-      "rarity": "epic",
+      "rarity": "rare",
       "asset": {
         "model": "assets/models/shared/weapons/semi_sniper.glb",
         "binding": "shared",
@@ -2600,7 +2600,7 @@
       "id": "hydro-abyss-rifle",
       "name": "Hydro Dip — Abyss",
       "weapon": "rifle",
-      "rarity": "epic",
+      "rarity": "uncommon",
       "asset": {
         "model": "assets/models/shared/weapons/rifle.glb",
         "binding": "shared",
@@ -2664,7 +2664,7 @@
       "id": "hydro-abyss-smg",
       "name": "Hydro Dip — Abyss",
       "weapon": "smg",
-      "rarity": "epic",
+      "rarity": "uncommon",
       "asset": {
         "model": "assets/models/shared/weapons/smg.glb",
         "binding": "shared",
@@ -2728,7 +2728,7 @@
       "id": "hydro-abyss-sniper",
       "name": "Hydro Dip — Abyss",
       "weapon": "sniper",
-      "rarity": "epic",
+      "rarity": "uncommon",
       "asset": {
         "model": "assets/models/shared/weapons/sniper.glb",
         "binding": "shared",
@@ -2792,7 +2792,7 @@
       "id": "hydro-abyss-shotgun",
       "name": "Hydro Dip — Abyss",
       "weapon": "shotgun",
-      "rarity": "epic",
+      "rarity": "uncommon",
       "asset": {
         "model": "assets/models/shared/weapons/shotgun.glb",
         "binding": "shared",
@@ -2856,7 +2856,7 @@
       "id": "hydro-abyss-semi-sniper",
       "name": "Hydro Dip — Abyss",
       "weapon": "semi-sniper",
-      "rarity": "epic",
+      "rarity": "uncommon",
       "asset": {
         "model": "assets/models/shared/weapons/semi_sniper.glb",
         "binding": "shared",
@@ -2915,409 +2915,6 @@
         "semi-sniper"
       ],
       "collection": "hydro-abyss"
-    },
-    {
-      "id": "darkness-rifle",
-      "name": "Darkness",
-      "weapon": "rifle",
-      "rarity": "epic",
-      "asset": {
-        "model": "assets/models/shared/weapons/rifle.glb",
-        "binding": "shared",
-        "materials": {
-          "gun_fde": {
-            "color": "#010101",
-            "metallic": 0,
-            "roughness": 1,
-            "plain": true,
-            "fx": {
-              "type": "shade",
-              "rim": 0.04
-            }
-          },
-          "gun_polymer": {
-            "color": "#010101",
-            "metallic": 0,
-            "roughness": 1,
-            "plain": true,
-            "fx": {
-              "type": "shade",
-              "rim": 0.04
-            }
-          },
-          "gun_black": {
-            "color": "#010101",
-            "metallic": 0,
-            "roughness": 1,
-            "plain": true,
-            "fx": {
-              "type": "shade",
-              "rim": 0.04
-            }
-          },
-          "gun_steel": {
-            "color": "#010101",
-            "metallic": 0,
-            "roughness": 1,
-            "plain": true,
-            "fx": {
-              "type": "shade",
-              "rim": 0.04
-            }
-          },
-          "gun_rubber": {
-            "color": "#010101",
-            "metallic": 0,
-            "roughness": 1,
-            "plain": true,
-            "fx": {
-              "type": "shade",
-              "rim": 0.04
-            }
-          }
-        }
-      },
-      "ownership": "grant",
-      "compatibleWith": [
-        "rifle"
-      ],
-      "collection": "darkness"
-    },
-    {
-      "id": "darkness-smg",
-      "name": "Darkness",
-      "weapon": "smg",
-      "rarity": "epic",
-      "asset": {
-        "model": "assets/models/shared/weapons/smg.glb",
-        "binding": "shared",
-        "materials": {
-          "gun_white": {
-            "color": "#010101",
-            "metallic": 0,
-            "roughness": 1,
-            "plain": true,
-            "fx": {
-              "type": "shade",
-              "rim": 0.04
-            }
-          },
-          "gun_steel": {
-            "color": "#010101",
-            "metallic": 0,
-            "roughness": 1,
-            "plain": true,
-            "fx": {
-              "type": "shade",
-              "rim": 0.04
-            }
-          },
-          "gun_polymer": {
-            "color": "#010101",
-            "metallic": 0,
-            "roughness": 1,
-            "plain": true,
-            "fx": {
-              "type": "shade",
-              "rim": 0.04
-            }
-          },
-          "gun_black": {
-            "color": "#010101",
-            "metallic": 0,
-            "roughness": 1,
-            "plain": true,
-            "fx": {
-              "type": "shade",
-              "rim": 0.04
-            }
-          },
-          "gun_rubber": {
-            "color": "#010101",
-            "metallic": 0,
-            "roughness": 1,
-            "plain": true,
-            "fx": {
-              "type": "shade",
-              "rim": 0.04
-            }
-          }
-        }
-      },
-      "ownership": "grant",
-      "compatibleWith": [
-        "smg"
-      ],
-      "collection": "darkness"
-    },
-    {
-      "id": "darkness-sniper",
-      "name": "Darkness",
-      "weapon": "sniper",
-      "rarity": "epic",
-      "asset": {
-        "model": "assets/models/shared/weapons/sniper.glb",
-        "binding": "shared",
-        "materials": {
-          "gun_green": {
-            "color": "#010101",
-            "metallic": 0,
-            "roughness": 1,
-            "plain": true,
-            "fx": {
-              "type": "shade",
-              "rim": 0.04
-            }
-          },
-          "gun_steel": {
-            "color": "#010101",
-            "metallic": 0,
-            "roughness": 1,
-            "plain": true,
-            "fx": {
-              "type": "shade",
-              "rim": 0.04
-            }
-          },
-          "gun_black": {
-            "color": "#010101",
-            "metallic": 0,
-            "roughness": 1,
-            "plain": true,
-            "fx": {
-              "type": "shade",
-              "rim": 0.04
-            }
-          },
-          "gun_polymer": {
-            "color": "#010101",
-            "metallic": 0,
-            "roughness": 1,
-            "plain": true,
-            "fx": {
-              "type": "shade",
-              "rim": 0.04
-            }
-          },
-          "gun_rubber": {
-            "color": "#010101",
-            "metallic": 0,
-            "roughness": 1,
-            "plain": true,
-            "fx": {
-              "type": "shade",
-              "rim": 0.04
-            }
-          }
-        }
-      },
-      "ownership": "grant",
-      "compatibleWith": [
-        "sniper"
-      ],
-      "collection": "darkness"
-    },
-    {
-      "id": "darkness-shotgun",
-      "name": "Darkness",
-      "weapon": "shotgun",
-      "rarity": "epic",
-      "asset": {
-        "model": "assets/models/shared/weapons/shotgun.glb",
-        "binding": "shared",
-        "materials": {
-          "gun_wood": {
-            "color": "#010101",
-            "metallic": 0,
-            "roughness": 1,
-            "plain": true,
-            "fx": {
-              "type": "shade",
-              "rim": 0.04
-            }
-          },
-          "gun_polymer": {
-            "color": "#010101",
-            "metallic": 0,
-            "roughness": 1,
-            "plain": true,
-            "fx": {
-              "type": "shade",
-              "rim": 0.04
-            }
-          },
-          "gun_steel": {
-            "color": "#010101",
-            "metallic": 0,
-            "roughness": 1,
-            "plain": true,
-            "fx": {
-              "type": "shade",
-              "rim": 0.04
-            }
-          },
-          "gun_black": {
-            "color": "#010101",
-            "metallic": 0,
-            "roughness": 1,
-            "plain": true,
-            "fx": {
-              "type": "shade",
-              "rim": 0.04
-            }
-          },
-          "gun_rubber": {
-            "color": "#010101",
-            "metallic": 0,
-            "roughness": 1,
-            "plain": true,
-            "fx": {
-              "type": "shade",
-              "rim": 0.04
-            }
-          }
-        }
-      },
-      "ownership": "grant",
-      "compatibleWith": [
-        "shotgun"
-      ],
-      "collection": "darkness"
-    },
-    {
-      "id": "darkness-semi-sniper",
-      "name": "Darkness",
-      "weapon": "semi-sniper",
-      "rarity": "epic",
-      "asset": {
-        "model": "assets/models/shared/weapons/semi_sniper.glb",
-        "binding": "shared",
-        "materials": {
-          "gun_gold": {
-            "color": "#010101",
-            "metallic": 0,
-            "roughness": 1,
-            "plain": true,
-            "fx": {
-              "type": "shade",
-              "rim": 0.04
-            }
-          },
-          "gun_black": {
-            "color": "#010101",
-            "metallic": 0,
-            "roughness": 1,
-            "plain": true,
-            "fx": {
-              "type": "shade",
-              "rim": 0.04
-            }
-          },
-          "gun_polymer": {
-            "color": "#010101",
-            "metallic": 0,
-            "roughness": 1,
-            "plain": true,
-            "fx": {
-              "type": "shade",
-              "rim": 0.04
-            }
-          },
-          "gun_steel": {
-            "color": "#010101",
-            "metallic": 0,
-            "roughness": 1,
-            "plain": true,
-            "fx": {
-              "type": "shade",
-              "rim": 0.04
-            }
-          },
-          "gun_rubber": {
-            "color": "#010101",
-            "metallic": 0,
-            "roughness": 1,
-            "plain": true,
-            "fx": {
-              "type": "shade",
-              "rim": 0.04
-            }
-          }
-        }
-      },
-      "ownership": "grant",
-      "compatibleWith": [
-        "semi-sniper"
-      ],
-      "collection": "darkness"
-    },
-    {
-      "id": "darkness-melee",
-      "name": "Darkness",
-      "weapon": "melee",
-      "rarity": "epic",
-      "asset": {
-        "model": "assets/models/shared/melee/dagger_r.glb",
-        "secondaryModel": "assets/models/shared/melee/dagger_l.glb",
-        "binding": "embedded",
-        "materials": {
-          "dagger_coat": {
-            "color": "#010101",
-            "metallic": 0,
-            "roughness": 1,
-            "plain": true,
-            "fx": {
-              "type": "shade",
-              "rim": 0.04
-            }
-          },
-          "dagger_steel": {
-            "color": "#010101",
-            "metallic": 0,
-            "roughness": 1,
-            "plain": true,
-            "fx": {
-              "type": "shade",
-              "rim": 0.04
-            }
-          },
-          "dagger_metal": {
-            "color": "#010101",
-            "metallic": 0,
-            "roughness": 1,
-            "plain": true,
-            "fx": {
-              "type": "shade",
-              "rim": 0.04
-            }
-          },
-          "dagger_grip": {
-            "color": "#010101",
-            "metallic": 0,
-            "roughness": 1,
-            "plain": true,
-            "fx": {
-              "type": "shade",
-              "rim": 0.04
-            }
-          },
-          "dagger_accent": {
-            "color": "#010101",
-            "metallic": 0,
-            "roughness": 1,
-            "plain": true,
-            "fx": {
-              "type": "shade",
-              "rim": 0.04
-            }
-          }
-        }
-      },
-      "ownership": "grant",
-      "compatibleWith": [
-        "melee"
-      ],
-      "collection": "darkness"
     },
     {
       "id": "frosted-rifle",
@@ -3684,7 +3281,7 @@
     {
       "id": "rainbow-glow",
       "name": "Rainbow Glow",
-      "rarity": "rare"
+      "rarity": "epic"
     },
     {
       "id": "rich",
@@ -3697,14 +3294,16 @@
     {
       "id": "blossom",
       "name": "Blossom",
-      "rarity": "uncommon",
+      "rarity": "legendary",
+      "killEffect": "blossom-flower-burst",
       "weapons": [
         "rifle",
         "smg",
         "sniper",
         "shotgun",
         "semi-sniper"
-      ]
+      ],
+      "crate": true
     },
     {
       "id": "carbon-fiber",
@@ -3721,48 +3320,47 @@
     {
       "id": "hydro-nebula",
       "name": "Hydro Dip — Nebula",
-      "rarity": "epic",
+      "rarity": "uncommon",
       "weapons": [
         "rifle",
         "smg",
         "sniper",
         "shotgun",
         "semi-sniper"
-      ]
+      ],
+      "crate": true
     },
     {
       "id": "hydro-inferno",
       "name": "Hydro Dip — Inferno",
-      "rarity": "epic",
+      "rarity": "rare",
       "weapons": [
         "rifle",
         "smg",
         "sniper",
         "shotgun",
         "semi-sniper"
-      ]
+      ],
+      "crate": true
     },
     {
       "id": "hydro-abyss",
       "name": "Hydro Dip — Abyss",
-      "rarity": "epic",
+      "rarity": "uncommon",
       "weapons": [
         "rifle",
         "smg",
         "sniper",
         "shotgun",
         "semi-sniper"
-      ]
-    },
-    {
-      "id": "darkness",
-      "name": "Darkness",
-      "rarity": "epic"
+      ],
+      "crate": true
     },
     {
       "id": "frosted",
       "name": "Frosted",
       "rarity": "legendary",
+      "killEffect": "frosted-blizzard",
       "fireEffect": "snow",
       "icicles": true,
       "weapons": [
@@ -3771,7 +3369,8 @@
         "sniper",
         "shotgun",
         "semi-sniper"
-      ]
+      ],
+      "crate": true
     }
   ],
   "crate": {
@@ -3780,15 +3379,19 @@
     "distribution": [
       {
         "rarity": "uncommon",
-        "percent": 55
+        "percent": 50
       },
       {
         "rarity": "rare",
-        "percent": 40
+        "percent": 37
+      },
+      {
+        "rarity": "epic",
+        "percent": 10
       },
       {
         "rarity": "legendary",
-        "percent": 5
+        "percent": 3
       }
     ],
     "model": "assets/cosmetics/crate/reward-crate/model.glb",

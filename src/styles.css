@@ -1714,10 +1714,6 @@ body[data-home-page='shop'] #game,body[data-home-page='locker'] #game,body[data-
 .shop-offer-copy {margin:0;color:#b8c4d2;font-size:13px;line-height:1.5;}
 .shop-open.btn {width:auto;align-self:flex-start;padding:14px 28px;}
 .shop-offer .crate-distribution {justify-content:flex-start;padding:4px 0;gap:6px 18px;}.shop-offer .crate-distribution p {text-align:left;}
-.crate-contents {grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;}
-.crate-contents h3 {grid-column:1/-1;margin:0;font-size:12px;letter-spacing:.14em;color:#9cabbc;}
-.crate-collection {display:grid;gap:3px;padding:10px 12px;border-radius:8px;background:linear-gradient(145deg,#cbd4dd1c,#7b889510);box-shadow:inset 0 -2px var(--rarity);}
-.crate-collection strong {color:var(--rarity);font-size:14px;}.crate-collection small,.crate-collection span {font-size:10px;letter-spacing:.06em;color:#c5cfdb;}.crate-collection small {color:var(--rarity);}
 
 .crate-reveal {--reveal:#5c7cff;--rarity:#c9d2de;position:fixed;inset:0;z-index:1000;display:grid;grid-template-rows:auto 1fr auto;justify-items:center;overflow:hidden;
   opacity:0;transition:opacity .25s ease;color:#fff;user-select:none;}
@@ -1785,3 +1781,25 @@ body[data-home-page='leaderboard'] #ui{background:#10192366}
 @media(prefers-reduced-motion:reduce){.result-gems{animation:none}}
 
 .scope-zoom {position:absolute;left:50%;top:74%;transform:translateX(-50%);color:#ddd;font:600 12px var(--font);letter-spacing:.06em;text-shadow:0 1px 3px #000;pointer-events:none;}
+
+/* Server-confirmed developer designation. Relationship colours still govern health bars. */
+.developer-name { color:#9bdbff !important; text-shadow:0 0 7px #ffffff88,0 1px 3px #0009; }
+.developer-badge { display:inline-flex; vertical-align:middle; margin-left:.45em; padding:.14em .42em; border-radius:8px; background:#cbe9ff1c; color:#9bdbff; font-size:.63em; font-weight:700; letter-spacing:.05em; line-height:1.2; text-shadow:0 0 6px #ffffff99; }
+.developer-name .developer-badge { color:#9bdbff; }
+.crate-prices { min-height:74px; display:flex; align-items:baseline; justify-content:center; flex-wrap:wrap; gap:8px 16px; font-variant-numeric:tabular-nums; }
+.crate-prices strong { font-size:clamp(23px,3vw,36px); }
+.crate-regular { color:#a9b5c6; }
+.crate-regular[hidden] { visibility:hidden; display:inline; }
+.crate-sale-countdown { width:100%; min-height:1.3em; color:#b6d9ff; font-size:13px; }
+.shop-crate-stage { position:relative; }
+.crate-sale-badge { position:absolute; right:10%; bottom:10%; border-radius:8px; background:#408de5; padding:8px 15px; font-size:17px; font-weight:800; transform:rotate(-9deg); box-shadow:0 4px 18px #0004; }
+.crate-sale-badge[hidden] { display:none; }
+.logo .logo-trigger { display:inline-grid; place-items:center; position:relative; padding:0; margin:0; border:0; border-radius:5px; background:none; color:inherit; font:inherit; vertical-align:middle; cursor:pointer; line-height:1; transition:transform 160ms cubic-bezier(.2,1.6,.4,1); }
+.logo-trigger:hover { transform:scale(1.09); }
+.logo-trigger:focus-visible { outline:2px solid #9bdbff; outline-offset:4px; }
+.logo-flash,.logo-trail { position:absolute; pointer-events:none; opacity:0; top:10%; }
+.logo-flash { width:10px; height:10px; background:#fff5c0; clip-path:polygon(50% 0,62% 35%,100% 50%,62% 65%,50% 100%,38% 65%,0 50%,38% 35%); }
+.logo-trail { width:2px; height:14px; background:linear-gradient(#ffefba,transparent); }
+.logo-flash.left,.logo-trail.left { left:10%; }
+.logo-flash.right,.logo-trail.right { right:10%; }
+@media(prefers-reduced-motion:reduce) { .logo-trigger:hover { transform:none; } }

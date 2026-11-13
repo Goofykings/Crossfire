@@ -1,3 +1,4 @@
+import {username} from '../ui/Username';
 import {meleeClip,meleeBlocked} from '../../shared/melee';
 import { visualCosmetic } from '../rendering/CosmeticAssets';
 import { Color3, Frustum, Material, Matrix, MeshBuilder, Quaternion, StandardMaterial, TransformNode, Vector3, type Scene, type Mesh, type BaseTexture } from '@babylonjs/core';
@@ -339,7 +340,7 @@ export class RemotePlayers {
         }
       }else if(!player.weapon){a.weapon?.dispose();a.weapon=null;}
       a.friendly = playerColor(s.match.mode, selfId, self?.team ?? null, player.id, player.team) === 'friendly';
-      if (a.nameLabel.textContent !== player.name) a.nameLabel.textContent = player.name;
+      username(a.nameLabel,player.name,player.developer);
       a.label.dataset.health=String(player.health);a.label.dataset.maxHealth=String(PLAYER_MAX_HEALTH);
       a.label.dataset.relationship = a.friendly ? 'teammate' : 'opponent';
       a.seen = performance.now();

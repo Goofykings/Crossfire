@@ -281,6 +281,9 @@ def map_collision(layout: dict) -> dict:
     # (Maps need not be square: x and z limits are read separately. Square maps get the same boxes as before.)
     p0, q0, p1, q1 = layout["playArea"]
     ring = 3.0
+    if (layout.get("farm") or {}).get("perimeter"):
+        # The Farmstead has a real wall (farmstead.collision_boxes): the visible stone is the boundary, no invisible ring.
+        return {"version": 1, "map": layout["id"], "boxes": boxes, "roofSurfaces": farmstead.roof_solids(layout)[1]}
     for bx in (aabb(p0 - ring - 0.5, 0, q0 - ring, p0 - 0.5, 30, q1 + ring),
                aabb(p1 + 0.5, 0, q0 - ring, p1 + ring + 0.5, 30, q1 + ring),
                aabb(p0 - ring, 0, q0 - ring - 0.5, p1 + ring, 30, q0 - 0.5),

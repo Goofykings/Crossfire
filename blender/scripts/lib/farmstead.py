@@ -16,7 +16,7 @@ Element types (all coordinates are game metres; rects are [x0, z0, x1, z1]):
   post    {t, at:[x,z], y:[y0,y1], size, mat}
   box     {t, box:[x0,y0,z0,x1,y1,z1], mat, kind, solid?, mats?, skip?}
   roof    {t, kind:'gable'|'shed', rect, eave, axis:'x'|'z', pitch, over, mat, gable?, under?, high?:'n'|'s'|'e'|'w'}
-          visual only: nobody can stand on a roof; ceilings carry the collision under it.
+          roof slabs have finely stepped movement solids and exact bullet surfaces.
 
 Solids are tagged `farm:<id>:<kind>`; `tests/farmstead.test.ts` walks every opening with the real controller.
 """
@@ -413,6 +413,54 @@ def farm(layout):
     return layout.get('farm') or {'structures': [], 'fences': []}
 
 
+def roof_profiles(el):
+    """Same closed slab profiles as roof_mesh, in (across, height) coordinates."""
+    x0,z0,x1,z1=el['rect'];o=el.get('over',.45);t=math.tan(math.radians(el['pitch']))
+    d=el.get('thick',.16)/math.cos(math.radians(el['pitch']))
+    u0,u1,v0,v1=(z0,z1,x0,x1) if el['axis']=='x' else (x0,x1,z0,z1)
+    ua,ub=u0-o,u1+o;uc=(u0+u1)/2;eave=el['eave'];va,vb=v0-o,v1+o
+    if el.get('kind','gable')=='gable':
+        ridge=eave+(ub-ua)/2*t
+        profiles=[[(ua,eave),(uc,ridge),(uc,ridge-d),(ua,eave-d)],[(ub,eave),(uc,ridge),(uc,ridge-d),(ub,eave-d)],[(uc-.1,ridge+.1),(uc+.1,ridge+.1),(uc+.1,ridge-.02),(uc-.1,ridge-.02)]]
+    else:
+        rise=(ub-ua)*t
+        profiles=[[(ua,eave),(ub,eave+rise),(ub,eave+rise-d),(ua,eave-d)]] if el['high'] in ('s','e') else [[(ub,eave),(ua,eave+rise),(ua,eave+rise-d),(ub,eave-d)]]
+    return profiles,va,vb
+
+
+def roof_solids(layout):
+    """<5.4 cm maximum step at the steepest roof, <=2.7 cm top approximation.
+    Exact slab triangles separately replace these boxes for shots and decals.
+    """
+    boxes=[];surfaces=[]
+    for s in farm(layout)['structures']:
+        for index,el in enumerate(s['elements']):
+            if el['t']!='roof':continue
+            tag=f"farm:{s['id']}:roof:{index}";polys,va,vb=roof_profiles(el)
+            world=(lambda u,y,v:(v,y,u)) if el['axis']=='x' else (lambda u,y,v:(u,y,v))
+            vertices=[];indices=[]
+            for j,poly in enumerate(polys):
+                a,b=poly[:2];count=max(1,math.ceil(abs(b[0]-a[0])/.1))
+                for k in range(count):
+                    lo=k/count;hi=(k+1)/count;mid=(lo+hi)/2
+                    u=a[0]+(b[0]-a[0])*mid;y=a[1]+(b[1]-a[1])*mid
+                    half=abs(b[0]-a[0])/count/2;depth=abs(poly[2][1]-b[1])
+                    boxes.append((roof_box(world,u-half,y-depth,va,u+half,y,vb),tag))
+                # Closed prism. The visual ridge cap extends 3 cm beyond the slabs.
+                low,high=(va-.03,vb+.03) if j==2 else (va,vb)
+                start=len(vertices)//3
+                for v in (low,high):
+                    for u,y in poly:vertices.extend(world(u,y,v))
+                for k in range(4):
+                    n=(k+1)%4;indices.extend([start+k,start+n,start+4+n,start+k,start+4+n,start+4+k])
+                indices.extend([start,start+1,start+2,start,start+2,start+3,start+4,start+6,start+5,start+4,start+7,start+6])
+            points=[vertices[i:i+3] for i in range(0,len(vertices),3)]
+            lo=[min(p[i] for p in points) for i in range(3)];hi=[max(p[i] for p in points) for i in range(3)]
+            center=[(a+b)/2 for a,b in zip(lo,hi)]
+            surfaces.append({'tag':tag,'mesh':{'center':center,'half':[(b-a)/2 for a,b in zip(lo,hi)],'vertices':[v-center[i%3] for i,v in enumerate(vertices)],'indices':indices}})
+    return boxes,surfaces
+
+
 def collision_boxes(layout):
     """[(aabb, tag)] of every solid part and the perimeter fence."""
     out = []
@@ -425,6 +473,11 @@ def collision_boxes(layout):
         for a0, a1 in spans:
             b = [a0, 0.0, line - FENCE_T / 2, a1, FENCE_H, line + FENCE_T / 2] if along_x else [line - FENCE_T / 2, 0.0, a0, line + FENCE_T / 2, FENCE_H, a1]
             out.append((b, f"farm:fence:{f['id']}"))
+    perimeter = farm(layout).get('perimeter')
+    if perimeter:
+        import perimeter as wall
+        out += wall.boxes(perimeter)
+    out += roof_solids(layout)[0]
     return out
 
 
@@ -447,6 +500,12 @@ def generate(layout):
                 roof_mesh(md, el)
     fence_mesh(md, layout)
     poster_mesh(md, layout)
+    perimeter = farm(layout).get('perimeter')
+    if perimeter:
+        import perimeter as wall
+        import perimeter_ivy
+        wall.mesh(md, perimeter)
+        perimeter_ivy.add(md, perimeter)
     return md
 
 

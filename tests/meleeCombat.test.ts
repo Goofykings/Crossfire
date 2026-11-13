@@ -44,7 +44,7 @@ it('V migrates without stealing a custom key; melee skins are real owned paired 
  expect(defaultBindings().melee).toEqual(['KeyV']);const old=defaultBindings();delete (old as Partial<typeof old>).melee;old.reload=['KeyV'];const migrated=sanitizeBindings(old);expect(migrated.reload).toEqual(['KeyV']);expect(migrated.melee).not.toContain('KeyV');
  const inv=normalizeInventory();expect(inv.owned).toContain('default-melee');expect(inv.equipped.melee).toBe('default-melee');
  const pool=crateItems().filter(c=>c.weapon==='melee');expect(pool).toHaveLength(6);for(const c of pool){expect(compatibleCosmetic(c.id,'melee')).toBe(true);expect(fs.existsSync('public/'+c.asset.model)).toBe(true);expect(fs.existsSync('public/'+c.asset.secondaryModel)).toBe(true);}
- const selected=drawCrate(crateItems().filter(c=>c.id!=='rich-melee').map(c=>c.id),()=>0);expect(selected?.id).toBe('rich-melee');expect(CRATE.distribution.map(d=>d.percent)).toEqual([55,40,5]);
+ const selected=drawCrate(crateItems().filter(c=>c.id!=='rich-melee').map(c=>c.id),()=>0);expect(selected?.id).toBe('rich-melee');expect(CRATE.distribution.map(d=>d.percent)).toEqual([50,37,10,3]);
 });
 it('protocol rejects client damage claims, incompatible versions and invalid melee confirmation',()=>{
  const frame={seq:1,yaw:0,pitch:0,intent:{...NO_INTENT},combat:{trigger:true,reload:false,melee:true}};

@@ -2,7 +2,7 @@ import { MaterialPluginBase, RegisterClass, type BaseTexture, type Material, typ
 import type { SkinFx } from '../../shared/cosmetics';
 
 /** One material plugin for every animated or procedural weapon skin. A skin supplies only
- * parameters and textures (shared/cosmetics.ts `fx`); the three modes are compile-time
+ * parameters and textures (shared/cosmetics.ts `fx`); the two modes are compile-time
  * defines of the same PBR shader, so nothing here costs a pass, a render target or CPU work
  * per vertex.
  *
@@ -12,8 +12,6 @@ import type { SkinFx } from '../../shared/cosmetics';
  *          jumps or loops visibly. Three map reads + one ramp read (lite: one + one).
  *   frost  Frosted. Snow above a gun-space height with a wavy edge, and on upward faces,
  *          from the object-space position and normal (so it stays put when the gun moves).
- *   shade  Darkness. A faint view-dependent edge sheen added after lighting, so the black
- *          silhouette stays readable on dark backgrounds. Not emissive lighting.
  *
  * Geometry is never displaced: only the fragment colour changes. */
 let lite = false;
@@ -62,14 +60,6 @@ const FRAGMENT_ALBEDO = `
 }
 #endif
 `;
-const FRAGMENT_FINAL = `
-#ifdef SKINFX_SHADE
-{
-  float skinRim=1.-clamp(dot(normalW,viewDirectionW),0.,1.);
-  finalColor.rgb+=vec3(.5,.58,.82)*(skinFxA.w*skinRim*skinRim*skinRim);
-}
-#endif
-`;
 const VARYINGS = `
 #if defined(SKINFX_FLOW) || defined(SKINFX_FROST)
 varying vec2 vSkinFxUV;
@@ -84,7 +74,7 @@ export class SkinFxPlugin extends MaterialPluginBase {
   private ramp: BaseTexture | null = null;
 
   constructor(material: Material) {
-    super(material, 'SkinFx', 210, { SKINFX_FLOW: false, SKINFX_FROST: false, SKINFX_SHADE: false, SKINFX_LITE: false });
+    super(material, 'SkinFx', 210, { SKINFX_FLOW: false, SKINFX_FROST: false, SKINFX_LITE: false });
     live.add(this);
     material.onDisposeObservable.addOnce(() => live.delete(this));
   }
@@ -103,11 +93,11 @@ export class SkinFxPlugin extends MaterialPluginBase {
 
   override prepareDefinesBeforeAttributes(defines: MaterialDefines): void {
     // The varyings need the mesh's UVs and normals even where the source material has no maps.
-    if (this.cfg && this.cfg.type !== 'shade') { defines._needUVs = true; defines._needNormals = true; }
+    if (this.cfg) { defines._needUVs = true; defines._needNormals = true; }
   }
   override prepareDefines(defines: MaterialDefines): void {
     const type = this.cfg?.type, d = defines as unknown as Record<string, boolean>;
-    d.SKINFX_FLOW = type === 'flow'; d.SKINFX_FROST = type === 'frost'; d.SKINFX_SHADE = type === 'shade'; d.SKINFX_LITE = lite;
+    d.SKINFX_FLOW = type === 'flow'; d.SKINFX_FROST = type === 'frost'; d.SKINFX_LITE = lite;
   }
   override hasTexture(texture: BaseTexture): boolean { return texture === this.map || texture === this.ramp; }
   override getActiveTextures(textures: BaseTexture[]): void { if (this.map) textures.push(this.map); if (this.ramp) textures.push(this.ramp); }
@@ -131,10 +121,6 @@ export class SkinFxPlugin extends MaterialPluginBase {
       ubo.updateFloat4('skinFxA', 0, 0, 0, 0);
       ubo.updateFloat4('skinFxB', 0, 0, 0, 0);
       ubo.updateFloat4('skinFxC', 0, 0, cfg.wave * 2, cfg.line);
-    } else {
-      ubo.updateFloat4('skinFxA', 0, 0, 0, cfg.rim);
-      ubo.updateFloat4('skinFxB', 0, 0, 0, 0);
-      ubo.updateFloat4('skinFxC', 0, 0, 0, 0);
     }
     if (this.map) ubo.setTexture('skinFxMap', this.map);
     if (this.ramp) ubo.setTexture('skinFxRamp', this.ramp);
@@ -168,7 +154,6 @@ uniform sampler2D skinFxRamp;
 #endif
 `,
       CUSTOM_FRAGMENT_UPDATE_ALPHA: FRAGMENT_ALBEDO,
-      CUSTOM_FRAGMENT_BEFORE_FRAGCOLOR: FRAGMENT_FINAL,
     };
   }
   /** Material.clone (the elimination fade clones weapon materials) recreates the plugin by

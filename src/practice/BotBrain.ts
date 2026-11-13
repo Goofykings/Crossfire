@@ -13,6 +13,7 @@ export type BotState='exploring'|'patrolling'|'searching'|'pursuing'|'attacking'
 export interface BotContext {actors:readonly PracticeActor[];nav:PracticeNavigation;now:number;mode:MatchMode;random:PracticeRandom;switchWeapon:(a:PracticeActor,w:WeaponId)=>void;reserveGrenade?:()=>boolean;obscured?:(from:Vec3,to:Vec3)=>boolean;zones?:ZoneControlState}
 const dist=(a:Vec3,b:Vec3)=>Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z),wrap=(a:number)=>Math.atan2(Math.sin(a),Math.cos(a));
 export class BotBrain {
+ private clearanceEscape=false;
  state:BotState='respawning';targetId:string|null=null;visible=false;path:NavNode[]=[];pathIndex=0;goal:NavNode|null=null;
  stuckFor=0;recoveries=0;switches=0;distanceTravelled=0;lastSeen:Vec3|null=null;
  objective:ZoneId|null=null;
@@ -21,7 +22,7 @@ export class BotBrain {
  private nextSlide=0;private slideUntil=0;private nextJump=0;private nextSwitch=0;private triggerUntil=0;private burstAt=0;private strafe=1;private turnAt=0;
  private readonly tuning;private errorYaw=0;private errorPitch=0;private headAim=false;private seq=0;private restingUntil=0;
  constructor(private actor:PracticeActor,readonly difficulty:BotDifficulty,private random:PracticeRandom){this.tuning=DIFFICULTY[difficulty];this.previous={...actor.controller.position};}
- reset(now:number){this.objective=null;this.throwingUntil=0;this.grenadeCheck=now+1000;this.nextGrenade=Math.max(this.nextGrenade,now+2000);this.state='exploring';this.path=[];this.pathIndex=0;this.goal=null;this.targetId=null;this.visible=false;this.lastSeen=null;this.seenAt=-Infinity;this.noticedAt=0;this.thinkAt=now;this.stuckFor=0;this.previous={...this.actor.controller.position};this.nextSwitch=now+22000+this.random.next()*24000;this.routeAt=0;}
+ reset(now:number){this.clearanceEscape=false;this.objective=null;this.throwingUntil=0;this.grenadeCheck=now+1000;this.nextGrenade=Math.max(this.nextGrenade,now+2000);this.state='exploring';this.path=[];this.pathIndex=0;this.goal=null;this.targetId=null;this.visible=false;this.lastSeen=null;this.seenAt=-Infinity;this.noticedAt=0;this.thinkAt=now;this.stuckFor=0;this.previous={...this.actor.controller.position};this.nextSwitch=now+22000+this.random.next()*24000;this.routeAt=0;}
  private eye(a:PracticeActor):Vec3{return a.controller.leanEye();}
  private point(a:PracticeActor,head=true):Vec3{const p=a.controller.position,offset=leanOffset(a.controller.yaw,a.controller.lean);return{x:p.x+offset.x*(head?1:.5),y:p.y+(head?playerHeight(a.controller.capture())-.2:playerHeight(a.controller.capture())*.67),z:p.z+offset.z*(head?1:.5)};}
  private clear(a:Vec3,b:Vec3,ctx:BotContext){const length=dist(a,b);return !ctx.obscured?.(a,b)&&(length<.01||!ctx.nav.world.raycast(a.x,a.y,a.z,(b.x-a.x)/length,(b.y-a.y)/length,(b.z-a.z)/length,length-.01));}
@@ -114,7 +115,13 @@ export class BotBrain {
   if(p.grounded&&now>this.nextJump&&(next&&next.y-p.position.y>.28||this.stuckFor>1.7&&this.stuckFor<2.5)){it.jumpPressed=true;this.nextJump=now+2200;}
   const close=!!engage&&!!enemy&&dist(p.position,enemy.controller.position)<1.65;
   const melee=a.state.combat.melee;
-  const toggle=!!melee&&!melee.toggleHeld&&(close&&melee.phase==='hidden'||!nearby&&melee.phase!=='hidden'&&melee.phase!=='unequipping');
+  // A long firearm can be caught below a landing after a jump onto a guard.
+  // Use the normal dagger equip to recover body clearance, then restore the gun
+  // once movement is free. No teleport, collision exception or artificial attack.
+  if(this.stuckFor>2.5&&!nearby&&p.grounded)this.clearanceEscape=true;
+  if(this.clearanceEscape&&this.stuckFor<.15&&moved>dt*.12)this.clearanceEscape=false;
+  const wantsMelee=close||this.clearanceEscape;
+  const toggle=!!melee&&!melee.toggleHeld&&(wantsMelee&&melee.phase==='hidden'||!wantsMelee&&!nearby&&melee.phase!=='hidden'&&melee.phase!=='unequipping');
   it.aim=!!engage&&!it.slide&&!close;
   let trigger=false;
   if(engage&&enemy&&aim&&this.clear(this.eye(a),aim,ctx)&&Math.abs(wrap(desired-p.yaw))<(this.difficulty==='absurd'?.02:.09)){

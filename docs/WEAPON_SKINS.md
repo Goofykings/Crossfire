@@ -4,9 +4,10 @@ Seven new skin families (31 catalog items) and new default looks for the SMG, sh
 only: weapon statistics, hitboxes, anchors, animation timing, melee timing and the protocol are untouched.
 
 **Not obtainable yet.** The families are in the catalog (`EXTRA_COLLECTIONS` in `shared/cosmetics.ts`) so the
-Locker, first person, characters and the crate reveal can render them, but they are deliberately outside the crate
-pool: `crateItems()`, `drawCrate()`, `CRATE` odds, prices, inventory storage and every Worker endpoint are unchanged.
-Granting them (crate, shop or otherwise) is the separate backend task. Until then no account can own or equip one;
+Locker, first person, characters and the crate reveal can render them. 2026-11-12 update: the Epic families (Hydro Dip
+x3, Darkness) joined the crate pool at the user's request and the odds became 50/37/10/3 (docs/WEAPON_RENDERING.md);
+Blossom, Carbon Fiber and Frosted are still outside it. `drawCrate()`, prices, inventory storage and every Worker endpoint
+are unchanged. Until a grant path exists for those three no account can own or equip one;
 `normalizeInventory`/`validInventory` already accept the ids, so a later server grant needs no client change.
 
 ## Families
@@ -143,7 +144,7 @@ a catalog skin on the local first-person weapon or daggers; it owns, equips, sav
 
 ## Limits
 
-- The skins cannot be obtained until the backend task adds a grant path; the Shop's crate contents list is unchanged.
+- Blossom, Carbon Fiber and Frosted cannot be obtained until a grant path exists; the Epic families are crate drops since 2026-11-12 (the Shop's contents list was removed).
 - Finishes are world-space tiled textures on box-projected UVs: patterns do not continue across face edges.
 - The snow cap is a height rule per weapon, not hand-painted: small parts above the line are fully white.
 - Hydro Dip keeps animating at distance and in the Locker; there is no per-distance fallback beyond Chromebook mode.

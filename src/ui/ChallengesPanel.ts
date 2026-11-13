@@ -1,3 +1,4 @@
+import {username} from './Username';
 import { CHALLENGES_PER_PERIOD, challengeDefinition, type CareerView, type ChallengeCategory } from '../../shared/challenges';
 
 /** Original faceted crystal, reused for balances and every challenge reward. */
@@ -91,7 +92,7 @@ export class ChallengesPanel {
     });
   }
   update(name: string, serverNow: number | null): void {
-    if(this.name.textContent!==name)this.name.textContent=name||'Guest';
+    username(this.name,name||'Guest',this.view?.developer);this.name.title=this.view?.accountId?`Account ID: ${this.view.accountId}`:'';
     if(this.view){
       const t=Math.min(1,(performance.now()-this.balanceAt)/350),amount=Math.round(this.startGems+(this.targetGems-this.startGems)*(1-(1-t)**3));
       if(amount!==this.displayedGems){this.displayedGems=amount;this.balance.textContent=amount.toLocaleString('en-US');}

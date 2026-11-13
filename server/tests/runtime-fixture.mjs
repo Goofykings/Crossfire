@@ -31,6 +31,23 @@ export default {
   },
 };
 export class PublicRoom extends ProductionRoom {
+  async saleForTest(active,price=169){
+    const now=Date.now(),hour=Math.floor(now/3600000)*3600000;
+    const startsAt=active?Math.max(hour,Math.min(hour+3000000,now-1000)):(now-hour>=600000?hour:hour+3000000);
+    const windows=[{hour,startsAt,endsAt:startsAt+600000,price},{hour:hour+3600000,startsAt:hour+3600000+1000,endsAt:hour+3600000+601000,price:180}];
+    await this.ctx.storage.put('crate-sales',windows);return windows;
+  }
+  async retiredInventoryForTest(credential){
+    const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(credential)),id=[...new Uint8Array(digest)].map(n=>n.toString(16).padStart(2,'0')).join('');
+    const inventory=await this.inventory.get(id);inventory.owned.push('darkness-rifle','darkness-melee','blossom-shotgun');inventory.equipped.rifle='darkness-rifle';inventory.equipped.melee='darkness-melee';
+    await this.ctx.storage.put('inventory:'+id,{revision:inventory.revision,owned:inventory.owned,equipped:inventory.equipped});await this.ctx.storage.put('crate:'+id+':retired-darkness',{item:'darkness-rifle',chargedPrice:250});
+  }
+  async retireSessionForTest(id){const e=this.players.get(id);if(!e||e.socket)throw Error('Requires disconnected session');e.session.expiresAt=0;this.prune();await this.persist();}
+  async farmBoundaryForTest(){return this.activeMap.layout.farm.perimeter.inner;}
+  async grenadeChargeForTest(id){const e=this.players.get(id);return {active:!!e?.grenadeCharge?.active,progress:e?.grenadeCharge?.progress(Date.now())??0,action:e?.gun?.action??null};}
+  async roofPositionsForTest(){
+    return [...this.activeMap.world.all()].filter(c=>c.bulletOnly&&c.tag.includes(':roof:')).map(c=>{const x=c.cx,z=c.cz,y=this.activeMap.world.groundHeight(x,z,.34,15);return {tag:c.tag,position:[x,y,z]};});
+  }
   async propBulletRayForTest(type,origin,direction,range=100){
     const p=[...this.activeMap.layout.props,...this.activeMap.layout.obstacles].find(p=>p.type===type);
     if(!p)throw Error('Requires actual authored prop');

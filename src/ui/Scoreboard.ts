@@ -1,3 +1,4 @@
+import {username} from './Username';
 import {teamMode,modeName} from '../../shared/combat';
 import type { PlayerState, Snapshot } from '../../shared/protocol';
 import {meleeBlocked} from '../../shared/melee';
@@ -46,7 +47,7 @@ export class Scoreboard {
     this.root.dataset.mode=mode??'';
     const end = snapshot?.match.endsAt;
     this.header.textContent = `${modeName(mode).toUpperCase()||'Mode unavailable'} · ${matchCountdown(end ?? null, serverNow)}`;
-    const signature = JSON.stringify([selfId, snapshot?.match, snapshot?.players.map((p) => [p.id, p.name, p.score, p.kills, p.deaths, p.assists, p.team, p.weapon, meleeBlocked(p.combat.melee)])]);
+    const signature = JSON.stringify([selfId, snapshot?.match, snapshot?.players.map((p) => [p.id, p.name, p.developer, p.score, p.kills, p.deaths, p.assists, p.team, p.weapon, meleeBlocked(p.combat.melee)])]);
     if (signature === this.signature) return;
     this.signature = signature;
     this.body.replaceChildren();
@@ -63,7 +64,7 @@ export class Scoreboard {
         row.classList.toggle('local', p.id === selfId);
         const name = row.insertCell();
         name.className = `score-name-${snapshot ? scoreboardRelationship(snapshot, selfId, p) : 'opponent'}`;
-        name.textContent = p.name;
+        username(name,p.name,p.developer);
         row.insertCell().innerHTML = weaponIcon(meleeBlocked(p.combat.melee)?'melee':p.weapon);
         const score = row.insertCell(); score.textContent = formatScore(p.score); score.title = `${p.score} points`; score.dataset.score = String(p.score);
         for (const value of [p.kills, p.deaths, p.assists??0]) row.insertCell().textContent = String(value);

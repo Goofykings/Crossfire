@@ -1,3 +1,4 @@
+import {username} from './Username';
 import { defaultEquipment, type Equipment } from '../../shared/cosmetics';
 import { visualCosmetic } from '../rendering/CosmeticAssets';
 import { Color3, Color4, DirectionalLight, Engine, FreeCamera, HemisphericLight, MeshBuilder,
@@ -38,7 +39,7 @@ export interface CharacterPerfResult {
 export class HomeCharacter {
   private canvas: HTMLCanvasElement | null = null;
   private nameLabel: HTMLDivElement | null = null;
-  private playerName = '';
+  private playerName = '';private developer=false;
   private engine: Engine | null = null;
   private scene: Scene | null = null;
   private library: CharacterAssetLibrary | null = null;
@@ -89,10 +90,11 @@ export class HomeCharacter {
     this.canvas.style.setProperty('--character-fade-end', `${(top - .68) / height * 100}%`);
   };
   constructor(private readonly host: HTMLElement) {}
-  setName(name: string): void {
-    if (this.playerName === name) return;
+  setName(name: string,developer=false): void {
+    if (this.playerName === name&&this.developer===developer) return;
+    this.developer=developer;
     this.playerName = name;
-    if (this.nameLabel) { this.nameLabel.textContent = name; this.nameLabel.hidden = !name; }
+    if (this.nameLabel) { username(this.nameLabel,name,developer); this.nameLabel.hidden = !name; }
   }
   setWeapon(id: WeaponId): void {
     this.preferredWeapon = id;
@@ -120,7 +122,7 @@ export class HomeCharacter {
     canvas.className = 'home-character'; canvas.setAttribute('aria-hidden', 'true');
     this.host.append(canvas); this.canvas = canvas;
     const label = document.createElement('div'); label.className = 'home-character-name';
-    label.textContent = this.playerName; label.hidden = !this.playerName;
+    username(label,this.playerName,this.developer); label.hidden = !this.playerName;
     (this.host.parentElement ?? this.host).append(label); this.nameLabel = label;
     const engine = new Engine(canvas, true, { alpha: true, audioEngine: false, powerPreference: 'low-power' }, false);
     this.engine = engine;

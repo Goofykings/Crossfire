@@ -1,3 +1,4 @@
+import {LegendaryEffects} from './LegendaryEffects';
 import {PerformanceDiagnostics} from '../core/PerformanceDiagnostics';
 import {HealthSaturation} from '../rendering/HealthSaturation';
 import {ZoneControlView} from './ZoneControlView';
@@ -10,9 +11,8 @@ import { PracticeClient,type MatchSession } from '../practice/PracticeClient';
 import {PracticeChallenges} from '../practice/PracticeChallenges';
 import {EnvironmentSimulation} from '../../shared/environment';
 import type { PracticeSetup } from '../practice/config';
-import { cosmetic, defaultEquipment, killEffect } from '../../shared/cosmetics';
+import { cosmetic, defaultEquipment } from '../../shared/cosmetics';
 import { MoneyBurst } from '../weapons/MoneyBurst';
-import { visualCosmetic } from '../rendering/CosmeticAssets';
 import { setSkinFxLite, skinFxInfo } from '../rendering/SkinFx';
 import { RoomClient } from '../network/RoomClient';
 import type { RoomAdmission } from '../../shared/rooms';
@@ -476,6 +476,7 @@ export class Game {
     map.environment.applyShadowPreset(SHADOW_PRESETS[s.shadowQuality], this.ctx.camera);
     this.excludeViewFromSun(map);
     map.environment.applyGraphicsPreset(graphicsPreset(s));
+    map.foliage?.setLite(this.settings.value.chromebookMode);
     for (const t of map.targets.targets) {
       t.onStateChange = (_t, state) => {
         if (state === 'falling') {
@@ -531,10 +532,10 @@ export class Game {
         network.onCareer = profile => { if (!signal.aborted && this.network === network) this.career?.accept(profile); };
         network.onChat = (message) => {
           if (signal.aborted || this.network !== network) return;
-          this.ui.addChat(message.name, message.text);
+          this.ui.addChat(message.name, message.text,false,message.developer);
         };
         network.onSystem = message => {
-          if (!signal.aborted && this.network === network) this.ui.addChat('Server', `${message.name} joined.`, true);
+          if (!signal.aborted && this.network === network) this.ui.addChat('Server', ' joined.', true,message.developer,message.name);
         };
         network.onChatError = (message) => { if (!signal.aborted && this.network === network) this.ui.showToast(message, 'warn'); };
         network.onShot = (shot) => {
@@ -696,10 +697,11 @@ export class Game {
 
   /** Legendary Rich kill effect. Cosmetic and local: it reads the killer's synchronized
    * cosmetic from the snapshot, so other players nearby see it too without new messages. */
-  private killEffect(event: Elimination, snapshot: Snapshot, selfId: string | null): void {
+  readonly legendaryEffects=new LegendaryEffects();
+  private killEffect(event: Elimination, _snapshot: Snapshot, selfId: string | null): void {
     if (!event.killerId || event.killerId === event.victimId) return;
-    const killer = snapshot.players.find((p) => p.id === event.killerId);
-    if (!killer?.weapon || killEffect(event.weapon==='melee'?killer.meleeCosmeticId:visualCosmetic(killer.weapon, killer.cosmeticId).id) !== 'money') return;
+    this.legendaryEffects.accept(event);
+    if(event.cosmeticEffect?.effect!=='money')return;
     if (event.killerId === selfId) { this.emitMoney(null); return; }
     const at = this.remotePlayers.muzzle(event.killerId);
     if (at && at.subtract(this.ctx.camera.globalPosition).length() < 45) this.emitMoney(at);
@@ -833,7 +835,7 @@ export class Game {
     this.weaponView?.setVisible(false); this.ui.setScope(0); this.ui.damage.clear();
     this.ui.setRespawnBusy(false);
     this.remotePlayers.setSpectated(death.killerId);
-    this.ui.setSpectate(death.killerName, Math.max(0, death.respawnAt - (Date.now() + (this.network?.clockOffset ?? 0))), this.network?.state === 'connected');
+    this.ui.setSpectate(death.killerName, Math.max(0, death.respawnAt - (Date.now() + (this.network?.clockOffset ?? 0))), this.network?.state === 'connected',null,death.killerDeveloper);
     this.ui.show('spectate');
   }
 
@@ -1044,6 +1046,7 @@ export class Game {
       this.materials.setUltra(!!p.ultraMaterials);
       this.materials.setChromebook(v.chromebookMode);
       setSkinFxLite(v.chromebookMode);
+      this.map?.foliage?.setLite(v.chromebookMode);
       this.remotePlayers.setAnimationDetail(v.chromebookMode ? .25 : v.graphicsQuality === 'low' ? .5 : 1);
       this.remotePlayers.setTrailsReduced(v.chromebookMode);
       this.remotePlayers.setLightweightDeaths(v.chromebookMode);
@@ -1071,7 +1074,7 @@ export class Game {
     this.ui.challenges.update(this.guestProfile.value.username, this.career?.serverNow ?? null);
     this.homeCharacter.setCosmetics(this.cosmetics?.view?.equipped??defaultEquipment());
     this.homeCharacter.setWeapon(this.lastUsedWeapon.value ?? this.ui.selectedWeapon);
-    this.homeCharacter.setName(this.guestProfile.value.username);
+    this.homeCharacter.setName(this.guestProfile.value.username,this.career?.view?.developer);
     this.homeCharacter.setVisible(this.state === 'menu' && this.ui.currentScreen === 'menu' && !this.options.autoplay);
     if(this.state!=='playing')this.aimAssist.reset();
     if (this.grenadeCharge.active && (this.state !== 'playing' || !this.input.enabled
@@ -1142,12 +1145,13 @@ export class Game {
         this.weaponView?.setVisible(false);
         this.ui.setScope(0);
       }
-      this.ui.setSpectate(death.killerName, Math.max(0, death.respawnAt - (Date.now() + (this.network?.clockOffset ?? 0))), this.network?.state === 'connected', pose&&meleeBlocked(pose.melee)?'melee':pose?.weapon ?? null);
+      this.ui.setSpectate(death.killerName, Math.max(0, death.respawnAt - (Date.now() + (this.network?.clockOffset ?? 0))), this.network?.state === 'connected', pose&&meleeBlocked(pose.melee)?'melee':pose?.weapon ?? null,death.killerDeveloper);
     }
     this.remotePlayers.setSpectatorScope(spectatorScoped);
     this.effects?.setReduced(this.settings.value.chromebookMode);
     this.trails.setReduced(this.settings.value.chromebookMode);
     this.effects?.update(dt);
+    if (this.map?.foliage && this.state !== 'loading') this.map.foliage.update(this.ctx.camera.position);
     if(this.map&&this.state!=='loading')this.map.props.update(dt,Date.now()+(this.network?.clockOffset??0),!this.options.multiplayer);
     if (this.map && this.state !== 'loading' && this.state !== 'results') {
       if (!this.options.multiplayer) this.updatePracticeGrenades();
@@ -1834,6 +1838,8 @@ export class Game {
       /** Play a map as the Play button does (loads it if needed, then spawns). */
       play: (id: string) => this.play(id).then(() => this.map?.def.id ?? null),
       /** The loaded map's gameplay data (for tests that need spawn, target and safe-zone positions). */
+      /** Which foliage set each cell draws (detail or lite): Chromebook mode and distance. */
+      foliage: () => this.map?.foliage?.inspect() ?? null,
       mapInfo: () => {
         const l = this.map?.def.layout;
         return l

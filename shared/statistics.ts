@@ -7,7 +7,7 @@ export type StatsMetric = typeof METRICS[number];
 export interface Totals { kills: number; assists: number; deaths: number; points: number; wins: number; games: number; gems: number }
 export interface PeriodTotals { start: number; kills: number; points: number; wins: number }
 export interface StatisticsRecord { id: string; name: string; revision: number; totals: Totals; daily: PeriodTotals; weekly: PeriodTotals; recent: string[]; lastRound: number }
-export interface RankingRow { id: string; name: string; rank: number; value: number; local: boolean }
+export interface RankingRow { developer?:boolean; id: string; name: string; rank: number; value: number; local: boolean }
 export interface LeaderboardView { version: number; period: StatsPeriod; metric: StatsMetric; start: number; serverTime: number; rows: RankingRow[]; own: RankingRow | null }
 export interface PersonalStats { version: number; serverTime: number; totals: Totals }
 export const emptyTotals = (): Totals => ({ kills:0, assists:0, deaths:0, points:0, wins:0, games:0, gems:0 });
@@ -50,7 +50,7 @@ export function validPersonalStats(v:unknown):v is PersonalStats {
 export function validLeaderboard(v:unknown):v is LeaderboardView {
   const p=v as LeaderboardView;
   const row=(r:RankingRow)=>!!r&&typeof r.id==='string'&&/^[a-f0-9-]{36}$/.test(r.id)&&typeof r.name==='string'&&r.name.length<=48
-    &&natural(r.value)&&r.value>0&&natural(r.rank)&&r.rank>0&&typeof r.local==='boolean';
+    &&(r.developer===undefined||typeof r.developer==='boolean')&&natural(r.value)&&r.value>0&&natural(r.rank)&&r.rank>0&&typeof r.local==='boolean';
   if(!p||p.version!==STATISTICS_API_VERSION||!PERIODS.includes(p.period)||!METRICS.includes(p.metric)||!natural(p.serverTime)
     ||p.start!==periodStart(p.period,p.serverTime)||!Array.isArray(p.rows)||p.rows.length>10||!p.rows.every(row)||!(p.own===null||row(p.own)))return false;
   const ids=new Set<string>();

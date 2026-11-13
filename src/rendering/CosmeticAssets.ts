@@ -24,9 +24,29 @@ export async function loadCosmeticAsset(item:CosmeticDefinition,scene:Scene,mate
       c.transformNodes.push(pair);c.rootNodes=[pair];
     }
     await patchCosmetic(c,item,scene,materials,signal);
+    normalizeWeaponMeshes(c);
     if(item.asset.icicles)await addIcicles(c,item.asset.icicles,scene,signal);
     await Promise.all([materials.ready(signal),texturesReady(c.textures,signal)]);return c;
   } catch(error){c.dispose();throw error;}
+}
+
+/** Parts that only exist during an animation (the loading shell of the shotgun): hidden until the animator enables them, so static views
+ * (Locker, Shop reveal, thumbnails) never show them poking out of the receiver. WeaponView and CharacterWeapon toggle them per frame. */
+export const ANIMATION_ONLY_NODES:readonly string[]=['shell'];
+
+/** The firearm GLBs carry RGBA vertex colours (Blender always exports four components, alpha = 1). Babylon's glTF loader turns that into
+ * `hasVertexAlpha`, which makes every mesh a TRANSPARENT one: alpha-blended, no depth write, sorted back to front per mesh. Parts of one
+ * weapon then overdraw each other by draw order, so internals (brass, shells, magazine ribs) showed through solid surfaces and the
+ * weapon looked right from some angles only. Vertex alpha that is 1 everywhere carries no information, so it is switched off and the
+ * meshes render in the opaque pass with the depth buffer. Meshes with real vertex alpha keep it. */
+export function normalizeWeaponMeshes(c:Pick<AssetContainer,'meshes'|'transformNodes'>):void{
+  for(const mesh of c.meshes){
+    if(!mesh.hasVertexAlpha)continue;
+    const colors=mesh.getVerticesData('color');if(!colors)continue;
+    let opaque=true;for(let i=3;i<colors.length;i+=4)if(colors[i]<.999){opaque=false;break;}
+    if(opaque)mesh.hasVertexAlpha=false;
+  }
+  for(const node of [...c.transformNodes,...c.meshes])if(ANIMATION_ONLY_NODES.includes(node.name))node.setEnabled(false);
 }
 
 export async function patchCosmetic(c:Pick<AssetContainer,'materials'|'textures'>&{meshes:readonly Pick<AbstractMesh,'material'>[]},item:CosmeticDefinition,scene:Scene,materials:MaterialLibrary,signal?:AbortSignal):Promise<void>{
@@ -49,8 +69,6 @@ export async function patchCosmetic(c:Pick<AssetContainer,'materials'|'textures'
       if(!copy){
         copy=source.clone(`cosmetic:${item.id}:${name}`)!;copies.set(source,copy);c.materials.push(copy);
         if(!(copy instanceof PBRMaterial))throw Error(`Cosmetic material must use PBR: ${name}`);
-        // A flat finish (Darkness) drops the source's maps before any override is applied.
-        if(patch.plain){copy.albedoTexture=null;copy.bumpTexture=null;copy.metallicTexture=null;copy.emissiveTexture=null;copy.emissiveColor=Color3.Black();copy.clearCoat.isEnabled=false;}
         if(patch.color)copy.albedoColor=Color3.FromHexString(patch.color);
         if(patch.metallic!==undefined)copy.metallic=patch.metallic;
         if(patch.roughness!==undefined)copy.roughness=patch.roughness;
@@ -73,11 +91,9 @@ export async function patchCosmetic(c:Pick<AssetContainer,'materials'|'textures'
         copy.useRoughnessFromMetallicTextureGreen=true;copy.useMetallnessFromMetallicTextureBlue=true;copy.useAmbientOcclusionFromMetallicTextureRed=true;
         if(patch.fx){
           const fx=patch.fx,plugin=new SkinFxPlugin(copy);
-          plugin.configure(fx,fx.type==='shade'?null:fxTexture(fx.map),fx.type==='flow'?fxTexture(fx.ramp):null);
+          plugin.configure(fx,fxTexture(fx.map),fx.type==='flow'?fxTexture(fx.ramp):null);
           // The flowing colour replaces the source's own albedo image (the shotgun's walnut); its normal and ORM detail stay.
           if(fx.type==='flow'){copy.albedoTexture=null;copy.emissiveTexture=null;}
-          // A shadow barely mirrors its surroundings: dim the image-based and direct specular response.
-          if(fx.type==='shade'){copy.environmentIntensity=.1;copy.metallicF0Factor=.12;copy.specularIntensity=.2;copy.directIntensity=.45;}
         }
       }
       mesh.material=copy;

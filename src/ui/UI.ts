@@ -1,3 +1,5 @@
+import {logoEasterEgg} from './LogoEasterEgg';
+import {username} from './Username';
 import { feedback, screenVisibility } from './motion';
 import { CosmeticsPages } from './CosmeticsPages';
 import { PracticeMenu } from './PracticeMenu';
@@ -171,7 +173,7 @@ export class UI {
   constructor(
     private readonly root: HTMLElement,
     settings: SettingsStore,
-    audio: AudioManager,
+    private readonly audio: AudioManager,
     private readonly profile: GuestProfileStore,
   ) {
     this.draft = new SettingsDraft(settings);
@@ -303,6 +305,7 @@ export class UI {
     this.homeHeader = header;
     const logo = el('h1', 'logo', CROSSFIRE_LOGO);
     logo.setAttribute('aria-label', 'CROSSFIRE');
+    logoEasterEgg(logo,this.audio);
     header.appendChild(logo);
     const nav = el('nav', 'home-nav');
     nav.setAttribute('aria-label', 'Main navigation');
@@ -423,14 +426,14 @@ export class UI {
     this.refreshSelection();
   }
 
-  setSpectate(name: string | null, remainingMs: number, connected: boolean, weapon: WeaponId | 'melee' | null = null): void {
-    if (name !== this.spectateKiller || weapon !== this.spectateObservedWeapon) {
+  setSpectate(name: string | null, remainingMs: number, connected: boolean, weapon: WeaponId | 'melee' | null = null,developer=false): void {
+    if (name !== this.spectateKiller || weapon !== this.spectateObservedWeapon||this.spectateBy.dataset.developer!==String(developer)) {
       this.spectateKiller = name;
       this.spectateObservedWeapon = weapon;
       const heading = el('strong'); heading.textContent = 'ELIMINATED BY';
-      const player = el('span'); player.textContent = name ?? 'Environment';
+      const player = el('span'); username(player,name??'Environment',developer);this.spectateBy.dataset.developer=String(developer);
       this.spectateBy.replaceChildren(heading, player);
-      this.spectateName.textContent = name ? `Spectating: ${name}${weapon ? ` · ${this.labels[weapon]}` : ''}` : 'Spectating: unavailable';
+      this.spectateName.replaceChildren(document.createTextNode('Spectating: '));if(name)this.spectateName.append(username(el('span'),name,developer),document.createTextNode(weapon?' - '+this.labels[weapon]:''));else this.spectateName.append(document.createTextNode('unavailable'));
     }
     if (!connected) { this.spectateConnectionLost = true; this.spectateError.textContent = 'Reconnecting…'; }
     else if (this.spectateConnectionLost) { this.spectateConnectionLost = false; this.spectateError.textContent = ''; }
@@ -1012,6 +1015,7 @@ export class UI {
       this.pendingChat.length = 0;
       this.chatLog.replaceChildren(); this.chatFeed.replaceChildren();
     }
+    if(!['hud','spectate'].includes(screen))this.matchHud?.update(null,0,false);
     this.currentScreen = screen;
     if(screen!=='practice-setup')this.practice.hide();
     document.body.dataset.screen = screen;
@@ -1070,10 +1074,10 @@ export class UI {
     if (!this.chatOpen) return;
     this.chatOpen = false; this.chatBox.hidden = true; this.chatInput.blur(); this.onChatClose();
   }
-  addChat(name: string, text: string, system = false): void {
+  addChat(name: string, text: string, system = false,developer=false,joinedName?:string): void {
     const line = el('div', system ? 'chat-system' : 'chat-player');
-    const sender = el('strong'); sender.textContent = `${!system && name.toLowerCase() === 'server' ? 'Server (player)' : name}: `;
-    line.append(sender, document.createTextNode(text)); this.chatLog.appendChild(line);
+    const sender = el('strong'); username(sender,!system&&name.toLowerCase()==='server'?'Server (player)':name,!system&&developer);sender.append(document.createTextNode(': '));
+    line.append(sender);if(joinedName){const joined=el('span');username(joined,joinedName,developer);line.append(joined);}line.append(document.createTextNode(text)); this.chatLog.appendChild(line);
     while (this.chatLog.childElementCount > 30) this.chatLog.firstElementChild?.remove();
     this.chatLog.scrollTop = this.chatLog.scrollHeight;
     const recent = line.cloneNode(true) as HTMLElement;

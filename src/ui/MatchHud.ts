@@ -30,7 +30,7 @@ export class MatchHud {
   }
   update(snapshot: Snapshot | null, serverNow: number, visible: boolean, selfId = ''): void {
     this.root.hidden = !visible || !snapshot;
-    if (!snapshot) return;
+    if (!visible||!snapshot) {this.timer.textContent='';this.final.hidden=true;this.lastFinal=null;return;}
     const mode = snapshot.match.mode==='ffa'?'FFA':modeName(snapshot.match.mode).toUpperCase();
     const time = matchCountdown(snapshot.match.endsAt, serverNow);
     if (this.mode.textContent !== mode) this.mode.textContent = mode;

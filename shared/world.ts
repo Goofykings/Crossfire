@@ -9,6 +9,7 @@ export function createMapWorld(collision: CollisionFile, layout: MapLayout, cata
   world.slidePassages.push(...(layout.slidePassages??[]).map(p=>({x:p.center[0],z:p.center[1],halfWidth:p.width/2,halfDepth:p.depth/2,clearance:p.clearance})));
   world.ladders.push(...(layout.ladders ?? []));
   world.addMany(collision.boxes);
+  for(const surface of collision.roofSurfaces??[])world.addBulletSurface(surface.mesh,[0,0,0],0,surface.tag,[...world.all()].filter(c=>c.tag===surface.tag));
   for (const [index,p] of [...layout.props, ...layout.obstacles].entries()) {
     const replacement=environment?.replaceProps.find(r=>r.index===index);
     if(replacement){

@@ -20,8 +20,9 @@ committed, pushed or deployed.
   fails. Expected failures (401/400/409) are responses, never gate rejections.
 - Response: `{version:1, item, gems, inventory}` (validated by `validCrateResult`).
   The owner's connected public-main socket also receives the new career view.
-- Odds: Uncommon 55%, Rare 40%, Legendary 5% (no Epic family exists yet; its old
-  10% share was redistributed). Weights renormalize over rarities that still have
+- Odds (2026-11-12): Uncommon 50%, Rare 37%, Epic 10%, Legendary 3%, printed by the Shop from
+  `CRATE.distribution`. The Epic families (Hydro Dip x3, Darkness) are in the pool (`crate: true`), which
+  makes 57 items; the Shop no longer lists the crate contents. Weights renormalize over rarities that still have
   unowned items, so a crate never repeats an item. With everything owned the
   endpoint returns 409 and the Shop shows ALL SKINS OWNED.
 - Spending never changes lifetime statistics (earned gems stay cumulative).

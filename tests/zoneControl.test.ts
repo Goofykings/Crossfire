@@ -66,7 +66,7 @@ describe('Zone Control rooms, results and wire compatibility',()=>{
   const result=finalizeRound(ledger,{blue:1,red:20});expect(result.winner).toBeNull();expect(result.mvp?.id).toBe('a');expect(result.winningTeam).toBe('red');expect(validResult(result)).toBe(true);
   expect(resultOutcome(result,'a','blue')).toBe('DEFEAT');expect(resultOutcome(result,'b','red')).toBe('VICTORY');expect(finalizeRound(ledger,{blue:2,red:2}).draw).toBe(true);
   const rewards=matchRewardRequests('room',result,{...ledger,rewardStartedAt:0,rewardParticipants:{a:{identity:'aa',name:'A',firstSpawn:0,abandoned:false},b:{identity:'bb',name:'B',firstSpawn:0,abandoned:false}}});
-  expect(rewards.get('a')).toMatchObject({rank:1,points:1000,won:false});expect(rewards.get('b')).toMatchObject({rank:1,points:100,won:true});
+  expect(rewards.get('a')).toMatchObject({rewardVersion:3,kills:10,deaths:1,bonus:0});expect(rewards.get('b')).toMatchObject({rewardVersion:3,kills:1,deaths:10,bonus:25});
   expect(teammates('zone-control','red','red')).toBe(true);expect(teammates('ffa','red','red')).toBe(false);
  });
  it('accepts compatible full and compact objective snapshots and refuses invalid/injected state',()=>{

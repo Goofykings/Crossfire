@@ -1,3 +1,4 @@
+import {username} from './Username';
 import type { Elimination, Snapshot } from '../../shared/protocol';
 import { playerColor } from './teamColors';
 import { weaponIcon } from './WeaponIcons';
@@ -37,16 +38,16 @@ export class CombatFeed {
     const row = document.createElement('div'); row.className = 'kill-feed-entry';
     const killer = document.createElement('span'); killer.className = `combat-name-${relation(event.killerId, event.killerTeam)}`;
     killer.dataset.id = event.killerId ?? ''; killer.dataset.team = event.killerTeam ?? '';
-    killer.textContent = event.killerName ?? 'Environment';
+    username(killer,event.killerName??'Environment',event.killerDeveloper);
     const icon = document.createElement('span'); icon.className = 'kill-feed-weapon'; icon.innerHTML = weaponIcon(event.weapon);
-    const victim = document.createElement('span'); victim.className = `combat-name-${relation(event.victimId, event.victimTeam)}`; victim.textContent = event.victimName;
+    const victim = document.createElement('span'); victim.className = `combat-name-${relation(event.victimId, event.victimTeam)}`; username(victim,event.victimName,event.victimDeveloper);
     victim.dataset.id = event.victimId; victim.dataset.team = event.victimTeam ?? '';
     row.append(killer, icon, victim); this.feed.appendChild(row);
     while (this.feed.childElementCount > 5) this.feed.firstElementChild?.remove();
     window.setTimeout(() => row.remove(), 5500);
     if (!this.root.hidden && event.killerId === selfId && event.victimId !== selfId) {
       const heading = document.createElement('strong'); heading.textContent = 'ELIMINATED';
-      const name = document.createElement('span'); name.textContent = event.victimName;
+      const name = document.createElement('span'); username(name,event.victimName,event.victimDeveloper);
       this.confirmation.replaceChildren(heading, name);
       if (event.award) {
         const score = document.createElement('b'); score.className = 'elimination-points'; score.textContent = `+${event.award.total}`;
@@ -67,7 +68,7 @@ export class CombatFeed {
     for (const node of this.feed.querySelectorAll<HTMLElement>('[data-id]')) {
       const target = snapshot.players.find(p => p.id === node.dataset.id);
       const targetTeam = target ? target.team : (node.dataset.team === 'blue' || node.dataset.team === 'red' ? node.dataset.team : null);
-      node.className = `combat-name-${playerColor(snapshot.match.mode, selfId, team, node.dataset.id || null, targetTeam)}`;
+      node.className = `combat-name-${playerColor(snapshot.match.mode, selfId, team, node.dataset.id || null, targetTeam)}`;node.classList.toggle('developer-name',node.dataset.developer==='true');
     }
   }
   clear(): void { this.feed.replaceChildren(); this.hideConfirmation(); }

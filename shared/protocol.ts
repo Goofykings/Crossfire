@@ -1,3 +1,5 @@
+import {KILL_EFFECTS,killEffect,compatibleCosmetic} from './cosmetics';
+import type {EliminationEffect} from './eliminationCosmetics';
 import {MAX_MATCH_GEMS} from './matchRewards';
 import {validMelee, type MeleeState} from './melee';
 import {expandServerMessage} from './snapshotWire';
@@ -16,8 +18,8 @@ import {validZoneControl,type ZoneControlState} from './zoneControl';
 import { pointsOrder, type ScoreAward, type RoundResult, type RoundStanding } from './scoring';
 import { GRENADE, type GrenadeState, type GrenadeEvent, type GrenadeExplosion } from './grenades';
 
-// v27: match receipts accept the new authoritative 4x rewards (maximum 128).
-export const PROTOCOL_VERSION = 27;
+// v28: new match rewards, server developer designation and confirmed cosmetic kill metadata.
+export const PROTOCOL_VERSION = 28;
 export const validWeapon = (x: unknown): x is WeaponId => x === 'rifle' || x === 'shotgun' || x === 'sniper' || x === 'smg' || x === 'semi-sniper';
 export const PUBLIC_ROOM = 'public-main';
 export const INPUT_BATCH_LIMIT = 12;
@@ -43,6 +45,8 @@ export interface ShotResult {
 }
 export interface MeleeResult { id:string;roundId:number;shooterId:string;life:number;at:number;stage:1|2|3;hits:ShotResult['hits'] }
 export interface Elimination {
+  cosmeticEffect?:EliminationEffect;
+  killerDeveloper?:boolean;victimDeveloper?:boolean;
   assists?: {id:string;name:string;points:50}[];
   award: ScoreAward | null;
   id: string; victimLife: number; direction: Vec3 | null;
@@ -51,6 +55,7 @@ export interface Elimination {
   at: number; respawnAt: number; killerTeam: 'blue' | 'red' | null; victimTeam: 'blue' | 'red' | null;
 }
 export interface PlayerState {
+  developer?:boolean;
   /** Additive visual metadata; absent on older v19 snapshots. Never a combat input. */
   cosmeticId?:string;
   meleeCosmeticId?:string;
@@ -103,11 +108,11 @@ export type ClientMessage =
 export type ServerMessage =
   | {v:typeof PROTOCOL_VERSION;type:'sync';nonce:string}
   | {v:typeof PROTOCOL_VERSION;type:'room_exit';reason:'afk'|'closed';message:string}
-  | { v: typeof PROTOCOL_VERSION; type: 'system'; kind: 'player_joined'; id: string; name: string }
+  | { v: typeof PROTOCOL_VERSION; type: 'system'; kind: 'player_joined'; id: string; name: string; developer?:boolean }
   | { v: typeof PROTOCOL_VERSION; type: 'career'; profile: CareerView }
   | { v:typeof PROTOCOL_VERSION;type:'environment';frame:EnvironmentFrame }
   | { v: typeof PROTOCOL_VERSION; type: 'grenade'; event: GrenadeEvent }
-  | { v: typeof PROTOCOL_VERSION; type: 'chat'; id: string; name: string; text: string }
+  | { v: typeof PROTOCOL_VERSION; type: 'chat'; id: string; name: string; text: string; developer?:boolean }
   | { v: typeof PROTOCOL_VERSION; type: 'melee'; event: MeleeResult }
   | { v: typeof PROTOCOL_VERSION; type: 'shot'; shot: ShotResult }
   | { v: typeof PROTOCOL_VERSION; type: 'elimination'; elimination: Elimination }
@@ -126,7 +131,7 @@ const keys = (x: Record<string, unknown>, allowed: string[]) => Object.keys(x).e
 const team = (x: unknown) => x === null || x === 'blue' || x === 'red';
 const natural = (x: unknown): x is number => Number.isSafeInteger(x) && (x as number) >= 0;
 function validStanding(x: unknown): boolean {
-  return record(x) && typeof x.id === 'string' && x.id.length <= 64 && typeof x.name === 'string' && x.name.length <= 24
+  return record(x) && (x.developer===undefined||typeof x.developer==='boolean') && typeof x.id === 'string' && x.id.length <= 64 && typeof x.name === 'string' && x.name.length <= 24
     && team(x.team) && natural(x.score) && natural(x.kills) && natural(x.deaths) && (x.assists===undefined||natural(x.assists))
     && (x.weapon === undefined || x.weapon === null || validWeapon(x.weapon));
 }
@@ -158,7 +163,9 @@ function validAward(x: unknown, head: boolean): boolean {
     && x.combo === 20 * (x.comboCount - 1) && natural(x.total) && x.total === x.base + (x.headshot as number) + (x.combo as number);
 }
 export function validElimination(e: unknown): e is Elimination {
-  return record(e) && typeof e.id === 'string' && e.id.length > 0 && e.id.length <= 64
+  return record(e) && (e.killerDeveloper===undefined||typeof e.killerDeveloper==='boolean')&&(e.victimDeveloper===undefined||typeof e.victimDeveloper==='boolean')
+    &&(e.cosmeticEffect===undefined||record(e.cosmeticEffect)&&keys(e.cosmeticEffect,['effect','cosmeticId','position'])&&KILL_EFFECTS.includes(e.cosmeticEffect.effect as never)&&killEffect(e.cosmeticEffect.cosmeticId)===e.cosmeticEffect.effect&&e.killerId!==null&&e.killerId!==e.victimId&&compatibleCosmetic(e.cosmeticEffect.cosmeticId,e.weapon)&&vector(e.cosmeticEffect.position))
+    && typeof e.id === 'string' && e.id.length > 0 && e.id.length <= 64
     && Number.isSafeInteger(e.victimLife) && (e.victimLife as number) > 0 && (e.direction === null || direction(e.direction))
     && Number.isSafeInteger(e.roundId) && (e.roundId as number) >= 0 && typeof e.victimId === 'string' && typeof e.victimName === 'string'
     && (e.killerId === null || typeof e.killerId === 'string') && (e.killerName === null || typeof e.killerName === 'string')
@@ -249,9 +256,9 @@ export function parseServerMessage(text: string): ServerMessage | null {
   if (!record(x) || x.v !== PROTOCOL_VERSION) return null;
   if(x.type==='sync')return keys(x,['v','type','nonce'])&&typeof x.nonce==='string'&&/^[a-f0-9-]{36}$/.test(x.nonce)?x as unknown as ServerMessage:null;
   if(x.type==='room_exit')return keys(x,['v','type','reason','message'])&&['afk','closed'].includes(String(x.reason))&&typeof x.message==='string'&&x.message.length<=200?x as unknown as ServerMessage:null;
-  if (x.type === 'system') return keys(x, ['v', 'type', 'kind', 'id', 'name'])
+  if (x.type === 'system') return keys(x, ['v', 'type', 'kind', 'id', 'name','developer'])
     && x.kind === 'player_joined' && typeof x.id === 'string' && /^join:[0-9a-f-]{36}$/.test(x.id)
-    && typeof x.name === 'string' && normalizeUsername(x.name) === x.name ? x as unknown as ServerMessage : null;
+    && (x.developer===undefined||typeof x.developer==='boolean') && typeof x.name === 'string' && normalizeUsername(x.name) === x.name ? x as unknown as ServerMessage : null;
   if (x.type === 'career') return keys(x, ['v', 'type', 'profile']) && validCareerView(x.profile) ? x as unknown as ServerMessage : null;
   if(x.type==='environment')return keys(x,['v','type','frame'])&&validEnvironmentFrame(x.frame)?x as unknown as ServerMessage:null;
   if (x.type === 'grenade') {
@@ -261,8 +268,8 @@ export function parseServerMessage(text: string): ServerMessage | null {
         && natural(e.roundId) && natural(e.at) && vector(e.position) && finite(e.strength) && e.strength > 0 && e.strength <= 1
       : e.kind==='explode' && validExplosion(e)) ? x as unknown as ServerMessage : null;
   }
-  if (x.type === 'chat') return keys(x, ['v', 'type', 'id', 'name', 'text']) && typeof x.id === 'string' && x.id.length <= 64
-    && typeof x.name === 'string' && x.name.length <= 24 && typeof x.text === 'string' && x.text.length > 0 && x.text.length <= 200
+  if (x.type === 'chat') return keys(x, ['v', 'type', 'id', 'name', 'text','developer']) && typeof x.id === 'string' && x.id.length <= 64
+    && (x.developer===undefined||typeof x.developer==='boolean') && typeof x.name === 'string' && x.name.length <= 24 && typeof x.text === 'string' && x.text.length > 0 && x.text.length <= 200
     && !/[\u0000-\u001f\u007f]/.test(x.text) ? x as unknown as ServerMessage : null;
   if(x.type==='melee'){const e=x.event;return keys(x,['v','type','event'])&&record(e)&&keys(e,['id','roundId','shooterId','life','at','stage','hits'])&&identifier(e.id)&&identifier(e.shooterId)&&natural(e.roundId)&&natural(e.at)&&natural(e.life)&&e.life>0&&[1,2,3].includes(e.stage as number)&&Array.isArray(e.hits)&&e.hits.length<=1&&e.hits.every(h=>record(h)&&keys(h,['id','life','amount','health','head','killed','direction'])&&identifier(h.id)&&natural(h.life)&&h.life>0&&finite(h.amount)&&h.amount>0&&h.amount<=35&&finite(h.health)&&h.health>=0&&h.health<=100&&h.head===false&&typeof h.killed==='boolean'&&direction(h.direction))?x as unknown as ServerMessage:null;}
   if (x.type === 'shot') {
@@ -295,7 +302,7 @@ export function parseServerMessage(text: string): ServerMessage | null {
       && (p.comboCount === 0 ? p.comboUntil === null : p.alive === true && p.comboUntil !== null)
       && (p.lastPlayedRound === null || natural(p.lastPlayedRound)) && team(p.lastPlayedTeam)
       && (p.afkDeadline===undefined||p.afkDeadline===null||natural(p.afkDeadline))
-      && typeof p.name === 'string' && Number.isSafeInteger(p.ack) && validMotion(p.motion)
+      && (p.developer===undefined||typeof p.developer==='boolean')&& typeof p.name === 'string' && Number.isSafeInteger(p.ack) && validMotion(p.motion)
       && typeof p.alive === 'boolean' && Number.isSafeInteger(p.life) && (p.life as number) >= 0
       && finite(p.health) && p.health >= 0 && p.health <= 100 && (p.alive ? p.health > 0 : p.health === 0)
       && record(p.combat) && typeof p.combat.triggerHeld === 'boolean' && typeof p.combat.reloadHeld === 'boolean'

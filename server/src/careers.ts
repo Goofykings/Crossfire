@@ -16,7 +16,8 @@ export class Careers {
   private generation = 0;
   mark(id: string): void { this.dirty.set(id, ++this.generation); }
   private readonly creationRates = new Map<string, { at: number; count: number }>();
-  constructor(private readonly storage: DurableObjectStorage, private readonly active: () => Set<string>) {}
+  constructor(private readonly storage: DurableObjectStorage, private readonly active: () => Set<string>,private readonly developer:(id:string)=>boolean=()=>false) {}
+  view(id:string,p:CareerProfile,now:number):CareerView{return {...careerView(p,now),accountId:id,developer:this.developer(id)};}
   async load(id: string): Promise<CareerProfile | undefined> {
     let profile = this.profiles.get(id);
     if (!profile) {
@@ -43,7 +44,7 @@ export class Careers {
   }
   views(now: number): Map<string, CareerView> {
     for (const [id, p] of this.profiles) if(refreshCareer(p, id, now))this.mark(id);
-    return new Map([...this.profiles].map(([id, p]) => [id, careerView(p, now)]));
+    return new Map([...this.profiles].map(([id, p]) => [id, this.view(id,p,now)]));
   }
   async http(request: Request): Promise<Response> {
     const now = Date.now();
@@ -62,7 +63,7 @@ export class Careers {
       const id = await careerIdentity(credential), profile = createCareer(id, now);
       await this.storage.put(`career:${id}`, profile);
       this.profiles.set(id, profile); this.trim();
-      return Response.json({ v: PROTOCOL_VERSION, credential, profile: careerView(profile, now) }, { status: 201 });
+      return Response.json({ v: PROTOCOL_VERSION, credential, profile: this.view(id,profile,now) }, { status: 201 });
     }
     if (request.method !== 'GET') return new Response('Method not allowed', { status: 405 });
     const credential = (request.headers.get('Authorization')?.startsWith('Bearer ') ? request.headers.get('Authorization')!.slice(7) : '');
@@ -70,6 +71,6 @@ export class Careers {
     const id = await careerIdentity(credential), profile = await this.load(id);
     if (!profile) return Response.json({ error: 'Guest profile not found. Restore its original credential or clear this site data to start a new guest.' }, { status: 401 });
     if (refreshCareer(profile, id, now)) await this.storage.put(`career:${id}`, profile);
-    return Response.json({ v: PROTOCOL_VERSION, profile: careerView(profile, now) });
+    return Response.json({ v: PROTOCOL_VERSION, profile: this.view(id,profile,now) });
   }
 }

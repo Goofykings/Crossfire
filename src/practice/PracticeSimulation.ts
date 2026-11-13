@@ -1,3 +1,5 @@
+import {defaultEquipment} from '../../shared/cosmetics';
+import {eliminationEffect} from '../../shared/eliminationCosmetics';
 import {createMeleeState,stepMelee,meleeBlocked,traceMelee,meleeKnockback,MELEE} from '../../shared/melee';
 import {FIXED_DT,MOVEMENT,PLAYER_MAX_HEALTH} from '../config/constants';
 import {PlayerController,NO_INTENT,type Vec3} from '../player/PlayerController';
@@ -79,6 +81,7 @@ export class PracticeSimulation {
   const award=credited?awardElimination(credited.state,at,head):null;
   if(credited){credited.state.kills++;credited.state.grenades++;if(this.setup.mode==='teams'&&credited.state.team)this.teamScores[credited.state.team]++;if(!credited.state.alive)resetCombo(credited.state);}
   const event:Elimination={id,at,respawnAt:at+RESPAWN_DELAY_MS,roundId:this.roundId,victimId:victim.state.id,victimName:victim.state.name,victimLife:victim.state.life,victimTeam:victim.state.team,killerId:killer?.state.id??null,killerName:killer?.state.name??null,killerTeam:killer?.state.team??null,weapon:weapon??killer?.state.weapon??null,head,direction,award,assists};
+  if(credited){const equipment=defaultEquipment();if(credited.state.weapon)equipment[credited.state.weapon]=credited.state.cosmeticId??equipment[credited.state.weapon];equipment.melee=credited.state.meleeCosmeticId??equipment.melee;event.cosmeticEffect=eliminationEffect(equipment,event.weapon,victim.controller.position);}
   victim.state.death=event;this.events.push({type:'elimination',elimination:event});
  }
  private apply(victim:PracticeActor,killer:PracticeActor|null,amount:number,zone:'head'|'body',point:Vec3,direction:Vec3,weapon:WeaponId|'grenade'|'melee'):number{

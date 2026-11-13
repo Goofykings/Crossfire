@@ -4,47 +4,203 @@ Every prop is a low-poly MeshData with its origin at the centre of its footprint
 front toward -z, like the rest of the catalogue. Sizes and colliders live in catalog.PROPS.
 """
 import math
+import random
 from meshkit import MeshData
+from foliage import GOLDEN, LITE_SIZE, box_dirs, card, card_count, dot, ellipsoid, puff, unit
 
 
+# --- foliage (leaf-card volumes, see foliage.py) ------------------------------------------------------------
+# Trees, bushes and hedges are an opaque dark core (`leaf_core`: bullets stop on it, gaps show dark leaf mass) wrapped in
+# alpha-cut leaf cards that grow in every direction, so they look leafy from the front, the back, the sides and above.
+# Each prop carries a detailed set (`leaf_bush`) and a lite twin (`leaf_bush_lite`); FoliageLod draws one of them.
 def _trunk(m, h, r0, r1, seg=9):
     m.cylinder((0, 0, 0), r0, h, 'bark', segments=seg, radius_top=r1, caps=(False, False))
 
 
+OAK_TINT = ((0.92, 1.0, 0.8), (1.02, 1.0, 0.74))     # two oak greens, picked per canopy lobe
+OAK_BLOBS = [(0, 5.0, 0, 1.9), (1.25, 4.3, .4, 1.4), (-1.2, 4.5, -.3, 1.45), (.3, 4.4, -1.3, 1.3),
+             (-.2, 4.2, 1.25, 1.25), (.2, 6.1, .1, 1.2), (1.0, 5.6, -.8, 1.05), (-1.0, 5.7, .8, 1.0)]
+
+
 def tree_oak(scale=1.0, seed=0):
-    """Broad oak: a flared trunk, three limbs and a canopy of overlapping leaf blobs (about 4.4 m wide, 7 m tall)."""
-    m = MeshData()
+    """Broad oak: a flared trunk, three limbs and a canopy of eight leaf lobes (about 4.4 m wide, 7 m tall)."""
     s = scale
+    m = MeshData()
     _trunk(m, 3.1 * s, .34 * s, .2 * s)
     m.cylinder((0, -.02, 0), .46 * s, .22 * s, 'bark', segments=9, radius_top=.34 * s, caps=(False, False))
-    limbs = ((.9, 3.0, .2), (-.8, 3.3, -.5), (.1, 3.5, -.9))
-    for i, (x, y, z) in enumerate(limbs):
+    for (x, y, z) in ((.9, 3.0, .2), (-.8, 3.3, -.5), (.1, 3.5, -.9)):
         m.tube((0, 2.5 * s, 0), (x * s, y * s + .7 * s, z * s), .09 * s, 'bark', segments=6)
-    blobs = [(0, 5.0, 0, 1.9), (1.25, 4.3, .4, 1.4), (-1.2, 4.5, -.3, 1.45), (.3, 4.4, -1.3, 1.3),
-             (-.2, 4.2, 1.25, 1.25), (.2, 6.1, .1, 1.2), (1.0, 5.6, -.8, 1.05), (-1.0, 5.7, .8, 1.0)]
-    for i, (x, y, z, r) in enumerate(blobs):
-        mat = 'leaves_oak' if (i + seed) % 2 == 0 else 'leaves_oak_b'
-        m.sphere((x * s, y * s, z * s), r * s, mat, rings=4, segments=8, squash=.82)
+    for (x, y, z, r) in OAK_BLOBS:
+        ellipsoid(m, (x * s, y * s, z * s), (r * s * .6, r * s * .5, r * s * .6), 'leaf_core', rings=4, segments=8)
+
+    def inside_other(i):
+        """Cards pointing into another lobe are wasted: reject directions whose surface point lies inside a neighbour."""
+        cx, cy, cz, r = OAK_BLOBS[i]
+
+        def skip(v, nrm):
+            px, py, pz = cx + nrm[0] * r * .95, cy + nrm[1] * r * .8, cz + nrm[2] * r * .95
+            return any(j != i and (px - ox) ** 2 + (py - oy) ** 2 + (pz - oz) ** 2 < (orr * .82) ** 2 for j, (ox, oy, oz, orr) in enumerate(OAK_BLOBS))
+        return skip
+
+    def in_canopy(pt):
+        """Inside any lobe enlarged by 28%: the canopy keeps the silhouette (and the footprint) the catalogue promises."""
+        return pt[1] > 2.1 * s and any(((pt[0] - x * s) / (r * s * 1.28)) ** 2 + ((pt[1] - y * s) / (r * s * 1.1)) ** 2 + ((pt[2] - z * s) / (r * s * 1.28)) ** 2 <= 1
+                                       for (x, y, z, r) in OAK_BLOBS)
+
+    for lite in (False, True):
+        rnd = random.Random(7100 + seed * 17 + (5 if lite else 0))
+        for i, (x, y, z, r) in enumerate(OAK_BLOBS):
+            R = r * s * .8
+            puff(m, rnd, lite, (x * s, y * s, z * s), (R, R * .84, R), round(46 * r * r), (.5 + .22 * r) * s, (.8 + .3 * r) * s, kinds=(1, 3, 1, 0, 3, 2),
+                 tint=OAK_TINT[(i + seed) % 2], ao=.52, gain=1.0, skip=inside_other(i), min_y=2.2 * s, fit=in_canopy)
     return m
 
 
 def tree_pine():
-    """Pine: slim trunk with five stacked foliage cones (2.8 m wide, 8 m tall)."""
+    """Pine: a slim trunk and five tiers of drooping boughs (leaf cards spread around and over each tier), 3.6 m wide, 8 m tall."""
     m = MeshData()
     _trunk(m, 2.6, .24, .14, 8)
-    # Foliage starts above head height, and each cone has a floor, so nothing can be walked into or seen through.
     tiers = ((2.25, 1.35, 1.55), (3.3, 1.2, 1.4), (4.35, 1.05, 1.3), (5.35, .85, 1.2), (6.3, .65, 1.1))
-    for i, (y, r, h) in enumerate(tiers):
-        m.cylinder((0, y, 0), r * 1.35, h * 1.5, 'leaves_pine', segments=9, radius_top=.04, caps=(True, True))
-    m.cylinder((0, 6.9, 0), .07, 1.1, 'leaves_pine', segments=6, radius_top=.0, caps=(False, False))
+    for (y, r, h) in tiers:
+        # the opaque core is a narrow cone well inside the boughs, so it never shows as a cylinder
+        m.cylinder((0, y + .05, 0), r * .5, h * 1.3, 'leaf_core', segments=9, radius_top=.03, caps=(True, True))
+    m.cylinder((0, 6.9, 0), .06, 1.1, 'leaf_core', segments=6, radius_top=.0, caps=(False, False))
+    tint = (0.66, 0.92, 0.86)
+
+    def in_cone(pt):
+        """Inside the tree's cone (1.9 m radius at the lowest tier, tapering to the leader): 3.6 m wide, 8 m tall."""
+        return 2.0 <= pt[1] <= 8.05 and math.hypot(pt[0], pt[2]) <= 1.95 * max(0.0, 1 - (pt[1] - 2.2) / 5.4) + .12
+
+    for lite in (False, True):
+        rnd = random.Random(7300 + (5 if lite else 0))
+        for ti, (y, r, h) in enumerate(tiers):
+            n = card_count(15 - ti * 2, lite)
+            off = rnd.uniform(0, 6.28)
+            for i in range(n):
+                a = off + i * GOLDEN + rnd.uniform(-.2, .2)
+                e = rnd.uniform(-.62, .1) if ti < 4 else rnd.uniform(-.4, .3)       # boughs droop, the highest tiers are stiffer
+                d = (math.cos(a) * math.cos(e), math.sin(e), math.sin(a) * math.cos(e))
+                rc = r * .22
+                base = (math.cos(a) * rc, y + h * (.52 + rnd.uniform(-.12, .1)), math.sin(a) * rc)
+                length = r * 1.45 * (LITE_SIZE if lite else 1.0) * rnd.uniform(.85, 1.12)
+                roll = ((i * .6180339887) % 1.0) * math.pi + rnd.uniform(-.2, .2)
+                card(m, 'leaf_bush_lite' if lite else 'leaf_bush', base, d, (d[0], .6, d[2]), roll, length, length * 1.0, (1, 3, 1, 0)[i % 4], rnd,
+                     ao=.5, gain=.95, tint=(tint[0] * rnd.uniform(.94, 1.06), tint[1] * rnd.uniform(.95, 1.05), tint[2] * rnd.uniform(.94, 1.06)), fit=in_cone)
+            # the tier's body: shingled cards over a squat ellipsoid fill the space between and above the boughs
+            puff(m, rnd, lite, (0, y + h * .45, 0), (r * 1.15, h * .5, r * 1.15), round(30 * r * r), r * .55, r * .9, kinds=(1, 3, 1, 0), tint=tint, ao=.5,
+                 gain=1.0, droop_limit=-.2, fit=in_cone, min_y=2.0)
+        # the leader
+        puff(m, rnd, lite, (0, 6.95, 0), (.12, .5, .12), 8, .45, .7, kinds=(0, 2, 1), tint=tint, ao=.55, droop_limit=-.1, fit=in_cone)
     return m
 
 
 def bush():
+    """A shrub about 1.4 x 1.2 m and 0.95 m tall: a dark core, a few woody stems and leaf cards growing out in every direction."""
     m = MeshData()
-    for i, (x, z, r) in enumerate(((0, 0, .5), (.42, .15, .38), (-.4, -.1, .4), (.1, -.35, .34))):
-        m.sphere((x, r * .75, z), r, 'leaves_oak' if i % 2 == 0 else 'leaves_oak_b', rings=3, segments=7, squash=.85)
+    for (x, z, r) in ((0, 0, .27), (.2, .1, .2), (-.22, -.08, .19)):
+        ellipsoid(m, (x, r * 1.05 + .06, z), (r, r * .8, r), 'leaf_core', rings=3, segments=7)
+    rnd0 = random.Random(404)
+    for i in range(6):
+        a = i * 1.047 + rnd0.uniform(-.2, .2)
+        m.tube((0, 0, 0), (math.cos(a) * .2, .3 + rnd0.uniform(0, .1), math.sin(a) * .18), .014, 'bark', segments=4)
+    for lite in (False, True):
+        rnd = random.Random(404 + (9 if lite else 0))
+        puff(m, rnd, lite, (0, .36, 0), (.6, .46, .52), 110, .3, .5, kinds=(1, 3, 0, 1, 2, 3), tint=(1.0, 1.0, 1.0), ao=.5, gain=1.0, min_y=.05,
+             fit=lambda pt: pt[1] >= 0.0 and (pt[0] / .92) ** 2 + (pt[2] / .8) ** 2 + (max(0.0, pt[1] - .02) / 1.15) ** 2 <= 1.0)
     return m
+
+
+# Hedgerows: a row of sections (about a metre long each) with their own height, thickness and density, so no two hedges, and
+# no two parts of one hedge, are the same shape. Tops are uneven (small steps and swells), the ends are rounded or squared,
+# some parts are thinner and a few have a small gap in the leaf cover (the opaque core stays, so nothing becomes see-through
+# or walkable). `L x H x T` is the envelope: the colliders in catalog.py are these numbers.
+def _walk(rnd, n, lo, hi, step, jump):
+    v, out = rnd.uniform(lo + (hi - lo) * .5, hi), []
+    for _ in range(n):
+        v += rnd.uniform(-step, step)
+        if rnd.random() < jump:
+            v += rnd.choice((-1, 1)) * rnd.uniform(step, step * 1.6)
+        v = min(hi, max(lo, v))
+        out.append(v)
+    return out
+
+
+def hedge(L, H, T, seed):
+    rnd = random.Random(seed)
+    n = max(3, round(L / .95))
+    seg = L / n
+    heights = _walk(rnd, n, .8, 1.0, .06, .3)
+    top = max(heights)
+    heights = [H * v / top for v in heights]                 # the tallest section is exactly H
+    low = rnd.choice([i for i, v in enumerate(heights) if v < H] or [0])
+    heights[low] = H * rnd.uniform(.74, .84)                 # and at least one section is clearly lower: never a flat top
+    thick = _walk(rnd, n, .8, 1.0, .06, .22)
+    tmax = max(thick)
+    thick = [T * v / tmax for v in thick]
+    dens = [rnd.uniform(.62, 1.12) for _ in range(n)]
+    gaps = [(0 < i < n - 1 and rnd.random() < .22) for i in range(n)]
+    rounded = [rnd.random() < .6, rnd.random() < .6]         # each end rounded or squared
+    m = MeshData()
+    stems = max(3, round(L / .55))
+    for i in range(stems):
+        m.cylinder((-L / 2 + (i + .5) * L / stems, 0, rnd.uniform(-.1, .1) * T), .05, rnd.uniform(.3, .55), 'bark', segments=5, caps=(False, False))
+    secs = []
+    for i in range(n):
+        x = -L / 2 + (i + .5) * seg
+        h, t = heights[i], thick[i]
+        endl, endr = i == 0, i == n - 1
+        secs.append((x, h, t, endl, endr))
+        # opaque lumpy core: a lower and an upper mass per section, about 60% of the thickness, a little below the leaf cover
+        for fy, ry in ((.33, .3), (.64, .26)):
+            ellipsoid(m, (x + rnd.uniform(-.06, .06), h * fy, rnd.uniform(-.04, .04) * T), (seg * .72, h * ry, t * .5 * .62), 'leaf_core', rings=3, segments=7)
+    for lite in (False, True):
+        rr = random.Random(seed * 31 + (7 if lite else 0))
+        for i, (x, h, t, endl, endr) in enumerate(secs):
+            faces = ['py', 'pz', 'nz']
+            ex = 0.0
+            if endl and rounded[0] or endl and not rounded[0]:
+                faces.append('nx')
+            if endr:
+                faces.append('px')
+            # card length: a bit more than a third of the thickness at the thinnest, never more than half a metre
+            hmin, hmax = max(.38, min(.5, .3 + t * .15)), max(.55, min(.8, .45 + t * .2))
+            half = (seg * .5 + (.12 if (endl or endr) else .0), h * .5, t * .5)
+            area = 4 * half[0] * half[2] + 8 * half[0] * half[1] + (4 * half[2] * half[1] * ((1 if endl else 0) + (1 if endr else 0)))
+            count = max(8, round(area * 20 * dens[i]))
+            ndir = card_count(count, lite)
+            dirs = box_dirs(ndir, half, rr, tuple(faces))
+            g = None
+            if gaps[i]:
+                gv = unit((rr.uniform(-.4, .4), rr.uniform(.2, 1.0), rr.choice((-1, 1)) * rr.uniform(.4, 1.0)))
+                g = lambda v, nrm, gv=gv, rg=rr: dot(v, gv) > .82 and rg.random() < .85
+            R = (half[0] * .9, half[1] * .9, half[2] * .9)           # shingle cards root on the surface itself
+            def fit(pt, h=h, t=t, x0=(-L / 2 - .2) if endl else x - seg / 2 - .1, x1=(L / 2 + .2) if endr else x + seg / 2 + .1):
+                """The hedge envelope: this section's own length, height and thickness plus the leafy fuzz (up to 20 cm). Cards of a tall section never
+                bridge over a lower neighbour, so the steps in the top stay visible."""
+                return x0 <= pt[0] <= x1 and 0.0 <= pt[1] <= h + .2 and abs(pt[2]) <= t / 2 + .2
+            puff(m, rr, lite, (x, h / 2, 0), R, count, hmin, hmax, kinds=(1, 3, 0, 1, 2, 3), tint=OAK_TINT[(i + seed) % 2],
+                 ao=.5, gain=1.0, p=3.4, skip=g, min_y=.05, dirs=dirs, outward=.82, droop_limit=-.15, fit=fit)
+    return m
+
+
+HEDGE_VARIANTS = {
+    # name: (length, height, thickness, seed) of the dense envelope in metres
+    'hedge_long': (3.8, 2.9, .95, 101),
+    'hedge_tall': (3.4, 3.7, 1.05, 202),
+    'hedge_low': (3.9, 2.35, .9, 303),
+    'hedge_wide': (4.2, 2.8, 1.5, 404),
+    'hedge_thin': (3.2, 2.7, .7, 505),
+    'hedge_short': (2.6, 2.6, .95, 606),
+    'hedge_block': (4.2, 3.1, 1.9, 707),
+    'hedge_run': (4.7, 2.6, 1.0, 808),
+}
+
+
+def hedge_long():
+    return hedge(*HEDGE_VARIANTS['hedge_long'])
+
+
+FOLIAGE_BUILDERS = {name: (lambda a=spec: hedge(*a)) for name, spec in HEDGE_VARIANTS.items()}
 
 
 def hay_bale(rotated=False):
@@ -300,22 +456,8 @@ def tractor():
     return m
 
 
-def hedge_long():
-    """A hedgerow (3.8 m long, 2.9 m tall): overlapping leaf blobs on a few trunks, so it blocks sight and movement."""
-    m = MeshData()
-    for i in range(8):
-        x = -1.65 + i * .471
-        m.cylinder((x, 0, 0), .07, .8, 'bark', segments=5, caps=(False, False))
-    for i in range(8):
-        x = -1.65 + i * .471
-        for j, (y, r) in enumerate(((.85, .5), (1.55, .5), (2.25, .46))):
-            off = .12 if (i + j) % 2 else -.12
-            m.sphere((x, y, off * .6), r, 'leaves_oak' if (i + j) % 2 == 0 else 'leaves_oak_b', rings=3, segments=6, squash=1.05)
-    return m
-
-
 FARM_BUILDERS = {
-    'hedge_long': hedge_long,
+    **FOLIAGE_BUILDERS,
     'tree_oak': lambda: tree_oak(1.0, 0),
     'tree_oak_small': lambda: tree_oak(.74, 1),
     'tree_pine': tree_pine,

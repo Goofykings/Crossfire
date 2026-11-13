@@ -207,6 +207,8 @@ export class MaterialLibrary {
 
   /** Materials that should not cast shadows (transparent, emissive or too small to matter). */
   static readonly NO_SHADOW = new Set([
+    // wall ivy: thousands of thin cards on the Farmstead perimeter wall (see MapManager)
+    'leaf_ivy', 'leaf_ivy_lite',
     'glass', 'glass_shop', 'soil', 'flowers', 'foliage', 'lantern_glass', 'team_blue_glow', 'team_red_glow',
     'sign_blue', 'sign_red', 'slabs_inlay', 'stone_inlay', 'water', 'frame_white', 'frame_dark', 'produce', 'shop_sign', 'copper',
     // Industrial Complex / Modern City: glazing, paint and stain decals, lamps, and the alpha-tested chain-link mesh

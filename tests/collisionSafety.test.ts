@@ -60,9 +60,13 @@ describe.each(MAP_IDS)('%s actual map safety', id => {
       // slab pieces, where an exact point probe can fall between boxes by a rounding error).
       expect(world.groundHeight(x,z,.001,well ? 1.01 : .001)).toBeGreaterThanOrEqual((well ? well.floor : layout.ground.baseHeight) - 1e-9);
     }
-    const boundaries = [...world.all()].filter(c => c.tag === 'boundary');
-    expect(boundaries).toHaveLength(4);
-    for (const c of boundaries) expect(Math.min(c.hx,c.hz)).toBeGreaterThanOrEqual(1);
+    // The Farmstead's boundary is its visible stone wall (sections, piers, plinths: 0.9 m thick, see farmPerimeter.test.ts);
+    // every other map keeps the four invisible slabs.
+    const wall = !!layout.farm?.perimeter;
+    const boundaries = [...world.all()].filter(c => wall ? c.tag.startsWith('farm:perimeter:') : c.tag === 'boundary');
+    if (wall) expect(boundaries.length).toBeGreaterThanOrEqual(4); else expect(boundaries).toHaveLength(4);
+    for (const c of boundaries) expect(Math.min(c.hx,c.hz)).toBeGreaterThanOrEqual(wall ? .45 : 1);
+    expect([...world.all()].filter(c => c.tag === 'boundary')).toHaveLength(wall ? 0 : 4);
     for (let d = -1; d <= 1; d += .1) {
       for (const [dx,dz] of [[100,d*25],[-100,d*25],[d*25,100],[d*25,-100]]) {
         // Isolate actual perimeter from intervening buildings, retaining authored transforms.

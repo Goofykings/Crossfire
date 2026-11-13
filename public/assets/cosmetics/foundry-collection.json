@@ -46,7 +46,7 @@
         "thirdPersonPreset": "WEAPON_HOLDS.rifle"
       },
       "baseModel": "assets/models/shared/weapons/rifle.glb",
-      "baseSha256": "2a31589123b3c25a5857fd874384d7649cce0c6a6e842566885e082b55a463c6"
+      "baseSha256": "82bb04e49ed8d4230a8ef6d6de6fdeb4c30a74bb15c4ad0cd05f99f742e3e035"
     },
     {
       "catalogEntry": {
@@ -137,7 +137,7 @@
         "thirdPersonPreset": "WEAPON_HOLDS.shotgun"
       },
       "baseModel": "assets/models/shared/weapons/shotgun.glb",
-      "baseSha256": "744f6ea0defa6678d4ae8c9beae595369cf9edd63563b2fbec2a1d6f6a628e91"
+      "baseSha256": "50326dfb6b6415dfa83c15dd0077db814941875b90cb8ac0602d7b4fb43f1312"
     },
     {
       "catalogEntry": {

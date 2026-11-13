@@ -1,5 +1,6 @@
 import {texturesReady} from '../core/assetReadiness';
 import { loadContainer } from '../core/loadContainer';
+import { normalizeWeaponMeshes } from '../rendering/CosmeticAssets';
 import {
   Color3,
   Color4,
@@ -160,6 +161,7 @@ export class Effects {
   async loadCasings(materials: MaterialLibrary, signal?: AbortSignal): Promise<void> {
     const c = await loadContainer(assetUrl('assets/models/shared/weapons/casings.glb'), this.scene, signal);
     this.casingContainer = c;
+    normalizeWeaponMeshes(c);
     c.addAllToScene();
     for (const m of c.meshes) {
       if (m.getTotalVertices() === 0) continue;

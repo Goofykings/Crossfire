@@ -1,3 +1,4 @@
+import {username} from './Username';
 import { assetUrl } from '../core/assets';
 import { PERIODS, statRatios, type StatsPeriod, type StatsMetric, type LeaderboardView, type PersonalStats } from '../../shared/statistics';
 const node=<K extends keyof HTMLElementTagNameMap>(tag:K,cls='',text='')=>{const e=document.createElement(tag);e.className=cls;e.textContent=text;return e;};
@@ -51,7 +52,7 @@ export class LeaderboardPage {
       if(!this.opened||this.controller!==controller||controller.signal.aborted)return;
       this.personal=personal;this.renderPersonal();this.rows.replaceChildren();
       for(const row of board.rows){const tr=node('tr',row.local?'local':'');
-        tr.append(node('td','',`#${row.rank}`),node('td','player-name',row.name),node('td','',number.format(row.value)));this.rows.append(tr);}
+        tr.append(node('td','',`#${row.rank}`),username(node('td','player-name'),row.name,row.developer),node('td','',number.format(row.value)));this.rows.append(tr);}
       if(board.own&&board.own.rank>10)this.own.textContent=`Your rank: #${number.format(board.own.rank)}  ${number.format(board.own.value)}`;
       this.status.textContent=board.rows.length?'':'No statistics yet for this selection.';
     }catch(error){if(this.opened&&this.controller===controller)this.status.textContent=controller.signal.aborted?'Request timed out. Select Refresh to retry.':(error as Error).message;}

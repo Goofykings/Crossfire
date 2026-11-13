@@ -7,6 +7,11 @@ import type { Vec3 } from '../src/player/PlayerController';
 export function unsafeMovement(position: Vec3, layout: MapLayout): string | null {
   const { x, y, z } = position;
   if (![x, y, z].every(Number.isFinite)) return 'non_finite';
+  // Stone and visible fence extensions normally contain reachable roof routes.
+  // Keep authoritative recovery at that boundary for an already invalid position;
+  // no invisible tall collider or different client-only clamp is added.
+  const perimeter=layout.farm?.perimeter?.inner;
+  if(perimeter&&(x<perimeter[0]||z<perimeter[1]||x>perimeter[2]||z>perimeter[3]))return 'outside_perimeter';
   const [minX, minZ, maxX, maxZ] = layout.playArea;
   if (x < minX - 1 || x > maxX + 1 || z < minZ - 1 || z > maxZ + 1) return 'outside_perimeter';
   // Underground passages are legal ground below the street.

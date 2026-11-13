@@ -1,3 +1,32 @@
+## Weapon rendering fix and crate odds (2026-11-12)
+
+See docs/WEAPON_RENDERING.md and the newest PROGRESS entry. Firearm GLBs carry RGBA vertex colours, which Babylon turns into
+`hasVertexAlpha`, which alpha-blends every part without depth writes (parts showed through each other). `normalizeWeaponMeshes`
+(src/rendering/CosmeticAssets.ts, run by `loadCosmeticAsset` and for the grenade/casing models) switches it off where alpha is 1 and
+hides `ANIMATION_ONLY_NODES` (`shell`); never remove it, never "fix" a see-through weapon with double-sided materials or a disabled
+depth test, and give any new GLB loader the same call. tests/weaponRendering.test.ts guards it. `solid()` in weapon.py now winds
+edge faces from the edge itself, so concave profiles are allowed again; run `python -B -I tools/weapon_face_classes.py` (must say
+FLIPPED FACES 0). Glass panes use `glass()` (second pane 0.4 mm behind: coincident duplicates are welded away). Review in Chrome with
+tools/review-weapon-angles.mjs (+ tools/preview-lab.html) against the dev server. This SUPERSEDES the "keep Epic skins out of the crate"
+rule below: CRATE odds are Uncommon 50 / Rare 37 / Epic 10 / Legendary 3 and the Epic families (`crate: true` in EXTRA_COLLECTIONS) are
+in the pool (57 items); Blossom, Carbon Fiber and Frosted are still not. The Shop shows the crate image, the button and the odds only (no
+contents list). No commit/push/deploy.
+
+## Farmstead perimeter wall and leaf-card foliage (2026-11-12)
+
+See docs/FARMSTEAD.md "Perimeter wall, ivy and foliage rebuild" and the newest PROGRESS entry. The wall is the Farmstead's real
+boundary: `perimeter.py` builds one spec (`farm.perimeter`) that drives the stone mesh, the vines (`perimeter_ivy.py`), the collision boxes
+(`farmstead.collision_boxes`; `collision_gen` adds NO `boundary` slabs for this map) and the tactical/navigation footprints. Keep coping and
+pier caps behind the inner face and the relief inward-only (bullets use the boxes); wall UVs come from the ideal face plane, never from a
+tilted quad's own normal. Foliage (`foliage.py`) is leaf-card volumes: shingle-style cards on a surface around a dark opaque `leaf_core`
+(bullets stop there), detailed set plus a lite twin (`*_lite`, different cutoff and roughness or the batcher merges them), drawn by
+`FoliageLod` (lite in Chromebook mode and beyond 42 m). Never make leaf materials glossy (roughness below about 0.9 gives a pale specular
+veil) and never let wall ivy receive or cast shadows. Hedges are eight variants (`HEDGE_VARIANTS` + catalog colliders = envelope); the
+margin-strip hedges must stay 4.2 m (4.7 m south) so they close the strips; keep each at least 2.3 m tall (sightlines, tests/mapOverhaul).
+The 2026-11-10 Farmstead polish (lamps, puddles, doorway audit) was reverted by commit 48a13dd and is NOT in the tree. Rebuild:
+`python -B -I tools/layout_farm.py --write`, Blender `--only materials,props,farm` (bytecode guard), `node tools/generate-bullet-surfaces.mjs`,
+`npm test --prefix server`. Review: tools/farm-perimeter-shots.mjs, tools/farm-wall-impacts.mjs. No commit/push/deploy.
+
 <<<<<<< HEAD
 ## New weapon skins and default appearances (2026-11-10)
 

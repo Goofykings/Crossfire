@@ -141,10 +141,10 @@ PROPS = {
     "car_white": {"size": [2.0, 1.42, 4.6], "collider": [1.8, 1.42, 4.5]},
     "van_white": {"size": [2.04, 2.25, 5.3], "collider": [1.98, 2.25, 5.25]},
     # --- Farmstead (props_farm.py) ---
-    "tree_oak": {"size": [4.8, 7.4, 4.8], "collider": [0.62, 3.2, 0.62]},
-    "tree_oak_small": {"size": [3.6, 5.6, 3.6], "collider": [0.5, 2.4, 0.5]},
-    "tree_pine": {"size": [3.6, 8.0, 3.6], "collider": [0.5, 3.2, 0.5]},
-    "bush": {"size": [1.4, 0.95, 1.2], "collider": [0.9, 0.9, 0.9]},
+    "tree_oak": {"size": [6, 7.5, 5.7], "collider": [0.62, 3.2, 0.62]},
+    "tree_oak_small": {"size": [4.4, 5.5, 4.3], "collider": [0.5, 2.4, 0.5]},
+    "tree_pine": {"size": [3.8, 8, 3.9], "collider": [0.5, 3.2, 0.5]},
+    "bush": {"size": [1.8, 1.2, 1.6], "collider": [0.9, 0.9, 0.9]},
     "hay_bale": {"size": [1.1, 0.5, 0.55], "collider": [1.1, 0.5, 0.55]},
     "hay_stack": {"size": [2.2, 1.0, 0.55], "collider": [2.2, 1.0, 0.55]},
     "water_trough": {"size": [2.24, 0.66, 0.74], "collider": [2.24, 0.62, 0.74]},
@@ -161,7 +161,15 @@ PROPS = {
     "storage_shelf": {"size": [2.0, 1.9, 0.5], "collider": [2.0, 1.9, 0.5]},
     "bunk_bed": {"size": [2.0, 1.9, 0.95], "collider": [2.0, 1.9, 0.95]},
     "tractor": {"size": [2.0, 2.45, 3.7], "collider": [1.8, 1.7, 3.4]},
-    "hedge_long": {"size": [3.8, 2.9, 0.95], "collider": [3.8, 3.0, 0.85]},
+    # Hedgerows (props_farm.HEDGE_VARIANTS): the collider is the dense envelope (length, height, thickness); leaves reach 20 cm past it
+    "hedge_long": {"size": [4.2, 3.1, 1.4], "collider": [3.8, 2.9, 0.95]},
+    "hedge_tall": {"size": [3.8, 3.9, 1.5], "collider": [3.4, 3.7, 1.05]},
+    "hedge_low": {"size": [4.3, 2.6, 1.3], "collider": [3.9, 2.35, 0.9]},
+    "hedge_wide": {"size": [4.6, 3, 1.9], "collider": [4.2, 2.8, 1.5]},
+    "hedge_thin": {"size": [3.6, 2.9, 1.1], "collider": [3.2, 2.7, 0.7]},
+    "hedge_short": {"size": [3, 2.8, 1.4], "collider": [2.6, 2.6, 0.95]},
+    "hedge_block": {"size": [4.6, 3.3, 2.3], "collider": [4.2, 3.1, 1.9]},
+    "hedge_run": {"size": [5.1, 2.8, 1.4], "collider": [4.7, 2.6, 1]},
 }
 
 # Modular kit pieces exported for future maps (not instanced by the European Town layout itself).

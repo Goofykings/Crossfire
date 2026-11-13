@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {harness,until,self,frames,ack,aim,origin} from './room-harness.mjs';
-import {cosmetic} from '../../shared/cosmetics.ts';
+import {cosmetic,crateItems} from '../../shared/cosmetics.ts';
 const defaults=['default-rifle','default-smg','default-sniper','default-shotgun','default-semi-sniper','default-melee'];
 
 test('cosmetics: real capability inventory, starter migration, strict equip, unaffordable crate, wallet/statistics preservation',{timeout:30000},async t=>{
@@ -31,13 +31,13 @@ test('cosmetics: both public and custom-room snapshots carry validated equipment
 });
 
 test('cosmetics: server crate spends gems and grants one unowned item atomically, never duplicates',{timeout:60000},async t=>{
- const h=await harness(t),token=await h.profile();await h.central.legacyWalletForStatisticsTest(token,650);
+ const h=await harness(t),token=await h.profile();await h.central.legacyWalletForStatisticsTest(token,650);await h.central.saleForTest(false);
  const request=async(path,body)=>{const r=await fetch(new URL(path,h.base),{method:body?'POST':'GET',headers:{Origin:origin,Authorization:'Bearer '+token,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,data:await r.json()};};
  const stats=(await h.api('/stats',token)).data.totals;
  for(const body of [{version:1,id:'rich-rifle'},{version:1,rarity:'legendary'},{version:2},{version:1,gems:0}])assert.equal((await request('/cosmetics/open',body)).status,400,JSON.stringify(body));
  const opened=[];
  for(const left of [400,150]){const r=await request('/cosmetics/open',{version:1});assert.equal(r.status,200);assert.equal(r.data.gems,left);
-  assert.match(r.data.item,/^(green-camo|blue-camo|red-camo|marble|rainbow-glow|rich)-(rifle|smg|sniper|shotgun|semi-sniper|melee)$/);assert.ok(!opened.includes(r.data.item),'no duplicate');opened.push(r.data.item);
+  assert.ok(crateItems().some(c=>c.id===r.data.item));assert.ok(!opened.includes(r.data.item),'no duplicate');opened.push(r.data.item);
   assert.ok(r.data.inventory.owned.includes(r.data.item));assert.equal(r.data.inventory.version,1);}
  const broke=await request('/cosmetics/open',{version:1});assert.equal(broke.status,409);
  const inv=await request('/cosmetics');for(const id of opened)assert.ok(inv.data.owned.includes(id));assert.equal(inv.data.owned.length,defaults.length+2);
@@ -49,20 +49,20 @@ test('cosmetics: server crate spends gems and grants one unowned item atomically
 // Test-only grants feed the normal authenticated equip endpoint; no gameplay endpoint grants skins.
 test('cosmetics: all equipped firearms and daggers survive actual eliminations, respawns and resumed remote snapshots',{timeout:60000},async t=>{
  const h=await harness(t),token=await h.profile(),otherToken=await h.profile();
- const ids=['hydro-nebula-rifle','frosted-smg','darkness-sniper','blossom-shotgun','carbon-fiber-semi-sniper','darkness-melee'];
+ const ids=['hydro-nebula-rifle','frosted-smg','rainbow-glow-sniper','blossom-shotgun','carbon-fiber-semi-sniper','rainbow-glow-melee'];
  await h.central.inventoryForTest(token,ids);
  const equip=(credential,id)=>fetch(new URL('/cosmetics/equip',h.base),{method:'POST',headers:{Origin:origin,Authorization:'Bearer '+credential,'Content-Type':'application/json'},body:JSON.stringify({version:1,id})});
  for(const id of ids)assert.equal((await equip(token,id)).status,200);
- assert.equal((await equip(otherToken,'darkness-melee')).status,403,'ownership still required');
+ assert.equal((await equip(otherToken,'rainbow-glow-melee')).status,403,'ownership still required');
  const ad=await h.create(token),room=h.room(ad.room.id);let a=await h.open(ad,token);const b=await h.open(await h.admission(otherToken,{roomId:ad.room.id}),otherToken);await h.spawn(b,'sniper');
  const arena=await room.directionalArenaForTest();let life=0;
  for(const id of ids.slice(0,5)){
   const weapon=cosmetic(id).weapon;
   if(self(a).death)await until(()=>Date.now()>=self(a).death.respawnAt,'authoritative respawn eligibility');
   await h.spawn(a,weapon);assert.ok(self(a).life>life);life=self(a).life;
-  await until(()=>b.snapshot.players.some(p=>p.id===a.id&&p.life===life&&p.cosmeticId===id&&p.meleeCosmeticId==='darkness-melee'),'remote equipped new life');
-  assert.equal(self(a).cosmeticId,id);assert.equal(self(a).meleeCosmeticId,'darkness-melee');
-  const old=a;a=await h.open(ad,token,{resumeToken:a.token,roomTicket:undefined});assert.equal(a.id,old.id);assert.equal(self(a).life,life);assert.equal(self(a).cosmeticId,id);assert.equal(self(a).meleeCosmeticId,'darkness-melee');
+  await until(()=>b.snapshot.players.some(p=>p.id===a.id&&p.life===life&&p.cosmeticId===id&&p.meleeCosmeticId==='rainbow-glow-melee'),'remote equipped new life');
+  assert.equal(self(a).cosmeticId,id);assert.equal(self(a).meleeCosmeticId,'rainbow-glow-melee');
+  const old=a;a=await h.open(ad,token,{resumeToken:a.token,roomTicket:undefined});assert.equal(a.id,old.id);assert.equal(self(a).life,life);assert.equal(self(a).cosmeticId,id);assert.equal(self(a).meleeCosmeticId,'rainbow-glow-melee');
   assert.equal(a.snapshot.players.filter(p=>p.id===a.id).length,1);
   a.position=arena.center;b.position=arena.sources.front;
   await room.placeManyForCombatTest([{id:a.id,pos:a.position},{id:b.id,pos:b.position}]);
@@ -70,7 +70,7 @@ test('cosmetics: all equipped firearms and daggers survive actual eliminations, 
   const look=await aim(b,a),mark=b.messages.length;frames(b,{...look,trigger:true});await ack(b);
   await until(()=>!self(a).alive,'actual lethal sniper hit');
   assert.ok(b.messages.slice(mark).some(m=>m.type==='shot'&&m.shot.hits.some(hit=>hit.id===a.id&&hit.killed)),'real confirmed lethal hit');
-  assert.equal(self(a).cosmeticId,id);assert.equal(self(a).meleeCosmeticId,'darkness-melee');
+  assert.equal(self(a).cosmeticId,id);assert.equal(self(a).meleeCosmeticId,'rainbow-glow-melee');
  }
  await h.leave(a);await h.leave(b);
 });

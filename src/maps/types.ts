@@ -138,6 +138,14 @@ export interface MapLayout {
     solids: { id: string; kind: string; rect: Rect }[];
     /** Street to shelter-floor polylines of each underground entrance (tests, Practice debugging). */
     entranceWalks: Record<string, [number, number, number][]>;
+    /** The visible stone perimeter wall (blender/scripts/lib/perimeter.py): the map boundary and its collision. */
+    perimeter?: {
+      version: number; inner: [number, number, number, number]; thickness: number; plinth: [number, number]; material: string;
+      corners: { id: string; side: string; rect: Rect; top: number }[];
+      piers: { id: string; side: string; a: [number, number]; rect: Rect; top: number }[];
+      sections: { id: string; side: string; a: [number, number]; rect: Rect; top: number; seed: number }[];
+      extensions?: { id: string; side: string; a: [number, number]; base: number; top: number }[];
+    };
   };
   buildings: Building[];
   walls: { id: string; rect: Rect; height: number; style: string; gates: { rect: Rect }[] }[];
@@ -168,6 +176,7 @@ export interface PropCatalog {
 }
 
 export interface CollisionFile {
+  roofSurfaces?:{tag:string;mesh:import('../physics/BulletMesh').BulletMesh}[];
   version: number;
   map: string;
   boxes: { c: Vec3Tuple; h: Vec3Tuple; yaw: number; tag: string }[];

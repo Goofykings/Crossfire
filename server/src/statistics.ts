@@ -9,7 +9,7 @@ export class Statistics {
   private readonly records = new Map<string,StatisticsRecord>();
   private readonly dirty = new Map<string,number>();
   private generation=0;
-  constructor(private readonly storage: DurableObjectStorage) {
+  constructor(private readonly storage: DurableObjectStorage,private readonly developers:()=>readonly string[]=()=>[]) {
     storage.sql.exec(`CREATE TABLE IF NOT EXISTS statistics_rankings (id TEXT NOT NULL, name TEXT NOT NULL, revision INTEGER NOT NULL,
       period TEXT NOT NULL, start INTEGER NOT NULL, kills INTEGER NOT NULL, points INTEGER NOT NULL, wins INTEGER NOT NULL, PRIMARY KEY(period,start,id))`);
     storage.sql.exec('CREATE INDEX IF NOT EXISTS statistics_identity ON statistics_rankings(id)');
@@ -83,13 +83,14 @@ export class Statistics {
     await this.project();
     const start=periodStart(period,now);
     // SQL column names come only from the enum validated above. Values use bindings.
+    const developerIds=new Set((await Promise.all(this.developers().map(id=>this.load(id)))).flatMap(p=>p?[p.id]:[]));
     const rows=this.storage.sql.exec<{id:string;name:string;value:number}>(`SELECT id,name,${metric} AS value FROM statistics_rankings
       WHERE period=? AND start=? AND ${metric}>0 ORDER BY ${metric} DESC,id ASC LIMIT 10`,period,start).toArray()
-      .map((r,i):RankingRow=>({...r,rank:i+1,local:r.id===owner?.id}));
+      .map((r,i):RankingRow=>({...r,rank:i+1,local:r.id===owner?.id,developer:developerIds.has(r.id)}));
     let own:RankingRow|null=null;
     if(owner){const values=period==='all'?owner.totals:owner[period].start===start?owner[period]:null,value=values?.[metric]??0;
       if(value>0){const ahead=this.storage.sql.exec<{n:number}>(`SELECT COUNT(*) AS n FROM statistics_rankings WHERE period=? AND start=? AND (${metric}>? OR (${metric}=? AND id<?))`,period,start,value,value,owner.id).toArray()[0].n;
-        own={id:owner.id,name:owner.name,value,rank:ahead+1,local:true};}}
+        own={id:owner.id,name:owner.name,value,rank:ahead+1,local:true,developer:developerIds.has(owner.id)};}}
     return Response.json({version:STATISTICS_API_VERSION,period,metric,start,serverTime:now,rows,own});
   }
 }

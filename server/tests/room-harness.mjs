@@ -15,7 +15,7 @@ export async function harness(t,bindings={}){
  let base=(await mf.ready).href;const clients=[],stubs=[];
  const room=id=>{const r=testRoom(mf, id==='public-main'?id:'room:'+id);stubs.push(r);return r;};
  let central=room('public-main');
- async function restart(){for(const c of clients){clearInterval(c.timer);if(c.ws.readyState===1){c.ws.close();await until(()=>c.ws.readyState===3,'transport close');}}for(const r of stubs)r[Symbol.dispose]?.();stubs.length=0;await mf.dispose();mf=new Miniflare(options);base=(await mf.ready).href;central=room('public-main');}
+ async function restart(bindings={}){for(const c of clients){clearInterval(c.timer);if(c.ws.readyState===1){c.ws.close();await until(()=>c.ws.readyState===3,'transport close');}}for(const r of stubs)r[Symbol.dispose]?.();stubs.length=0;await mf.dispose();for(const [key,value]of Object.entries(bindings))options.workers[0].config.env[key]={type:'text',value};mf=new Miniflare(options);base=(await mf.ready).href;central=room('public-main');}
  t.after(async()=>{for(const c of clients){clearInterval(c.timer);c.ws.terminate();}for(const r of stubs)r[Symbol.dispose]?.();await mf.dispose();});
  async function api(path,token,body){const response=await fetch(new URL(path,base),{headers:{Origin:origin,...(token?{Authorization:'Bearer '+token}:{}),...(body?{'Content-Type':'application/json'}:{})},...(body?{method:'POST',body:JSON.stringify({v,...body})}:{})});return {status:response.status,data:await response.json()};}
  async function profile(){const r=await fetch(new URL('/profile',base),{method:'POST',headers:{Origin:origin}});assert.equal(r.status,201);return(await r.json()).credential;}

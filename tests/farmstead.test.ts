@@ -180,7 +180,7 @@ describe('farmstead buildings', () => {
       const solids = collision.boxes.filter((b) => b.tag.startsWith(`farm:${s.id}:`));
       expect(solids.filter((b) => b.tag.endsWith(':post')), `${s.id} posts`).toHaveLength(4);
       expect(solids.filter((b) => b.tag.endsWith(':floor') || b.tag.endsWith(':ceiling')), `${s.id} slabs`).toHaveLength(2);
-      expect(solids, `${s.id} has nothing else`).toHaveLength(6);
+      expect(solids.filter(b=>!b.tag.includes(':roof:')), `${s.id} only posts and slabs below the roof`).toHaveLength(6);expect(solids.filter(b=>b.tag.includes(':roof:')).length).toBeGreaterThan(0);
       // each post is a slim column at a corner, so every side is open between them
       for (const post of solids.filter((b) => b.tag.endsWith(':post'))) expect(Math.max(post.h[0], post.h[2])).toBeLessThan(0.2);
       // a walker crosses each side's open middle into the shack's footprint (props off to one side)

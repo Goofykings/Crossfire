@@ -1,3 +1,181 @@
+# Cosmetics, hourly sales, rewards, Developer tags and Farmstead roofs (2026-11-12)
+
+Completed and verified locally. Nothing committed, pushed or deployed.
+Full implementation, changed-file inventory, configuration and release notes:
+`docs/ECONOMY_COSMETIC_UPDATE.md`. Earlier uncommitted weapon/foliage work is preserved.
+
+- Existing cosmetic IDs/ownership preserved: Blossom/Frosted Legendary and crate eligible, Abyss/Nebula Uncommon,
+  Inferno Rare, existing Rainbow Glow Epic; crate tier odds remain 50/37/10/3. Darkness removed from registry,
+  equip/pools and its exclusive shader; inventory/session sanitization restores affected default slots only.
+  Retired completed receipts return an explicit no-charge conflict rather than rerolling rewards.
+- Canonical public-main persists current/next hourly 10-minute sale windows, random starts in minutes 0..50,
+  crypto-random prices 100..200 biased to mean ~167. Server-time offers/countdown, strikethrough 250, SALE badge;
+  backend quotes/atomic deduction/durable idempotent receipts enforce actual current price across expiry/restart.
+- New completed online match rewards: max(0,10*kills-3*deaths+team bonus). Winning first +25; winning second versus
+  losing first compare individual score for one +15 (tie neither); rank ties use immutable participant ID.
+  No old placement/multiplier on new rewards. Eligibility, Practice policy, balances, old outboxes and receipts preserved.
+- Backend-only Developer allowlist uses verified SHA-256 profile identities. Shared light-blue/glowing name+DEV helper
+  covers profile/home character, nametags, scoreboard/results, rankings, chat/feed and spectator displays.
+  Administrator must supply real IDs in `server/wrangler.jsonc` `DEVELOPER_ACCOUNT_IDS` (currently empty).
+  Obtain the existing account ID from the account-name tooltip or authenticated `/profile`; never publish its credential.
+- Duplicate-results root cause: retired sessions disappeared while their round-ledger rows survived, then re-entry
+  generated another participant ID. Verified re-entry now restores the canonical participant/counters/team/life and
+  issues a fresh connection token. Ledger migration merges only verified same-account disjoint rows; equal names stay distinct.
+- Match HUD is outside panel visibility: navigation now synchronously hides/resets it outside gameplay/spectating.
+  Original crossed-gun logo gains bounded accessible flashes/trails/recoil, quiet SFX and reduced-motion handling.
+- All nine Farmstead roof elements now have shared slope-following movement strips and exact bullet slabs/ridge caps.
+  Roof supports reach Practice navigation; an exposed existing bot firearm-clearance trap recovers using ordinary dagger
+  switching. Four affected boundary runs have visible metal fence extensions per user preference; visible bars and collision
+  are generated together, with real gaps for bullets. Strict roof/perimeter tests do not depend on out-of-bounds recovery.
+  An upstairs crate was shifted 35 cm to clear an eave. Layout validation: 253 props, 16 spawns, 12 targets, zero problems.
+- Confirmed elimination events capture validated equipped cosmetic ID/effect/victim position, including
+  `blossom-flower-burst` and `frosted-blizzard`. Bounded `game.legendaryEffects.onEffect` hook is ready for Claude;
+  elaborate particle animations intentionally remain separate. Existing Rich effects use the same confirmed metadata.
+- A full-suite run exposed a grenade test assuming elapsed time plus acknowledged batches proved a full held charge.
+  That is insufficient across the existing 400 ms missing-input cancellation. Test now observes retained authoritative
+  full-charge progress through read-only test RPC before release, preserving velocity assertions and gameplay rules.
+
+Verification:
+- `npm.cmd test -- --maxWorkers=2`: **1,080 passed, one existing skip**, 106 files, 342.31 s
+  (`test-results/economy-vitest-quiet.log`). Includes existing stale-life/previous-round snapshot guards.
+- Focused roof/perimeter/geometry tests: **32/32** after repairing overlapping fence/coping faces.
+- New real-Worker sale/developer/reconnect/roof cases plus both grenade/crouch cases: **5/5**.
+- Frontend production build with `BASE_PATH=/crossfire/`: passed, including TypeScript, 3,479 modules;
+  Worker typecheck and Wrangler dry-run build passed. Actual browser transport versus workerd protocol check: **1/1**.
+- Local Chrome component review: passed with real Worker identities, offers, snapshots and frozen results;
+  exact expiry, sale countdown, DEV color/badges, repeated results, same-name distinct participants,
+  immediate timer cleanup, logo keyboard/rapid-click/reduced-motion behavior and 800x600 layout.
+- Production Farmstead Practice review: five viewpoints in High and Chromebook modes, no page/asset errors,
+  no gameplay WebSocket. Final screenshots inspected. These are visual checks, not a Chromebook hardware benchmark.
+- Layout validator: zero problems; asset and cosmetic verification passed. Dedicated scaffold typecheck passed.
+- `npm.cmd --prefix server test`: **103/103 passed**, zero failures/cancellations/skips, 526.72 s
+  (`test-results/economy-backend-verified.log`). Includes all combat, grenade/crouch, assists, cosmetics,
+  sale/security, rooms, rewards, reconnect/retirement, movement/roofs, melee, statistics and Zone Control cases.
+
+Earlier overlapping build/browser/test runs produced resource-related animation/bot/protocol timeouts on this PC;
+the isolated frontend/protocol runs above pass without changing their timeouts or assertions. The final backend
+run is isolated too. The UI expiry review originally advanced ten minutes into the next valid hourly sale;
+its test clock now checks the exact confirmed expiry boundary instead. No product pricing rule was changed for that test.
+
+Release: shared protocol 28 requires matching frontend and actual gameplay backend, plus Farmstead assets.
+The current workflow deploys Pages only to a custom tunnel endpoint; it does not update the Worker automatically.
+Restart/release the backend serving that URL, verify `/health` protocol 28, then release the matching frontend when authorized.
+For Cloudflare, use `npx.cmd wrangler deploy` from `server/` when authorized; no DO reset, hosting/origin change or data wipe.
+Public-server/GitHub Actions validation and physical Chromebook hardware validation remain external checks.
+
+# Weapon rendering glitches and crate UI cleanup (2026-11-12)
+
+Visual only: combat, balance, protocol (v26), animations and the Worker's endpoints are untouched; nothing committed, pushed or deployed.
+Details: docs/WEAPON_RENDERING.md.
+
+Root causes
+- Every firearm was drawn through the transparent queue. Blender exports RGBA vertex colours, Babylon's glTF loader sets
+  `hasVertexAlpha`, and `needAlphaBlendingForMesh` then alpha-blends each mesh without depth writes, sorted back to front per mesh. Parts
+  overdrew each other by sort order: the AR's brass round showed through the receiver, the shotgun's loading shell and magazine ribs
+  showed through solid surfaces, details came and went while rotating. All contexts share the loader (first person, third person, Locker,
+  reveal, thumbnails). Found with a GL call log (blend on, depth mask off on opaque draws), a ray test and `needDepthPrePass` curing it.
+  Daggers have no vertex colours and were not affected. Fix: `normalizeWeaponMeshes` in the shared loader (vertex alpha that is 1
+  everywhere is switched off; real alpha kept), also applied to the grenade and casing models. No new materials, no double-sided
+  switch, no depth-test change.
+- Shotgun stock: `solid()` oriented edge faces by the profile centre, which is wrong at the reflex edge of a concave outline; the
+  underside notch was wound inside out. Edge faces now use the edge's own outward direction (tools/weapon_face_classes.py: 0 flipped
+  faces, was 1).
+- Optic glass (AR sight window, semi-auto sniper scope glass) was a single pane and vanished from the muzzle side; `glass()` adds a
+  second pane 0.4 mm behind (a coincident copy is welded away by the exporter).
+- The shell (`ANIMATION_ONLY_NODES`) is hidden by the loader for static views; WeaponView and CharacterWeapon still enable it per frame.
+
+Models and Locker
+- Regenerated rifle.glb, shotgun.glb, semi_sniper.glb (weapon.py); SMG, sniper, hands and daggers unchanged; Foundry base hashes refreshed.
+- CosmeticPreview: camera-following key light, depth planes fitted to the model (`minZ = radius * .05`, `maxZ = radius * 30`), `setAngles`
+  and `debug` review hooks; the model is never transformed, one scene per preview, disposed on close.
+
+Crate and Shop (the user asked for the real odds to change)
+- `CRATE.distribution` = Uncommon 50, Rare 37, Epic 10, Legendary 3. Hydro Dip Nebula/Inferno/Abyss and Darkness carry `crate: true`
+  and join the pool (57 items); Blossom, Carbon Fiber and Frosted stay outside. `drawCrate`, prices and endpoints unchanged.
+- The Shop's crate-contents list, heading, container and CSS are gone; the crate image, button with price, status and the ODDS block
+  (from `CRATE.distribution`, existing rarity colours) remain. Docs (CRATE_REVEAL, WEAPON_SKINS), tests and tools updated.
+
+Tools and tests
+- tools/preview-lab.html/.ts (real CosmeticPreview, per-triangle culling diagnostic), tools/review-weapon-angles.mjs (ten angles, rotation
+  sweep, contact sheets, `--diagnose`), tools/weapon_face_classes.py, tools/weapon_mesh_audit.py, new tests/weaponRendering.test.ts
+  (10 tests; fails on the original defect when the fix is disabled).
+- vitest: 103 files passed, 1 skipped / 1070 tests passed. Server: npm test --prefix server 100 of 100 (the melee reward test now expects
+  63 owned items). typecheck, assets:verify, verify-cosmetics and the production build pass.
+
+Evidence
+- Chrome: all 78 cosmetics at the ten required angles without console errors; defaults also through the 20..335 degree sweep; the
+  culling on/off difference of the AR fell from 26,253 px to at most 133 px (remaining differences are open tube ends and rims).
+  tools/skins-game-test.mjs 25 of 25 in the real game. Shop screenshot shows the crate and the four odds only.
+
+Remaining limits
+- Not run: tools/crate-browser-test.mjs (needs Worker + dist; updated for the new odds and the missing list); a frame-by-frame pass of third
+  person, Shop reveal and Chromebook mode (covered by the shared-loader test and the in-game test); real Chromebook timings.
+- Not every one of the 78 sheets was inspected by eye (errors and pixel diagnostics were); lab top/bottom views crop the dagger pair.
+- Frontend and Worker need a matching release (shared crate pool and odds changed).
+
+# Farmstead perimeter wall, ivy and leaf-card foliage (2026-11-12)
+
+The Farmstead's invisible boundary is replaced by a large, old, overgrown fieldstone wall that is the real boundary, and every tree,
+bush and hedge was rebuilt as leaf-card volumes that look leafy from every side. Buildings, the storm shelter and its entrances, paths,
+spawns, Zone Control squares, weapons and movement are unchanged; protocol (v26) and Cloudflare configuration are untouched. No commit,
+push or deployment. Details: docs/FARMSTEAD.md "Perimeter wall, ivy and foliage rebuild".
+
+Baseline note: commit 48a13dd ("Restore Crossfire to cc0c56a") had removed the 2026-11-10 Farmstead polish (leaf sprays, FoliageLod,
+shelter lamps and puddles, doorway audit) and the working tree holds the older sphere-blob foliage, so the brief's "new leaves" were not
+in the tree. Only the foliage pieces were brought back (the leaf atlas `bush_leaves.png` byte for byte from d6b1d4f, its generator in
+tools/make_farm_textures.py, `FoliageLod`, the `leaf_*` materials) and rebuilt; the shelter lamps, puddles, doorway audit and the other
+reverted work were NOT restored.
+
+Wall
+- Inner face where the old slabs stood (x -37.5..37.5, z -47.5..45.5), 0.9 m thick, section tops 3.10 to 3.42 m (house/cabin/barn walls
+  3.4 m), 32 buttress piers and 4 corner piers, plinth, chipped coping stones, fallen stones. 11.7k triangles; irregular-course stone texture
+  set (blocks about 49 x 30 cm, dark mortar, cracks, lichen, moss) with normal and ORM maps, vertex-colour dirt/moss/streaks.
+- `perimeter.py` is the single source: one spec (`layout.json` `farm.perimeter`) drives the mesh, the vines, the 108 collision boxes and
+  the tactical/navigation footprints.
+
+Collision
+- Sections, piers and plinths are exact boxes (2 cm overlaps, sunk 2 m); coping/caps never reach past the inner face and the relief is
+  inward only (at most 2.5 cm), so bullet marks sit on the drawn stone. No `boundary` slabs remain for this map (other maps keep theirs);
+  a rising shot over the wall hits nothing. Runs and jumps from the ground and from every deck, balcony, loft and railing top near the wall
+  cannot get over or through (tests/farmPerimeter.test.ts).
+
+Foliage
+- Leaf cards rooted on a surface and laid along it like shingles (a quarter stick out as fuzz) around a dark opaque core; all sets
+  double sided. Eight hedge shapes (lengths 2.6 to 4.7 m, heights 2.35 to 3.7 m, thickness 0.7 to 1.9 m) built section by section with uneven
+  tops, rounded or squared ends, thinner stretches and gaps in the leaf cover; the margin-strip hedges still close the strips; sightlines
+  unchanged. Oaks (8 lobes), pines (five drooping tiers) and bushes rebuilt the same way; envelopes and catalogue sizes updated.
+- Wall ivy: 6.9k cards (lite 3.0k) from vines that climb, branch, wrap piers and corners and spill over the coping, patchy by design, plus
+  weeds, moss and grass tufts. New atlas `ivy_leaves.png` (vine, dense patch, weed tuft, moss tuft).
+
+Performance
+- Detailed and lite twin sets; `FoliageLod` draws the lite sets in Chromebook mode and beyond 42 m (per 40 m cell). Ivy does not cast or
+  receive shadows. The wall and its collision stay in Chromebook mode (256 px stone, no normal map).
+- terrain.glb 2.5 -> 5.0 MB.
+
+Found and fixed while verifying
+- Wall texture steps: relief quads tilt by about a degree, which rotated the box-projected UV basis and shifted stones by metres; the faces
+  now carry UVs from the ideal plane.
+- A pale veil on the ivy in the High preset: specular sheen on the glossy cards (roughness 0.6); roughness is now 0.96 to 1.
+- Hedge top steps vanished under cards bridging from a taller neighbour; cards now stay over their own section.
+- Pier caps had no underside (see-through lines); closed.
+- Committed merge-conflict markers in generated files (public/assets/asset-manifest.json, docs/ASSET_MANIFEST.md) crashed the Blender
+  asset generator; the HEAD side was kept (they are regenerated). CLAUDE.md and PROGRESS.md still contain their own markers.
+- Hedge colliders are now the full envelope; one doorway-adjacent hedge moved 0.5 m so the sniper door test keeps its lane.
+
+Tests and evidence
+- vitest: full suite, 102 files / 1060 tests, including the new tests/farmPerimeter.test.ts (13: layout, closed ring, no overlaps, runs and jumps from ground and every deck/balcony/loft/railing top, bullets, margin strips, hedge shapes) and tests/farmFoliage.test.ts (54: materials, view coverage, silhouette fill, envelopes, hedge tops, ivy placement and patchiness, FoliageLod); collisionSafety and the geometry audit were updated for the wall and the leaf cards. Server: npm test --prefix server, 100 of 100 (rebuilds the Worker bundle). typecheck, assets:verify and the production build pass.
+- Chrome (dev server): tools/farm-perimeter-shots.mjs (wall from inside, all four corners, piers, plinth, coping, ivy, aerials; hedges
+  broadside, end-on and from above; oaks and pines from every side and below; the three portals and the house stair; Chromebook mode),
+  tools/farm-wall-impacts.mjs (bullet marks on every wall, a pier and a corner, High and Chromebook), no console errors.
+
+Remaining limits
+- Chromebook frame times on a real Chromebook were not measured (headless Chrome on the Intel iGPU only); the wall and foliage were
+  checked visually in Chromebook mode.
+- Shadows on the stone are the map's single directional shadow; the foliage on the wall has none (vertex shading only).
+- Bullets stop on the opaque cores, not on the outer leaf cards (as before for bushes and hedges).
+- Public Cloudflare behaviour was not validated; the frontend assets and the Worker need a matching release (layout, collision,
+  prop catalogue and bullet surfaces changed).
+
 # Chromebook responsiveness, prediction and combat stalls (2026-11-12)
 
 Completed the focused request without changing authoritative damage, movement

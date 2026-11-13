@@ -197,6 +197,8 @@ function findOverlaps(tris: Tri[]): Pair[] {
         const A = tris[ia], B = tris[ib];
         // same piece, same material: identical UVs and colours, so the pair cannot show a visible fight
         if (A.entry === B.entry && A.mat === B.mat) continue;
+        // alpha-cut leaf cards overlap by design (foliage is layered cards), and each foliage set has a lite twin that is never drawn together with it
+        if (A.mat.startsWith('leaf_') && B.mat.startsWith('leaf_')) continue;
         const dot = A.n[0] * B.n[0] + A.n[1] * B.n[1] + A.n[2] * B.n[2];
         if (dot < 0.9995) continue; // only same-facing pairs fight; back-to-back faces are culled from one side
         if (A.lo[0] > B.hi[0] || A.hi[0] < B.lo[0] || A.lo[1] > B.hi[1] || A.hi[1] < B.lo[1] || A.lo[2] > B.hi[2] || A.hi[2] < B.lo[2]) continue;

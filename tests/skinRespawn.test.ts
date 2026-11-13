@@ -40,9 +40,9 @@ it('dagger materials restore the same cached instances after spectator swaps; st
  const engine=new NullEngine(),scene=new Scene(engine),mesh=MeshBuilder.CreateBox('dagger',{},scene),base=new PBRMaterial('dagger_steel',scene);mesh.material=base;
  const library={get:()=>base} as unknown as MaterialLibrary,cache=new CosmeticMaterials([mesh],scene,library,'melee');
  try{
-  await cache.apply('darkness-melee');const dark=mesh.material;expect(dark).not.toBe(base);
-  for(let i=0;i<4;i++){await cache.apply();expect(mesh.material).toBe(base);await cache.apply('darkness-melee');expect(mesh.material).toBe(dark);}
-  await Promise.all([cache.apply(),cache.apply('darkness-melee')]);expect(mesh.material).toBe(dark);expect(cache.size).toBe(2);
+  await cache.apply('marble-melee');const dark=mesh.material;expect(dark).not.toBe(base);
+  for(let i=0;i<4;i++){await cache.apply();expect(mesh.material).toBe(base);await cache.apply('marble-melee');expect(mesh.material).toBe(dark);}
+  await Promise.all([cache.apply(),cache.apply('marble-melee')]);expect(mesh.material).toBe(dark);expect(cache.size).toBe(2);
   cache.dispose();expect(scene.materials).not.toContain(dark);expect(scene.materials).toContain(base);
  }finally{scene.dispose();engine.dispose();}
 });

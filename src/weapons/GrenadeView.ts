@@ -5,6 +5,7 @@ import { Color3, Color4, Scene as BabylonScene, MeshBuilder, SolidParticleSystem
 import { assetUrl } from '../core/assets';
 import { loadContainer } from '../core/loadContainer';
 import type { MaterialLibrary } from '../rendering/MaterialLibrary';
+import { normalizeWeaponMeshes } from '../rendering/CosmeticAssets';
 import { advanceGrenade, type GrenadeExplosion, type GrenadeState } from '../../shared/grenades';
 import { GRENADE_SMOKE_MS, GRENADE_FX } from '../../shared/grenades';
 import { smokeEnvelope, smokeRadius, smokeInterior, smokeObscures } from './grenadeSmoke';
@@ -81,6 +82,7 @@ export class GrenadeView {
   async load(materials: MaterialLibrary, signal?: AbortSignal): Promise<void> {
     await this.burst.ready(signal);
     this.container = await loadContainer(assetUrl('assets/models/shared/weapons/grenade.glb'), this.scene, signal);
+    normalizeWeaponMeshes(this.container); // RGBA vertex colours would put the opaque grenade in the blended queue
     for (const mesh of this.container.meshes) if (mesh.material) mesh.material = materials.get(mesh.material.name);
   }
   sync(states: GrenadeState[]): void {

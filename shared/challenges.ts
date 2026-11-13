@@ -47,7 +47,7 @@ export interface ChallengePeriod { start: number; endsAt: number; challenges: Ch
 export interface CareerProfile { revision: number; gems: number; daily: ChallengePeriod; weekly: ChallengePeriod; lastMatchRound: number; abandonedRound: number;
  /** Server-private receipts; never included in CareerView or accepted from clients. */
  matchRewards?:Record<string,{matchId:string;roundId:number;gems:number}> }
-export interface CareerView { revision: number; gems: number; daily: ChallengePeriod; weekly: ChallengePeriod; serverTime: number }
+export interface CareerView { developer?:boolean; accountId?:string; revision: number; gems: number; daily: ChallengePeriod; weekly: ChallengePeriod; serverTime: number }
 export type ChallengeEvent = { kind: 'kill'; weapon: WeaponId | 'grenade' | 'melee'; head: boolean; points: number }
   | { kind: 'points'; points:number }
   | { kind: 'bot'; difficulty:BotDifficulty; kills:number; won:boolean }
@@ -110,8 +110,9 @@ const natural = (x: unknown): x is number => Number.isSafeInteger(x) && (x as nu
 export function validCareerView(value: unknown): value is CareerView {
   if (!value || typeof value !== 'object') return false;
   const p = value as CareerView;
+  if ((p.developer!==undefined&&typeof p.developer!=='boolean')||(p.accountId!==undefined&&!/^[a-f0-9]{64}$/.test(p.accountId)))return false;
   if (!natural(p.revision) || !natural(p.gems) || !natural(p.serverTime)
-    || Object.keys(p).some(k => !['revision', 'gems', 'daily', 'weekly', 'serverTime'].includes(k))) return false;
+    || Object.keys(p).some(k => !['revision', 'gems', 'daily', 'weekly', 'serverTime','developer','accountId'].includes(k))) return false;
   return (['daily', 'weekly'] as const).every(category => {
     const period = p[category], boundary = challengePeriod(category, p.serverTime);
     if (!period || period.start !== boundary.start || period.endsAt !== boundary.endsAt || !Array.isArray(period.challenges) || period.challenges.length !== CHALLENGES_PER_PERIOD

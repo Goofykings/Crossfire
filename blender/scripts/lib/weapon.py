@@ -44,9 +44,9 @@ def extrude(md: MeshData, profile, x0: float, x1: float, mat: str, bevel: float 
         md.face([(xa, y1, z1), (xa, iy1, iz1), (xa, iy0, iz0), (xa, y0, z0)], mat)
 
 
-def _fix_winding(md: MeshData, start: int, center):
-    """Make faces added since `start` point away from `center` (convex-ish parts only)."""
-    for fi in range(start, len(md.faces)):
+def _fix_winding(md: MeshData, start: int, center, stop: int | None = None):
+    """Make faces added since `start` (up to `stop`) point away from `center` (convex-ish parts only)."""
+    for fi in range(start, len(md.faces) if stop is None else stop):
         f = md.faces[fi]
         pts = [md.verts[i] for i in f]
         c = [sum(p[k] for p in pts) / len(pts) for k in range(3)]
@@ -67,7 +67,32 @@ def solid(md: MeshData, profile, x0: float, x1: float, mat: str, bevel: float = 
     extrude(md, profile, x0, x1, mat, bevel, side_mat)
     cz = sum(p[0] for p in profile) / len(profile)
     cy = sum(p[1] for p in profile) / len(profile)
-    _fix_winding(md, start, ((x0 + x1) / 2, cy, cz))
+    n = len(profile)
+    # The two caps point along +-x, which the centre test gets right for any outline. The edge faces must NOT use it: on a concave outline
+    # (the shotgun stock's underside notch) the profile centre lies on the wrong side of a reflex edge, which turned that face inside out
+    # (invisible from below under back-face culling). Their outward direction comes from the edge itself and the outline's orientation.
+    _fix_winding(md, start, ((x0 + x1) / 2, cy, cz), stop=start + 2)
+    area = sum(profile[i][0] * profile[(i + 1) % n][1] - profile[(i + 1) % n][0] * profile[i][1] for i in range(n))
+    sign = 1.0 if area > 0 else -1.0
+    for i in range(n):
+        (z0, y0), (z1, y1) = profile[i], profile[(i + 1) % n]
+        ez, ey = (y1 - y0) * sign, -(z1 - z0) * sign
+        for k, sx in enumerate((0.0, 1.0, -1.0)):
+            fi = start + 2 + 3 * i + k
+            pts = [md.verts[j] for j in md.faces[fi]]
+            nrm = face_normal(pts)
+            if nrm[0] * sx + nrm[1] * ey + nrm[2] * ez < 0:
+                md.faces[fi] = list(reversed(md.faces[fi]))
+                md.face_uv[fi] = list(reversed(md.face_uv[fi]))
+                md.face_col[fi] = list(reversed(md.face_col[fi]))
+
+
+def glass(md: MeshData, pts, mat: str = "gun_glass"):
+    """An optic window as a thin pane seen from both sides (it faces the shooter first). One face only made the glass vanish when the
+    weapon was viewed from the muzzle side; the blended material draws without depth writes, so the pair costs nothing visible."""
+    md.face_toward(pts, mat, (0, 0, 1))
+    # 0.4 mm behind: a coincident reversed copy is welded away by the exporter's vertex merge (and duplicate faces with it)
+    md.face_toward([(x, y, z - 0.0004) for (x, y, z) in pts], mat, (0, 0, -1))
 
 
 def box(md: MeshData, x0, y0, z0, x1, y1, z1, mat: str):
@@ -238,7 +263,7 @@ def rifle():
     for k, z in enumerate((-0.049, -0.06)):
         box(body, 0.005 + k * 0.009, 0.104, z - 0.0045, 0.012 + k * 0.009, 0.1095, z + 0.0005, "gun_rubber")
     for z in (-0.049, -0.127):
-        body.face_toward([(-WX, WY0, z), (WX, WY0, z), (WX, WY1, z), (-WX, WY1, z)], "gun_glass", (0, 0, 1))
+        glass(body, [(-WX, WY0, z), (WX, WY0, z), (WX, WY1, z), (-WX, WY1, z)])
     # reticle projected on the front window (u to the viewer's right = +x when seen from behind, +z)
     r = 0.0115
     zr = -0.1262
@@ -610,8 +635,7 @@ def semi_sniper():
     ztube(body, -0.282, -0.292, SY, 0.0285, "gun_black", sides=14, caps=(False, False))
     for z in (-0.049, -0.282):
         r = 0.0262 if z > -0.1 else 0.0271
-        body.face_toward([(math.cos(2 * math.pi * i / 14) * r, SY + math.sin(2 * math.pi * i / 14) * r, z) for i in range(14)],
-                         "gun_glass", (0, 0, 1))
+        glass(body, [(math.cos(2 * math.pi * i / 14) * r, SY + math.sin(2 * math.pi * i / 14) * r, z) for i in range(14)])
     ztube(body, -0.1476, -0.1488, SY, 0.0152, "gun_steel", sides=14, caps=(False, False))                    # erector ring
     r = 0.0115
     zr = -0.13

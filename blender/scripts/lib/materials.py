@@ -310,6 +310,23 @@ MATERIALS.update({
     "leaves_oak_b": {"albedo": FARM_DIR + "leaves.jpg", "tile": 1.7, "tint": [1.0, 1.0, 0.58], "roughness": 0.85},
     "leaves_pine": {"albedo": FARM_DIR + "leaves.jpg", "tile": 1.3, "tint": [0.38, 0.62, 0.5], "roughness": 0.9},
     "hay": {"albedo": FARM_DIR + "hay.jpg", "tile": 0.9, "roughness": 1.0},
+    # Foliage: alpha-cut leaf cards (2 x 2 atlases, `atlas`: UV (0,0) is the bottom left of the image; the cards are double sided).
+    # Every set has a lite twin that differs only in its cutoff, which gives it its own batch: the runtime draws one set or the
+    # other (Chromebook mode and distance), so keep each pair of definitions different. `leaf_core` is the opaque dark mass inside
+    # a bush, hedge or canopy (bullets stop on it).
+    "leaf_bush": {"albedo": FARM_DIR + "bush_leaves.png", "tile": 1.0, "tint": [1.1, 1.16, 0.92], "roughness": 0.78, "alpha_cutoff": 0.42,
+                  "double_sided": True, "atlas": True},
+    "leaf_bush_lite": {"albedo": FARM_DIR + "bush_leaves.png", "tile": 1.0, "tint": [1.1, 1.16, 0.92], "roughness": 0.9, "alpha_cutoff": 0.5,
+                       "double_sided": True, "atlas": True},
+    "leaf_ivy": {"albedo": FARM_DIR + "ivy_leaves.png", "tile": 1.0, "tint": [1.08, 1.12, 0.94], "roughness": 0.96, "alpha_cutoff": 0.42,
+                 "double_sided": True, "atlas": True},
+    "leaf_ivy_lite": {"albedo": FARM_DIR + "ivy_leaves.png", "tile": 1.0, "tint": [1.08, 1.12, 0.94], "roughness": 1.0, "alpha_cutoff": 0.5,
+                      "double_sided": True, "atlas": True},
+    "leaf_core": {"albedo": FARM_DIR + "leaves.jpg", "tile": 1.2, "tint": [0.2, 0.3, 0.16], "roughness": 1.0},
+    # The perimeter wall (blender/scripts/make_stone_textures.py): irregular weathered blocks, dark mortar, moss, cracks. One repeat
+    # is 2.4 m; vertex colours add the dirt, moss and staining on top.
+    "stone_wall_old": {"tex": "stone_wall", "tex_dir": FARM_DIR, "tile": 2.4, "tint": [1.0, 1.0, 1.0], "roughness": 1.0, "metallic": 0.0,
+                       "normal": 1.1},
     # Walls and roofs.
     "siding_red": {"tex": "siding", "tile": 1.8, "tint": [2.2, 0.55, 0.42], "normal": 1.0},
     "siding_weathered": {"tex": "siding", "tile": 1.8, "tint": [1.5, 1.35, 1.2], "normal": 1.0},

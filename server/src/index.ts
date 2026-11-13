@@ -1,9 +1,13 @@
+import {eliminationEffect} from '../../shared/eliminationCosmetics';
+import {isDeveloper,developerAccounts} from './developers';
+import {CrateSales} from './crateSales';
+import {cratePrice} from '../../shared/crateSales';
 import {advanceZoneControl,createZoneControl,validZoneControl,zoneScores,zoneEligible,type ZoneControlState} from '../../shared/zoneControl';
 import {createMeleeState,stepMelee,meleeBlocked,traceMelee,meleeKnockback,MELEE,validMelee} from '../../shared/melee';
 import { traceWeaponShot } from '../../shared/hitscan';
 import {MotionHistory,shotViewTime} from '../../shared/lagCompensation';
 import {encodeServerMessage} from '../../shared/snapshotWire';
-import {matchRewardRequests,matchIdentity,payMatchGems,type MatchLedger,type MatchRewardRequest} from './matchRewards';
+import {canonicalizeParticipants,matchRewardRequests,matchIdentity,payMatchGems,type MatchLedger,type MatchRewardRequest} from './matchRewards';
 import { Inventory } from './inventory';
 import {PracticeChallenges} from './practiceChallenges';
 import {validPracticeChallengeRequest} from '../../shared/practiceChallenges';
@@ -20,7 +24,7 @@ import { Statistics } from './statistics';
 import { unsafeMovement } from '../../shared/movementSafety';
 import { GrenadeCharge } from '../../shared/grenadeCharge';
 import { Careers, careerIdentity, validCareerCredential } from './careers';
-import { advanceChallenges, careerView, type ChallengeEvent, type CareerView } from '../../shared/challenges';
+import { advanceChallenges, type ChallengeEvent, type CareerView } from '../../shared/challenges';
 import { GRENADE_SMOKE_MS } from '../../shared/grenades';
 import { EnvironmentSimulation, ENVIRONMENT, validPropState, type PropState, type EnvironmentFrame } from '../../shared/environment';
 import { DurableObject } from 'cloudflare:workers';
@@ -41,6 +45,7 @@ import { GRENADE, advanceGrenade, blastDamage, throwGrenade, grenadeKnockback, t
 import { validGrenade, validExplosion } from '../../shared/protocol';
 
 interface Bindings {
+  DEVELOPER_ACCOUNT_IDS?:string;
   ROOM: DurableObjectNamespace<PublicRoom>;
   ALLOWED_ORIGINS: string;
   SESSION_GRACE_MS: string;
@@ -153,17 +158,17 @@ export default {
       const response=await env.ROOM.getByName(PUBLIC_ROOM).fetch(request);
       return new Response(response.body,{status:response.status,headers:{...headers,'Content-Type':'application/json'}});
     }
-    if(url.pathname==='/cosmetics'||url.pathname==='/cosmetics/equip'||url.pathname==='/cosmetics/open'||url.pathname==='/practice-challenges'){
+    if(url.pathname==='/cosmetics'||url.pathname==='/cosmetics/equip'||url.pathname==='/cosmetics/open'||url.pathname==='/cosmetics/offer'||url.pathname==='/practice-challenges'){
       const origin=request.headers.get('Origin');if(!origin||!env.ALLOWED_ORIGINS.split(',').map(s=>s.trim()).includes(origin))return new Response('Origin denied',{status:403});
       const headers={'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Methods':'GET, POST, OPTIONS','Access-Control-Allow-Headers':'Authorization, Content-Type','Cache-Control':'no-store','Vary':'Origin'};
       if(request.method==='OPTIONS')return new Response(null,{status:204,headers});
-      if(url.search||(url.pathname==='/cosmetics'?request.method!=='GET':request.method!=='POST'))return Response.json({error:'Use GET /cosmetics, POST /cosmetics/equip or POST /cosmetics/open.'},{status:405,headers});
+      if(url.search||(['/cosmetics','/cosmetics/offer'].includes(url.pathname)?request.method!=='GET':request.method!=='POST'))return Response.json({error:'Use GET /cosmetics, POST /cosmetics/equip or POST /cosmetics/open.'},{status:405,headers});
       if(request.method==='POST'){
         const reader=request.body?.getReader();let timer:ReturnType<typeof setTimeout>|undefined;
         try{
           if(!reader)throw Error('Missing body');
           const body=await Promise.race([(async()=>{const chunks:Uint8Array[]=[];let size=0;for(;;){const r=await reader.read();if(r.done)break;size+=r.value.length;if(size>1024)throw Error('Too large');chunks.push(r.value);}const bytes=new Uint8Array(size);let at=0;for(const c of chunks){bytes.set(c,at);at+=c.length;}return JSON.parse(new TextDecoder().decode(bytes));})(),new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(Error('Timed out')),1000);})]);
-          if(url.pathname==='/practice-challenges'?!validPracticeChallengeRequest(body):!body||Array.isArray(body)||Object.keys(body).some(k=>!(url.pathname==='/cosmetics/open'?['version','requestId']:['version','id']).includes(k)))throw Error('Invalid request');
+          if(url.pathname==='/practice-challenges'?!validPracticeChallengeRequest(body):!body||Array.isArray(body)||Object.keys(body).some(k=>!(url.pathname==='/cosmetics/open'?['version','requestId','expectedPrice']:['version','id']).includes(k)))throw Error('Invalid request');
           const cleanHeaders=new Headers(request.headers);cleanHeaders.delete('Content-Length');request=new Request(request.url,{method:'POST',headers:cleanHeaders,body:JSON.stringify(body)});
         }catch{return Response.json({error:'Invalid equipment request.'},{status:400,headers});}
         finally{if(timer!==undefined)clearTimeout(timer);void reader?.cancel().catch(()=>{});}
@@ -363,35 +368,38 @@ export class PublicRoom extends DurableObject<Bindings> {
 
   private contributions!: DamageContributions;
   private readonly players = new Map<string, Entry>();
-  private readonly careers = new Careers(this.ctx.storage, () => new Set([...this.players.values()].flatMap(e => e.session.profileId ? [e.session.profileId] : []).concat(Object.values(this.ledger?.rewardParticipants??{}).filter(p=>!p.abandoned).map(p=>p.identity))));
-  private readonly statistics = new Statistics(this.ctx.storage);
+  private readonly careers = new Careers(this.ctx.storage, () => new Set([...this.players.values()].flatMap(e => e.session.profileId ? [e.session.profileId] : []).concat(Object.values(this.ledger?.rewardParticipants??{}).filter(p=>!p.abandoned).map(p=>p.identity))),id=>isDeveloper(id,this.env.DEVELOPER_ACCOUNT_IDS));
+  private readonly statistics = new Statistics(this.ctx.storage,()=>developerAccounts(this.env.DEVELOPER_ACCOUNT_IDS));
   private readonly practiceChallenges=new PracticeChallenges(this.ctx.storage,this.careers,this.statistics);
   private readonly inventory=new Inventory(this.ctx.storage,id=>this.careers.load(id));
   async inventoryForRoom(identity:string):Promise<InventoryView>{return this.exclusive(()=>this.inventory.get(identity));}
   /** Canonical only. Spends gems and grants a crypto-drawn unowned item in ONE storage batch;
    * the client merely animates the returned result. Expected failures resolve as responses. */
+  private readonly crateSales=new CrateSales(this.ctx.storage);
   private async openCrate(request:Request):Promise<Response>{
     const token=request.headers.get('Authorization')?.replace(/^Bearer /,'')??'';
     if(this.config||!validCareerCredential(token))return Response.json({error:'A valid guest credential is required.'},{status:401});
     const body=await request.json().catch(()=>null) as Record<string,unknown>|null;
-    if(!body||Array.isArray(body)||Object.keys(body).some(k=>!['version','requestId'].includes(k))||body.version!==COSMETICS_API_VERSION||(body.requestId!==undefined&&(typeof body.requestId!=='string'||!/^[-a-zA-Z0-9]{1,48}$/.test(body.requestId))))return Response.json({error:'Invalid crate request.'},{status:400});
+    if(!body||Array.isArray(body)||Object.keys(body).some(k=>!['version','requestId','expectedPrice'].includes(k))||body.version!==COSMETICS_API_VERSION||(body.requestId!==undefined&&(typeof body.requestId!=='string'||!/^[-a-zA-Z0-9]{1,48}$/.test(body.requestId))))return Response.json({error:'Invalid crate request.'},{status:400});
     const identity=await careerIdentity(token),profile=await this.careers.load(identity);
     if(!profile)return Response.json({error:'Guest profile not found.'},{status:401});
     const view=await this.inventory.get(identity);
     if(!CRATE.available)return Response.json({error:'Crates are unavailable.'},{status:409});
     const receiptKey=body.requestId?`crate:${identity}:${body.requestId}`:null;
-    if(receiptKey){const receipt=await this.ctx.storage.get<{item:string}>(receiptKey);if(receipt&&view.owned.includes(receipt.item))return Response.json({version:COSMETICS_API_VERSION,item:receipt.item,gems:profile.gems,inventory:view});}
-    if(profile.gems<CRATE.price)return Response.json({error:`Not enough gems. A crate costs ${CRATE.price}.`},{status:409});
+    if(receiptKey){const receipt=await this.ctx.storage.get<{item:string;chargedPrice?:number}>(receiptKey);if(receipt){if(!view.owned.includes(receipt.item))return Response.json({error:'This purchase already completed; its retired cosmetic is unavailable. No gems were charged.'},{status:409});return Response.json({version:COSMETICS_API_VERSION,item:receipt.item,chargedPrice:receipt.chargedPrice??250,gems:profile.gems,inventory:view});}}
+    const offer=await this.crateSales.offer(),price=cratePrice(offer,Date.now());
+    if(body.expectedPrice!==undefined&&body.expectedPrice!==price)return Response.json({error:'The crate price changed. Review the current price and retry.',offer},{status:409});
+    if(profile.gems<price)return Response.json({error:`Not enough gems. A crate costs ${price}.`},{status:409});
     const item=drawCrate(view.owned,()=>crypto.getRandomValues(new Uint32Array(1))[0]/2**32);
     if(!item)return Response.json({error:'You already own every crate item.'},{status:409});
     // Mutate the cached profile before the write so an overlapping persist() cannot
     // capture the pre-purchase balance after this batch; roll back if the write fails.
-    const before=structuredClone(profile);profile.gems-=CRATE.price;profile.revision++;
+    const before=structuredClone(profile);profile.gems-=price;profile.revision++;
     const inventory={revision:view.revision+1,owned:[...view.owned,item.id],equipped:view.equipped},career=this.careers.capture();
-    try{await this.ctx.storage.put({...career.records,['career:'+identity]:structuredClone(profile),['inventory:'+identity]:inventory,...(receiptKey?{[receiptKey]:{item:item.id}}:{})});}
+    try{await this.ctx.storage.put({...career.records,['career:'+identity]:structuredClone(profile),['inventory:'+identity]:inventory,...(receiptKey?{[receiptKey]:{item:item.id,chargedPrice:price}}:{})});}
     catch(error){Object.assign(profile,before);throw error;}
-    this.careers.committed(career.versions);this.sendCareerViews(new Map([[identity,careerView(profile,Date.now())]]));
-    return Response.json({version:COSMETICS_API_VERSION,item:item.id,gems:profile.gems,inventory:{...inventory,version:COSMETICS_API_VERSION,serverTime:Date.now()}});
+    this.careers.committed(career.versions);this.sendCareerViews(new Map([[identity,this.careers.view(identity,profile,Date.now())]]));
+    return Response.json({version:COSMETICS_API_VERSION,item:item.id,chargedPrice:price,gems:profile.gems,inventory:{...inventory,version:COSMETICS_API_VERSION,serverTime:Date.now()}});
   }
   async refreshEquipment(identity:string,view:InventoryView):Promise<void>{
     return this.exclusive(async()=>{
@@ -528,6 +536,7 @@ export class PublicRoom extends DurableObject<Bindings> {
 
   private entry(session: Session): Entry {
     migrateSession(session);
+    if(session.equipment)for(const key of Object.keys(defaultEquipment()) as (keyof Equipment)[])if(!compatibleCosmetic(session.equipment[key],key))session.equipment[key]=defaultCosmetic(key);
     session.revision ??= 0;
     session.activityAt??=Date.now();
     session.joinedAt??=Date.now();
@@ -587,6 +596,7 @@ export class PublicRoom extends DurableObject<Bindings> {
       if(this.statistics.hasPending)await this.persist(); return response;
     });
     if(new URL(request.url).pathname==='/practice-challenges')return this.exclusive(()=>this.practiceChallenges.http(request));
+    if(new URL(request.url).pathname==='/cosmetics/offer'&&request.method==='GET')return this.exclusive(async()=>Response.json(await this.crateSales.offer()));
     if(new URL(request.url).pathname==='/cosmetics/open')return this.exclusive(()=>this.openCrate(request));
     if(new URL(request.url).pathname.startsWith('/cosmetics')){
       const result=await this.exclusive(()=>this.inventory.http(request));
@@ -683,7 +693,7 @@ export class PublicRoom extends DurableObject<Bindings> {
     } else if (message.type === 'chat') {
       if (now - e.lastChatAt < 750) { this.error(socket, 'chat_rate', 'Wait before sending another message'); return; }
       e.lastChatAt = now;e.session.activityAt=now;
-      this.publish({ v: PROTOCOL_VERSION, type: 'chat', id: e.session.id, name: e.session.name, text: message.text.trim() });
+      this.publish({ v: PROTOCOL_VERSION, type: 'chat', id: e.session.id, name: e.session.name, developer:isDeveloper(e.session.profileId,this.env.DEVELOPER_ACCOUNT_IDS), text: message.text.trim() });
     } else if(message.type==='sync'){
       if(e.probe?.nonce===message.nonce){const sample=now-e.probe.at;e.rtt=e.rtt?e.rtt*.75+sample*.25:sample;e.probe=undefined;}
     } else if (message.type === 'ping') {
@@ -757,7 +767,7 @@ export class PublicRoom extends DurableObject<Bindings> {
       if(!profileId){this.error(socket,'profile_required','A valid guest profile is required.',true);return;}
       if(!e&&!roomTicket){this.error(socket,'room_authorization','Select this room or enter its private code first.',true);return;}
       if(!e&&this.players.size>=this.config.maxPlayers){this.error(socket,'room_full','This room is full.',true);return;}
-      const canonical=await this.authority.claimRoomProfile(profileId,this.roomId,e?undefined:roomTicket);joinedCareer=careerView(canonical,Date.now());
+      const canonical=await this.authority.claimRoomProfile(profileId,this.roomId,e?undefined:roomTicket);joinedCareer=this.careers.view(profileId,canonical,Date.now());
       if(!e){const old=await this.careers.load(profileId);this.careers.profiles.set(profileId,{...canonical,lastMatchRound:old?.lastMatchRound??-1,abandonedRound:old?.abandonedRound??-1});this.careers.mark(profileId);}
     }else if(profileId){const lease=await this.ctx.storage.get<string>('room-member:'+profileId);if(lease&&await this.directory.active(lease)){this.error(socket,'profile_in_use','Leave the other room first.',true);return;}if(lease)await this.ctx.storage.delete('room-member:'+profileId);}
     if (profileId && !await this.careers.load(profileId)) { this.error(socket, 'profile_invalid', 'Guest challenge credential is invalid. Reload to retry.', true); return; }
@@ -770,11 +780,15 @@ export class PublicRoom extends DurableObject<Bindings> {
     const name = normalizeUsername(requested) ?? 'Player';
     if (!e) {
       if (this.players.size >= (this.config?.maxPlayers??10)) { this.error(socket, 'room_full', 'Room capacity reached', true); return; }
+      canonicalizeParticipants(this.ledger);
+      const prior=profileId?Object.entries(this.ledger.rewardParticipants??{}).find(([,p])=>p.identity===profileId):undefined;
+      const standing=prior?this.ledger.players[prior[0]]:undefined;
       const controller = new PlayerController(this.activeMap.world);
-      e = this.entry({ id: crypto.randomUUID(), name, token: token(), generation: 0, revision: 0, grenades: 0, motion: controller.capture(), ack: 0,
+      e = this.entry({ id: prior?.[0]??crypto.randomUUID(), name, token: token(), generation: 0, revision: 0, grenades: 0, motion: controller.capture(), ack: 0,
         roundId: this.round.id, alive: false, health: 0, regenAt: null, assists:0, team: this.chooseTeam(), combat: { melee:createMeleeState(), gun: null, triggerHeld: false, reloadHeld: false, aimHeld: false, grenadeHeld: false },
         life: 0, weapon: null, kills: 0, deaths: 0, death: null, score: 0, comboCount: 0, comboUntil: null,
         lastPlayedRound: null, lastPlayedTeam: null, lastSeen: Date.now(), expiresAt: 0 });
+      if(standing&&prior){Object.assign(e.session,{score:standing.score,kills:standing.kills,deaths:standing.deaths,assists:standing.assists??0,life:prior[1].life??0,team:standing.team,lastPlayedRound:this.round.id,lastPlayedTeam:standing.team,participation:{roundId:this.round.id,firstSpawn:prior[1].firstSpawn,abandoned:prior[1].abandoned}});}
       this.players.set(e.session.id, e);
     }
     // A valid resume credential preserves the session, while display names remain editable.
@@ -807,7 +821,7 @@ export class PublicRoom extends DurableObject<Bindings> {
     if(joinedCareer&&profileId)this.sendCareerViews(new Map([[profileId,joinedCareer]]));
     // The persisted session/resume credential is the once-only announcement marker.
     // Socket replacement, refresh, hibernation and round snapshots never replay it.
-    if (!resumed) this.publish({ v: PROTOCOL_VERSION, type: 'system', kind: 'player_joined', id: `join:${e.session.id}`, name: e.session.name });
+    if (!resumed) this.publish({ v: PROTOCOL_VERSION, type: 'system', kind: 'player_joined', id: `join:${e.session.id}`, name: e.session.name, developer:isDeveloper(e.session.profileId,this.env.DEVELOPER_ACCOUNT_IDS) });
     this.broadcast();
     await this.scheduleCleanup();
     this.start();
@@ -835,7 +849,7 @@ export class PublicRoom extends DurableObject<Bindings> {
       grenades: e.session.grenades,
       score: e.session.score, comboCount: e.session.comboCount, comboUntil: e.session.comboUntil,
       lastPlayedRound: e.session.lastPlayedRound, lastPlayedTeam: e.session.lastPlayedTeam,
-      name: e.session.name, motion, ack: e.session.ack, alive: e.session.alive, life: e.session.life,
+      name: e.session.name, developer:isDeveloper(e.session.profileId,this.env.DEVELOPER_ACCOUNT_IDS), motion, ack: e.session.ack, alive: e.session.alive, life: e.session.life,
       health: e.session.health, combat: { ...e.session.combat, gun: e.gun?.capture() ?? null },
       ...(e.session.weapon?{cosmeticId:compatibleCosmetic(e.session.equipment?.[e.session.weapon],e.session.weapon)?e.session.equipment![e.session.weapon]:defaultCosmetic(e.session.weapon)}:{}),
       meleeCosmeticId:e.session.equipment?.melee??defaultCosmetic('melee'), weapon: e.session.weapon, kills: e.session.kills, deaths: e.session.deaths, assists:e.session.assists, afkDeadline:e.session.alive?this.afkDeadline(e):null, team: e.session.team, death: e.session.death });});
@@ -851,8 +865,8 @@ export class PublicRoom extends DurableObject<Bindings> {
   private recordStanding(e: Entry): void {
     const s = e.session;
     if (s.lastPlayedRound !== this.round.id) return;
-    this.ledger.players[s.id] = { id: s.id, name: s.name, team: s.lastPlayedTeam, score: s.score, kills: s.kills, deaths: s.deaths, assists: s.assists, weapon: s.weapon };
-    if(s.profileId&&s.participation?.roundId===this.round.id){const participants=this.ledger.rewardParticipants??={};participants[s.id]={identity:s.profileId,name:s.name,firstSpawn:s.participation.firstSpawn,abandoned:participants[s.id]?.abandoned??false};}
+    this.ledger.players[s.id] = { id: s.id, name: s.name, developer:isDeveloper(s.profileId,this.env.DEVELOPER_ACCOUNT_IDS), team: s.lastPlayedTeam, score: s.score, kills: s.kills, deaths: s.deaths, assists: s.assists, weapon: s.weapon };
+    if(s.profileId&&s.participation?.roundId===this.round.id){const participants=this.ledger.rewardParticipants??={};participants[s.id]={identity:s.profileId,name:s.name,life:s.life,firstSpawn:s.participation.firstSpawn,abandoned:participants[s.id]?.abandoned??false};}
   }
 
   /** One canonical persisted schedule; clients never choose the public map. */
@@ -861,6 +875,7 @@ export class PublicRoom extends DurableObject<Bindings> {
     const next = this.scheduledRound();
     if (next.id === this.round.id) return;
     for (const e of this.players.values()) this.recordStanding(e);
+    canonicalizeParticipants(this.ledger);
     this.lastResult = finalizeRound(this.ledger, this.scores);
     this.contributions.clear();
     this.finishCareerRound(this.lastResult);
@@ -962,8 +977,9 @@ export class PublicRoom extends DurableObject<Bindings> {
     this.recordStatistics(victim.session.profileId,{kind:'death',id:eliminationId,at});
     const elimination: import('../../shared/protocol').Elimination = { id: eliminationId, victimLife: victim.session.life,
       award, assists,
+      ...(credited?{cosmeticEffect:eliminationEffect(credited.session.equipment,weapon??credited.session.weapon,victim.controller.position)}:{}),
       direction, roundId: this.round.id, victimId: victim.session.id,
-      victimName: victim.session.name, killerId: killer?.session.id ?? null, killerName: killer?.session.name ?? null,
+      victimName: victim.session.name, victimDeveloper:isDeveloper(victim.session.profileId,this.env.DEVELOPER_ACCOUNT_IDS),killerDeveloper:isDeveloper(killer?.session.profileId,this.env.DEVELOPER_ACCOUNT_IDS), killerId: killer?.session.id ?? null, killerName: killer?.session.name ?? null,
       weapon: weapon ?? killer?.session.weapon ?? null, head, at, respawnAt: at + RESPAWN_DELAY_MS,
       killerTeam: killer?.session.team ?? null, victimTeam: victim.session.team };
     victim.session.death = elimination;

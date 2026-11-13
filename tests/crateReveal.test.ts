@@ -10,8 +10,9 @@ const seq = (...values:number[]) => { let i=0; return () => values[i++ % values.
 describe('crate collections', () => {
   it('has six named families, each with a version for all five guns and the matching dagger pair', () => {
     expect(COLLECTIONS.map(c => [c.name, c.rarity])).toEqual([
-      ['Green Camo','uncommon'],['Blue Camo','uncommon'],['Red Camo','uncommon'],['Marble','rare'],['Rainbow Glow','rare'],['Rich','legendary']]);
-    expect(crateItems()).toHaveLength(36);
+      ['Green Camo','uncommon'],['Blue Camo','uncommon'],['Red Camo','uncommon'],['Marble','rare'],['Rainbow Glow','epic'],['Rich','legendary']]);
+    // The six original families plus the Epic ones (Hydro Dip x3 for the five guns, Darkness for all six categories).
+    expect(crateItems()).toHaveLength(36 + 25);
     for (const c of COLLECTIONS) for (const w of WEAPON_CATEGORIES) {
       const item = cosmetic(collectionCosmetic(c.id, w))!;
       expect(item).toMatchObject({ name:c.name, rarity:c.rarity, weapon:w, compatibleWith:[w], ownership:'grant', collection:c.id });
@@ -24,7 +25,7 @@ describe('crate collections', () => {
     }
   });
   it('only Rich carries the money kill effect and no cosmetic touches weapon balance', () => {
-    expect(COSMETICS.filter(c => killEffect(c.id)).map(c => c.id)).toEqual(WEAPON_CATEGORIES.map(w => `rich-${w}`));
+    expect(COSMETICS.filter(c => killEffect(c.id)==='money').map(c => c.id)).toEqual(WEAPON_CATEGORIES.map(w => `rich-${w}`));
     const before = JSON.stringify(WEAPONS);
     for (const c of COSMETICS) expect(Object.keys(c).sort()).not.toContain('stats');
     expect(JSON.stringify(WEAPONS)).toBe(before);
@@ -35,14 +36,16 @@ describe('server crate draw', () => {
   it('picks rarity by the published odds, then an unowned item of that rarity', () => {
     expect(drawCrate([], seq(0, 0))!.rarity).toBe('uncommon');
     expect(drawCrate([], seq(.56, 0))!.rarity).toBe('rare');
-    expect(drawCrate([], seq(.96, 0))!.id).toBe('rich-rifle');
-    expect(drawCrate([], seq(.999, .999))!.id).toBe('rich-melee');
+    expect(drawCrate([], seq(.88, 0))!.rarity).toBe('epic');
+    expect(drawCrate([], seq(.96, .999))!.rarity).toBe('epic');
+    expect(drawCrate([], seq(.98, 0))!.id).toBe('rich-rifle');
+    expect(drawCrate([], seq(.999, .999))!.id).toBe('frosted-semi-sniper');
   });
   it('never repeats an owned item and renormalizes when a rarity is exhausted', () => {
     const owned:string[] = [];
     const random = (() => { let s = 7; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();
     for (let i = 0; i < crateItems().length; i++) { const item = drawCrate(owned, random)!; expect(owned).not.toContain(item.id); owned.push(item.id); }
-    expect(new Set(owned).size).toBe(36);
+    expect(new Set(owned).size).toBe(61);
     expect(drawCrate(owned, random)).toBeUndefined();
     const noUncommon = crateItems().filter(c => c.rarity === 'uncommon').map(c => c.id);
     expect(drawCrate(noUncommon, seq(0, 0))!.rarity).toBe('rare');

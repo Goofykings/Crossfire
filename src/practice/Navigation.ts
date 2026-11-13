@@ -16,7 +16,7 @@ export class PracticeNavigation {
   for(let ix=Math.ceil((x0+r)/this.spacing);ix*this.spacing<x1-r;ix++)for(let iz=Math.ceil((z0+r)/this.spacing);iz*this.spacing<z1-r;iz++){
    const x=ix*this.spacing,z=iz*this.spacing,candidates=new Set<number>();
    // Copy heights before nested queries reuse the collision world's scratch list.
-   for(const c of world.query(x-r,lowest,z-r,x+r,12,z+r))if(c.solid&&c.hx>.10&&c.hz>.10)candidates.add(Math.round(c.maxY*10000)/10000);
+   for(const c of world.query(x-r,lowest,z-r,x+r,12,z+r))if(c.solid&&(c.hx>.10&&c.hz>.10||c.tag.includes(':roof:')))candidates.add(Math.round(c.maxY*10000)/10000);
    const found:NavNode[]=[];
    for(const y0 of candidates){
     const y=world.groundHeight(x,z,MOVEMENT.radius,y0+.015,y0-.02);

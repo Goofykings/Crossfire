@@ -1,9 +1,10 @@
-import { COSMETICS, COLLECTIONS, CATEGORY_NAMES, WEAPON_CATEGORIES, RARITIES, CRATE, cosmetic, crateItems, collectionCosmetic, type CosmeticCategory, type CosmeticDefinition, type InventoryView } from '../../shared/cosmetics';
+import { COSMETICS, CATEGORY_NAMES, WEAPON_CATEGORIES, RARITIES, CRATE, cosmetic, crateItems, type CosmeticCategory, type CosmeticDefinition, type InventoryView } from '../../shared/cosmetics';
 import { CrateReveal } from './CrateReveal';
 import type { CosmeticsClient } from '../network/CosmeticsClient';
 import { assetUrl } from '../core/assets';
 import { CosmeticPreview } from './CosmeticPreview';
 import { cosmeticThumbnails } from './WeaponPreviews';
+import {cratePrice,type CrateOffer} from '../../shared/crateSales';
 const node=<K extends keyof HTMLElementTagNameMap>(tag:K,cls='',text='')=>{const n=document.createElement(tag);n.className=cls;n.textContent=text;return n;};
 export class CosmeticsPages {
   client:CosmeticsClient|null=null;
@@ -17,7 +18,9 @@ export class CosmeticsPages {
   private images=new Map<string,string>();private selected='';private pending=false;private buttons:HTMLButtonElement[]=[];
   private previewScreen:HTMLElement;
   private readonly openButton=node('button','btn primary shop-open');private readonly shopStatus=node('p','cosmetic-status');
-  private readonly contents=node('section','crate-contents');private readonly reveal=new CrateReveal();private gems:number|null=null;
+  private readonly reveal=new CrateReveal();private gems:number|null=null;
+  private offer:CrateOffer|null=null;private offerAt=0;private saleTimer:ReturnType<typeof setInterval>|null=null;private offerRequest:AbortController|null=null;private nextOffer=0;
+  private readonly prices=node('div','crate-prices');private readonly regular=node('s','crate-regular','250 GEMS');private readonly price=node('strong');private readonly sale=node('span','crate-sale-badge','SALE');private readonly countdown=node('span','crate-sale-countdown');
   constructor(screen:(id:'shop'|'locker'|'cosmetic-preview')=>HTMLElement,navigate:(id:'menu'|'locker')=>void){
     const shop=screen('shop'),locker=screen('locker');this.previewScreen=screen('cosmetic-preview');
     for(const page of [shop,locker]){page.classList.add('cosmetic-page');const bg=node('img','cosmetic-background');bg.src=assetUrl('assets/ui/town-plaza.webp');bg.alt='';page.append(bg);}
@@ -28,32 +31,33 @@ export class CosmeticsPages {
     const shopHeading=node('header','cosmetic-heading');shopHeading.append(node('h1','','SHOP'));
     const content=node('div','shop-content'),stage=node('div','shop-crate-stage'),crate=node('img','shop-crate');crate.src=assetUrl('assets/cosmetics/crate/reward-crate/thumbnail.png');crate.alt='Crossfire reward crate';stage.append(crate);
     const offer=node('section','shop-offer');this.openButton.type='button';this.openButton.onclick=()=>this.openCrate();this.shopStatus.setAttribute('role','status');
-    offer.append(node('h2','','REWARD CRATE'),node('p','shop-offer-copy','One weapon skin per crate. You never get a duplicate.'),this.openButton,this.shopStatus);
+    this.prices.append(this.regular,this.price,this.countdown);stage.append(this.sale);this.sale.hidden=true;
+    offer.append(node('h2','','REWARD CRATE'),node('p','shop-offer-copy','One weapon skin per crate. You never get a duplicate.'),this.prices,this.openButton,this.shopStatus);
     const distribution=node('section','crate-distribution');distribution.setAttribute('aria-label','Crate odds');distribution.append(node('p','','ODDS'));
     for(const entry of CRATE.distribution){const label=node('span','',`${RARITIES[entry.rarity].name.toUpperCase()} — ${entry.percent}%`);label.style.color=RARITIES[entry.rarity].color;distribution.append(label);}
-    this.contents.setAttribute('aria-label','Crate contents');offer.append(distribution);content.append(stage,offer,this.contents);shop.append(shopHeading,content);
+    offer.append(distribution);content.append(stage,offer);shop.append(shopHeading,content);
     this.previewScreen.classList.add('cosmetic-item-preview');this.previewTitle.id='cosmetic-name';this.previewScreen.setAttribute('aria-labelledby','cosmetic-name');
     const title=node('header');title.append(this.previewTitle,this.previewCategory);const controls=node('footer');this.equipButton.type='button';this.equipButton.onclick=()=>void this.equip();controls.append(this.equipButton,this.button('Back',()=>navigate('locker')));this.previewStatus.setAttribute('role','status');this.previewScreen.append(title,this.previewHost,this.previewStatus,controls);
     this.previewScreen.addEventListener('keydown',e=>{if(e.key==='Escape'){e.stopPropagation();navigate('locker');}});
   }
   private button(text:string,click:()=>void){const b=node('button','btn',text);b.type='button';b.onclick=click;return b;}
   setBalance(gems:number|null){this.gems=gems;this.renderShop();}
-  private canOpen(){return !!this.client&&this.gems!==null&&this.gems>=CRATE.price&&!!this.inventory&&crateItems().some(c=>!this.inventory!.owned.includes(c.id));}
+  private now(){return this.offer?this.offer.serverTime+performance.now()-this.offerAt:0;}
+  private currentPrice(){return this.offer?cratePrice(this.offer,this.now()):CRATE.price;}
+  private canOpen(){return !!this.client&&!!this.offer&&this.now()<this.offer.windows[1].hour+3600000&&this.gems!==null&&this.gems>=this.currentPrice()&&!!this.inventory&&crateItems().some(c=>!this.inventory!.owned.includes(c.id));}
   private renderShop(){
     const left=this.inventory?crateItems().filter(c=>!this.inventory!.owned.includes(c.id)).length:null;
-    this.openButton.textContent=left===0?'ALL SKINS OWNED':`OPEN — ${CRATE.price} GEMS`;this.openButton.disabled=!this.canOpen();
+    const price=this.currentPrice(),active=this.offer?.windows.find(w=>this.now()>=w.startsAt&&this.now()<w.endsAt);
+    this.price.textContent=`${price} GEMS`;this.regular.hidden=this.sale.hidden=!active;
+    const seconds=active?Math.max(0,Math.ceil((active.endsAt-this.now())/1000)):0;
+    this.countdown.textContent=active?`${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')} remaining`:'';
+    this.openButton.textContent=left===0?'ALL SKINS OWNED':`OPEN — ${price} GEMS`;this.openButton.disabled=!this.canOpen();
     this.openButton.title=this.openButton.disabled&&left!==0?'Earn gems from daily and weekly challenges.':'';
-    this.contents.replaceChildren(node('h3','','CRATE CONTENTS'));
-    for(const c of COLLECTIONS){
-      const owned=WEAPON_CATEGORIES.filter(w=>this.inventory?.owned.includes(collectionCosmetic(c.id,w))).length;
-      const row=node('div','crate-collection');row.dataset.collection=c.id;row.style.setProperty('--rarity',RARITIES[c.rarity].color);
-      row.append(node('strong','',c.name),node('small','',RARITIES[c.rarity].name.toUpperCase()),node('span','',this.inventory?`${owned}/4`:'AR · SMG · SNIPER · SHOTGUN'));this.contents.append(row);
-    }
   }
   private openCrate(){
     if(!this.canOpen()||!this.client)return;const client=this.client;
     void this.reveal.start({
-      open:async signal=>{const result=await client.openCrate(signal);this.inventory=result.inventory;this.setBalance(result.gems);this.onRefreshAccount();return cosmetic(result.item)!;},
+      open:async signal=>{try{const result=await client.openCrate(signal,this.currentPrice());this.inventory=result.inventory;this.setBalance(result.gems);this.onRefreshAccount();return cosmetic(result.item)!;}catch(error){void this.loadOffer();throw error;}},
       equip:async item=>{this.inventory=await client.equip(item.id,new AbortController().signal);},
       isEquipped:item=>this.inventory?.equipped[item.weapon]===item.id,
       canOpenAgain:()=>this.canOpen(),
@@ -61,12 +65,19 @@ export class CosmeticsPages {
     });
   }
   show(page:'shop'|'locker'|'cosmetic-preview'){
+    if(this.saleTimer)clearInterval(this.saleTimer);this.saleTimer=null;this.offerRequest?.abort();this.offerRequest=null;
     this.request?.abort();this.thumbnails?.abort();this.thumbnails=null;
     if(page==='cosmetic-preview')return;
     this.onRefreshAccount();
     this.preview.close();this.item=null;this.selected=page;this.inventory=this.client?.view??this.inventory;if(page==='locker')this.render();this.renderShop();this.load();
+    if(page==='shop'){void this.loadOffer();if(!this.saleTimer)this.saleTimer=setInterval(()=>{this.renderShop();if(performance.now()>=this.nextOffer&&!this.offerRequest)void this.loadOffer();},250);}
   }
-  hide(){this.reveal.close();this.selected='';this.request?.abort();this.request=null;this.thumbnails?.abort();this.thumbnails=null;this.preview.close();this.item=null;}
+  hide(){if(this.saleTimer)clearInterval(this.saleTimer);this.saleTimer=null;this.offerRequest?.abort();this.offerRequest=null;this.reveal.close();this.selected='';this.request?.abort();this.request=null;this.thumbnails?.abort();this.thumbnails=null;this.preview.close();this.item=null;}
+  private async loadOffer(){
+    if(!this.client||this.selected!=='shop')return;this.offerRequest?.abort();const request=new AbortController();this.offerRequest=request;this.nextOffer=performance.now()+30000;
+    try{const offer=await this.client.offer(AbortSignal.any([request.signal,AbortSignal.timeout(10000)]));if(request.signal.aborted)return;this.offer=offer;this.offerAt=performance.now();this.shopStatus.textContent='';this.renderShop();}
+    catch(error){if(!request.signal.aborted)this.shopStatus.textContent=(error as Error).message;}finally{if(this.offerRequest===request)this.offerRequest=null;}
+  }
   private load(){
     this.request?.abort();const request=new AbortController();this.request=request;this.status.textContent='Loading inventory...';
     void (async()=>{if(!this.client)throw Error('Inventory unavailable: check multiplayer configuration.');const view=await this.client.load(request.signal);if(request.signal.aborted||!this.selected)return;this.inventory=view;this.status.textContent='';this.shopStatus.textContent='';if(this.selected==='locker')this.render();this.renderShop();})().catch(error=>{if(!request.signal.aborted)this.status.textContent=this.shopStatus.textContent=(error as Error).message;});

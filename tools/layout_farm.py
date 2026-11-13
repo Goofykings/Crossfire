@@ -20,6 +20,7 @@ sys.path.insert(0, str(ROOT / 'tools'))
 
 import farm_structures as fs  # noqa: E402
 import farmstead  # noqa: E402
+import perimeter  # noqa: E402
 import underground  # noqa: E402
 import underground_layouts as ul  # noqa: E402
 from catalog import PROPS  # noqa: E402
@@ -131,12 +132,19 @@ CRATES = [
 # Hedgerows and windbreaks (props 'hedge_long', 3.8 m x 3 m): they cut the long north-south and east-west lanes, so no
 # straight eye-level line crosses the whole map (tests/mapOverhaul.test.ts allows 76 m on this open map), and they
 # add cover. Strip hedges close the 4 m margin outside the fence; the others stand in the yard clear of paths.
+# The hedgerows are eight shapes (props_farm.HEDGE_VARIANTS: different lengths, heights and thicknesses, each with its own uneven top,
+# ends and gaps in the leaf cover). Strip hedges close the yard's margin between the fence and the perimeter wall, so they must be
+# 4.2 m or longer (4.7 m in the 5 m south strip); the others are free, and a few are turned a few degrees off the grid.
 HEDGES = [
-    P('hedge_long', -35.0, -30.0, 0), P('hedge_long', 35.0, -24.0, 0), P('hedge_long', -35.0, -5.0, 0), P('hedge_long', 35.0, -5.0, 0),
-    P('hedge_long', -35.0, 30.0, 0), P('hedge_long', 35.0, 30.0, 0), P('hedge_long', -18.0, -45.0, 90), P('hedge_long', -18.0, 42.9, 90),
-    P('hedge_long', 16.0, -45.0, 90), P('hedge_long', 16.0, 42.9, 90),
-    P('hedge_long', -31.0, -12.0, 0), P('hedge_long', -26.0, -0.5, 0), P('hedge_long', -9.5, -11.5, 0), P('hedge_long', 12.5, -10.5, 0),
-    P('hedge_long', 29.0, -0.5, 0), P('hedge_long', 31.0, -9.0, 0), P('hedge_long', 20.0, 5.0, 0), P('hedge_long', 23.0, 8.0, 0), P('hedge_long', 13.5, 16.5, 0), P('hedge_long', 26.5, 14.0, 0),
+    # west and east strips (the margin is 4.5 m wide: fence line to the wall's inner face)
+    P('hedge_wide', -35.22, -30.0, 0), P('hedge_block', 35.22, -24.0, 0), P('hedge_block', -35.22, -5.0, 0), P('hedge_wide', 35.22, -5.0, 0),
+    P('hedge_wide', -35.22, 30.0, 0), P('hedge_block', 35.22, 30.0, 0),
+    # north and south strips
+    P('hedge_block', -18.0, -45.2, 90), P('hedge_run', -18.0, 42.95, 90), P('hedge_wide', 16.0, -45.2, 90), P('hedge_run', 16.0, 42.95, 90),
+    # in the yard
+    P('hedge_tall', -31.0, -12.0, 3), P('hedge_long', -26.0, -0.5, 356), P('hedge_wide', -9.5, -12.0, 0), P('hedge_low', 12.5, -10.5, 4),
+    P('hedge_run', 29.0, -0.5, 0), P('hedge_thin', 31.0, -9.0, 5), P('hedge_block', 20.0, 5.0, 0), P('hedge_wide', 23.0, 8.0, 355),
+    P('hedge_short', 13.5, 16.5, 4), P('hedge_tall', 26.5, 14.0, 0),
 ]
 OUTDOOR = [
     P('tractor', -21.0, -8.4, 90), P('hay_stack', -31.4, -27.0, 90), P('hay_stack', -31.4, -35.2, 90), 
@@ -165,7 +173,7 @@ HOUSE_PROPS = [
     P('crate', -12.6, 6.1, 0), P('crate', -11.1, 6.1, 90), P('storage_shelf', -13.38, 1.2, 90), P('barrel', -7.3, 0.2, 0),
     # upper floor
     P('bed', 4.4, -6.4, 0, 3.4), P('wardrobe', 4.7, -1.45, 0, 3.4), P('bed', 9.9, -6.4, 0, 3.4), P('wardrobe', 7.2, -1.45, 0, 3.4),
-    P('bed', 6.6, 3.65, 0, 3.4), P('bookshelf', 10.7, 7.4, 0, 3.4), P('crate', 1.0, 6.9, 30, 3.4), P('bench', 4.3, 6.15, 90, 3.4),
+    P('bed', 6.6, 3.65, 0, 3.4), P('bookshelf', 10.7, 7.4, 0, 3.4), P('crate', 1.35, 6.9, 30, 3.4), P('bench', 4.3, 6.15, 90, 3.4),
 ]
 BARN_PROPS = [
     P('tractor', -26.8, -33.6, 0), P('hay_stack', -28.2, -36.9, 0), P('hay_bale', -28.6, -35.3, 0), P('hay_bale', -29.0, -26.6, 90),
@@ -268,6 +276,20 @@ def snap(x, z, boxes, radius, holes):
     raise ValueError(f'no clear spot near {x}, {z}')
 
 
+def prop_footprints(props, props_catalog):
+    """[x0, z0, x1, z1] ground footprints (rotated collider extents) of the street-level props that have a collider."""
+    out = []
+    for p in props:
+        col = props_catalog.get(p['type'], {}).get('collider')
+        if col and -0.5 < p['pos'][1] < 0.5:
+            hx, hz = col[0] / 2, col[2] / 2
+            r = math.radians(p['heading'])
+            ex = abs(math.cos(r)) * hx + abs(math.sin(r)) * hz
+            ez = abs(math.sin(r)) * hx + abs(math.cos(r)) * hz
+            out.append([p['pos'][0] - ex, p['pos'][2] - ez, p['pos'][0] + ex, p['pos'][2] + ez])
+    return out
+
+
 def build():
     catalog = {k: v for k, v in PROPS.items()}
     layout = {
@@ -281,14 +303,20 @@ def build():
         'props': [], 'obstacles': [], 'lights': LIGHTS, 'targets': [], 'spawns': [],
     }
     layout['farm']['structures'] = fs.structures()
+    # props first: the perimeter wall's piers keep clear of whatever stands near it (hedges ending at the wall, trees)
+    layout['props'] = all_props(set(catalog))
+    layout['farm']['perimeter'] = perimeter.build_spec(PLAY, prop_footprints(layout['props'], catalog))
+    roof_bounds = [( [m['mesh']['center'][0]-m['mesh']['half'][0], m['mesh']['center'][2]-m['mesh']['half'][2],
+                      m['mesh']['center'][0]+m['mesh']['half'][0], m['mesh']['center'][2]+m['mesh']['half'][2]],
+                     m['mesh']['center'][1]+m['mesh']['half'][1]) for m in farmstead.roof_solids(layout)[1]]
+    layout['farm']['perimeter']['extensions'] = perimeter.roof_extensions(layout['farm']['perimeter'], roof_bounds)
     underground_passages = [underground.prepare(p) for p in ul.farm_underground()]
-    layout['farm']['solids'] = solids(layout['farm']['structures'], underground_passages)
+    layout['farm']['solids'] = solids(layout['farm']['structures'], underground_passages) + perimeter.solids(layout['farm']['perimeter'])
     layout['navigation'] = {'version': 1, 'groundRoutes': [{k: z[k] for k in ('id', 'kind', 'rect')} for z in layout['ground']['zones']],
                             'coveredRoutes': layout['ground']['covered'], 'upperRoutes': [],
                             'groundObstacles': [{'id': f"{s['id']}:{s['kind']}", 'rect': s['rect']} for s in layout['farm']['solids']]}
     layout['underground'] = underground_passages
     layout['farm']['entranceWalks'] = {e['id']: underground.entrance_waypoints(e) for p in underground_passages for e in p['entrances']}
-    layout['props'] = all_props(set(catalog))
     # underground floor props
     for p in underground_passages:
         for kind, x, z, heading in ul._FARM_PROPS:

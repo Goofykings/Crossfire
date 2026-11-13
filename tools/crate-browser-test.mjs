@@ -61,8 +61,8 @@ try{
   await page.waitForFunction(()=>document.querySelector('.home-gems span')?.textContent==='0',{timeout:60000});
   check(await page.$eval('.shop-crate',n=>n.complete&&n.naturalWidth>0&&n.src.includes('/crossfire/assets/cosmetics/crate/reward-crate/')),'new crate thumbnail loads at the GitHub Pages subpath');
   check(await page.$eval('.shop-open',n=>n.disabled),'Open disabled with 0 gems');
-  check((await page.$$eval('.crate-collection',n=>n.map(r=>r.dataset.collection))).join()==='green-camo,blue-camo,red-camo,marble,rainbow-glow,rich','all six collections listed as crate contents');
-  check((await page.$$eval('.crate-distribution span',n=>n.map(s=>s.textContent))).join('|')==='UNCOMMON — 55%|RARE — 40%|LEGENDARY — 5%','odds shown');
+  check(await page.$('.crate-contents, .crate-collection')===null&&!(await page.$eval('#shop',n=>/CRATE CONTENTS/i.test(n.textContent))),'the Shop has no crate-contents list or heading');
+  check((await page.$$eval('.crate-distribution span',n=>n.map(s=>s.textContent))).join('|')==='UNCOMMON — 50%|RARE — 37%|EPIC — 10%|LEGENDARY — 3%','odds shown from CRATE.distribution');
   await shot('shop-0-gems');
   await h.central.legacyWalletForStatisticsTest(credential,900);await nav('Locker');await visible('#locker');await nav('Shop');await visible('#shop');
   await page.waitForFunction(()=>document.querySelector('.home-gems span')?.textContent==='900'&&!document.querySelector('.shop-open').disabled,{timeout:60000});

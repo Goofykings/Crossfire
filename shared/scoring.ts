@@ -6,7 +6,7 @@ import type { WeaponId } from '../src/weapons/Weapon';
 export const COMBO_WINDOW_MS = 4000;
 export interface ScoreState { score: number; comboCount: number; comboUntil: number | null }
 export interface ScoreAward { base: number; headshot: number; combo: number; comboCount: number; total: number }
-export interface RoundStanding { id: string; name: string; team: PlayerTeam; score: number; kills: number; deaths: number; assists?: number; weapon?: WeaponId | null }
+export interface RoundStanding { developer?:boolean; id: string; name: string; team: PlayerTeam; score: number; kills: number; deaths: number; assists?: number; weapon?: WeaponId | null }
 export interface RoundResult {
   /** Present only after the server has durably confirmed these awards. Additive v19 metadata. */
   gemRewards?:{matchId:string;awards:Record<string,number>};

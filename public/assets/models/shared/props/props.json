@@ -1164,22 +1164,113 @@
   "hedge_long": {
    "file": "hedge_long.glb",
    "size": [
-    3.8,
-    2.9,
-    0.95
+    4.2,
+    3.1,
+    1.4
    ],
    "collider": [
     3.8,
-    3.0,
-    0.85
+    2.9,
+    0.95
+   ]
+  },
+  "hedge_tall": {
+   "file": "hedge_tall.glb",
+   "size": [
+    3.8,
+    3.9,
+    1.5
+   ],
+   "collider": [
+    3.4,
+    3.7,
+    1.05
+   ]
+  },
+  "hedge_low": {
+   "file": "hedge_low.glb",
+   "size": [
+    4.3,
+    2.6,
+    1.3
+   ],
+   "collider": [
+    3.9,
+    2.35,
+    0.9
+   ]
+  },
+  "hedge_wide": {
+   "file": "hedge_wide.glb",
+   "size": [
+    4.6,
+    3,
+    1.9
+   ],
+   "collider": [
+    4.2,
+    2.8,
+    1.5
+   ]
+  },
+  "hedge_thin": {
+   "file": "hedge_thin.glb",
+   "size": [
+    3.6,
+    2.9,
+    1.1
+   ],
+   "collider": [
+    3.2,
+    2.7,
+    0.7
+   ]
+  },
+  "hedge_short": {
+   "file": "hedge_short.glb",
+   "size": [
+    3,
+    2.8,
+    1.4
+   ],
+   "collider": [
+    2.6,
+    2.6,
+    0.95
+   ]
+  },
+  "hedge_block": {
+   "file": "hedge_block.glb",
+   "size": [
+    4.6,
+    3.3,
+    2.3
+   ],
+   "collider": [
+    4.2,
+    3.1,
+    1.9
+   ]
+  },
+  "hedge_run": {
+   "file": "hedge_run.glb",
+   "size": [
+    5.1,
+    2.8,
+    1.4
+   ],
+   "collider": [
+    4.7,
+    2.6,
+    1
    ]
   },
   "tree_oak": {
    "file": "tree_oak.glb",
    "size": [
-    4.8,
-    7.4,
-    4.8
+    6,
+    7.5,
+    5.7
    ],
    "collider": [
     0.62,
@@ -1190,9 +1281,9 @@
   "tree_oak_small": {
    "file": "tree_oak_small.glb",
    "size": [
-    3.6,
-    5.6,
-    3.6
+    4.4,
+    5.5,
+    4.3
    ],
    "collider": [
     0.5,
@@ -1203,9 +1294,9 @@
   "tree_pine": {
    "file": "tree_pine.glb",
    "size": [
-    3.6,
-    8.0,
-    3.6
+    3.8,
+    8,
+    3.9
    ],
    "collider": [
     0.5,
@@ -1216,9 +1307,9 @@
   "bush": {
    "file": "bush.glb",
    "size": [
-    1.4,
-    0.95,
-    1.2
+    1.8,
+    1.2,
+    1.6
    ],
    "collider": [
     0.9,

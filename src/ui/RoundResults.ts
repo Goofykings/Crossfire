@@ -1,3 +1,4 @@
+import {username} from './Username';
 import {teamMode,modeName} from '../../shared/combat';
 import { playerColor, displayTeam, teamOrder } from './teamColors';
 import { type PlayerTeam } from '../../shared/combat';
@@ -36,6 +37,7 @@ export function createRoundResults(result: RoundResult, selfId: string, team: Pl
   banner.append(node('small', 'result-mode', practice?'PRACTICE · BOT CHALLENGES COUNT WHEN CONNECTED':`${modeName(result.mode).toUpperCase()} \u00b7 MATCH COMPLETE`), node('h1', 'result-title', outcome));
   const winner = node('p', 'result-winner', result.draw ? 'Match drawn' : teamMode(result.mode)
     ? `${shownTeam(result.winningTeam)?.toUpperCase()} TEAM WINS` : `${result.winner?.name} wins`);
+  if(!result.draw&&!teamMode(result.mode)&&result.winner){winner.replaceChildren(username(node('span'),result.winner.name,result.winner.developer),document.createTextNode(' wins'));}
   banner.append(winner); panel.append(banner);
   updateResultGems(panel,result,selfId,!!practice);
   const boards = node('div', 'result-boards'); boards.dataset.mode = result.mode;
@@ -53,7 +55,7 @@ export function createRoundResults(result: RoundResult, selfId: string, team: Pl
       const row = body.insertRow(); row.dataset.playerId = p.id; row.classList.toggle('local', p.id === selfId);
       const friendly = playerColor(result.mode, selfId, team, p.id, p.team) === 'friendly';
       const name = row.insertCell(); name.className = `score-name-${friendly ? 'friendly' : 'opponent'}`;
-      name.append(node('span', 'result-rank', String(i + 1)), node('span', 'result-player-name', p.name)); name.title = p.name;
+      name.append(node('span', 'result-rank', String(i + 1)), username(node('span', 'result-player-name'),p.name,p.developer)); name.title = p.name;
       if (p.id === result.winner?.id) name.append(node('small', 'result-player-winner', 'WINNER'));
       row.insertCell().innerHTML = weaponIcon(p.weapon);
       const score = row.insertCell(); score.textContent = formatScore(p.score); score.title = `${p.score} points`; score.dataset.score = String(p.score);
@@ -67,7 +69,7 @@ export function createRoundResults(result: RoundResult, selfId: string, team: Pl
   const mvp = node('div', 'result-mvp');
   if (result.mvp) mvp.classList.add(`score-name-${playerColor(result.mode, selfId, team, result.mvp.id, result.players?.find(p => p.id === result.mvp?.id)?.team ?? null)}`);
   if (!result.draw) winner.classList.add(`score-name-${teamMode(result.mode) ? (result.winningTeam === team ? 'friendly' : 'opponent') : playerColor(result.mode, selfId, team, result.winner?.id ?? null, null)}`);
-  mvp.append(node('small', '', 'MVP'), node('strong', '', result.mvp?.name ?? 'No participants'), node('span', '', result.mvp ? `${result.mvp.score} points` : ''));
+  mvp.append(node('small', '', 'MVP'), username(node('strong'),result.mvp?.name??'No participants',result.mvp?.developer), node('span', '', result.mvp ? `${result.mvp.score} points` : ''));
   panel.append(mvp);
   const actions = node('div', 'result-actions');
   const play = node('button', 'btn primary', practice?'RESTART':'PLAY AGAIN'), lobby = node('button', 'btn leave-match', practice?'RETURN HOME':'RETURN TO LOBBY');

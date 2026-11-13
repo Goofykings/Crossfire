@@ -21,6 +21,7 @@ import type { CollisionWorld } from '../physics/CollisionWorld';
 import { createMapWorld, mapVersion } from '../../shared/world';
 import type {BulletCatalog} from '../physics/BulletMesh';
 import { Environment } from '../rendering/Environment';
+import { FoliageLod } from './FoliageLod';
 import { MaterialLibrary } from '../rendering/MaterialLibrary';
 import type { RenderContext } from '../rendering/RenderContext';
 import { GeometryBatcher } from '../rendering/StaticBatcher';
@@ -51,6 +52,8 @@ export interface LoadedMap {
   /** Overhead map for the Tab overlay, derived from the same layout as the geometry and collision. */
   readonly tactical: TacticalMapData;
   readonly stats: MapStats;
+  /** Foliage detail sets (bushes, hedges, canopies, wall ivy); null when the map has no leaf cards. */
+  readonly foliage: FoliageLod | null;
   /** Toggle the collision debug view (boxes from collision_debug.glb). */
   toggleCollisionDebug(): Promise<void>;
   dispose(): void;
@@ -204,11 +207,15 @@ export class MapManager {
         ...batched.filter((m) => !MaterialLibrary.NO_SHADOW.has((m.metadata as { canonical: string }).canonical)),
         ...targets.meshes,
       ];
+      // Wall ivy lies a few centimetres off the stone: as a shadow receiver it flickers with the wall's own shadow (pale bands on the
+      // leaves), and thousands of its cards would only add cost to every shadow pass. It neither casts nor receives; vertex shading gives it depth.
+      const ivy = (m: AbstractMesh) => /^leaf_ivy/.test((m.metadata as { canonical?: string } | null)?.canonical ?? '');
       environment.registerShadowMeshes(
         shadowCasters.filter((m) => !targets.meshes.includes(m)),
-        [...batched, ...targets.meshes],
+        [...batched.filter((m) => !ivy(m)), ...targets.meshes],
         targets.meshes,
       );
+      for (const m of batched) if (ivy(m)) m.receiveShadows = false;
 
       // the previous map's materials and textures are no longer drawn by anything: free them
       const inUse = new Set(scene.meshes.map((m) => m.material).filter((m): m is NonNullable<typeof m> => !!m));
@@ -221,6 +228,9 @@ export class MapManager {
       await readinessDeadline(scene.whenReadyAsync(), active, 'Map shaders failed to become ready');
       active.throwIfAborted();
       this.materials.trim();
+
+      // leaf cards: detailed and lite sets, one of which is drawn (Chromebook mode, distance)
+      const foliage = new FoliageLod(batched);
 
       let debugMeshes: AbstractMesh[] | null = null;
       let debugVisible = false;
@@ -243,6 +253,7 @@ export class MapManager {
         spawns: def.layout.spawns,
         tactical,
         stats,
+        foliage: foliage.count ? foliage : null,
         toggleCollisionDebug: async () => {
           if (!debugMeshes) {
             if (!index.collisionDebug) return;

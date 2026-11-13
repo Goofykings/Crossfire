@@ -2669,6 +2669,82 @@
    "albedo": "assets/textures/farmstead/hay.jpg",
    "roughness": 1.0
   },
+  "leaf_bush": {
+   "tile": 1.0,
+   "tint": [
+    1.1,
+    1.16,
+    0.92
+   ],
+   "albedo": "assets/textures/farmstead/bush_leaves.png",
+   "roughness": 0.78,
+   "alpha_cutoff": 0.42,
+   "double_sided": true,
+   "atlas": true
+  },
+  "leaf_bush_lite": {
+   "tile": 1.0,
+   "tint": [
+    1.1,
+    1.16,
+    0.92
+   ],
+   "albedo": "assets/textures/farmstead/bush_leaves.png",
+   "roughness": 0.9,
+   "alpha_cutoff": 0.5,
+   "double_sided": true,
+   "atlas": true
+  },
+  "leaf_ivy": {
+   "tile": 1.0,
+   "tint": [
+    1.08,
+    1.12,
+    0.94
+   ],
+   "albedo": "assets/textures/farmstead/ivy_leaves.png",
+   "roughness": 0.96,
+   "alpha_cutoff": 0.42,
+   "double_sided": true,
+   "atlas": true
+  },
+  "leaf_ivy_lite": {
+   "tile": 1.0,
+   "tint": [
+    1.08,
+    1.12,
+    0.94
+   ],
+   "albedo": "assets/textures/farmstead/ivy_leaves.png",
+   "roughness": 1.0,
+   "alpha_cutoff": 0.5,
+   "double_sided": true,
+   "atlas": true
+  },
+  "leaf_core": {
+   "tile": 1.2,
+   "tint": [
+    0.2,
+    0.3,
+    0.16
+   ],
+   "albedo": "assets/textures/farmstead/leaves.jpg",
+   "roughness": 1.0
+  },
+  "stone_wall_old": {
+   "tile": 2.4,
+   "tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "albedo": "assets/textures/farmstead/stone_wall_albedo.jpg",
+   "normal": "assets/textures/farmstead/stone_wall_normal.jpg",
+   "orm": "assets/textures/farmstead/stone_wall_orm.jpg",
+   "roughness": 1.0,
+   "metallic": 0.0,
+   "normal_strength": 1.1
+  },
   "siding_red": {
    "tile": 1.8,
    "tint": [

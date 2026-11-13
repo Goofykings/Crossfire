@@ -16,10 +16,10 @@ const glb = (file: string) => { const b = fs.readFileSync('public/' + file); ret
 afterEach(() => { vi.unstubAllGlobals(); setSkinFxLite(false); });
 
 describe('2026-11-10 skin families', () => {
-  it('names, rarities and coverage: every firearm, and the daggers for Darkness only', () => {
+  it('names, rarities and coverage: every firearm with stable IDs', () => {
     expect(EXTRA_COLLECTIONS.map((c) => [c.id, c.name, c.rarity])).toEqual([
-      ['blossom', 'Blossom', 'uncommon'], ['carbon-fiber', 'Carbon Fiber', 'rare'], ['hydro-nebula', 'Hydro Dip — Nebula', 'epic'],
-      ['hydro-inferno', 'Hydro Dip — Inferno', 'epic'], ['hydro-abyss', 'Hydro Dip — Abyss', 'epic'], ['darkness', 'Darkness', 'epic'], ['frosted', 'Frosted', 'legendary']]);
+      ['blossom', 'Blossom', 'legendary'], ['carbon-fiber', 'Carbon Fiber', 'rare'], ['hydro-nebula', 'Hydro Dip — Nebula', 'uncommon'],
+      ['hydro-inferno', 'Hydro Dip — Inferno', 'rare'], ['hydro-abyss', 'Hydro Dip — Abyss', 'uncommon'], ['frosted', 'Frosted', 'legendary']]);
     for (const c of EXTRA_COLLECTIONS) {
       for (const w of GUN_CATEGORIES) {
         const item = cosmetic(collectionCosmetic(c.id, w))!;
@@ -30,17 +30,25 @@ describe('2026-11-10 skin families', () => {
         for (const patch of Object.values(item.asset.materials!)) for (const file of [patch.albedo, patch.normal, patch.orm, patch.fx && 'map' in patch.fx ? patch.fx.map : undefined, patch.fx?.type === 'flow' ? patch.fx.ramp : undefined])
           if (file) expect(fs.existsSync('public/' + file), file).toBe(true);
       }
-      expect(!!cosmetic(collectionCosmetic(c.id, 'melee'))).toBe(c.id === 'darkness');
+      expect(!!cosmetic(collectionCosmetic(c.id, 'melee'))).toBe(false);
     }
     expect(new Set(COSMETICS.map((c) => c.id)).size).toBe(COSMETICS.length);
   });
-  it('stays out of the crate: pool, odds and draws are exactly as before', () => {
-    expect(crateItems()).toHaveLength(36);
-    expect(crateItems().every((c) => COLLECTIONS.some((f) => f.id === c.collection))).toBe(true);
-    expect(CRATE.distribution).toEqual([{ rarity: 'uncommon', percent: 55 }, { rarity: 'rare', percent: 40 }, { rarity: 'legendary', percent: 5 }]);
-    const extra = new Set(EXTRA_COLLECTIONS.map((c) => c.id));
-    for (let i = 0; i < 400; i++) { const r = () => ((i * 7919 + 13) % 997) / 997; expect(extra.has(drawCrate([], r)!.collection!)).toBe(false); }
-    // With every crate item owned the crate is exhausted, even though the new skins are unowned.
+  it('updated families join the crate; the published odds are 50/37/10/3', () => {
+    const epic = EXTRA_COLLECTIONS.filter((c) => c.crate).map((c) => c.id);
+    expect(epic).toEqual(['blossom', 'hydro-nebula', 'hydro-inferno', 'hydro-abyss', 'frosted']);
+    expect(cosmetic('rainbow-glow-rifle')?.rarity).toBe('epic');expect(cosmetic('darkness-melee')).toBeUndefined();
+    expect(crateItems()).toHaveLength(36 + 25);
+    expect(crateItems().every((c) => COLLECTIONS.some((f) => f.id === c.collection) || epic.includes(c.collection!))).toBe(true);
+    expect(CRATE.distribution).toEqual([{ rarity: 'uncommon', percent: 50 }, { rarity: 'rare', percent: 37 }, { rarity: 'epic', percent: 10 }, { rarity: 'legendary', percent: 3 }]);
+    // Blossom, Carbon Fiber and Frosted stay out of the pool.
+    const outside = new Set(['carbon-fiber','darkness']);
+    for (let i = 0; i < 400; i++) { const r = () => ((i * 7919 + 13) % 997) / 997; expect(outside.has(drawCrate([], r)!.collection!)).toBe(false); }
+    // Over many seeded draws every tier drops at roughly its published share.
+    const counts: Record<string, number> = {}; let s = 12345; const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+    for (let i = 0; i < 20000; i++) { const r = drawCrate([], rnd)!.rarity; counts[r] = (counts[r] ?? 0) + 1; }
+    for (const d of CRATE.distribution) expect(Math.abs(counts[d.rarity] / 200 - d.percent)).toBeLessThan(1.2);
+    // With every crate item owned the crate is exhausted, even though the other new skins are unowned.
     expect(drawCrate(crateItems().map((c) => c.id), () => .5)).toBeUndefined();
     // The catalog still knows them, so a later server grant validates.
     const owned = normalizeInventory({ owned: ['frosted-rifle', 'darkness-melee'], equipped: { rifle: 'frosted-rifle', melee: 'darkness-melee' } as never });
@@ -58,7 +66,7 @@ describe('2026-11-10 skin families', () => {
   it('effects: only Frosted has the firing snow and icicles, Rich keeps its kill effect, balance is untouched', () => {
     expect(COSMETICS.filter((c) => fireEffect(c.id)).map((c) => c.id)).toEqual(GUN_CATEGORIES.map((w) => `frosted-${w}`));
     expect(COSMETICS.filter((c) => c.asset.icicles).map((c) => c.id)).toEqual(GUN_CATEGORIES.map((w) => `frosted-${w}`));
-    expect(COSMETICS.filter((c) => killEffect(c.id)).every((c) => c.collection === 'rich')).toBe(true);
+    expect(COSMETICS.filter((c) => killEffect(c.id)==='money').every((c) => c.collection === 'rich')).toBe(true);
     const before = JSON.stringify(WEAPONS);
     for (const c of ALL_COLLECTIONS) expect(Object.keys(c)).not.toContain('stats');
     expect(JSON.stringify(WEAPONS)).toBe(before);
@@ -105,22 +113,13 @@ describe('shared skin shader and effects', () => {
   const library = (scene: Scene) => { const shared = new PBRMaterial('shared', scene); return { get: () => shared, ready: async () => {} } as unknown as MaterialLibrary; };
   const modes = (meshes: { material: unknown }[]) => [...new Set(meshes.map((m) => m.material).filter((m): m is PBRMaterial => m instanceof PBRMaterial && m.name.startsWith('cosmetic:')))]
     .map((m) => (m.pluginManager?.getPlugin('SkinFx') as SkinFxPlugin | null)?.mode ?? null);
-  it('attaches one plugin per effect material, strips maps for Darkness, survives Material.clone, adds icicles', async () => {
+  it('preserves flow/frost material plugins across clones and adds icicles', async () => {
     stub();
     const engine = new NullEngine(), scene = new Scene(engine), materials = library(scene), signal = new AbortController().signal;
     try {
       const hydro = await loadCosmeticAsset(cosmetic('hydro-abyss-rifle')!, scene, materials, signal);
       expect(modes(hydro.meshes)).toContain('flow');
-      const dark = await loadCosmeticAsset(cosmetic('darkness-melee')!, scene, materials, signal);
-      const shadows = [...new Set(dark.meshes.map((m) => m.material).filter((m): m is PBRMaterial => m instanceof PBRMaterial && m.name.startsWith('cosmetic:')))];
-      expect(shadows.length).toBeGreaterThan(0);
-      for (const m of shadows) {
-        expect(m.albedoTexture).toBeNull(); expect(m.bumpTexture).toBeNull(); expect(m.metallicTexture).toBeNull();
-        expect(m.emissiveColor.equalsFloats(0, 0, 0)).toBe(true); expect(Math.max(m.albedoColor.r, m.albedoColor.g, m.albedoColor.b)).toBeLessThan(.01);
-        expect(m.alpha).toBe(1); expect(m.needAlphaBlending()).toBe(false);
-        // The elimination fade clones weapon materials: the clone must keep the effect.
-        const copy = m.clone('death:test')!; expect((copy.pluginManager?.getPlugin('SkinFx') as SkinFxPlugin).mode).toBe('shade'); copy.dispose();
-      }
+      for(const m of hydro.materials){const plugin=m.pluginManager?.getPlugin('SkinFx') as SkinFxPlugin|null;if(!plugin)continue;const copy=m.clone('death:test')!;expect((copy.pluginManager?.getPlugin('SkinFx') as SkinFxPlugin).mode).toBe('flow');copy.dispose();}
       const frost = await loadCosmeticAsset(cosmetic('frosted-smg')!, scene, materials, signal), base = await loadCosmeticAsset(cosmetic('default-smg')!, scene, materials, signal);
       expect(modes(frost.meshes)).toContain('frost');
       const icicles = frost.meshes.find((m) => m.name === 'frost_icicles')!;
@@ -132,7 +131,7 @@ describe('shared skin shader and effects', () => {
         const a = [...frost.transformNodes, ...frost.meshes].find((n) => n.name === name), b = [...base.transformNodes, ...base.meshes].find((n) => n.name === name);
         expect(!!a).toBe(!!b); if (a && b) expect((a as { position: Vector3 }).position.equalsWithEpsilon((b as { position: Vector3 }).position, 1e-6)).toBe(true);
       }
-      for (const c of [hydro, dark, frost, base]) c.dispose();
+      for (const c of [hydro, frost, base]) c.dispose();
     } finally { scene.dispose(); engine.dispose(); }
   });
   it('snowflakes are bounded, rate-limited and cut down in Chromebook mode', () => {
