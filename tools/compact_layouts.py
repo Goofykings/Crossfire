@@ -101,7 +101,9 @@ def industrial(A):
         ('dispatch_north', 'alley', [-15, -14, -11, -8]),
         ('dispatch_south', 'alley', [-12, 2, -7, 9]),
         ('loading_yard', 'yard', [-7, -11, 10, 3]),
-        ('loading_dock', 'dock', [10, -11, 13, 3], {'height': 1.1, 'stairs': [('w', (-11, -8))]}),
+        # 1.10 m exceeded the actual 120 Hz jump apex (1.062 m), even though
+        # the eye could see over the edge. Leave clearance for a normal jump.
+        ('loading_dock', 'dock', [10, -11, 13, 3], {'height': 1.0, 'stairs': [('w', (-11, -8))]}),
         ('dock_lane', 'street', [13, -14, 17, 6]),
         ('workshop_yard', 'yard', [17, -2, 27, 3]),
         # South band: the catwalk lane, storage yard, goods office, warehouse B and containers.

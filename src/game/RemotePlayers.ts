@@ -43,7 +43,9 @@ interface Avatar {
   correction?:{x:number;y:number;z:number};
   /** Server-confirmed shots waiting for the interpolated pose to reach them. */
   shots: ShotTimeline;
-  life: number; death?: { elapsed: number; started: number; direction: Elimination['direction']; rotation: Quaternion; motion:DeathMotion; axis: Vector3; materials: Material[]; textures: Set<BaseTexture> };
+  life: number; death?: { elapsed: number; started: number; direction: Elimination['direction']; rotation: Quaternion; motion:DeathMotion; axis: Vector3; materials: Material[]; textures: Set<BaseTexture>;
+    /** Blossom elimination: the body was hidden at once (it became flowers) and never plays the falling animation. */
+    vanish?: boolean };
 }
 
 /** Interval between shots at the weapon's cadence (milliseconds). */
@@ -101,7 +103,7 @@ export class RemotePlayers {
       const eye = camera?.globalPosition;
       for (const [id, a] of this.avatars) {
         a.character?.applyLean();
-        if(a.death)a.character?.poseDeath(a.death.elapsed,a.death.motion.angle,a.death.axis);
+        if(a.death&&!a.death.vanish)a.character?.poseDeath(a.death.elapsed,a.death.motion.angle,a.death.axis);
         if (a.weapon && !a.death) {
           // Arm IK only for avatars that can be seen; their blend states still advance.
           a.weapon.posing = a.root.isEnabled() && (!planes || a.meshes.some((mesh) => { mesh.computeWorldMatrix(); return mesh.isInFrustum(planes); }));
@@ -175,7 +177,7 @@ export class RemotePlayers {
     if (this.spectatedId === id) return;
     this.spectatedId = id;
     for (const [playerId, a] of this.avatars) {
-      a.root.setEnabled(playerId !== id);
+      a.root.setEnabled(playerId !== id && !a.death?.vanish);
       if (playerId === id) { a.label.hidden = true; this.silhouettes?.remove(a.meshes); }
     }
   }
@@ -242,10 +244,23 @@ export class RemotePlayers {
   }
   private lightweightDeaths=false;
   setLightweightDeaths(value:boolean):void {this.lightweightDeaths=value;}
-  eliminate(event: Elimination): void {
+  /** Where the victim's model is drawn right now (feet), while it is hidden by a Blossom elimination: the flowers start from there rather
+   * than from the authoritative position, which can be ahead of the interpolated body. */
+  vanishedAt(id: string): Vector3 | null { const a = this.avatars.get(id); return a?.death?.vanish ? a.root.position.clone() : null; }
+  /** `vanish`: a Blossom elimination replaces the body with flowers, so the model disappears on this frame and plays no fall (purely
+   * presentational: the avatar is kept for the usual death lifetime so snapshots, respawn replacement and cleanup are unchanged). */
+  eliminate(event: Elimination, vanish = false): void {
     this.avatars.get(event.victimId)?.weapon?.stopFiring();
     const a = this.avatars.get(event.victimId);
     if (!a || a.life !== event.victimLife || a.death) return;
+    if (vanish) {
+      const motion = new DeathMotion(a.root.position, event.direction, this.collisionWorld);
+      a.death = { elapsed: 0, started: performance.now(), direction: event.direction, motion, axis: new Vector3(1, 0, 0), rotation: Quaternion.Identity(), materials: [], textures: new Set(), vanish: true };
+      a.root.setEnabled(false);
+      a.label.hidden = true; this.silhouettes?.remove(a.meshes);
+      if (a.melee) { a.melee.animator.reset(); a.melee.advance(0); a.melee.pair.update(a.melee.pose); }
+      return;
+    }
     const materials = new Map<Material, Material>();
     const textures = new Set<BaseTexture>();
     // Low-spec death still uses the same collision-safe ragdoll and lifetime.
@@ -279,6 +294,11 @@ export class RemotePlayers {
     this.silhouettes?.remove(a.meshes);
     // The death fade clones character/gun materials only: put the daggers away at once.
     if (a.melee) { a.melee.animator.reset(); a.melee.advance(0); a.melee.pair.update(a.melee.pose); }
+  }
+  /** Test hook: a living avatar's id, life and drawn feet position. */
+  debugTarget(id: string | null): { id: string; life: number; position: Vector3 } | null {
+    const found = [...this.avatars].find(([key, a]) => (id === null || key === id) && !a.death);
+    return found ? { id: found[0], life: found[1].life, position: found[1].root.position.clone() } : null;
   }
   /** Test hook: play the real death presentation for one avatar (no scoring, no authority). */
   debugEliminate(id: string | null, direction: Elimination['direction']): string | null {
@@ -363,6 +383,7 @@ export class RemotePlayers {
         death.elapsed = (performance.now() - death.started) / 1000;
         const pose = deathPose(death.elapsed, death.direction);
         if (pose.done) { this.remove(a); this.avatars.delete(id); continue; }
+        if (death.vanish) continue;   // hidden: no tipping, no fade, nothing to pose
         // Cross(up, fall) rotates the upright body away from the incoming shot.
         death.motion.advance(dt);const body=death.motion;
         a.root.rotationQuaternion = Quaternion.RotationAxis(new Vector3(body.fall.z, 0, -body.fall.x), body.angle).multiply(death.rotation);
@@ -494,7 +515,8 @@ export class RemotePlayers {
       yaw: a.root.rotation.y, scale: a.root.scaling.x, height: a.height, lean: a.lean, friendly: a.friendly, visible: a.visible,
       extrapolating:!!a.extrapolating,
       labelVisible: !a.label.hidden && !this.labels.hidden, outline: !a.death && a.visible && (this.silhouettes?.has(a.meshes) ?? false),
-      death: a.death ? { elapsed: a.death.elapsed, ...deathPose(a.death.elapsed, a.death.direction),
+      shown: a.root.isEnabled(),
+      death: a.death ? { elapsed: a.death.elapsed, vanish: !!a.death.vanish, ...deathPose(a.death.elapsed, a.death.direction),
         alpha: a.meshes[0].material?.alpha, rotation: a.root.rotationQuaternion?.asArray() } : null,
       source: a.character ? 'glb' : 'placeholder', animation: a.character?.inspect() ?? null, weapon: a.weapon?.inspect() ?? null,
       shots: a.shots.inspect(),

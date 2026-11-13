@@ -2669,6 +2669,27 @@
    "albedo": "assets/textures/farmstead/hay.jpg",
    "roughness": 1.0
   },
+  "hay_roll": {
+   "tile": 1.0,
+   "tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "albedo": "assets/textures/farmstead/hay_roll.jpg",
+   "roughness": 1.0
+  },
+  "hay_end": {
+   "tile": 1.0,
+   "tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "albedo": "assets/textures/farmstead/hay_end.jpg",
+   "roughness": 1.0,
+   "atlas": true
+  },
   "leaf_bush": {
    "tile": 1.0,
    "tint": [

@@ -387,7 +387,8 @@ def stage_props():
         objs[0].location = ((i % 6) * 3.5, -(i // 6) * 3.5, 0.0)
     catalog_path = SHARED / "props" / "props.json"
     catalog_path.write_text(json.dumps({"version": 1, "props": {
-        n: {"file": f"{n}.glb", "size": PROPS[n]["size"], "collider": PROPS[n]["collider"]} for n in out if n in PROPS
+        n: {"file": f"{n}.glb", "size": PROPS[n]["size"], "collider": PROPS[n]["collider"],
+            **({"colliders": PROPS[n]["colliders"]} if PROPS[n].get("colliders") else {})} for n in out if n in PROPS
     }}, indent=1), encoding="utf-8")
     record(catalog_path, "prop-catalog", "Prop sizes and collision boxes used by the runtime", script="lib/catalog.py")
     setup_world()

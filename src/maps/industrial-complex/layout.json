@@ -143,7 +143,7 @@
      13,
      3
     ],
-    "height": 1.1,
+    "height": 1.0,
     "material": "concrete_floor"
    },
    {
@@ -497,14 +497,14 @@
     13,
     3
    ],
-   "height": 1.1,
+   "height": 1.0,
    "stairs": [
     {
      "side": "w",
      "from": -11,
      "to": -8,
-     "steps": 6,
-     "rise": 0.1833,
+     "steps": 5,
+     "rise": 0.2,
      "run": 0.3
     }
    ],
@@ -2449,7 +2449,7 @@
    "id": "T05",
    "pos": [
     11.5,
-    1.1,
+    1.0,
     -4.0
    ],
    "heading": 0

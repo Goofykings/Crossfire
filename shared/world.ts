@@ -21,7 +21,16 @@ export function createMapWorld(collision: CollisionFile, layout: MapLayout, cata
     const size = catalog.props[p.type]?.collider;
     if (!size) continue;
     const [w, h, d] = size;
-    const box=world.add({ c: [p.pos[0], p.pos[1] + h / 2, p.pos[2]], h: [w / 2, h / 2, d / 2], yaw: -p.heading * Math.PI / 180, tag: `prop:${p.type}` });
+    const yaw = -p.heading * Math.PI / 180;
+    const compound = catalog.props[p.type]?.colliders;
+    if (compound?.length) {
+      // Rounded props (hay bales): several slabs that follow the shape, in the prop's own frame.
+      const cos = Math.cos(yaw), sin = Math.sin(yaw), tag = `prop:${p.type}`;
+      const boxes = compound.map(([lx, ly, lz, bw, bh, bd]) => world.add({ c: [p.pos[0] + lx * cos + lz * sin, p.pos[1] + ly, p.pos[2] - lx * sin + lz * cos], h: [bw / 2, bh / 2, bd / 2], yaw, tag }));
+      if(bullets){const mesh=bullets.meshes[p.type];if(!mesh)throw Error(`Missing bullet surface: ${p.type}`);world.addBulletSurface(mesh,p.pos,yaw,tag,boxes);}
+      continue;
+    }
+    const box=world.add({ c: [p.pos[0], p.pos[1] + h / 2, p.pos[2]], h: [w / 2, h / 2, d / 2], yaw, tag: `prop:${p.type}` });
     if(bullets){const mesh=bullets.meshes[p.type];if(!mesh)throw Error(`Missing bullet surface: ${p.type}`);world.addBulletSurface(mesh,p.pos,box.yaw,box.tag,[box]);}
   }
   return world;

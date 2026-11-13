@@ -310,6 +310,10 @@ MATERIALS.update({
     "leaves_oak_b": {"albedo": FARM_DIR + "leaves.jpg", "tile": 1.7, "tint": [1.0, 1.0, 0.58], "roughness": 0.85},
     "leaves_pine": {"albedo": FARM_DIR + "leaves.jpg", "tile": 1.3, "tint": [0.38, 0.62, 0.5], "roughness": 0.9},
     "hay": {"albedo": FARM_DIR + "hay.jpg", "tile": 0.9, "roughness": 1.0},
+    # Round bales: strands wound round the barrel (UV: u = turns of the circumference, v = metres along the axis) and the spiral
+    # of the rolled layers on each end (a whole-image atlas: UV 0..1 covers the disc).
+    "hay_roll": {"albedo": FARM_DIR + "hay_roll.jpg", "tile": 1.0, "roughness": 1.0},
+    "hay_end": {"albedo": FARM_DIR + "hay_end.jpg", "tile": 1.0, "roughness": 1.0, "atlas": True},
     # Foliage: alpha-cut leaf cards (2 x 2 atlases, `atlas`: UV (0,0) is the bottom left of the image; the cards are double sided).
     # Every set has a lite twin that differs only in its cutoff, which gives it its own batch: the runtime draws one set or the
     # other (Chromebook mode and distance), so keep each pair of definitions different. `leaf_core` is the opaque dark mass inside

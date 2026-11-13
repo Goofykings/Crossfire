@@ -100,15 +100,28 @@ def _ellipsoid_area(r):
     return 4 * math.pi * (((r[0] * r[1]) ** p + (r[0] * r[2]) ** p + (r[1] * r[2]) ** p) / 3) ** (1 / p)
 
 
-def lumps(m, seed, parts, density=26.0, fit=None, hmin=.3, hmax=.5, tint=(1.0, 1.0, 1.0), kinds=(1, 3, 0, 1, 2, 3), core=.54, min_y=.05, inset=.15, ao=.58):
+def lumps(m, seed, parts, density=26.0, fit=None, hmin=.3, hmax=.5, tint=(1.0, 1.0, 1.0), kinds=(1, 3, 0, 1, 2, 3), core=.46, min_y=.05, inset=.15, ao=.58, low_boost=.85, ground=0.0):
     """Foliage as a union of rounded lumps, so the outline is organic from every side: `parts` is a list of (centre, radii) ellipsoids.
     Each lump gets an opaque dark core (bullets stop on it) and shingled leaf cards on every part of its surface that is not buried
-    inside a neighbouring lump. Both the detailed and the lite set are written. Cards near the ground are skipped (min_y)."""
+    inside a neighbouring lump. Both the detailed and the lite set are written. Cards near the ground are skipped (min_y).
+
+    2026-11-13 coverage fixes: `ground` stretches every lump whose underside is within that many metres of the ground down to the
+    ground (the top stays put), so no core floats with a gap beneath it; `low_boost` adds that share of extra cards on the lower part
+    of each lump (sides and underside, where a viewer at eye level or below sees the cards edge-on and through their cut-outs)."""
     from foliage import surface, sphere_dirs
     # the cards stand on the lump's surface and reach about `inset` beyond it, so the lumps are drawn that much inside the envelope
     parts = [(c, tuple(max(.12, v - inset) for v in r)) for c, r in parts]
+    if ground:
+        stretched = []
+        for c, r in parts:
+            bottom = c[1] - r[1]
+            if 0.0 < bottom < ground:
+                d = (bottom - .02) / 2
+                c, r = (c[0], c[1] - d, c[2]), (r[0], r[1] + d, r[2])
+            stretched.append((c, r))
+        parts = stretched
     for c, r in parts:
-        ellipsoid(m, c, (r[0] * core, r[1] * core, r[2] * core), 'leaf_core', rings=4, segments=9)
+        ellipsoid(m, c, (r[0] * core, r[1] * core, r[2] * core), 'leaf_core', rings=5, segments=10)
 
     def buried(pt, me):
         for j, (c, r) in enumerate(parts):
@@ -127,6 +140,10 @@ def lumps(m, seed, parts, density=26.0, fit=None, hmin=.3, hmax=.5, tint=(1.0, 1
                 return buried((c[0] + q[0] * .96, c[1] + q[1] * .96, c[2] + q[2] * .96), i)
             puff(m, rr, lite, c, r, n, hmin, hmax, kinds=kinds, tint=tint, ao=ao, gain=1.0, p=2.0, skip=skip, min_y=min_y, dirs=dirs,
                  outward=.8, droop_limit=-.3, fit=fit, spray=.4)
+            if low_boost:
+                low = [v for v in sphere_dirs(card_count(max(10, int(n * low_boost * 2)), lite), rr, .4) if v[1] < .15]
+                puff(m, rr, lite, c, r, n, hmin * .9, hmax * .9, kinds=kinds, tint=tint, ao=ao * 1.1, gain=1.0, p=2.0, skip=skip, min_y=min_y, dirs=low,
+                     outward=.8, droop_limit=-.6, fit=fit, spray=.3)
 
 
 def bush(seed=404):
@@ -142,7 +159,7 @@ def bush(seed=404):
              ((.05, .31, .38), (.4, .28, .34)), ((-.08, .3, -.4), (.42, .29, .32)),
              ((-.12, .66, .02), (.4, .27, .36)), ((.3, .6, .12), (.3, .22, .3)), ((-.4, .56, -.1), (.26, .2, .27))]
     fit = lambda pt: pt[1] >= 0.0 and (pt[0] / 1.0) ** 2 + (pt[2] / .9) ** 2 + (max(0.0, pt[1] - .02) / 1.12) ** 2 <= 1.0
-    lumps(m, seed, parts, density=40.0, hmin=.22, hmax=.34, fit=fit, min_y=.04, inset=.1)
+    lumps(m, seed, parts, density=40.0, hmin=.22, hmax=.34, fit=fit, min_y=.03, inset=.1, ground=.45)
     return m
 
 
@@ -233,48 +250,63 @@ def hay_bale(rotated=False):
     return m
 
 
-BIG_BALE = (1.7, .9, .85)       # length x height x depth of a large bale lying on its side: low enough to jump onto (a jump rises 1.09 m)
-
-
-def hay_bale_big():
-    """A large rectangular bale on its side (1.7 x 0.9 x 0.85 m): rounded edges, ends tucked in, a slight bulge, two loops of twine.
-    Origin at the centre of the footprint, long axis along x."""
-    L, H, D = BIG_BALE
+def hay_bale_round():
+    """A large round bale lying on its side (1.5 m long, 1.12 m across; numbers in catalog.ROUND_BALE_*): a 28-sided barrel with a
+    slight belly, shoulders that roll in toward each flat end, a flat contact patch on the ground and two loops of twine. The barrel
+    has its own straw texture (UV u = turns of the circumference, v = metres along the axis) and each end shows the rolled spiral.
+    Origin at the centre of the footprint, axis along x."""
+    import catalog as C
+    R, L, sag = C.ROUND_BALE_R, C.ROUND_BALE_L, C.ROUND_BALE_SAG
+    cy = R - sag
+    SEG = 28
     m = MeshData()
-    r = .075
-    prof = []                                    # cross-section as (z, y), counter-clockwise seen from +x, rounded corners
-    for cz, cy, a0 in ((D / 2 - r, H - r, 0.0), (-D / 2 + r, H - r, 90.0), (-D / 2 + r, r, 180.0), (D / 2 - r, r, 270.0)):
-        for k in range(4):
-            ang = math.radians(a0 + 30 * k)
-            prof.append((cz + math.cos(ang) * r, cy + math.sin(ang) * r))
-    n = len(prof)
-    stations = [-L / 2, -L * .33, -L * .14, 0.0, L * .14, L * .33, L / 2]
-    k_at = {-L / 2: .955, L / 2: .955, -L * .33: .99, L * .33: .99, -L * .14: 1.0, L * .14: 1.0, 0.0: 1.012}
+    # (x, radius factor): the belly is a little fuller than the shoulders; the end face is a disc at 0.88 R
+    half = L / 2
+    stations = [(-half, .88), (-half + .03, .965), (-half + .08, .99), (-half + .2, 1.0), (0.0, 1.012),
+                (half - .2, 1.0), (half - .08, .99), (half - .03, .965), (half, .88)]
+    turns = round(2 * math.pi * R)                    # whole texture repeats round the barrel: no seam
 
-    def pt(x, z, y, grow=0.0):
-        k = k_at[x] if x in k_at else 1.0
-        return (x, y * k if y > H / 2 else y, z * k)
+    def ring(k, grow=0.0):
+        pts = []
+        for j in range(SEG):
+            a = 2 * math.pi * j / SEG
+            pts.append((math.cos(a) * (R * k + grow), max(cy + math.sin(a) * (R * k + grow), 0.0)))
+        return pts                                    # (z, y)
 
-    rings = [[pt(x, z, y) for z, y in prof] for x in stations]
-    for i in range(len(rings) - 1):
-        for j in range(n):
-            q = [rings[i][j], rings[i + 1][j], rings[i + 1][(j + 1) % n], rings[i][(j + 1) % n]]
-            cx = (q[0][0] + q[2][0]) / 2
-            out = ((q[0][0] + q[2][0]) / 2 - cx, (q[0][1] + q[2][1]) / 2 - H / 2, (q[0][2] + q[2][2]) / 2)
-            m.face_toward(q, 'hay', out, col=(.84, .78, .64, 1.0))
-    m.face_toward(list(rings[0]), 'hay', (-1, 0, 0), col=(.72, .66, .52, 1.0))
-    m.face_toward(list(rings[-1]), 'hay', (1, 0, 0), col=(.72, .66, .52, 1.0))
-    # twine: a flat ribbon 3.2 cm wide that follows the profile, 1.2 cm proud of the straw
-    for x in (-.42, .42):
-        kx = .993 + .012 * (1 - abs(x) / (L / 2)) * .5
-        for j in range(n):
+    def col_at(y, shade):
+        t = max(0.0, min(1.0, y / (2 * R)))
+        v = shade * (.62 + .38 * math.sqrt(t))        # darker toward the ground where the bales shade each other
+        return (v, v * .97, v * .9, 1.0)
+
+    rings = [ring(k) for _, k in stations]
+    for i in range(len(stations) - 1):
+        x0, x1 = stations[i][0], stations[i + 1][0]
+        for j in range(SEG):
+            j1 = (j + 1) % SEG
+            q = [(x0,) + (rings[i][j][1], rings[i][j][0]), (x1,) + (rings[i + 1][j][1], rings[i + 1][j][0]),
+                 (x1,) + (rings[i + 1][j1][1], rings[i + 1][j1][0]), (x0,) + (rings[i][j1][1], rings[i][j1][0])]
+            q = [(x, y, z) for (x, y, z) in q]
+            uv = [(j / SEG * turns, x0 + half), (j / SEG * turns, x1 + half), ((j + 1) / SEG * turns, x1 + half), ((j + 1) / SEG * turns, x0 + half)]
+            my = sum(p[1] for p in q) / 4 - cy
+            mz = sum(p[2] for p in q) / 4
+            ym = sum(p[1] for p in q) / 4
+            m.face_toward(q, 'hay_roll', (0, my, mz), uv=uv, col=[col_at(p[1], .96 + .05 * math.sin(j * 1.7 + i)) for p in q])
+    for idx, sgn in ((0, -1), (len(stations) - 1, 1)):
+        x = stations[idx][0]
+        pts = [(x, y, z) for (z, y) in rings[idx]]
+        uv = [(.5 + z / (2 * R), .5 + (y - cy) / (2 * R)) for (z, y) in rings[idx]]
+        m.face_toward(pts, 'hay_end', (sgn, 0, 0), uv=uv, col=[col_at(y, .92) for (z, y) in rings[idx]])
+    # twine: a 3 cm ribbon round the belly, 1 cm proud of the straw
+    for x in (-.4, .4):
+        outer = ring(1.0, .0)                         # radius at |x| = 0.4 is 1.003 R at most: sit 1.1 cm above that
+        rb = ring(1.003, .011)
+        for j in range(SEG):
+            j1 = (j + 1) % SEG
             quad = []
-            for (z, y), side in ((prof[j], -1), (prof[j], 1), (prof[(j + 1) % n], 1), (prof[(j + 1) % n], -1)):
-                ny, nz = y - H / 2, z
-                ln = math.hypot(nz, ny) or 1.0
-                quad.append((x + side * .016, (y * kx if y > H / 2 else y) + ny / ln * .012, z * kx + nz / ln * .012))
-            mz = (prof[j][0] + prof[(j + 1) % n][0]) / 2
-            my = (prof[j][1] + prof[(j + 1) % n][1]) / 2 - H / 2
+            for (z, y), side in ((rb[j], -1), (rb[j], 1), (rb[j1], 1), (rb[j1], -1)):
+                quad.append((x + side * .015, max(y, .006), z))
+            my = (rb[j][1] + rb[j1][1]) / 2 - cy
+            mz = (rb[j][0] + rb[j1][0]) / 2
             m.face_toward(quad, 'rope', (0, my, mz), col=(.62, .56, .46, 1.0))
     return m
 
@@ -529,7 +561,7 @@ FARM_BUILDERS = {
     'tree_pine': tree_pine,
     'bush': bush,
     'hay_bale': hay_bale,
-    'hay_bale_big': hay_bale_big,
+    'hay_bale_round': hay_bale_round,
     'hay_stack': hay_stack,
     'water_trough': water_trough,
     'wheelbarrow': wheelbarrow,

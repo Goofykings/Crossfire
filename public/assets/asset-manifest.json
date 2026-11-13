@@ -1,7 +1,7 @@
 {
  "generator": "blender/scripts/generate_all.py",
  "blender": "5.2.3 LTS",
- "generated": "2026-11-13 06:48:23",
+ "generated": "2026-11-13 16:04:38",
  "assets": [
   {
    "path": "assets/characters/player-albedo.png",
@@ -36,7 +36,7 @@
   {
    "path": "assets/materials.json",
    "kind": "materials",
-   "bytes": 64558,
+   "bytes": 64909,
    "description": "Material table (names, texture sets, tiling, tint, PBR factors)",
    "script": "blender/scripts/lib/materials.py"
   },
@@ -277,17 +277,17 @@
   {
    "path": "assets/models/industrial-complex/collision.json",
    "kind": "collision",
-   "bytes": 26376,
-   "description": "305 oriented collision boxes (runtime physics)",
+   "bytes": 26260,
+   "description": "304 oriented collision boxes (runtime physics)",
    "script": "blender/scripts/lib/collision_gen.py"
   },
   {
    "path": "assets/models/industrial-complex/collision_debug.glb",
    "kind": "collision-debug",
-   "bytes": 358988,
+   "bytes": 357584,
    "description": "Collision boxes as meshes for in-game debug view (F2)",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 3660
+   "triangles": 3648
   },
   {
    "path": "assets/models/industrial-complex/environment.json",
@@ -306,10 +306,10 @@
   {
    "path": "assets/models/industrial-complex/terrain.glb",
    "kind": "map-terrain",
-   "bytes": 522780,
+   "bytes": 521668,
    "description": "Asphalt and concrete yards, loading docks, stairs, railings, fences, canopies, pipe bridges, road paint",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 8664
+   "triangles": 8650
   },
   {
    "path": "assets/models/modern-city/buildings/block_01.glb",
@@ -903,10 +903,10 @@
   {
    "path": "assets/models/shared/props/bush.glb",
    "kind": "prop",
-   "bytes": 92224,
+   "bytes": 157928,
    "description": "bush (1.8 x 1.2 x 1.6 m)",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 954
+   "triangles": 1714
   },
   {
    "path": "assets/models/shared/props/cable_reel.glb",
@@ -1237,12 +1237,12 @@
    "triangles": 56
   },
   {
-   "path": "assets/models/shared/props/hay_bale_big.glb",
+   "path": "assets/models/shared/props/hay_bale_round.glb",
    "kind": "prop",
-   "bytes": 25440,
-   "description": "hay_bale_big (1.7 x 0.9 x 0.85 m)",
+   "bytes": 52580,
+   "description": "hay_bale_round (1.5 x 1.08 x 1.14 m)",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 284
+   "triangles": 612
   },
   {
    "path": "assets/models/shared/props/hay_stack.glb",
@@ -1255,66 +1255,66 @@
   {
    "path": "assets/models/shared/props/hedge_block.glb",
    "kind": "prop",
-   "bytes": 313836,
+   "bytes": 576764,
    "description": "hedge_block (4.6 x 3.3 x 2.3 m)",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 3512
+   "triangles": 6560
   },
   {
    "path": "assets/models/shared/props/hedge_long.glb",
    "kind": "prop",
-   "bytes": 248300,
+   "bytes": 437612,
    "description": "hedge_long (4.2 x 3.1 x 1.4 m)",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 2750
+   "triangles": 4942
   },
   {
    "path": "assets/models/shared/props/hedge_low.glb",
    "kind": "prop",
-   "bytes": 213928,
+   "bytes": 371512,
    "description": "hedge_low (4.3 x 2.6 x 1.3 m)",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 2342
+   "triangles": 4164
   },
   {
    "path": "assets/models/shared/props/hedge_run.glb",
    "kind": "prop",
-   "bytes": 267596,
+   "bytes": 471944,
    "description": "hedge_run (5.1 x 2.8 x 1.4 m)",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 2966
+   "triangles": 5332
   },
   {
    "path": "assets/models/shared/props/hedge_short.glb",
    "kind": "prop",
-   "bytes": 160164,
+   "bytes": 282248,
    "description": "hedge_short (3 x 2.8 x 1.4 m)",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 1742
+   "triangles": 3154
   },
   {
    "path": "assets/models/shared/props/hedge_tall.glb",
    "kind": "prop",
-   "bytes": 284620,
+   "bytes": 511508,
    "description": "hedge_tall (3.8 x 3.9 x 1.5 m)",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 3164
+   "triangles": 5792
   },
   {
    "path": "assets/models/shared/props/hedge_thin.glb",
    "kind": "prop",
-   "bytes": 200720,
+   "bytes": 362800,
    "description": "hedge_thin (3.6 x 2.9 x 1.1 m)",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 2222
+   "triangles": 4100
   },
   {
    "path": "assets/models/shared/props/hedge_wide.glb",
    "kind": "prop",
-   "bytes": 273724,
+   "bytes": 495472,
    "description": "hedge_wide (4.6 x 3 x 1.9 m)",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 3054
+   "triangles": 5624
   },
   {
    "path": "assets/models/shared/props/ibc_tank.glb",
@@ -1447,7 +1447,7 @@
   {
    "path": "assets/models/shared/props/props.json",
    "kind": "prop-catalog",
-   "bytes": 19378,
+   "bytes": 20030,
    "description": "Prop sizes and collision boxes used by the runtime",
    "script": "blender/scripts/lib/catalog.py"
   },
@@ -1897,7 +1897,7 @@
   {
    "path": "blender/source/farmstead.blend",
    "kind": "blend",
-   "bytes": 5368081,
+   "bytes": 5984618,
    "description": "Editable source: buildings, terrain, collision, markers, prop preview",
    "script": "blender/scripts/generate_all.py"
   },
@@ -1911,7 +1911,7 @@
   {
    "path": "blender/source/industrial-complex.blend",
    "kind": "blend",
-   "bytes": 1263444,
+   "bytes": 1263622,
    "description": "Editable source: buildings, terrain, collision, markers, prop preview",
    "script": "blender/scripts/generate_all.py"
   },
@@ -1932,7 +1932,7 @@
   {
    "path": "blender/source/props.blend",
    "kind": "blend",
-   "bytes": 1755918,
+   "bytes": 2344944,
    "description": "Editable source: all street props",
    "script": "blender/scripts/generate_all.py"
   },

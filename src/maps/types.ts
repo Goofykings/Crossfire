@@ -168,7 +168,7 @@ export interface MapAssetIndex {
 
 export interface PropCatalog {
   version: number;
-  props: Record<string, { file: string; size: Vec3Tuple; collider: Vec3Tuple | null }>;
+  props: Record<string, { file: string; size: Vec3Tuple; collider: Vec3Tuple | null; /** Optional compound collision [cx, cy, cz, w, h, d] boxes in the prop's local frame (round bales); `collider` stays the bounding box. */ colliders?: number[][] }>;
 }
 
 export interface CollisionFile {

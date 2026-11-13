@@ -135,39 +135,32 @@ HEDGES = [
     P('hedge_run', 29.0, -0.5, 0), P('hedge_thin', 31.0, -9.0, 5), P('hedge_block', 20.0, 5.0, 0), P('hedge_wide', 23.0, 8.0, 355),
     P('hedge_short', 13.5, 16.5, 4), P('hedge_tall', 26.5, 14.0, 0),
 ]
-# Large hay bales (prop `hay_bale_big`, 1.7 x 0.9 x 0.85 m, lying on their side). 0.9 m is just under what a jump clears (1.09 m), so a player can
-# jump onto a bale from the ground and on to a second layer from the first. Stacks are separate props (the upper bale sits on y = 0.9):
-#   single    one bale, a low piece of cover
-#   step      two bales end to end and a third on one of them: a ground bale to jump onto, then a 1.8 m ledge
-#   pyramid   two bales and one across the seam on top
-BALE_H = 0.9
+# Large round bales on their side (hay_bale_round: R 0.56, axis along the prop's x). A pyramid has its rows across the stack (local z):
+# three on the ground, two in the notches above, one on top (or two and one). Centres are 2 cm closer than a bale's diameter, so
+# neighbours touch (the slabs overlap by 2 cm) instead of floating or sinking in.
+BALE_R = 0.56
+BALE_S = 2 * BALE_R - 0.02            # centre distance of touching bales
+BALE_DY = BALE_S * math.sqrt(3) / 2   # row height of a hexagonal packing
 
 
 def bale_stack(kind, x, z, heading):
     yaw = -math.radians(heading)
     c, s_ = math.cos(yaw), math.sin(yaw)
 
-    def at(u, v, y):
-        return P('hay_bale_big', x + u * c + v * s_, z - u * s_ + v * c, heading, y)
-    if kind == 'single':
-        return [at(0, 0, 0)]
-    if kind == 'step':
-        return [at(-.85, 0, 0), at(.85, 0, 0), at(.85, 0, BALE_H)]
-    if kind == 'pyramid':
-        return [at(-.85, 0, 0), at(.85, 0, 0), at(0, 0, BALE_H)]
-    raise ValueError(kind)
+    def at(v, row):
+        return P('hay_bale_round', x + v * s_, z + v * c, heading, round(row * BALE_DY, 4))
+    rows = {'pyr3': [[-BALE_S, 0, BALE_S], [-BALE_S / 2, BALE_S / 2], [0]], 'pyr2': [[-BALE_S / 2, BALE_S / 2], [0]]}[kind]
+    return [at(v, r) for r, vs in enumerate(rows) for v in vs]
 
 
-BALES = [('pyramid', 3.0, -38.4, 0), ('single', 13.2, -41.2, 8), ('step', 31.0, 25.5, 90), ('pyramid', 21.0, 38.6, 0),
-         ('single', 33.4, -38.0, 90), ('step', -27.0, 41.0, 0), ('single', -33.0, -42.0, 20), ('step', 24.0, -9.0, 90),
-         ('step', 0.5, -24.0, 0), ('pyramid', -20.0, 3.5, 90)]
+BALES = [('pyr3', -24.0, 12.0, 0), ('pyr3', 22.0, 18.0, 90), ('pyr2', 6.0, -33.0, 0), ('pyr2', -20.0, 0.0, 0), ('pyr2', 10.0, 30.0, 0)]
 HAY = [p for kind, x, z, h in BALES for p in bale_stack(kind, x, z, h)]
 OUTDOOR = [
-    P('tractor', -21.0, -8.4, 90), P('hay_stack', -31.4, -27.0, 90), P('hay_stack', -31.4, -35.2, 90), 
+    P('tractor', -21.0, -8.4, 90), 
     P('water_trough', -10.2, -22.8, 0), P('well', 2.6, 16.5, 0), P('wheelbarrow', 12.4, -23.6, 40), P('firewood_stack', 11.4, -31.0, 90),
     P('car_red', -13.5, 30.5, 90), P('bench', 3.9, 8.45, 180), P('bench', 10.4, 8.45, 180),
     P('barrel', 11.2, 9.4, 0), P('flower_pot_large', 0.6, 8.7, 0), P('flower_pot_large', -5.4, 8.7, 0),
-    P('hay_bale', 31.6, 14.2, 20), P('barrel_group', 13.0, -27.4, 0), P('cart', -29.2, -9.5, 8),
+    P('barrel_group', 13.0, -27.4, 0), P('cart', -29.2, -9.5, 8),
     P('bush', -13.3, -9.4, 0), P('bush', -3.2, -9.5, 0), P('bush', 9.0, -9.5, 0), P('bush', 12.9, 2.0, 0), P('bush', -14.9, 5.9, 0),
     P('bush', 1.0, -42.0, 0), P('bush', 5.0, -42.0, 0), P('bush', -31.2, 20.0, 0),
     P('bush', -10.8, 25.2, 0), P('bush', -29.0, -17.0, 0), P('bush', 25.4, -20.4, 0),
@@ -381,8 +374,8 @@ def validate(layout):
             problems.append(f"{p['type']} at {p['pos']} outside the play area")
     for i, (p, a) in enumerate(boxes_of):
         for q, b in boxes_of[i + 1:]:
-            if abs(p['pos'][1] - q['pos'][1]) > 0.5:
-                continue
+            if abs(p['pos'][1] - q['pos'][1]) > 0.5 or p['type'] == q['type'] == 'hay_bale_round':
+                continue   # bales of a stack touch by design (their boxes include the belly; the collision slabs do not overlap)
             if a[0] < b[2] - .03 and a[2] > b[0] + .03 and a[1] < b[3] - .03 and a[3] > b[1] + .03:
                 problems.append(f"{p['type']} at {p['pos']} overlaps {q['type']} at {q['pos']}")
     return problems

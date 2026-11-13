@@ -8,6 +8,30 @@ ground (y = 0), facing -Z in game space (i.e. their "front" looks north when yaw
 the prop is purely decorative (players walk through / over it).
 """
 
+# Large round hay bale lying on its side (axis along local x). The collision is a stack of thin slabs that follow the circle, so a
+# player walks and jumps over a rounded shape instead of a box; the same numbers drive the mesh (props_farm.hay_bale_round).
+ROUND_BALE_R = 0.56        # radius
+ROUND_BALE_L = 1.5         # length along the axis
+ROUND_BALE_SAG = 0.04      # the bale settles: its lowest 4 cm are a flat contact patch
+ROUND_BALE_SLABS_N = 7
+
+
+def round_bale_slabs():
+    """[cx, cy, cz, w, h, d] boxes in the prop's local frame (x along the bale axis, z across, y up from the ground)."""
+    import math
+    R, L, sag, n = ROUND_BALE_R, ROUND_BALE_L, ROUND_BALE_SAG, ROUND_BALE_SLABS_N
+    cy = R - sag
+    top = cy + R
+    h = top / n
+    out = []
+    for i in range(n):
+        ym = (i + 0.5) * h
+        hw = math.sqrt(max(R * R - (ym - cy) ** 2, 0.0)) * 0.97
+        hw = max(hw, 0.16)
+        out.append([0.0, round(ym, 4), 0.0, L, round(h, 4), round(2 * hw, 4)])
+    return out
+
+
 BUILDING_TYPES = {
     "stone2": "Two-story stone townhouse",
     "plaster3": "Three-story plaster townhouse",
@@ -147,7 +171,7 @@ PROPS = {
     "bush": {"size": [1.8, 1.2, 1.6], "collider": [0.9, 0.9, 0.9]},
     "hay_bale": {"size": [1.1, 0.5, 0.55], "collider": [1.1, 0.5, 0.55]},
     "hay_stack": {"size": [2.2, 1.0, 0.55], "collider": [2.2, 1.0, 0.55]},
-    "hay_bale_big": {"size": [1.7, 0.9, 0.85], "collider": [1.7, 0.9, 0.85]},
+    "hay_bale_round": {"size": [1.5, 1.08, 1.14], "collider": [1.5, 1.08, 1.14], "colliders": round_bale_slabs()},
     "water_trough": {"size": [2.24, 0.66, 0.74], "collider": [2.24, 0.62, 0.74]},
     "wheelbarrow": {"size": [1.7, 0.75, 0.6], "collider": [1.5, 0.55, 0.6]},
     "firewood_stack": {"size": [1.8, 1.2, 0.6], "collider": [1.8, 1.2, 0.6]},

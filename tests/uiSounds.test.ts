@@ -40,4 +40,11 @@ it('UI tones unlock lazily, remain short, use master/SFX gains and bound rapid v
  expect(sources.filter(s=>!s.stop.mock.calls.length)).toHaveLength(3);
  sources.at(-1)!.onended!();expect(sources.at(-1)!.disconnect).toHaveBeenCalled();
  audio.setVolume(0);audio.setSfxVolume(0);expect(gains[0].gain.value).toBe(0);expect(gains[1].gain.value).toBe(0);
+ // The first logo click needs neither a decoded rifle WAV nor a running clock.
+ // It can queue while unlock resumes the context, and still uses the muted bus.
+ ctx.state='suspended';const count=sources.length,requests=vi.mocked(fetch).mock.calls.length;
+ audio.playUI('logo');expect(sources).toHaveLength(count+1);const logo=sources.at(-1)!;
+ expect(logo.buffer!.duration).toBeCloseTo(.075);expect(logo.start).toHaveBeenCalledOnce();expect(gains.at(-1)!.gain.value).toBe(.1);
+ expect(gains.at(-1)!.connect).toHaveBeenCalledWith(gains[1]);expect(vi.mocked(fetch).mock.calls.length).toBe(requests);
+ audio.playUI('logo');expect(sources.at(-1)!.buffer).toBe(logo.buffer);
 });

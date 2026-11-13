@@ -8392,24 +8392,6 @@
    "heading": 90
   },
   {
-   "type": "hay_stack",
-   "pos": [
-    -31.4,
-    0.0,
-    -27.0
-   ],
-   "heading": 90
-  },
-  {
-   "type": "hay_stack",
-   "pos": [
-    -31.4,
-    0.0,
-    -35.2
-   ],
-   "heading": 90
-  },
-  {
    "type": "water_trough",
    "pos": [
     -10.2,
@@ -8498,15 +8480,6 @@
     8.7
    ],
    "heading": 0
-  },
-  {
-   "type": "hay_bale",
-   "pos": [
-    31.6,
-    0.0,
-    14.2
-   ],
-   "heading": 20
   },
   {
    "type": "barrel_group",
@@ -8626,220 +8599,193 @@
    "heading": 0
   },
   {
-   "type": "hay_bale_big",
+   "type": "hay_bale_round",
    "pos": [
-    2.15,
-    0,
-    -38.4
+    -24.0,
+    0.0,
+    10.9
    ],
    "heading": 0
   },
   {
-   "type": "hay_bale_big",
+   "type": "hay_bale_round",
    "pos": [
-    3.85,
-    0,
-    -38.4
+    -24.0,
+    0.0,
+    12.0
    ],
    "heading": 0
   },
   {
-   "type": "hay_bale_big",
+   "type": "hay_bale_round",
    "pos": [
-    3.0,
-    0.9,
-    -38.4
+    -24.0,
+    0.0,
+    13.1
    ],
    "heading": 0
   },
   {
-   "type": "hay_bale_big",
+   "type": "hay_bale_round",
    "pos": [
-    13.2,
-    0,
-    -41.2
+    -24.0,
+    0.9526,
+    11.45
    ],
-   "heading": 8
+   "heading": 0
   },
   {
-   "type": "hay_bale_big",
+   "type": "hay_bale_round",
    "pos": [
-    31.0,
-    0,
-    24.65
+    -24.0,
+    0.9526,
+    12.55
+   ],
+   "heading": 0
+  },
+  {
+   "type": "hay_bale_round",
+   "pos": [
+    -24.0,
+    1.9053,
+    12.0
+   ],
+   "heading": 0
+  },
+  {
+   "type": "hay_bale_round",
+   "pos": [
+    23.1,
+    0.0,
+    18.0
    ],
    "heading": 90
   },
   {
-   "type": "hay_bale_big",
+   "type": "hay_bale_round",
    "pos": [
-    31.0,
-    0,
-    26.35
+    22.0,
+    0.0,
+    18.0
    ],
    "heading": 90
   },
   {
-   "type": "hay_bale_big",
+   "type": "hay_bale_round",
    "pos": [
-    31.0,
-    0.9,
-    26.35
+    20.9,
+    0.0,
+    18.0
    ],
    "heading": 90
   },
   {
-   "type": "hay_bale_big",
+   "type": "hay_bale_round",
    "pos": [
-    20.15,
-    0,
-    38.6
-   ],
-   "heading": 0
-  },
-  {
-   "type": "hay_bale_big",
-   "pos": [
-    21.85,
-    0,
-    38.6
-   ],
-   "heading": 0
-  },
-  {
-   "type": "hay_bale_big",
-   "pos": [
-    21.0,
-    0.9,
-    38.6
-   ],
-   "heading": 0
-  },
-  {
-   "type": "hay_bale_big",
-   "pos": [
-    33.4,
-    0,
-    -38.0
+    22.55,
+    0.9526,
+    18.0
    ],
    "heading": 90
   },
   {
-   "type": "hay_bale_big",
+   "type": "hay_bale_round",
    "pos": [
-    -27.85,
-    0,
-    41.0
-   ],
-   "heading": 0
-  },
-  {
-   "type": "hay_bale_big",
-   "pos": [
-    -26.15,
-    0,
-    41.0
-   ],
-   "heading": 0
-  },
-  {
-   "type": "hay_bale_big",
-   "pos": [
-    -26.15,
-    0.9,
-    41.0
-   ],
-   "heading": 0
-  },
-  {
-   "type": "hay_bale_big",
-   "pos": [
-    -33.0,
-    0,
-    -42.0
-   ],
-   "heading": 20
-  },
-  {
-   "type": "hay_bale_big",
-   "pos": [
-    24.0,
-    0,
-    -9.85
+    21.45,
+    0.9526,
+    18.0
    ],
    "heading": 90
   },
   {
-   "type": "hay_bale_big",
+   "type": "hay_bale_round",
    "pos": [
-    24.0,
-    0,
-    -8.15
+    22.0,
+    1.9053,
+    18.0
    ],
    "heading": 90
   },
   {
-   "type": "hay_bale_big",
+   "type": "hay_bale_round",
    "pos": [
-    24.0,
-    0.9,
-    -8.15
-   ],
-   "heading": 90
-  },
-  {
-   "type": "hay_bale_big",
-   "pos": [
-    -0.35,
-    0,
-    -24.0
+    6.0,
+    0.0,
+    -33.55
    ],
    "heading": 0
   },
   {
-   "type": "hay_bale_big",
+   "type": "hay_bale_round",
    "pos": [
-    1.35,
-    0,
-    -24.0
+    6.0,
+    0.0,
+    -32.45
    ],
    "heading": 0
   },
   {
-   "type": "hay_bale_big",
+   "type": "hay_bale_round",
    "pos": [
-    1.35,
-    0.9,
-    -24.0
+    6.0,
+    0.9526,
+    -33.0
    ],
    "heading": 0
   },
   {
-   "type": "hay_bale_big",
+   "type": "hay_bale_round",
    "pos": [
     -20.0,
-    0,
-    2.65
+    0.0,
+    -0.55
    ],
-   "heading": 90
+   "heading": 0
   },
   {
-   "type": "hay_bale_big",
+   "type": "hay_bale_round",
    "pos": [
     -20.0,
-    0,
-    4.35
+    0.0,
+    0.55
    ],
-   "heading": 90
+   "heading": 0
   },
   {
-   "type": "hay_bale_big",
+   "type": "hay_bale_round",
    "pos": [
     -20.0,
-    0.9,
-    3.5
+    0.9526,
+    0.0
    ],
-   "heading": 90
+   "heading": 0
+  },
+  {
+   "type": "hay_bale_round",
+   "pos": [
+    10.0,
+    0.0,
+    29.45
+   ],
+   "heading": 0
+  },
+  {
+   "type": "hay_bale_round",
+   "pos": [
+    10.0,
+    0.0,
+    30.55
+   ],
+   "heading": 0
+  },
+  {
+   "type": "hay_bale_round",
+   "pos": [
+    10.0,
+    0.9526,
+    30.0
+   ],
+   "heading": 0
   },
   {
    "type": "market_table",
@@ -9754,9 +9700,9 @@
   {
    "id": "S06",
    "pos": [
-    29.5,
+    30,
     0.0,
-    14.0
+    14
    ],
    "heading": 260
   },

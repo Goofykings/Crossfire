@@ -1,10 +1,12 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { MultiplayerClient } from '../src/network/MultiplayerClient';
-import { PlayerController, NO_INTENT } from '../src/player/PlayerController';
+import { PlayerController, NO_INTENT, type MoveIntent } from '../src/player/PlayerController';
 import { CollisionWorld } from '../src/physics/CollisionWorld';
 import { Weapon, WEAPONS } from '../src/weapons/Weapon';
 import { PROTOCOL_VERSION,parseClientMessage, type PlayerState, type Snapshot } from '../shared/protocol';
 import { createMeleeState } from '../shared/melee';
+import { WORLDS } from '../server/src/world';
+import { FIXED_DT } from '../src/config/constants';
 
 // Explicit transport unit fixture. Operational multiplayer is tested separately
 // with actual Worker/TCP sockets and independent browsers.
@@ -351,6 +353,43 @@ it('backpressure never advances unrecorded movement and input resumes after ackn
  const before=local.capture();for(let i=0;i<90;i++)if(client.canPredict){local.fixedUpdate(1/120,{...NO_INTENT,z:1});client.fixedInput(local,{...NO_INTENT,z:1});}
  expect(local.capture()).toEqual(before);expect(client.canPredict).toBe(false);
  vi.advanceTimersByTime(100);p.ack=24;socket.receive({v:PROTOCOL_VERSION,type:'snapshot',snapshot:snapshot(p)});expect(client.canPredict).toBe(true);
+});
+
+it.each([60,30,20])('reconciles Industrial dock jumps without position corrections at %i FPS with delayed/jittered snapshots',async fps=>{
+  const {client,socket,p}=await connect(),data=WORLDS['industrial-complex'];
+  const make=()=>{const c=new PlayerController(data.world);c.weaponClearance='rifle';c.teleport({x:7,y:0,z:-5},90);return c;};
+  const authority=make(),local=make(),states=[authority.capture()],inputs:MoveIntent[]=[];
+  let jumped=false;
+  for(let tick=0;tick<240;tick++){
+    const distance=10-authority.position.x;
+    const jump:boolean=!jumped&&distance<1;
+    jumped ||= jump;
+    const intent={...NO_INTENT,z:distance>-.8?1:0,aim:true,jumpPressed:jump};
+    inputs.push(intent);authority.fixedUpdate(FIXED_DT,intent);states.push(authority.capture());
+  }
+  const base=Date.now(),packet=(ack:number)=>({...snapshot({...p,ack,motion:states[ack]}),
+    mapId:'industrial-complex' as const,mapVersion:data.revision,serverTime:base+Math.round(ack*FIXED_DT*1000)});
+  socket.receive({v:PROTOCOL_VERSION,type:'snapshot',snapshot:packet(0)});
+  let accumulator=0,tick=0;
+  while(tick<inputs.length){
+    accumulator+=1/fps;
+    while(accumulator+1e-10>=FIXED_DT&&tick<inputs.length){
+      expect(client.canPredict).toBe(true);
+      const intent=inputs[tick++];local.fixedUpdate(FIXED_DT,intent);client.fixedInput(local,intent);accumulator-=FIXED_DT;
+      if(tick%6===0){
+        const ack=Math.max(0,tick-[12,18,22][Math.floor(tick/6)%3]),before=local.capture();
+        socket.receive({v:PROTOCOL_VERSION,type:'snapshot',snapshot:packet(ack)});
+        client.reconcile(local,client.latest!);
+        expect(local.capture()).toEqual(before);
+        // Outdated packets must not overwrite a newer landing/acknowledgment.
+        if(ack>=6){const latest=client.latest;socket.receive({v:PROTOCOL_VERSION,type:'snapshot',snapshot:packet(ack-6)});
+          expect(client.latest).toBe(latest);}
+      }
+    }
+    vi.advanceTimersByTime(1000/fps);
+  }
+  expect(local.position.y).toBe(1);expect(local.grounded).toBe(true);
+  expect(client.inspect().corrections.max).toBeLessThan(.000001);
 });
 
 it('an older spawn confirmation resolves the request against the newer state without rolling it back',async()=>{

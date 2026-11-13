@@ -21,6 +21,12 @@
 }
 :is(#ui, .crate-reveal) button:not(:disabled):not([aria-disabled='true']):hover,
 :is(#ui, .crate-reveal) summary:hover { scale: var(--motion-hover-scale); filter: brightness(1.08); }
+/* Keep the logo's larger spring hover; generic button scale/transition must not
+ * compound it or override its transform transition. Recoil is on the child SVG. */
+#ui .home-header .logo .logo-trigger,
+#ui .home-header .logo .logo-trigger:is(:hover,:active,:focus-visible) {
+  scale:1; filter:none; transition:transform var(--motion-hover) cubic-bezier(.2,1.6,.4,1);
+}
 /* Replace the older 1.035 hover transform; cards keep their grid measurements. */
 :is(#ui, .crate-reveal) .btn:hover, :is(#ui, .crate-reveal) .btn:focus-visible { transform: none; }
 :is(#ui, .crate-reveal) button:not(:disabled):not([aria-disabled='true']):active,

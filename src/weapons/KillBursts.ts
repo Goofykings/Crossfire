@@ -17,16 +17,25 @@ interface Particle {
   ax: number; ay: number; az: number; ph: number; ph2: number; sw: number; fall: number; tint: number;
   // Blizzard orbit: centre, radius, start angle, angular speed, squash, tilt, height, rise.
   cx: number; cy: number; cz: number; r: number; th: number; w: number; squash: number; tilt: number; h: number; rise: number; end: number;
+  // Blizzard turbulence and trail: orbit inclination, angular-speed surge, trail flag and length in seconds. Blossom: sway amplitude, wobble rates.
+  incl: number; wob: number; trail: boolean; tlen: number; amp: number; wr1: number; wr2: number;
 }
 const particle = (): Particle => ({ on: false, burst: 0, kicked: false, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, age: 0, life: 1, hold: 0, size: 0, angle: 0, spin: 0,
-  ax: 0, ay: 1, az: 0, ph: 0, ph2: 0, sw: 0, fall: 0, tint: 0, cx: 0, cy: 0, cz: 0, r: 0, th: 0, w: 0, squash: 1, tilt: 0, h: 0, rise: 0, end: 1 });
+  ax: 0, ay: 1, az: 0, ph: 0, ph2: 0, sw: 0, fall: 0, tint: 0, cx: 0, cy: 0, cz: 0, r: 0, th: 0, w: 0, squash: 1, tilt: 0, h: 0, rise: 0, end: 1,
+  incl: 0, wob: 0, trail: false, tlen: .2, amp: .4, wr1: 2, wr2: 2.4 });
 
-/** Per-effect budgets. Capacity is sized for the concurrent burst limit, so the pools never grow. */
-export const BURST_BUDGET = {
-  full: { bursts: 3, flowers: 26, petals: 44, flakes: 54, sparkles: 10 },
-  lite: { bursts: 2, flowers: 11, petals: 14, flakes: 22, sparkles: 4 },
-} as const;
+interface Budget { bursts: number; flowers: number; petals: number; flakes: number; sparkles: number; trails: number; trailSegments: number }
+/** Per-effect budgets. Capacity is sized for the concurrent burst limit, so the pools never grow.
+ * 2026-11-13: Blossom +50% (26/44 -> 39/66), Frosted x2 (54/10 -> 108/16) plus curved trails on a quarter of the flakes. Chromebook
+ * mode keeps a fraction of that (the flowers/flakes a little denser than before so the effect stays recognisable) with far fewer,
+ * shorter and opaque trails. */
+export const BURST_BUDGET: { full: Budget; lite: Budget } = {
+  full: { bursts: 3, flowers: 39, petals: 66, flakes: 108, sparkles: 16, trails: 28, trailSegments: 14 },
+  lite: { bursts: 2, flowers: 14, petals: 20, flakes: 30, sparkles: 6, trails: 6, trailSegments: 6 },
+};
 const MAX_DISTANCE = 150;
+/** Whether a burst at this distance is drawn at all (Game also hides a Blossom victim only when it will be replaced by flowers). */
+export const burstInRange = (distance: number): boolean => distance <= MAX_DISTANCE;
 const DURATION = { 'blossom-flower-burst': 2.1, 'frosted-blizzard': 1.45 } as const;
 
 const FWD = new Vector3(0, 0, 1);
@@ -150,6 +159,57 @@ class Field {
   dispose(): void { this.mesh.material?.dispose(); this.mesh.dispose(); }
 }
 
+/** All snowflake trails in ONE dynamic mesh: every trail is a camera-facing ribbon of `segments` quads whose points are re-evaluated each frame
+ * from the flake's closed-form orbit (so the tail follows the true curve at any sampling density and needs no history buffer). Vertex alpha
+ * fades along the tail; in Chromebook mode the ribbons are opaque and only taper. Buffers are preallocated; unused trails are simply not drawn. */
+class Ribbons {
+  readonly mesh: Mesh;
+  private readonly positions: Float32Array;
+  private readonly colors: Float32Array;
+  private segments = 0; private blended = true; used = 0;
+  constructor(scene: Scene, readonly capacity: number, maxSegments: number) {
+    const verts = capacity * (maxSegments + 1) * 2;
+    this.positions = new Float32Array(verts * 3); this.colors = new Float32Array(verts * 4);
+    const material = new StandardMaterial('kill-burst-trail', scene);
+    material.disableLighting = true; material.emissiveColor = Color3.White(); material.backFaceCulling = false; material.fogEnabled = false;
+    this.mesh = new Mesh('kill-burst-trail', scene);
+    const data = new VertexData();
+    data.positions = this.positions; data.colors = this.colors; data.normals = Array.from({ length: verts * 3 }, (_, i) => (i % 3 === 2 ? 1 : 0));
+    data.indices = this.indicesFor(maxSegments); this.segments = maxSegments;
+    data.applyToMesh(this.mesh, true);
+    this.mesh.material = material; this.mesh.renderingGroupId = 0; this.mesh.isPickable = false; this.mesh.receiveShadows = false; this.mesh.alwaysSelectAsActiveMesh = true;
+    this.mesh.hasVertexAlpha = true; this.mesh.setEnabled(false);
+  }
+  private indicesFor(segments: number): number[] {
+    const out: number[] = [], stride = (segments + 1) * 2;
+    for (let t = 0; t < this.capacity; t++) for (let k = 0; k < segments; k++) {
+      const a = t * stride + k * 2; out.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+    }
+    return out;
+  }
+  /** Chooses the ribbon length for the active quality mode (rebuilds the index list only when it changes). */
+  configure(segments: number, blended: boolean): void {
+    if (segments !== this.segments) { this.segments = segments; this.mesh.setIndices(this.indicesFor(segments)); this.mesh.alwaysSelectAsActiveMesh = true; }
+    if (blended !== this.blended) { this.blended = blended; this.mesh.hasVertexAlpha = blended; }
+  }
+  get segmentCount(): number { return this.segments; }
+  get isBlended(): boolean { return this.blended; }
+  /** Writes point `k` of ribbon `slot`: two vertices either side of (x,y,z) along `side`, with a vertex colour. */
+  point(slot: number, k: number, x: number, y: number, z: number, sx: number, sy: number, sz: number, r: number, g: number, b: number, a: number): void {
+    const v = (slot * (this.segments + 1) + k) * 2, p = v * 3, c = v * 4, P = this.positions, C = this.colors;
+    P[p] = x + sx; P[p + 1] = y + sy; P[p + 2] = z + sz; P[p + 3] = x - sx; P[p + 4] = y - sy; P[p + 5] = z - sz;
+    for (let i = 0; i < 2; i++) { C[c + i * 4] = r; C[c + i * 4 + 1] = g; C[c + i * 4 + 2] = b; C[c + i * 4 + 3] = a; }
+  }
+  commit(count: number): void {
+    this.used = count; this.mesh.setEnabled(count > 0);
+    if (count === 0) return;
+    this.mesh.updateVerticesData('position', this.positions, false, false); this.mesh.updateVerticesData('color', this.colors, false, false);
+    const sub = this.mesh.subMeshes[0]; if (sub) sub.indexCount = count * this.segments * 6;
+  }
+  clear(): void { this.commit(0); }
+  dispose(): void { this.mesh.material?.dispose(); this.mesh.dispose(); }
+}
+
 const FLOWER_TINTS: readonly (readonly [number, number, number])[] = [[1, .2, .5], [1, .6, .76], [.82, .08, .34]];
 const PETAL_TINTS: readonly (readonly [number, number, number])[] = [[1, .62, .78], [1, .3, .56], [.86, .12, .4], [1, .88, .93]];
 const FLAKE_TINTS: readonly (readonly [number, number, number])[] = [[1, 1, 1], [.5, .76, 1], [.32, .62, 1]];
@@ -157,11 +217,16 @@ const FLAKE_TINTS: readonly (readonly [number, number, number])[] = [[1, 1, 1], 
 export class KillBursts {
   private readonly flowers: Field; private readonly petals: Field; private readonly flakes: Field; private readonly sparkles: Field;
   private readonly fields: Field[];
+  private readonly ribbons: Ribbons;
   private readonly bursts: { id: number; effect: KillBurstEffect; start: number; until: number }[] = [];
-  private readonly q = new Quaternion(); private readonly face = new Quaternion(); private readonly m = new Matrix();
+  private readonly q = new Quaternion(); private readonly q2 = new Quaternion(); private readonly face = new Quaternion(); private readonly m = new Matrix();
   private readonly s = new Vector3(); private readonly p = new Vector3();
   private readonly observer: Observer<Scene>;
   private nextId = 1; private tick = performance.now(); private clock = 0; private emitted = 0;
+  // Scratch for the closed-form swirl (position at an arbitrary orbit time) and the camera position used to orient trail ribbons.
+  private ox = 0; private oy = 0; private oz = 0; private camX = 0; private camY = 0; private camZ = 0;
+  private readonly trailPts = new Float32Array((BURST_BUDGET.full.trailSegments + 1) * 3);
+  private trailsLastFrame = 0; private updateMs = 0;
   constructor(private readonly scene: Scene) {
     const max = BURST_BUDGET.full;
     this.flowers = new Field(scene, 'flower', flowerGeometry(), max.flowers * max.bursts);
@@ -169,6 +234,8 @@ export class KillBursts {
     this.flakes = new Field(scene, 'flake', flakeGeometry(), max.flakes * max.bursts);
     this.sparkles = new Field(scene, 'sparkle', sparkleGeometry(), max.sparkles * max.bursts);
     this.fields = [this.flowers, this.petals, this.flakes, this.sparkles];
+    // A retired burst's flakes live on for 0.16 s while a new one starts, hence one burst more than the concurrent limit.
+    this.ribbons = new Ribbons(scene, (max.bursts + 1) * max.trails, max.trailSegments);
     // Own clock: the engine's frame delta only advances inside its render loop.
     this.observer = scene.onBeforeRenderObservable.add(() => { const now = performance.now(); if (this.frozen) { this.tick = now; return; } this.update(Math.min(.05, Math.max(0, (now - this.tick) / 1000))); this.tick = now; });
   }
@@ -180,9 +247,11 @@ export class KillBursts {
   inspect() {
     const lite = skinFxLite();
     return { lite, bursts: this.bursts.length, ages: this.bursts.map((b) => +(this.clock - b.start).toFixed(3)), emitted: this.emitted, flowers: this.flowers.active, petals: this.petals.active, flakes: this.flakes.active, sparkles: this.sparkles.active,
-      blended: this.flowers.isBlended, capacity: this.fields.map((f) => f.capacity), budget: lite ? BURST_BUDGET.lite : BURST_BUDGET.full, drawn: this.fields.filter((f) => f.mesh.isEnabled()).length };
+      blended: this.flowers.isBlended, capacity: this.fields.map((f) => f.capacity), budget: lite ? BURST_BUDGET.lite : BURST_BUDGET.full,
+      drawn: this.fields.filter((f) => f.mesh.isEnabled()).length + (this.ribbons.mesh.isEnabled() ? 1 : 0),
+      trails: this.trailsLastFrame, trailCapacity: this.ribbons.capacity, trailSegments: this.ribbons.segmentCount, updateMs: +this.updateMs.toFixed(3) };
   }
-  meshes(): Mesh[] { return this.fields.map((f) => f.mesh); }
+  meshes(): Mesh[] { return [...this.fields.map((f) => f.mesh), this.ribbons.mesh]; }
 
   /** `at` is the eliminated player's feet in world space (the authoritative event position). `distance` scales particles up for far
    * viewers and `reduced` honours prefers-reduced-motion with a calmer, smaller effect. */
@@ -190,6 +259,7 @@ export class KillBursts {
     if (distance > MAX_DISTANCE) return;
     const lite = skinFxLite(), budget = lite ? BURST_BUDGET.lite : BURST_BUDGET.full;
     for (const f of this.fields) f.setBlended(!lite);
+    this.ribbons.configure(budget.trailSegments, !lite);
     // Concurrent budget per effect: the oldest burst of this kind fades out early instead of piling up.
     const same = this.bursts.filter((b) => b.effect === effect);
     while (same.length >= budget.bursts) { const old = same.shift()!; this.retire(old.id); this.bursts.splice(this.bursts.indexOf(old), 1); }
@@ -200,33 +270,40 @@ export class KillBursts {
     else this.emitBlizzard(id, at, budget, boost, calm, reduced);
   }
   /** Removes everything now (map change, leaving the match). */
-  clear(): void { for (const f of this.fields) f.clear(); this.bursts.length = 0; }
+  clear(): void { for (const f of this.fields) f.clear(); this.ribbons.clear(); this.trailsLastFrame = 0; this.bursts.length = 0; }
 
   private retire(id: number): void {
     for (const f of this.fields) for (const p of f.parts) if (p.on && p.burst === id) p.life = Math.min(p.life, Math.max(p.age, 0) + .16);
   }
 
-  private emitBlossom(id: number, at: Vector3, budget: { bursts: number; flowers: number; petals: number }, boost: number, calm: number, reduced: boolean): void {
-    const cy = at.y + .95;
+  /** Blossom: the eliminated body is replaced by flowers. They appear inside the body's own volume (a 0.1-1.75 m tall column about the feet),
+   * pop in within ~35 ms, hold a beat so the silhouette reads as a cloud of blossoms, then burst outward from the body's centre and drift
+   * down. Every piece has its own spin rate, wobble, sway and fall speed so nothing moves in unison. */
+  private emitBlossom(id: number, at: Vector3, budget: Budget, boost: number, calm: number, reduced: boolean): void {
     const spawn = (field: Field, count: number, petal: boolean): void => {
       // Only the first `bursts * perBurst` particles of a pool are used, so the active quality mode sets the real ceiling.
       const limit = (petal ? budget.petals : budget.flowers) * budget.bursts;
       for (let i = 0; i < count; i++) {
         const p = field.take(limit);
-        // Direction on a slightly tall ellipsoid; flowers sit on a shell around the body so they surround it without hiding it entirely.
-        let dx = rnd(-1, 1), dy = rnd(-1, 1), dz = rnd(-1, 1); const l = Math.hypot(dx, dy, dz) || 1; dx /= l; dy /= l; dz /= l;
-        const rho = petal ? rnd(.25, .7) : rnd(.4, .72);
+        // A point in the body column (denser toward the torso), then the direction away from the body's centre (tall ellipsoid metric).
+        const ang = rnd(0, 6.283), rad = .3 * Math.sqrt(Math.random()) * (petal ? 1 : .9), hy = .12 + Math.pow(Math.random(), 1.15) * 1.62;
+        const lx = Math.cos(ang) * rad, lz = Math.sin(ang) * rad;
+        let dx = lx + rnd(-.18, .18), dy = (hy - .95) * .62 + rnd(-.2, .2), dz = lz + rnd(-.18, .18);
+        const l = Math.hypot(dx, dy, dz) || 1; dx /= l; dy /= l; dz /= l;
         p.on = true; p.burst = id; p.kicked = false;
-        p.x = at.x + dx * rho; p.y = Math.max(at.y + .08, cy + dy * rho * 1.3); p.z = at.z + dz * rho;
-        // The pieces pop in over ~0.12 s, hold for a beat, then burst outward together.
-        p.age = -rnd(0, reduced ? .2 : .12); p.hold = rnd(.15, .24);
-        const speed = (petal ? rnd(1.8, 4.2) : rnd(2.4, 4.6)) * calm;
-        p.vx = dx * speed; p.vy = dy * speed * .75 + .6 * calm; p.vz = dz * speed;
-        p.life = (petal ? rnd(1.65, 2.05) : rnd(1.5, 1.85)) * (reduced ? .85 : 1);
-        p.size = (petal ? rnd(.07, .125) : rnd(.085, .165) * (Math.random() < .12 ? 1.35 : 1)) * boost;
-        p.angle = rnd(0, 6.3); p.spin = (petal ? rnd(2.2, 6) : rnd(-2.4, 2.4)) * calm * (Math.random() < .5 ? -1 : 1);
+        p.x = at.x + lx; p.y = at.y + hy; p.z = at.z + lz;
+        // Pieces pop in over ~0.09 s (staggered by up to 35 ms: the body is gone from the first frame), hold ~0.1 s, then burst outward.
+        p.age = -rnd(0, reduced ? .1 : .035); p.hold = rnd(.07, .15);
+        const speed = (petal ? rnd(2.2, 5.4) : rnd(2.8, 6)) * calm;
+        p.vx = dx * speed; p.vy = dy * speed * .75 + .7 * calm; p.vz = dz * speed;
+        p.life = (petal ? rnd(1.55, 2.0) : rnd(1.45, 1.95)) * (reduced ? .85 : 1);
+        p.size = (petal ? rnd(.07, .13) : rnd(.09, .175) * (Math.random() < .15 ? 1.35 : 1)) * boost;
+        // Log-uniform spin rates: most pieces turn lazily, a few spin; petals turn faster than flowers but some only drift round.
+        const rate = Math.exp(rnd(Math.log(petal ? .9 : .35), Math.log(petal ? 5.2 : 2.4)));
+        p.angle = rnd(0, 6.3); p.spin = rate * calm * (Math.random() < .5 ? -1 : 1);
         p.ax = rnd(-1, 1); p.ay = rnd(-1, 1); p.az = rnd(-1, 1); const al = Math.hypot(p.ax, p.ay, p.az) || 1; p.ax /= al; p.ay /= al; p.az /= al;
-        p.ph = rnd(0, 6.3); p.ph2 = rnd(0, 6.3); p.sw = rnd(3.2, 6.2); p.fall = petal ? rnd(.42, .85) : rnd(.6, 1.05);
+        p.ph = rnd(0, 6.3); p.ph2 = rnd(0, 6.3); p.sw = rnd(2.2, 5.4); p.amp = rnd(.22, .7); p.wr1 = rnd(1.3, 2.9); p.wr2 = rnd(1.6, 3.3);
+        p.fall = petal ? rnd(.38, .85) : rnd(.5, 1.1);
         const roll = Math.random(); p.tint = petal ? (roll < .5 ? 0 : roll < .78 ? 1 : roll < .92 ? 2 : 3) : (roll < .42 ? 0 : roll < .82 ? 1 : 2);
         p.cy = at.y;
       }
@@ -235,18 +312,20 @@ export class KillBursts {
     spawn(this.petals, Math.round(budget.petals * calm), true);
   }
 
-  private emitBlizzard(id: number, at: Vector3, budget: { bursts: number; flakes: number; sparkles: number }, boost: number, calm: number, reduced: boolean): void {
+  /** Frosted: flakes on individual, inclined, speed-surging orbits (a third turn the other way); a quarter of them draw a curved trail. */
+  private emitBlizzard(id: number, at: Vector3, budget: Budget, boost: number, calm: number, reduced: boolean): void {
+    const trails = Math.round(budget.trails * calm);
     const spawn = (field: Field, count: number, sparkle: boolean): void => {
       const limit = (sparkle ? budget.sparkles : budget.flakes) * budget.bursts;
       for (let i = 0; i < count; i++) {
         const p = field.take(limit);
         p.on = true; p.burst = id; p.kicked = false;
         p.cx = at.x; p.cz = at.z; p.cy = at.y + .95;
-        // Varied orbits: radius, squash and tilt differ per flake, so the swirl is never a clean ring. A fifth spin the other way.
-        p.r = .14 + .72 * Math.pow(Math.random(), .8); p.th = rnd(0, 6.3);
-        p.w = rnd(5, 12) * (Math.random() < .2 ? -.7 : 1) * (reduced ? .25 : 1);
-        p.squash = rnd(.55, 1); p.tilt = rnd(0, 3.14);
-        p.h = (Math.random() + Math.random() - 1) * .85; p.rise = rnd(.05, .3) * calm;
+        p.r = .14 + .8 * Math.pow(Math.random(), .8); p.th = rnd(0, 6.3);
+        p.w = rnd(5, 12.5) * (Math.random() < .3 ? -.75 : 1) * (reduced ? .25 : 1);
+        p.wob = rnd(.15, .6) * (reduced ? .3 : 1); p.incl = rnd(-.55, .55);
+        p.squash = rnd(.5, 1); p.tilt = rnd(0, 3.14);
+        p.h = (Math.random() + Math.random() - 1) * .9; p.rise = rnd(.05, .32) * calm;
         p.age = -rnd(0, .1); p.end = rnd(.85, 1.03);
         p.life = p.end + rnd(.22, .3);
         p.size = (sparkle ? rnd(.075, .13) : rnd(.032, .068)) * boost;
@@ -254,6 +333,8 @@ export class KillBursts {
         p.ph = rnd(0, 6.3); p.ph2 = rnd(0, 6.3); p.sw = rnd(4, 9);
         const roll = Math.random(); p.tint = sparkle ? 0 : roll < .45 ? 0 : roll < .85 ? 1 : 2;
         p.fall = rnd(2.4, 4.6) * (reduced ? .4 : 1);
+        // The first flakes of a burst carry a trail (their order in the pool is random in space, so this is an unbiased quarter).
+        p.trail = !sparkle && i < trails; p.tlen = rnd(.13, .24);
       }
     };
     spawn(this.flakes, Math.round(budget.flakes * calm), false);
@@ -265,12 +346,19 @@ export class KillBursts {
     for (let i = this.bursts.length - 1; i >= 0; i--) if (this.clock > this.bursts[i].until) this.bursts.splice(i, 1);
     let any = false;
     for (const f of this.fields) for (const p of f.parts) if (p.on) { any = true; break; }
-    if (!any) { for (const f of this.fields) if (f.mesh.isEnabled()) f.commit(0); return; }
+    if (!any) { for (const f of this.fields) if (f.mesh.isEnabled()) f.commit(0); if (this.ribbons.mesh.isEnabled()) this.ribbons.commit(0); this.trailsLastFrame = 0; return; }
+    const started = performance.now();
     const camera = this.scene.activeCamera;
-    if (camera) camera.getWorldMatrix().decompose(undefined, this.face); else this.face.copyFromFloats(0, 0, 0, 1);
+    if (camera) {
+      camera.getWorldMatrix().decompose(undefined, this.face);
+      const g = camera.globalPosition; this.camX = g.x; this.camY = g.y; this.camZ = g.z;
+    } else { this.face.copyFromFloats(0, 0, 0, 1); this.camX = this.camY = this.camZ = 0; }
     const blended = this.flowers.isBlended;
     this.updateBlossom(this.flowers, false, dt, blended); this.updateBlossom(this.petals, true, dt, blended);
+    this.trailsLastFrame = 0;
     this.updateBlizzard(this.flakes, false, dt, blended); this.updateBlizzard(this.sparkles, true, dt, blended);
+    this.ribbons.commit(this.trailsLastFrame);
+    this.updateMs = performance.now() - started;
   }
 
   private updateBlossom(field: Field, petal: boolean, dt: number, blended: boolean): void {
@@ -286,23 +374,27 @@ export class KillBursts {
       } else {
         x.kicked = true;
         // Fast expansion that drags to a stop, then a slow flutter downward with sideways sway.
-        const drag = Math.exp(-4.2 * dt); x.vx *= drag; x.vz *= drag; x.vy *= drag;
+        const drag = Math.exp(-3.1 * dt); x.vx *= drag; x.vz *= drag; x.vy *= drag;
         x.vy += (-x.fall - x.vy) * Math.min(1, 1.6 * dt);
-        x.x += x.vx * dt + Math.sin(x.age * x.sw + x.ph) * .42 * dt; x.z += x.vz * dt + Math.cos(x.age * x.sw * .8 + x.ph2) * .3 * dt; x.y += x.vy * dt;
+        // The sway fades in as the burst slows, so the first metre is a clean outward blast and the later drift floats.
+        const sway = Math.min(1, (x.age - x.hold) / .5);
+        x.x += x.vx * dt + Math.sin(x.age * x.sw + x.ph) * x.amp * sway * 1.25 * dt; x.z += x.vz * dt + Math.cos(x.age * x.sw * .8 + x.ph2) * x.amp * sway * dt; x.y += x.vy * dt;
         // Never sink through the floor: pieces land softly and are already fading by then.
         if (x.y < x.cy + .03) { x.y = x.cy + .03; x.vy = 0; x.vx *= .9; x.vz *= .9; }
       }
       x.angle += x.spin * dt;
-      const fade = Math.min(1, (x.life - x.age) / .4), pop = popScale(x.age / .11);
+      const fade = smooth((x.life - x.age) / .5), pop = popScale(x.age / .09);
       const size = x.size * pop * (blended ? .88 + .12 * fade : Math.max(.02, fade));
       this.p.set(x.x, x.y, x.z);
       if (petal) {
         this.s.setAll(size);
         Quaternion.RotationAxisToRef(this.axis(x), x.angle, this.q);
       } else {
-        // Flowers face the camera and spin about the view axis; a gentle squash keeps them from reading as flat decals.
-        this.s.set(size, size * (.84 + .16 * Math.cos(x.age * 3.4 + x.ph)), size);
-        Quaternion.RotationAxisToRef(FWD, x.angle, this.q); this.face.multiplyToRef(this.q, this.q);
+        // Flowers face the camera and turn slowly about the view axis, with a lazy two-axis wobble (own rate and phase per flower) so they
+        // tilt like falling blossoms instead of spinning as flat decals.
+        this.s.set(size, size * (.9 + .1 * Math.cos(x.age * 3.4 + x.ph)), size);
+        Quaternion.RotationYawPitchRollToRef(Math.sin(x.age * x.wr1 + x.ph) * .6, Math.sin(x.age * x.wr2 + x.ph2) * .6, x.angle, this.q2);
+        this.face.multiplyToRef(this.q2, this.q);
       }
       Matrix.ComposeToRef(this.s, this.q, this.p, this.m);
       const t = tints[x.tint];
@@ -323,13 +415,7 @@ export class KillBursts {
       if (x.age < 0) continue;
       const t = x.age;
       if (t < x.end) {
-        // Swirl: an orbit that gathers outward over the first 0.25 s, with its own squash/tilt, a rising spiral and two sine turbulences.
-        const radius = x.r * (.5 + .5 * smooth(t / .25)) * (1 + .22 * Math.sin(t * 3.1 + x.ph));
-        const a = x.th + x.w * t, ex = Math.cos(a) * radius, ez = Math.sin(a) * radius * x.squash;
-        const ct = Math.cos(x.tilt), st = Math.sin(x.tilt);
-        x.x = x.cx + ex * ct - ez * st + Math.sin(t * x.sw + x.ph) * .05 + Math.sin(t * x.sw * 2.1 + x.ph2) * .025;
-        x.z = x.cz + ex * st + ez * ct + Math.cos(t * x.sw * .9 + x.ph2) * .05;
-        x.y = x.cy + x.h + t * x.rise + Math.sin(t * 4.3 + x.ph) * .12;
+        this.swirlAt(x, t); x.x = this.ox; x.y = this.oy; x.z = this.oz;
       } else {
         if (!x.kicked) {
           // Disperse: leave along the orbit's tangent with a strong outward kick, then drag to a stop while fading.
@@ -352,22 +438,66 @@ export class KillBursts {
       Matrix.ComposeToRef(this.s, this.q, this.p, this.m);
       const c = FLAKE_TINTS[x.tint];
       field.write(n++, this.m, c[0], c[1], c[2], blended ? fade * .95 : 1);
+      if (x.trail && t < x.end && this.trailsLastFrame < this.ribbons.capacity) this.writeTrail(x, t, fade, blended, c);
     }
     field.commit(n);
+  }
+
+  /** Position of a flake on its orbit at time `t` (into `ox/oy/oz`): a ring that gathers outward over 0.25 s, with its own squash, yaw and
+   * inclination (so some loops pass over and under the centre), a surging angular speed, a rising spiral and sine turbulence. A closed form
+   * on purpose: trails evaluate it at earlier times and so follow the exact curve without storing history. */
+  private swirlAt(x: Particle, t: number): void {
+    const radius = x.r * (.5 + .5 * smooth(t / .25)) * (1 + .22 * Math.sin(t * 3.1 + x.ph));
+    const a = x.th + x.w * t + x.wob * Math.sin(t * 2.3 + x.ph2);
+    const ex = Math.cos(a) * radius, ez0 = Math.sin(a) * radius * x.squash;
+    const ci = Math.cos(x.incl), si = Math.sin(x.incl), ez = ez0 * ci, ey = ez0 * si;
+    const ct = Math.cos(x.tilt), st = Math.sin(x.tilt);
+    this.ox = x.cx + ex * ct - ez * st + Math.sin(t * x.sw + x.ph) * .05 + Math.sin(t * x.sw * 2.1 + x.ph2) * .025;
+    this.oz = x.cz + ex * st + ez * ct + Math.cos(t * x.sw * .9 + x.ph2) * .05;
+    this.oy = Math.max(x.cy - .86, x.cy + x.h + ey + t * x.rise + Math.sin(t * 4.3 + x.ph) * .12);
+  }
+
+  /** One thin curved ribbon behind a flake: `trailSegments` points sampled back along its orbit (0.13-0.24 s), widest at the flake and
+   * tapering to nothing, fading along its length (alpha in blended mode, taper only in Chromebook mode), gone before the flake disperses. */
+  private writeTrail(x: Particle, t: number, fade: number, blended: boolean, c: readonly [number, number, number]): void {
+    const segs = this.ribbons.segmentCount, pts = this.trailPts, slot = this.trailsLastFrame++;
+    const span = x.tlen * (blended ? 1 : .8);
+    for (let k = 0; k <= segs; k++) { this.swirlAt(x, Math.max(0, t - span * k / segs)); pts[k * 3] = this.ox; pts[k * 3 + 1] = this.oy; pts[k * 3 + 2] = this.oz; }
+    // Appears with the flake, shortens away before the dispersal so it never smears across the kick.
+    const life = smooth(t / .1) * smooth((x.end - t) / .14) * fade;
+    const half = x.size * .2 * (blended ? 1 : Math.max(.05, life));
+    // White with just a hint of the flake's own ice tint.
+    const cr = .65 + .35 * c[0], cg = .65 + .35 * c[1], cb = .65 + .35 * c[2];
+    for (let k = 0; k <= segs; k++) {
+      const a = Math.max(0, k - 1) * 3, b = Math.min(segs, k + 1) * 3;
+      const dx = pts[b] - pts[a], dy = pts[b + 1] - pts[a + 1], dz = pts[b + 2] - pts[a + 2];
+      const vx = this.camX - pts[k * 3], vy = this.camY - pts[k * 3 + 1], vz = this.camZ - pts[k * 3 + 2];
+      // Side vector = direction x view, normalised: the ribbon always turns its face to the viewer.
+      let sx = dy * vz - dz * vy, sy = dz * vx - dx * vz, sz = dx * vy - dy * vx;
+      const sl = Math.hypot(sx, sy, sz), taper = Math.pow(1 - k / (segs + 1), .85), w = sl > 1e-7 ? half * taper / sl : 0;
+      sx *= w; sy *= w; sz *= w;
+      const alpha = blended ? life * .6 * Math.pow(1 - k / (segs + 1), 1.4) : 1;
+      this.ribbons.point(slot, k, pts[k * 3], pts[k * 3 + 1], pts[k * 3 + 2], sx, sy, sz, cr, cg, cb, alpha);
+    }
   }
 
   /** Compiles every shader variant up front (blended and opaque) so the first elimination never hitches. */
   async warm(): Promise<void> {
     const keep = this.flowers.isBlended;
+    const keepSegments = this.ribbons.segmentCount;
     for (const blended of [true, false]) {
       for (const f of this.fields) f.setBlended(blended);
-      await Promise.all(this.fields.map((f) => f.mesh.material!.forceCompilationAsync(f.mesh, { useInstances: true })));
+      this.ribbons.configure(keepSegments, blended);
+      await Promise.all([...this.fields.map((f) => f.mesh.material!.forceCompilationAsync(f.mesh, { useInstances: true })),
+        this.ribbons.mesh.material!.forceCompilationAsync(this.ribbons.mesh)]);
     }
     for (const f of this.fields) f.setBlended(keep);
+    this.ribbons.configure(keepSegments, keep);
   }
   dispose(): void {
     this.scene.onBeforeRenderObservable.remove(this.observer);
     for (const f of this.fields) f.dispose();
+    this.ribbons.dispose();
     this.bursts.length = 0;
   }
 }

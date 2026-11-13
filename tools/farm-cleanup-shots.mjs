@@ -30,6 +30,9 @@ const GROUPS = {
     ['bush-south', -10.8, 28.4, 0, -2, 1.3], ['bush-north', -10.8, 22.0, 180, -2, 1.3], ['bush-west', -14.2, 25.2, 90, -2, 1.3], ['bush-east', -7.4, 25.2, 270, -2, 1.3],
     ['bush-above', -10.8, 25.2, 0, -80, 4.5], ['bush-close', -10.8, 27.0, 0, -6, 1.0], ['bush-diag', -13.2, 27.6, 45, -4, 1.4], ['bush-other-south', -29.0, -14.4, 0, -2, 1.3],
     ['bush-other-east', -26.4, -17.0, 270, -2, 1.3], ['bush-yard', 25.4, -17.6, 0, -2, 1.3], ['bush-pair-1', 3.0, -39.4, 0, -2, 1.3], ['bush-pair-2', 3.0, -44.6, 180, -2, 1.3],
+    // ground level, looking up into the underside, and low corners (2026-11-13: the lower part used to show gaps)
+    ['bush-ground', -10.8, 28.2, 0, 8, .1], ['bush-underside', -10.8, 26.9, 0, 32, .05], ['bush-ground-corner', -12.8, 27.2, 40, 10, .12], ['bush-ground-corner-b', -8.8, 23.2, 220, 10, .12],
+    ['bush-low-side', -14.6, 25.2, 90, 14, .08], ['bush-low-yard', 25.4, -19.2, 0, 14, .1],
   ],
   hedges: [
     ['tall-broadside', -26, -12, 270, 3], ['tall-endon', -22, -12, 270, 2], ['tall-from-above', -31, -12, 0, -75, 9], ['tall-diagonal', -27.5, -8, 315, 8],
@@ -37,9 +40,9 @@ const GROUPS = {
     ['run-broadside', 29, 3.5, 180, 3], ['thin-end', 31, -5.5, 0, 3], ['low-hedge', 12.5, -6.5, 0, 2], ['strip-west', -33.5, -26, 270, 4],
   ],
   hay: [
-    ['step-west', -27, 3.6, 90, 4], ['step-west-end', -31.2, 8.5, 180, 4], ['pyramid-north', 3, -33.5, 0, 4], ['pyramid-north-side', -2.5, -38.4, 90, 4],
-    ['pyramid-north-above', 3, -38.4, 0, -60, 6], ['step-east', 25.5, 21, 90, 3], ['pyramid-south', 21, 34, 0, 3], ['single-north', 9.5, -38, 0, 3],
-    ['step-centre', 0.5, -19.5, 0, 3], ['pyramid-west', -15, 3.5, 270, 3], ['step-yard-east', 19.5, -9, 90, 3],
+    ['pyr3-west-end', -24, 22, 0, 6, 1.64], ['pyr3-west-side', -31, 12, 90, 8], ['pyr3-west-front', -16.5, 12, 270, 8], ['pyr3-west-above', -24, 12, 0, -60, 8],
+    ['pyr3-east-end', 22, 28, 180, 8], ['pyr3-east-side', 16, 18, 90, 8], ['pyr3-east-diag', 27, 24, 225, 10], ['pyr2-north', 6, -27, 0, 6], ['pyr2-north-end', 12, -33, 270, 6],
+    ['pyr2-south', 10, 24.5, 180, 8], ['pyr2-barn-a', -26, -27, 90, 6], ['pyr2-barn-b', -26.5, -35.2, 90, 6], ['pyr2-west', -20, 6, 0, 6], ['pyr2-low-up', 6, -30, 0, 22, .2], ['end-disc-close', 12.3, 29.45, 270, 0, .6], ['end-disc-pyr3', -27.3, 12, 90, 4, 1.0], ['pyr3-notch-close', -27.0, 10.2, 60, 8, 1.6],
   ],
   entrances: [
     ['old-north-portal', 0.5, -18.5, 0, 6, 1.7], ['old-north-portal-b', 6, -28, 270, 8], ['old-east-portal', 12, 9, 90, 8], ['old-east-portal-b', 24, 12, 270, 8],

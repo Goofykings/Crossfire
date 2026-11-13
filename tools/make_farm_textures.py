@@ -75,6 +75,69 @@ def hay() -> None:
     img.save(OUT / "hay.jpg", quality=88)
 
 
+# --- round bales (2026-11-13) -----------------------------------------------------------------------------
+HAY_PALETTE = [(206, 174, 88), (190, 152, 68), (160, 126, 54), (224, 194, 110), (142, 110, 48), (214, 184, 100)]
+
+
+def hay_roll() -> None:
+    """The barrel of a round bale: straw wound round it (strands run along u, which is the circumference), with darker seams
+    where the layers meet and a few strands that wander. Tileable."""
+    rnd = random.Random(2113)
+    img = Image.new("RGB", (S, S), (170, 136, 60))
+    d = ImageDraw.Draw(img)
+    for _ in range(7600):
+        x, y = rnd.uniform(0, S), rnd.uniform(0, S)
+        L = rnd.uniform(26, 90)
+        a = rnd.gauss(0, .07) + (0 if rnd.random() < .93 else rnd.uniform(-.9, .9))
+        col = rnd.choice(HAY_PALETTE)
+        x1, y1 = x + math.cos(a) * L, y + math.sin(a) * L
+        wrap(lambda ox, oy: d.line((x + ox, y + oy, x1 + ox, y1 + oy), fill=col, width=rnd.choice((1, 2, 2, 3))))
+    for y in range(37, S, 73):                       # layer seams: a thin dark line with a shadow row under it
+        yy = y + rnd.randint(-6, 6)
+        wrap(lambda ox, oy: d.line((0 + ox, yy + oy, S + ox, yy + rnd.randint(-2, 2) + oy), fill=(96, 72, 34), width=2))
+        wrap(lambda ox, oy: d.line((0 + ox, yy + 3 + oy, S + ox, yy + 3 + oy), fill=(128, 100, 46), width=2))
+    img = img.filter(ImageFilter.GaussianBlur(.7))
+    img.save(OUT / "hay_roll.jpg", quality=90)
+
+
+def hay_end() -> None:
+    """The flat end of a round bale: the rolled layers as a tight spiral, with the straw ends showing as short tangential
+    strokes. The whole image is the disc (UV 0..1), the corners are never used."""
+    rnd = random.Random(2114)
+    img = Image.new("RGB", (S, S), (176, 142, 66))
+    d = ImageDraw.Draw(img)
+    c = S / 2
+    for _ in range(14000):                           # straw ends
+        r = math.sqrt(rnd.random()) * c * 1.05
+        th = rnd.uniform(0, 2 * math.pi)
+        ln = rnd.uniform(.03, .11)
+        col = rnd.choice(HAY_PALETTE)
+        pts = [(c + math.cos(th + k * ln / 3) * r, c + math.sin(th + k * ln / 3) * r) for k in range(4)]
+        d.line(pts, fill=col, width=rnd.choice((1, 2, 2, 3)))
+    pitch = 11.0                                     # spiral: radius grows by `pitch` pixels per turn, drawn as a shaded line
+    th = 0.0
+    prev = None
+    while th < 2 * math.pi * 24:
+        r = 6 + pitch * th / (2 * math.pi) + math.sin(th * 3.1) * 1.4
+        pt = (c + math.cos(th) * r, c + math.sin(th) * r)
+        if prev:
+            d.line((prev, pt), fill=(112, 86, 38), width=2)
+            d.line(((prev[0] + 2, prev[1] + 2), (pt[0] + 2, pt[1] + 2)), fill=(206, 176, 92), width=1)
+        prev = pt
+        th += .05
+    for _ in range(2600):                            # fuzz over the spiral so it reads as straw, not a drawn line
+        r = math.sqrt(rnd.random()) * c * 1.05
+        th2 = rnd.uniform(0, 2 * math.pi)
+        a = th2 + math.pi / 2 + rnd.gauss(0, .5)
+        ln = rnd.uniform(5, 13)
+        x, y = c + math.cos(th2) * r, c + math.sin(th2) * r
+        d.line((x, y, x + math.cos(a) * ln, y + math.sin(a) * ln), fill=rnd.choice(HAY_PALETTE), width=1)
+    yy, xx = ImageDraw.Draw(img), None
+    d.ellipse((c - 9, c - 9, c + 9, c + 9), fill=(120, 92, 42))   # the core
+    img = img.filter(ImageFilter.GaussianBlur(.6))
+    img.save(OUT / "hay_end.jpg", quality=90)
+
+
 # --- bush foliage atlas -----------------------------------------------------------------------------------
 def _leaf_outline(length, width, steps=14, round_base=0.0, tip=1.0):
     """Closed outline (list of (x, y) with the stalk at the origin, the tip at +y) of a leaf: pointed oval,
@@ -303,9 +366,9 @@ def main() -> None:
     import sys
     OUT.mkdir(parents=True, exist_ok=True)
     only = [a for a in sys.argv[1:] if not a.startswith("-")]
-    for name, fn in (("leaves", leaves), ("hay", hay), ("bush_leaves", bush_leaves), ("ivy", ivy_leaves)):
-        # `python tools/make_farm_textures.py ivy` rewrites just one atlas; with no argument the ivy atlas is not touched
-        if (not only and name != "ivy") or name in only:
+    for name, fn in (("leaves", leaves), ("hay", hay), ("bush_leaves", bush_leaves), ("ivy", ivy_leaves), ("hay_roll", hay_roll), ("hay_end", hay_end)):
+        # `python tools/make_farm_textures.py ivy` rewrites just one atlas; with no argument the ivy and round-bale atlases are not touched
+        if (not only and name not in ("ivy", "hay_roll", "hay_end")) or name in only:
             fn()
     print("wrote", OUT)
 

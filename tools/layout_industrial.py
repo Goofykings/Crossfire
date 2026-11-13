@@ -29,7 +29,7 @@ from spawn_points import ffa_spawns  # noqa: E402
 PLAY = 27
 OUTER = 35
 WALL = 0.3  # warehouse wall thickness: interiors are inset by this from the lot edge
-DOCK_H = 1.1
+DOCK_H = 1.0
 PLATFORM_H = 3.0
 GANTRY_H = 1.8
 

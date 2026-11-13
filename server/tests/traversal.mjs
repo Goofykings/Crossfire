@@ -8,6 +8,37 @@ import {test} from 'node:test';
 import {setTimeout as delay} from 'node:timers/promises';
 import {Miniflare,convertV4MiniflareOptions,Log,LogLevel} from 'miniflare';
 import WebSocket from 'ws';
+import { harness, until as roomUntil, self as roomSelf } from './room-harness.mjs';
+
+test('Industrial loading dock: normal jumps land with all weapons and synchronize to a second real peer', {timeout:60000}, async t => {
+  const h=await harness(t),token=await h.profile(),other=await h.profile();
+  const ad=await h.create(token,{mapId:'industrial-complex'}),room=h.room(ad.room.id);
+  const b=await h.open(await h.admission(other,{roomId:ad.room.id}),other);
+  for(const weapon of ['rifle','smg','shotgun','sniper','semi-sniper']) {
+    const a=await h.open(await h.admission(token,{roomId:ad.room.id}),token);
+    await h.spawn(a,weapon);const life=roomSelf(a).life;
+    await room.placeForCombatTest(a.id,[7,0,-5],90);
+    await roomUntil(()=>Math.abs(roomSelf(a).motion.position.x-7)<.001,'approach position');
+    let jumped=false,landed=false;
+    for(let tick=0;tick<180;tick+=6){
+      const p=roomSelf(a).motion.position,distance=10-p.x;
+      const jump=!jumped&&distance<1.1;jumped ||= jump;
+      a.send({type:'input',roundId:a.snapshot.roundId,mapVersion:a.snapshot.mapVersion,
+        frames:Array.from({length:6},(_,i)=>({seq:++a.seq,yaw:-Math.PI/2,pitch:0,
+          intent:{x:0,z:distance>-.8?1:0,slide:false,aim:false,jumpPressed:jump&&i===0},combat:{trigger:false,reload:false}}))});
+      await roomUntil(()=>roomSelf(a).ack>=a.seq,'jump input acknowledgment');
+      const state=roomSelf(a);landed ||= state.motion.grounded&&Math.abs(state.motion.position.y-1)<.001;
+      assert.ok(state.motion.position.y>=0);assert.equal(state.health,100);assert.equal(state.life,life);
+      if(landed&&state.motion.velocity.x===0)break;
+    }
+    assert.ok(landed,`${weapon} reached the loading dock`);
+    const end=roomSelf(a),peer=await roomUntil(()=>b.snapshot.players.find(p=>p.id===a.id&&p.ack>=end.ack),'peer landing snapshot');
+    assert.equal(peer.motion.position.y,1);assert.equal(peer.motion.grounded,true);
+    assert.equal(peer.life,life);assert.equal(peer.health,100);
+    assert.deepEqual(a.messages.filter(m=>m.type==='error'),[]);
+    await h.leave(a);
+  }
+});
 
 test('enclosed interiors: authoritative stair loops synchronize across two real peers on every map', {timeout:120000}, async()=>{
   const origin='http://localhost:5173',clients=[];

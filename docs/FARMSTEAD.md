@@ -207,3 +207,9 @@ Zone Control squares and tree canopies. The old small `hay_bale`/`hay_stack` sta
 leaves, density by height, load budget), tests/farmstead.test.ts (no fence, no underground, no holes), tests/farmPerimeter.test.ts (containment, nothing on
 top); in-engine: `node tools/farm-hay-jump-test.mjs` (local `?practice` mode: 0.9 m, 1.8 m and walk-off through the game's own input) and
 `node tools/farm-cleanup-shots.mjs <url> [group ...] [--chromebook]` (wall, vines, bushes, hedges, hay, entrances, aerial).
+
+## Round bales and bush coverage 2026-11-13
+
+Supersedes the rectangular `hay_bale_big` described above: see the newest PROGRESS entry. `hay_bale_round` (1.5 x 1.12 m, crown 1.08 m) stands in 3-2-1 and 2-1 pyramids built by
+`bale_stack` in tools/layout_farm.py; its collision is the catalog's `colliders` slab list (shared/world.ts), its textures are `hay_roll.jpg` / `hay_end.jpg`. Bushes and hedges
+get ground-reaching lumps and extra low cards (`props_farm.lumps(ground=, low_boost=)`). Review: `node tools/farm-hay-jump-test.mjs`, `node tools/farm-cleanup-shots.mjs <url> hay bushes`.

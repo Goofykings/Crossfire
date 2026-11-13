@@ -1,3 +1,11 @@
+## Round hay bales and bush coverage (2026-11-13)
+
+See docs/FARMSTEAD.md "Round bales and bush coverage" and the newest PROGRESS entry. Visual/layout only. The big hay prop is `hay_bale_round`: rounded collision comes from the optional
+catalog `colliders` slab list (`catalog.round_bale_slabs`, applied in shared/world.ts for frontend, Practice and Worker; `collider` stays the bounding box for tools): never
+go back to one box per bale. Stacks are 3-2-1 / 2-1 pyramids from `bale_stack`; keep the tall ones 8 m from the wall (crown 3 m) and off dirt paths, spawns and zone squares.
+Climb tests must strafe along the bale axis (the shared controller sweeps the rifle ahead of the body). Bushes/hedges: `lumps(ground=, low_boost=)` keep the underside covered; do not shrink those.
+Rebuild: layout_farm --write, Blender `--only materials,props,farm`, `node tools/generate-bullet-surfaces.mjs`, `npm test --prefix server`. No commit/push/deploy.
+
 ## Farmstead clean-up: no fence, no underground, higher wall, thin vines (2026-11-12)
 
 See docs/FARMSTEAD.md "Clean-up 2026-11-12" and the newest PROGRESS entry. Visual/layout only; combat, protocol v28 and Zone Control untouched. This SUPERSEDES

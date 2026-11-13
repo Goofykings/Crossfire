@@ -13,7 +13,7 @@ import {EnvironmentSimulation} from '../../shared/environment';
 import type { PracticeSetup } from '../practice/config';
 import { cosmetic, defaultEquipment } from '../../shared/cosmetics';
 import { MoneyBurst } from '../weapons/MoneyBurst';
-import { KillBursts, type KillBurstEffect } from '../weapons/KillBursts';
+import { KillBursts, burstInRange, type KillBurstEffect } from '../weapons/KillBursts';
 import { setSkinFxLite, skinFxInfo } from '../rendering/SkinFx';
 import { RoomClient } from '../network/RoomClient';
 import type { RoomAdmission } from '../../shared/rooms';
@@ -272,7 +272,7 @@ export class Game {
       else void this.enterPlay();
     };
     this.ui.onQuit = () => this.quitToMenu();
-    this.legendaryEffects.onEffect = (effect) => this.playLegendary(effect.effect, effect.position);
+    this.legendaryEffects.onEffect = (effect, event) => this.playLegendary(effect.effect, effect.position, event.victimId);
     this.ui.onCancelLoading = () => {const practice=!!this.practiceSetup,selected=!!this.admission;this.quitToMenu();if(practice)this.ui.practice.open();else if(selected)this.ui.rooms.open();};
     this.ui.onChatSend = (text) => this.network?.sendChat(text) ?? false;
     this.ui.onChatClose = () => {
@@ -587,7 +587,7 @@ export class Game {
         };
         network.onElimination = (event) => {
           if (signal.aborted || this.network !== network) return;
-          const deathStarted=this.performanceDiagnostics.start();this.remotePlayers.eliminate(event);this.performanceDiagnostics.end('death',deathStarted);
+          const deathStarted=this.performanceDiagnostics.start();this.remotePlayers.eliminate(event,this.blossomVanishes(event));this.performanceDiagnostics.end('death',deathStarted);
           if(event.assists?.some(a=>a.id===network.selfId))this.ui.showToast('+50 ASSIST','blue',1.8);
           if (event.killerId === network.selfId && event.victimId !== network.selfId && event.award) this.ui.grenadeReward();
           if (network.latest) { this.ui.combatFeed.add(event, network.latest, network.selfId); this.killEffect(event, network.latest, network.selfId); }
@@ -712,11 +712,23 @@ export class Game {
   }
   /** Legendary Blossom / Frosted eliminations. `position` is the authoritative event position (the victim's feet), never read from the
    * killer's current weapon. LegendaryEffects already delivered each confirmed event once. */
-  private playLegendary(effect: string, position: { x: number; y: number; z: number }): void {
+  private playLegendary(effect: string, position: { x: number; y: number; z: number }, victimId?: string): void {
     if (effect !== 'blossom-flower-burst' && effect !== 'frosted-blizzard') return;
-    const camera = this.ctx.camera, at = new Vector3(position.x, position.y, position.z);
+    const camera = this.ctx.camera;
+    let at = new Vector3(position.x, position.y, position.z);
+    // A hidden Blossom victim: start the flowers where the model was last drawn (it trails the authoritative position by the
+    // interpolation delay), unless that is implausibly far from the confirmed position.
+    const shown = effect === 'blossom-flower-burst' && victimId ? this.remotePlayers.vanishedAt(victimId) : null;
+    if (shown && Vector3.Distance(shown, at) < 2.5) at = shown;
     const bursts = this.ensureKillBursts();
     bursts.emit(effect as KillBurstEffect, at, { distance: at.subtract(camera.globalPosition).length(), reduced: this.reducedMotion.matches });
+  }
+  /** A confirmed Blossom elimination turns the victim's model into flowers (no falling body). Only when the burst will really be drawn
+   * (within its draw distance), so a distant victim never just disappears. Rich/Frosted/plain eliminations keep the normal death. */
+  private blossomVanishes(event: Elimination): boolean {
+    const e = event.cosmeticEffect;
+    if (e?.effect !== 'blossom-flower-burst' || !event.killerId || event.killerId === event.victimId) return false;
+    return burstInRange(Vector3.Distance(this.ctx.camera.globalPosition, new Vector3(e.position.x, e.position.y, e.position.z)));
   }
   private killBurstWarm: Promise<void> | null = null;
   private ensureKillBursts(): KillBursts {
@@ -1822,6 +1834,17 @@ export class Game {
         return true;
       },
       /** DEV only: runs a fabricated confirmed elimination through the real kill-effect path (dedupe, effect filtering, drawing). */
+      /** DEV review hook: a confirmed-style elimination of a real remote avatar through the same calls as network.onElimination
+       * (death presentation, Blossom vanish, Legendary burst). effect null = an ordinary kill. Returns the victim id. */
+      eliminateRemoteWith: (effect: string | null, id: string | null = null, dx = 0, dz = 1) => {
+        if (!import.meta.env.DEV) return null;
+        const target = this.remotePlayers.debugTarget(id); if (!target) return null;
+        const event = { id: `review:${target.id}:${Math.round(performance.now())}`, victimId: target.id, victimLife: target.life, direction: { x: dx, y: 0, z: dz }, award: null, roundId: 0,
+          victimName: '', killerId: 'review-killer', killerName: null, weapon: 'rifle', head: false, at: 0, respawnAt: 0, killerTeam: null, victimTeam: null,
+          cosmeticEffect: effect ? { effect, cosmeticId: effect === 'blossom-flower-burst' ? 'blossom-rifle' : 'frosted-rifle', position: { x: target.position.x, y: target.position.y, z: target.position.z } } : undefined } as unknown as Elimination;
+        this.remotePlayers.eliminate(event, this.blossomVanishes(event)); this.legendaryEffects.accept(event);
+        return target.id;
+      },
       deliverElimination: (event: Elimination) => { if (!import.meta.env.DEV || !this.network?.latest) return false; this.killEffect(event, this.network.latest, this.network.selfId); return true; },
       clearKillBursts: () => this.killBursts?.clear(),
       freezeKillBursts: (on: boolean) => this.killBursts?.freeze(on),

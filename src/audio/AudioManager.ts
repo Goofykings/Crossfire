@@ -84,23 +84,23 @@ export class AudioManager {
   private effectsVolume = 1;
   private readonly uiVoices=new Set<AudioBufferSourceNode>();
   private lastUI=-Infinity;
-  /** Warm 45/55 ms ticks, synthesized once so the first click needs no fetch. */
+  /** Cached 45/55 ms ticks and a quiet 75 ms logo shot: no first-click fetch dependency. */
   private uiBuffers=new Map<string,AudioBuffer>();
-  playUI(kind:'hover'|'click'|'tick',rate=1):void {
-    const ctx=this.ctx;if(!ctx||!this.sfx||ctx.state!=='running')return;
-    if(kind!=='click'&&ctx.currentTime-this.lastUI<.025)return;
+  playUI(kind:'hover'|'click'|'tick'|'logo',rate=1):void {
+    const ctx=this.ctx;if(!ctx||!this.sfx||ctx.state==='closed'||kind!=='logo'&&ctx.state!=='running')return;
+    if(kind!=='click'&&kind!=='logo'&&ctx.currentTime-this.lastUI<.025)return;
     this.lastUI=ctx.currentTime;
     let buffer=this.uiBuffers.get(kind);
     if(!buffer){
-      const duration=kind==='click'?.055:.045;buffer=ctx.createBuffer(1,Math.ceil(ctx.sampleRate*duration),ctx.sampleRate);
+      const duration=kind==='logo'?.075:kind==='click'?.055:.045;buffer=ctx.createBuffer(1,Math.ceil(ctx.sampleRate*duration),ctx.sampleRate);
       const data=buffer.getChannelData(0),frequency=kind==='click'?360:560;
-      for(let i=0;i<data.length;i++){const t=i/ctx.sampleRate,envelope=Math.sin(Math.PI*t/duration)*Math.exp(-t*85);data[i]=(Math.sin(2*Math.PI*frequency*t)+.18*Math.sin(2*Math.PI*frequency*1.5*t))*envelope;}
+      for(let i=0;i<data.length;i++){const t=i/ctx.sampleRate,envelope=Math.sin(Math.PI*t/duration)*Math.exp(-t*85);data[i]=kind==='logo'?(.65*(Math.random()*2-1)+.35*Math.sin(2*Math.PI*(900*t-4200*t*t)))*Math.sin(Math.min(1,t/.002)*Math.PI/2)*Math.exp(-t*70)*(1-t/duration):(Math.sin(2*Math.PI*frequency*t)+.18*Math.sin(2*Math.PI*frequency*1.5*t))*envelope;}
       this.uiBuffers.set(kind,buffer);
     }
     // A hard voice budget bounds even pathological pointer/input streams.
     if(this.uiVoices.size>=3){const old=this.uiVoices.values().next().value!;old.stop();this.uiVoices.delete(old);}
     const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=buffer;source.playbackRate.value=rate;
-    gain.gain.value=kind==='click'?.22:kind==='tick'?.09:.065;source.connect(gain);gain.connect(this.sfx);
+    gain.gain.value=kind==='logo'?.1:kind==='click'?.22:kind==='tick'?.09:.065;source.connect(gain);gain.connect(this.sfx);
     this.uiVoices.add(source);source.onended=()=>{this.uiVoices.delete(source);source.disconnect();gain.disconnect();};source.start();
   }
   private readonly buffers = new Map<SoundName, AudioBuffer>();
