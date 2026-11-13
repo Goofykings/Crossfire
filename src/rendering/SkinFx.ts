@@ -16,6 +16,11 @@ import type { SkinFx } from '../../shared/cosmetics';
  * Geometry is never displaced: only the fragment colour changes. */
 let lite = false;
 const live = new Set<SkinFxPlugin>();
+const qualityObservers = new Set<() => void>();
+/** Includes embedded dagger libraries and isolated previews, which do not share Game.materials. */
+export function observeSkinFxQuality(callback:()=>void):()=>void {
+  qualityObservers.add(callback);return ()=>{qualityObservers.delete(callback);};
+}
 const still = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 /** Seconds for the flow animation; tests and screenshots may replace it. */
 export const skinFxClock = { now: (): number => still ? 0 : performance.now() / 1000 };
@@ -25,6 +30,7 @@ export function setSkinFxLite(enabled: boolean): void {
   if (lite === enabled) return;
   lite = enabled;
   for (const plugin of live) plugin.markAllDefinesAsDirty();
+  for (const refresh of qualityObservers) refresh();
 }
 export const skinFxLite = (): boolean => lite;
 export const skinFxInfo = () => ({ lite, materials: live.size, modes: [...live].map((p) => p.mode) });

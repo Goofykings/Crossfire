@@ -160,6 +160,28 @@ describe('wall ivy: grows on the wall, not in the air', () => {
     expect(lite.length).toBeLessThan(ivy.length * .7);
     expect(lite.length).toBeGreaterThan(ivy.length * .2);
   });
+  it('is made of thin stems and small leaves, never big spiky shapes (2026-11-12)', () => {
+    const longest = (t: number[]) => Math.max(Math.hypot(t[3] - t[0], t[4] - t[1], t[5] - t[2]), Math.hypot(t[6] - t[3], t[7] - t[4], t[8] - t[5]), Math.hypot(t[0] - t[6], t[1] - t[7], t[2] - t[8]));
+    const sizes = ivy.map(longest).sort((a, b) => a - b);
+    // stems are ribbons about 2.5 cm wide and 20 to 30 cm long, leaves 8 to 14 cm, sprigs 25 cm, mats of leaves up to 0.5 m (a triangle's longest edge is the 0.7 m diagonal)
+    expect(sizes[Math.floor(sizes.length * .75)], 'three quarters of the pieces are leaf-sized').toBeLessThanOrEqual(.3);
+    expect(sizes[Math.floor(sizes.length * .9)], 'ninety percent of the pieces are small').toBeLessThanOrEqual(.5);
+    expect(sizes[sizes.length - 1], 'nothing is larger than a leaf mat').toBeLessThanOrEqual(.75);
+    // the thin stems: pieces whose short side is under 3.5 cm and long side over 15 cm
+    const thin = ivy.filter((t) => { const e = [Math.hypot(t[3] - t[0], t[4] - t[1], t[5] - t[2]), Math.hypot(t[6] - t[3], t[7] - t[4], t[8] - t[5])].sort((a, b) => a - b); return e[0] < .035 && e[1] > .15; });
+    expect(thin.length, 'ribbon stems').toBeGreaterThan(1500);
+  });
+  it('is denser toward the ground and still reaches up the wall', () => {
+    const band = (lo: number, hi: number) => ivy.filter((t) => (t[1] + t[4] + t[7]) / 3 >= lo && (t[1] + t[4] + t[7]) / 3 < hi).length;
+    const low = band(0, 1.0), mid = band(1.0, 2.0), high = band(2.0, 3.0), top = band(3.0, 4.6);
+    expect(low, 'first metre').toBeGreaterThan(mid * 1.6);
+    expect(mid).toBeGreaterThan(high);
+    expect(high, 'vines climb to the upper wall').toBeGreaterThan(200);
+    expect(top, 'some reach the coping').toBeGreaterThan(30);
+  });
+  it('keeps the whole terrain within the load budget', () => {
+    expect(readFileSync('public/assets/models/farmstead/terrain.glb').length).toBeLessThan(11 * 1024 * 1024);
+  });
   it('keeps every card within 2.1 m of the wall face (pier faces and hanging curtains included) or on the far side of it', () => {
     let worst = 0;
     for (const t of [...ivy, ...lite]) for (const o of [0, 3, 6]) {

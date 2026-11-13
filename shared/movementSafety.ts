@@ -7,7 +7,7 @@ import type { Vec3 } from '../src/player/PlayerController';
 export function unsafeMovement(position: Vec3, layout: MapLayout): string | null {
   const { x, y, z } = position;
   if (![x, y, z].every(Number.isFinite)) return 'non_finite';
-  // Stone and visible fence extensions normally contain reachable roof routes.
+  // The stone wall contains every reachable route (decks, balconies, roofs); nothing stands on top of it any more.
   // Keep authoritative recovery at that boundary for an already invalid position;
   // no invisible tall collider or different client-only clamp is added.
   const perimeter=layout.farm?.perimeter?.inner;

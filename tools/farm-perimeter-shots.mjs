@@ -1,7 +1,7 @@
 /** Review screenshots of the Farmstead perimeter wall and its foliage in real Chrome (free camera, Practice map):
  * the wall from inside, its four corners, piers, plinth, coping and vines, the aerials, hedges (broadside, end-on and from above),
- * the oaks and pines from every side, the underground entrances, and the same views in Chromebook mode.
- *   node tools/farm-perimeter-shots.mjs [http://127.0.0.1:5181/] [group ...]      groups: wall corners hedges trees entrances chromebook
+ * the oaks and pines from every side, and the same views in Chromebook mode.
+ *   node tools/farm-perimeter-shots.mjs [http://127.0.0.1:5181/] [group ...]      groups: wall corners hedges trees chromebook
  * Writes PNGs and contact sheets to test-results/farm-perimeter/. */
 import fs from 'node:fs';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -35,10 +35,6 @@ const GROUPS = {
     ['oak-front', -8.6, -22.5, 0, 12], ['oak-side', -2, -29.3, 270, 12], ['oak-back', -8.6, -36.5, 180, 12], ['oak-top', -8.6, -29.3, 0, -85, 18],
     ['oak-canopy-under', -8.6, -29.3, 0, 60, 1.7], ['oaks-row', 0, -14, 0, 3], ['pine-side', -30, -14.4, 270, 4], ['pine-far', -22, -14.4, 270, 10],
     ['pine-top', -34.7, -14.4, 0, -85, 16], ['pine-close', -34.7, -9.5, 180, 14], ['bush-close', -13.3, -12.8, 180, -6], ['bushes-row', -17, -9.6, 90, -2],
-  ],
-  entrances: [
-    ['north-portal-street', -7, -29, 60, -10, 1.7], ['east-portal-street', 12, 9, 90, -8, 1.7], ['southwest-portal-street', -20, 12, 0, -12, 1.7],
-    ['house-hall-stair', -3.2, 11, 180, -3, 1.7], ['gate-to-house', -2.7, 38, 0, 2],
   ],
 };
 // the same viewpoints with Chromebook mode on

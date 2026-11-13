@@ -4,14 +4,16 @@ import {FreeCamera,MeshBuilder,NullEngine,PBRMaterial,Scene,Vector3} from '@baby
 import '@babylonjs/loaders/glTF';
 import {WeaponView} from '../src/weapons/WeaponView';
 import {CosmeticMaterials} from '../src/rendering/CosmeticMaterials';
-import {defaultEquipment,GUN_CATEGORIES,EXTRA_COLLECTIONS} from '../shared/cosmetics';
+import {defaultEquipment,GUN_CATEGORIES,ALL_COLLECTIONS,COLLECTIONS} from '../shared/cosmetics';
+import {Weapon,WEAPONS} from '../src/weapons/Weapon';
+import {setSkinFxLite} from '../src/rendering/SkinFx';
 import type {RenderContext} from '../src/rendering/RenderContext';
 import type {MaterialLibrary} from '../src/rendering/MaterialLibrary';
 vi.mock('../src/core/loadContainer',async(importOriginal)=>{
  const actual=await importOriginal<typeof import('../src/core/loadContainer')>();
  return {...actual,loadContainer:(url:string,scene:Scene,signal?:AbortSignal)=>actual.loadContainer(url,scene,signal??new AbortController().signal)};
 });
-afterEach(()=>vi.unstubAllGlobals());
+afterEach(()=>{setSkinFxLite(false);vi.unstubAllGlobals();});
 it('all five firearm rigs recover equipped materials after spectator/default swaps and repeated new lives without asset/effect duplication',async()=>{
  const requests:string[]=[];vi.stubGlobal('fetch',async(url:string)=>{requests.push(String(url));return new Response(await readFile(`public/${String(url).replace(/^.*?assets\//,'assets/')}`));});
  const engine=new NullEngine(),scene=new Scene(engine),camera=new FreeCamera('camera',Vector3.Zero(),scene);scene.activeCamera=camera;
@@ -19,8 +21,9 @@ it('all five firearm rigs recover equipped materials after spectator/default swa
  const view=new WeaponView({scene,camera} as RenderContext,library,null);
  try{
   await view.load();
-  // Exercise every extra family, including flow/frost/shade, through the actual cached rigs.
-  for(const family of EXTRA_COLLECTIONS){
+  // The current registry includes the original families (notably Rich) as well
+  // as flow/frost finishes. A cached new life must preserve every family.
+  for(const family of ALL_COLLECTIONS){
    const equipped=defaultEquipment();for(const w of GUN_CATEGORIES)equipped[w]=`${family.id}-${w}`;
    await view.setCosmetics(equipped);
    for(const w of GUN_CATEGORIES){view.select(w);expect(view.currentCosmetic).toBe(equipped[w]);}
@@ -29,6 +32,11 @@ it('all five firearm rigs recover equipped materials after spectator/default swa
     for(const w of GUN_CATEGORIES){
      await view.setCosmetic(w,`default-${w}`);view.select(w);view.motion.reset();
      await view.setCosmetic(w,equipped[w]);view.select(w);expect(view.currentCosmetic).toBe(equipped[w]);
+     const weapon=new Weapon(WEAPONS.find(s=>s.id===w)!);
+     const motion={speed:3,grounded:true,sliding:false,crouch:0,sprinting:false};
+     for(const ads of [0,1]){weapon.ads=ads;view.update(1/60,weapon,motion);}
+     weapon.action=w==='shotgun'?'shell':'reload';weapon.progress=.4;view.update(1/60,weapon,motion);
+     setSkinFxLite(true);expect(view.currentCosmetic).toBe(equipped[w]);setSkinFxLite(false);
      expect(view.meshes.filter(m=>m.isEnabled()&&m.material?.name.startsWith('cosmetic:')).length).toBeGreaterThan(0);
     }
    }
@@ -43,6 +51,10 @@ it('dagger materials restore the same cached instances after spectator swaps; st
   await cache.apply('marble-melee');const dark=mesh.material;expect(dark).not.toBe(base);
   for(let i=0;i<4;i++){await cache.apply();expect(mesh.material).toBe(base);await cache.apply('marble-melee');expect(mesh.material).toBe(dark);}
   await Promise.all([cache.apply(),cache.apply('marble-melee')]);expect(mesh.material).toBe(dark);expect(cache.size).toBe(2);
+  for(const family of COLLECTIONS){
+   const id=`${family.id}-melee`;await cache.apply(id);const equipped=mesh.material;
+   for(let life=0;life<3;life++){await cache.apply();await cache.apply(id);expect(mesh.material).toBe(equipped);setSkinFxLite(true);expect((mesh.material as PBRMaterial).metallic).toBe(0);setSkinFxLite(false);}
+  }
   cache.dispose();expect(scene.materials).not.toContain(dark);expect(scene.materials).toContain(base);
  }finally{scene.dispose();engine.dispose();}
 });

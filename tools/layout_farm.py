@@ -3,7 +3,7 @@
     python -B -I tools/layout_farm.py --write
 
 Source plan: references_images/Newoutdoormap.png (0.125 m per pixel). The farm buildings are authored
-in tools/farm_structures.py, the shelter in tools/underground_layouts.py; this file adds the ground, dirt
+in tools/farm_structures.py (everything is above ground: the storm shelter was removed); this file adds the ground, dirt
 paths, trees, crates, props, spawns, targets and lights, then validates that every prop stands on open
 ground and clear of every solid. Run without --write to validate only.
 """
@@ -21,8 +21,6 @@ sys.path.insert(0, str(ROOT / 'tools'))
 import farm_structures as fs  # noqa: E402
 import farmstead  # noqa: E402
 import perimeter  # noqa: E402
-import underground  # noqa: E402
-import underground_layouts as ul  # noqa: E402
 from catalog import PROPS  # noqa: E402
 
 OUT = ROOT / 'src' / 'maps' / 'farmstead' / 'layout.json'
@@ -36,12 +34,8 @@ def P(kind, x, z, heading=0.0, y=0.0):
 
 # --- ground ------------------------------------------------------------------------------------------
 def zones():
-    # Walkable meadow: the fenced yard plus the short approach outside each fence gap. The rest of the margin is a
-    # strip hedgerows cut off (the terrain draws grass everywhere regardless).
-    z = [{'id': 'meadow', 'kind': 'yard', 'rect': [-33.0, -43.0, 33.0, 40.5], 'height': 0.0, 'material': 'grass'}]
-    for gid, r in (('north_gap', [-1.5, -47.0, 5.0, -43.0]), ('south_gap', [-4.75, 40.5, -0.5, 45.0]), ('west_gap', [-37.0, -1.9, -33.0, 4.75]),
-                   ('east_gap_north', [33.0, -19.9, 37.0, -13.4]), ('east_gap_south', [33.0, 17.25, 37.0, 23.75])):
-        z.append({'id': gid, 'kind': 'yard', 'rect': r, 'height': 0.0, 'material': 'grass'})
+    # Walkable meadow: the whole play area up to the perimeter wall (the terrain draws grass everywhere regardless).
+    z = [{'id': 'meadow', 'kind': 'yard', 'rect': list(PLAY), 'height': 0.0, 'material': 'grass'}]
     # Dirt paths (plan: tan strips). Orthogonal rects; the terrain roughens their edges.
     paths = [
         ('south_gate_path', [-4.75, 8.0, -0.6, 44.0]),
@@ -82,7 +76,7 @@ def covered():
     return [{'id': i, 'kind': 'interior', 'rect': r} for i, r in rooms]
 
 
-def solids(structures, passages=()):
+def solids(structures):
     """Street-level footprints that block a walking player (what the tactical map draws): wall, post and
     guard pieces between 0.47 m and 1.7 m, and each staircase's steps taller than 0.47 m as one rect."""
     out = []
@@ -100,11 +94,6 @@ def solids(structures, passages=()):
             b = p.box
             if b[4] > 0.47 and b[1] < 1.7:
                 out.append({'id': s['id'], 'kind': p.kind, 'rect': [round(b[0], 4), round(b[2], 4), round(b[3], 4), round(b[5], 4)]})
-    # Underground portals: the walls, divider and guards a walking player meets at street level.
-    for p in passages:
-        for box, _, part in underground.passage_parts(p):
-            if part.startswith('entrance-') and box[1] < 1.7 and box[4] > .47:
-                out.append({'id': f"underground:{p['id']}", 'kind': part, 'rect': [round(box[0], 4), round(box[2], 4), round(box[3], 4), round(box[5], 4)]})
     return out
 
 
@@ -146,6 +135,33 @@ HEDGES = [
     P('hedge_run', 29.0, -0.5, 0), P('hedge_thin', 31.0, -9.0, 5), P('hedge_block', 20.0, 5.0, 0), P('hedge_wide', 23.0, 8.0, 355),
     P('hedge_short', 13.5, 16.5, 4), P('hedge_tall', 26.5, 14.0, 0),
 ]
+# Large hay bales (prop `hay_bale_big`, 1.7 x 0.9 x 0.85 m, lying on their side). 0.9 m is just under what a jump clears (1.09 m), so a player can
+# jump onto a bale from the ground and on to a second layer from the first. Stacks are separate props (the upper bale sits on y = 0.9):
+#   single    one bale, a low piece of cover
+#   step      two bales end to end and a third on one of them: a ground bale to jump onto, then a 1.8 m ledge
+#   pyramid   two bales and one across the seam on top
+BALE_H = 0.9
+
+
+def bale_stack(kind, x, z, heading):
+    yaw = -math.radians(heading)
+    c, s_ = math.cos(yaw), math.sin(yaw)
+
+    def at(u, v, y):
+        return P('hay_bale_big', x + u * c + v * s_, z - u * s_ + v * c, heading, y)
+    if kind == 'single':
+        return [at(0, 0, 0)]
+    if kind == 'step':
+        return [at(-.85, 0, 0), at(.85, 0, 0), at(.85, 0, BALE_H)]
+    if kind == 'pyramid':
+        return [at(-.85, 0, 0), at(.85, 0, 0), at(0, 0, BALE_H)]
+    raise ValueError(kind)
+
+
+BALES = [('pyramid', 3.0, -38.4, 0), ('single', 13.2, -41.2, 8), ('step', 31.0, 25.5, 90), ('pyramid', 21.0, 38.6, 0),
+         ('single', 33.4, -38.0, 90), ('step', -27.0, 41.0, 0), ('single', -33.0, -42.0, 20), ('step', 24.0, -9.0, 90),
+         ('step', 0.5, -24.0, 0), ('pyramid', -20.0, 3.5, 90)]
+HAY = [p for kind, x, z, h in BALES for p in bale_stack(kind, x, z, h)]
 OUTDOOR = [
     P('tractor', -21.0, -8.4, 90), P('hay_stack', -31.4, -27.0, 90), P('hay_stack', -31.4, -35.2, 90), 
     P('water_trough', -10.2, -22.8, 0), P('well', 2.6, 16.5, 0), P('wheelbarrow', 12.4, -23.6, 40), P('firewood_stack', 11.4, -31.0, 90),
@@ -206,7 +222,7 @@ def all_props(catalog_names) -> list[dict]:
         out.append(P('tree_pine', x, z, (round(x * 9 + z * 5) % 360)))
     for k, x, z, h in CRATES:
         out.append(P(k, x, z, h))
-    for group in (HEDGES, OUTDOOR, SHACK_PROPS, HOUSE_PROPS, BARN_PROPS, CABIN_PROPS, GARAGE_PROPS):
+    for group in (HEDGES, OUTDOOR, HAY, SHACK_PROPS, HOUSE_PROPS, BARN_PROPS, CABIN_PROPS, GARAGE_PROPS):
         out += [dict(p) for p in group]
     for p in out:
         assert p['type'] in catalog_names, p
@@ -299,32 +315,20 @@ def build():
         'playArea': PLAY, 'outerLimit': OUTER,
         'ground': {'baseHeight': 0.0, 'zones': zones(), 'covered': covered()},
         'terraces': [], 'buildings': [], 'walls': [], 'arches': [], 'upperRoutes': [], 'circulationRoutes': [],
-        'farm': {'structures': [], 'fences': fs.fences(), 'solids': [], 'entranceWalks': {}, 'posters': fs.posters()},
+        'farm': {'structures': [], 'solids': [], 'posters': fs.posters()},
         'props': [], 'obstacles': [], 'lights': LIGHTS, 'targets': [], 'spawns': [],
     }
     layout['farm']['structures'] = fs.structures()
     # props first: the perimeter wall's piers keep clear of whatever stands near it (hedges ending at the wall, trees)
     layout['props'] = all_props(set(catalog))
     layout['farm']['perimeter'] = perimeter.build_spec(PLAY, prop_footprints(layout['props'], catalog))
-    roof_bounds = [( [m['mesh']['center'][0]-m['mesh']['half'][0], m['mesh']['center'][2]-m['mesh']['half'][2],
-                      m['mesh']['center'][0]+m['mesh']['half'][0], m['mesh']['center'][2]+m['mesh']['half'][2]],
-                     m['mesh']['center'][1]+m['mesh']['half'][1]) for m in farmstead.roof_solids(layout)[1]]
-    layout['farm']['perimeter']['extensions'] = perimeter.roof_extensions(layout['farm']['perimeter'], roof_bounds)
-    underground_passages = [underground.prepare(p) for p in ul.farm_underground()]
-    layout['farm']['solids'] = solids(layout['farm']['structures'], underground_passages) + perimeter.solids(layout['farm']['perimeter'])
+    layout['farm']['solids'] = solids(layout['farm']['structures']) + perimeter.solids(layout['farm']['perimeter'])
     layout['navigation'] = {'version': 1, 'groundRoutes': [{k: z[k] for k in ('id', 'kind', 'rect')} for z in layout['ground']['zones']],
                             'coveredRoutes': layout['ground']['covered'], 'upperRoutes': [],
                             'groundObstacles': [{'id': f"{s['id']}:{s['kind']}", 'rect': s['rect']} for s in layout['farm']['solids']]}
-    layout['underground'] = underground_passages
-    layout['farm']['entranceWalks'] = {e['id']: underground.entrance_waypoints(e) for p in underground_passages for e in p['entrances']}
-    # underground floor props
-    for p in underground_passages:
-        for kind, x, z, heading in ul._FARM_PROPS:
-            assert kind in catalog, kind
-            assert any(r[0] < x < r[2] and r[1] < z < r[3] for r in p['segments']), f'{kind} at {x},{z} is outside the shelter'
-            layout['props'].append({'type': kind, 'pos': [x, p['floor'], z], 'heading': heading})
+    layout['underground'] = []        # the storm shelter was removed (2026-11-12): everything is above ground
     boxes = obstruction_boxes(layout, catalog)
-    holes = [underground.entrance_footprint(e) for p in underground_passages for e in p['entrances']]
+    holes = []
     # spawns and targets: snapped to clear ground, away from stairwells
     spawns, targets = [], []
     for i, (x, z, h) in enumerate(SPAWN_SEEDS, 1):
@@ -345,7 +349,7 @@ def validate(layout):
     for b, tag in farmstead.collision_boxes(layout):
         if b[4] > 0.25 and b[1] < 3.6:
             solids.append((b, tag))
-    holes = [underground.entrance_footprint(e) for p in layout['underground'] for e in p['entrances']]
+    holes = []          # no stairwells any more
     props = [p for p in layout['props']]
     boxes_of = []
     for p in props:

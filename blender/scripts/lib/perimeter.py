@@ -29,8 +29,8 @@ PIER_IN = 0.4
 PIER_OUT = 0.4
 CORNER_IN = 0.8           # a corner pier reaches this far into the yard from the inner faces
 CORNER_OUT = 0.4          # ... and this far past the outer faces
-SECTION_TOPS = (3.1, 3.18, 3.26, 3.34, 3.42)
-PIER_TOP = 3.62
+SECTION_TOPS = (4.1, 4.18, 4.26, 4.34, 4.42)   # a metre above the 3.4 m building walls: no iron or timber on top, the stone itself is the boundary
+PIER_TOP = 4.66
 CAP_H = 0.22
 COPING_OVER = 0.12        # the coping overhangs the OUTER face only
 BELOW = 0.25              # visible stone continues this far below the ground, so no seam shows
@@ -127,71 +127,6 @@ def boxes(spec) -> list:
     for p in spec['piers'] + spec['corners']:
         r = p['rect']
         out.append(([r[0], -2.0, r[1], r[2], p['top'], r[3]], f"farm:perimeter:{p['id']}"))
-    out += fence_boxes(spec)
-    return out
-
-
-def roof_extensions(spec, roofs):
-    """Fence only boundary runs reachable above the stone from a solid roof.
-
-    Conservative ballistic envelope: full slide speed even in the air, a jump
-    from the highest point of each roof, and 60 cm allowance at either end.
-    A roof's bounding rectangle overestimates its ridge height at the eaves.
-    """
-    out = []
-    for side in SIDES:
-        length = frame(spec['inner'], side)[3]
-        samples = []
-        for a in range(math.ceil(length) + 1):
-            x, _, z = pt(spec['inner'], side, min(a, length), 0)
-            height = 0.0
-            for r, top in roofs:
-                distance = max(0, math.hypot(max(r[0]-x, 0, x-r[2]), max(r[1]-z, 0, z-r[3])) - .6)
-                t = max(distance / 7.8, 6.6 / 20)
-                height = max(height, top + 6.6*t - 10*t*t)
-            samples.append(height)
-        ranges = []
-        for a, h in enumerate(samples):
-            if h <= 3.0:
-                continue
-            lo, hi = max(0, a-2), min(length, a+3)
-            if ranges and lo <= ranges[-1][1] + 2:
-                ranges[-1][1] = hi
-                ranges[-1][2] = max(ranges[-1][2], h)
-            else:
-                ranges.append([lo, hi, h])
-        for i, (lo, hi, h) in enumerate(ranges):
-            out.append({'id': f'{side}{i}', 'side': side, 'a': [lo, hi],
-                        'base': 3.0, 'top': max(5.5, math.ceil((h+1.6)*2)/2)})
-    return out
-
-
-def fence_boxes(spec):
-    """Real bars, not filled collision panels: bullets pass through visible gaps."""
-    out = []
-    def anchor(r):
-        # Above the local coping/pier, not a coplanar face buried in its stone.
-        parts=[(s['rect'],s['top']) for s in spec['sections']]
-        for p in spec['piers']+spec['corners']:
-            x0,z0,x1,z1=p['rect'];cx,cz=(x0+x1)/2,(z0+z1)/2;fw=min(x1-x0,z1-z0)*.32
-            parts += [([x0-.09,z0-.09,x1+.09,z1+.09],p['top']),
-                      ([cx-fw,cz-fw,cx+fw,cz+fw],p['top']+.2)]
-        return max([3.0]+[top+.006 for b,top in parts if b[0]<r[2] and b[2]>r[0] and b[1]<r[3] and b[3]>r[1]])
-    for f in spec.get('extensions', []):
-        lo, hi = f['a']; base, top = f['base'], f['top']
-        count = max(1, math.ceil((hi-lo)/.4))
-        for i in range(count+1):
-            a = lo+(hi-lo)*i/count
-            r = rect(spec['inner'], f['side'], a-.04, a+.04, -.22, -.14)
-            out.append(([r[0],anchor(r),r[1],r[2],top,r[3]], f"farm:perimeter-fence:{f['id']}:bar:{i}"))
-        count = max(1, math.ceil((hi-lo)/3))
-        for i in range(count+1):
-            a = lo+(hi-lo)*i/count
-            r = rect(spec['inner'], f['side'], a-.075, a+.075, -.255, -.105)
-            out.append(([r[0],anchor(r),r[1],r[2],top+.08,r[3]], f"farm:perimeter-fence:{f['id']}:post:{i}"))
-        r = rect(spec['inner'], f['side'], lo, hi, -.23, -.13)
-        for name, y in [('top',top-.2)]:
-            out.append(([r[0],y-.05,r[1],r[2],y+.05,r[3]], f"farm:perimeter-fence:{f['id']}:{name}"))
     return out
 
 
@@ -273,8 +208,6 @@ def _grid(md, p0, du, dv, nu, nv, toward, outer=False, recess=0.0, rnd=None):
 def mesh(md, spec) -> None:
     """Stonework: wall faces, plinth, coping stones, piers with caps, fallen stones at the foot."""
     inner = spec['inner']
-    for box, _ in fence_boxes(spec):
-        md.box(*box, 'iron_rusty')
     for s in spec['sections']:
         rnd = random.Random(s['seed'])
         side, (a0, a1), top = s['side'], s['a'], s['top']

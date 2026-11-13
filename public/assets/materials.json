@@ -2724,9 +2724,9 @@
   "leaf_core": {
    "tile": 1.2,
    "tint": [
-    0.2,
-    0.3,
-    0.16
+    0.26,
+    0.38,
+    0.2
    ],
    "albedo": "assets/textures/farmstead/leaves.jpg",
    "roughness": 1.0

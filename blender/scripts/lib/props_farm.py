@@ -1,4 +1,4 @@
-"""Farmstead props (2026-11): trees, hay, farm tools, rural furniture and shelter storage.
+"""Farmstead props (2026-11): trees, hay, farm tools and rural furniture.
 
 Every prop is a low-poly MeshData with its origin at the centre of its footprint on the floor and its
 front toward -z, like the rest of the catalogue. Sizes and colliders live in catalog.PROPS.
@@ -94,26 +94,62 @@ def tree_pine():
     return m
 
 
-def bush():
-    """A shrub about 1.4 x 1.2 m and 0.95 m tall: a dark core, a few woody stems and leaf cards growing out in every direction."""
-    m = MeshData()
-    for (x, z, r) in ((0, 0, .27), (.2, .1, .2), (-.22, -.08, .19)):
-        ellipsoid(m, (x, r * 1.05 + .06, z), (r, r * .8, r), 'leaf_core', rings=3, segments=7)
-    rnd0 = random.Random(404)
-    for i in range(6):
-        a = i * 1.047 + rnd0.uniform(-.2, .2)
-        m.tube((0, 0, 0), (math.cos(a) * .2, .3 + rnd0.uniform(0, .1), math.sin(a) * .18), .014, 'bark', segments=4)
+def _ellipsoid_area(r):
+    """Knud Thomsen's approximation of an ellipsoid's surface area."""
+    p = 1.6075
+    return 4 * math.pi * (((r[0] * r[1]) ** p + (r[0] * r[2]) ** p + (r[1] * r[2]) ** p) / 3) ** (1 / p)
+
+
+def lumps(m, seed, parts, density=26.0, fit=None, hmin=.3, hmax=.5, tint=(1.0, 1.0, 1.0), kinds=(1, 3, 0, 1, 2, 3), core=.54, min_y=.05, inset=.15, ao=.58):
+    """Foliage as a union of rounded lumps, so the outline is organic from every side: `parts` is a list of (centre, radii) ellipsoids.
+    Each lump gets an opaque dark core (bullets stop on it) and shingled leaf cards on every part of its surface that is not buried
+    inside a neighbouring lump. Both the detailed and the lite set are written. Cards near the ground are skipped (min_y)."""
+    from foliage import surface, sphere_dirs
+    # the cards stand on the lump's surface and reach about `inset` beyond it, so the lumps are drawn that much inside the envelope
+    parts = [(c, tuple(max(.12, v - inset) for v in r)) for c, r in parts]
+    for c, r in parts:
+        ellipsoid(m, c, (r[0] * core, r[1] * core, r[2] * core), 'leaf_core', rings=4, segments=9)
+
+    def buried(pt, me):
+        for j, (c, r) in enumerate(parts):
+            if j != me and sum(((pt[k] - c[k]) / r[k]) ** 2 for k in range(3)) < .86:
+                return True
+        return False
+
     for lite in (False, True):
-        rnd = random.Random(404 + (9 if lite else 0))
-        puff(m, rnd, lite, (0, .36, 0), (.6, .46, .52), 110, .3, .5, kinds=(1, 3, 0, 1, 2, 3), tint=(1.0, 1.0, 1.0), ao=.5, gain=1.0, min_y=.05,
-             fit=lambda pt: pt[1] >= 0.0 and (pt[0] / .92) ** 2 + (pt[2] / .8) ** 2 + (max(0.0, pt[1] - .02) / 1.15) ** 2 <= 1.0)
+        rr = random.Random(seed * 17 + (5 if lite else 0))
+        for i, (c, r) in enumerate(parts):
+            n = max(10, round(_ellipsoid_area(r) * density))
+            dirs = sphere_dirs(card_count(n, lite), rr, .4)
+
+            def skip(v, nrm, c=c, r=r, i=i):
+                q, _ = surface(v, r, 2.0)
+                return buried((c[0] + q[0] * .96, c[1] + q[1] * .96, c[2] + q[2] * .96), i)
+            puff(m, rr, lite, c, r, n, hmin, hmax, kinds=kinds, tint=tint, ao=ao, gain=1.0, p=2.0, skip=skip, min_y=min_y, dirs=dirs,
+                 outward=.8, droop_limit=-.3, fit=fit, spray=.4)
+
+
+def bush(seed=404):
+    """A shrub about 1.7 x 1.1 m and 1.0 m tall: a mound of overlapping rounded lumps (wide low ones, a few smaller ones on top), a dark core
+    in each and shingled leaf cards over the whole outline, leaves down to the ground; a few woody stems show at the foot."""
+    m = MeshData()
+    rnd = random.Random(seed)
+    for i in range(5):
+        a = i * 1.2566 + rnd.uniform(-.2, .2)
+        m.tube((0, 0, 0), (math.cos(a) * .26, .26 + rnd.uniform(0, .1), math.sin(a) * .22), .016, 'bark', segments=4)
+    parts = [((0.0, .38, 0.0), (.62, .38, .54)),
+             ((-.42, .31, .1), (.42, .3, .4)), ((.4, .3, -.1), (.44, .31, .4)),
+             ((.05, .31, .38), (.4, .28, .34)), ((-.08, .3, -.4), (.42, .29, .32)),
+             ((-.12, .66, .02), (.4, .27, .36)), ((.3, .6, .12), (.3, .22, .3)), ((-.4, .56, -.1), (.26, .2, .27))]
+    fit = lambda pt: pt[1] >= 0.0 and (pt[0] / 1.0) ** 2 + (pt[2] / .9) ** 2 + (max(0.0, pt[1] - .02) / 1.12) ** 2 <= 1.0
+    lumps(m, seed, parts, density=40.0, hmin=.22, hmax=.34, fit=fit, min_y=.04, inset=.1)
     return m
 
 
 # Hedgerows: a row of sections (about a metre long each) with their own height, thickness and density, so no two hedges, and
-# no two parts of one hedge, are the same shape. Tops are uneven (small steps and swells), the ends are rounded or squared,
-# some parts are thinner and a few have a small gap in the leaf cover (the opaque core stays, so nothing becomes see-through
-# or walkable). `L x H x T` is the envelope: the colliders in catalog.py are these numbers.
+# no two parts of one hedge, are the same shape. Each section is two or three overlapping rounded lumps (see `lumps`), so the sides bulge,
+# the top is a row of domes of different heights, and the ends are rounded: no flat faces and no boxes. `L x H x T` is the envelope:
+# the colliders in catalog.py are these numbers (the lumps stay inside it, plus a few centimetres of leafy fuzz).
 def _walk(rnd, n, lo, hi, step, jump):
     v, out = rnd.uniform(lo + (hi - lo) * .5, hi), []
     for _ in range(n):
@@ -137,49 +173,33 @@ def hedge(L, H, T, seed):
     thick = _walk(rnd, n, .8, 1.0, .06, .22)
     tmax = max(thick)
     thick = [T * v / tmax for v in thick]
-    dens = [rnd.uniform(.62, 1.12) for _ in range(n)]
-    gaps = [(0 < i < n - 1 and rnd.random() < .22) for i in range(n)]
-    rounded = [rnd.random() < .6, rnd.random() < .6]         # each end rounded or squared
     m = MeshData()
     stems = max(3, round(L / .55))
     for i in range(stems):
-        m.cylinder((-L / 2 + (i + .5) * L / stems, 0, rnd.uniform(-.1, .1) * T), .05, rnd.uniform(.3, .55), 'bark', segments=5, caps=(False, False))
-    secs = []
+        m.cylinder((-L / 2 + (i + .5) * L / stems, 0, rnd.uniform(-.1, .1) * T), .035, rnd.uniform(.18, .32), 'bark', segments=5, caps=(False, False))
+    parts = []
+    reach = .17                                            # leaf cards stand on a lump and reach about this far beyond it
     for i in range(n):
         x = -L / 2 + (i + .5) * seg
         h, t = heights[i], thick[i]
         endl, endr = i == 0, i == n - 1
-        secs.append((x, h, t, endl, endr))
-        # opaque lumpy core: a lower and an upper mass per section, about 60% of the thickness, a little below the leaf cover
-        for fy, ry in ((.33, .3), (.64, .26)):
-            ellipsoid(m, (x + rnd.uniform(-.06, .06), h * fy, rnd.uniform(-.04, .04) * T), (seg * .72, h * ry, t * .5 * .62), 'leaf_core', rings=3, segments=7)
-    for lite in (False, True):
-        rr = random.Random(seed * 31 + (7 if lite else 0))
-        for i, (x, h, t, endl, endr) in enumerate(secs):
-            faces = ['py', 'pz', 'nz']
-            ex = 0.0
-            if endl and rounded[0] or endl and not rounded[0]:
-                faces.append('nx')
-            if endr:
-                faces.append('px')
-            # card length: a bit more than a third of the thickness at the thinnest, never more than half a metre
-            hmin, hmax = max(.38, min(.5, .3 + t * .15)), max(.55, min(.8, .45 + t * .2))
-            half = (seg * .5 + (.12 if (endl or endr) else .0), h * .5, t * .5)
-            area = 4 * half[0] * half[2] + 8 * half[0] * half[1] + (4 * half[2] * half[1] * ((1 if endl else 0) + (1 if endr else 0)))
-            count = max(8, round(area * 20 * dens[i]))
-            ndir = card_count(count, lite)
-            dirs = box_dirs(ndir, half, rr, tuple(faces))
-            g = None
-            if gaps[i]:
-                gv = unit((rr.uniform(-.4, .4), rr.uniform(.2, 1.0), rr.choice((-1, 1)) * rr.uniform(.4, 1.0)))
-                g = lambda v, nrm, gv=gv, rg=rr: dot(v, gv) > .82 and rg.random() < .85
-            R = (half[0] * .9, half[1] * .9, half[2] * .9)           # shingle cards root on the surface itself
-            def fit(pt, h=h, t=t, x0=(-L / 2 - .2) if endl else x - seg / 2 - .1, x1=(L / 2 + .2) if endr else x + seg / 2 + .1):
-                """The hedge envelope: this section's own length, height and thickness plus the leafy fuzz (up to 20 cm). Cards of a tall section never
-                bridge over a lower neighbour, so the steps in the top stay visible."""
-                return x0 <= pt[0] <= x1 and 0.0 <= pt[1] <= h + .2 and abs(pt[2]) <= t / 2 + .2
-            puff(m, rr, lite, (x, h / 2, 0), R, count, hmin, hmax, kinds=(1, 3, 0, 1, 2, 3), tint=OAK_TINT[(i + seed) % 2],
-                 ao=.5, gain=1.0, p=3.4, skip=g, min_y=.05, dirs=dirs, outward=.82, droop_limit=-.15, fit=fit)
+        rz = max(.2, t * .5 - reach)
+        # a broad low lump that touches the ground and a domed upper one whose top is the section's height (less the card reach)
+        ry_low = max(.4, h * .38)
+        rx = seg * .72 - .02
+        cx = x + rnd.uniform(-.06, .06)
+        if endl or endr:                                   # the end lumps stop where the envelope does (plus the card reach)
+            rx = seg * .72 + .04
+            cx = (-L / 2 + rx + .03) if endl else (L / 2 - rx - .03)
+        parts.append(((cx, ry_low + .05, rnd.uniform(-.04, .04) * t), (rx, ry_low, rz)))
+        ry_up = max(.3, h * .27)
+        parts.append(((x + rnd.uniform(-.12, .12), h - reach - ry_up, rnd.uniform(-.05, .05) * t), (seg * .6, ry_up, max(.18, t * .42 - reach))))
+        if rnd.random() < .55 and h > 1.8:                 # a smaller bulge on the shoulder, to one side
+            side = rnd.choice((-1, 1))
+            parts.append(((x + rnd.uniform(-.3, .3), h * rnd.uniform(.45, .62), side * max(.05, t * .5 - reach - .18)), (seg * .4, h * .17, max(.16, t * .26))))
+    fit = lambda pt: -L / 2 - .16 <= pt[0] <= L / 2 + .16 and 0.0 <= pt[1] <= H + .16 and abs(pt[2]) <= T / 2 + .16
+    lumps(m, seed, parts, density=30.0, fit=fit, hmin=max(.32, min(.44, .26 + T * .1)), hmax=max(.48, min(.7, .4 + T * .15)),
+          tint=OAK_TINT[seed % 2], core=.54, min_y=.05, inset=0.0)
     return m
 
 
@@ -210,6 +230,52 @@ def hay_bale(rotated=False):
     for x in (-.28, .28):
         m.box(x - .012, 0, -.28, x + .012, .5, .28, 'rope', skip=('ny',))
         m.box(x - .013, .5, -.285, x + .013, .504, .285, 'rope')
+    return m
+
+
+BIG_BALE = (1.7, .9, .85)       # length x height x depth of a large bale lying on its side: low enough to jump onto (a jump rises 1.09 m)
+
+
+def hay_bale_big():
+    """A large rectangular bale on its side (1.7 x 0.9 x 0.85 m): rounded edges, ends tucked in, a slight bulge, two loops of twine.
+    Origin at the centre of the footprint, long axis along x."""
+    L, H, D = BIG_BALE
+    m = MeshData()
+    r = .075
+    prof = []                                    # cross-section as (z, y), counter-clockwise seen from +x, rounded corners
+    for cz, cy, a0 in ((D / 2 - r, H - r, 0.0), (-D / 2 + r, H - r, 90.0), (-D / 2 + r, r, 180.0), (D / 2 - r, r, 270.0)):
+        for k in range(4):
+            ang = math.radians(a0 + 30 * k)
+            prof.append((cz + math.cos(ang) * r, cy + math.sin(ang) * r))
+    n = len(prof)
+    stations = [-L / 2, -L * .33, -L * .14, 0.0, L * .14, L * .33, L / 2]
+    k_at = {-L / 2: .955, L / 2: .955, -L * .33: .99, L * .33: .99, -L * .14: 1.0, L * .14: 1.0, 0.0: 1.012}
+
+    def pt(x, z, y, grow=0.0):
+        k = k_at[x] if x in k_at else 1.0
+        return (x, y * k if y > H / 2 else y, z * k)
+
+    rings = [[pt(x, z, y) for z, y in prof] for x in stations]
+    for i in range(len(rings) - 1):
+        for j in range(n):
+            q = [rings[i][j], rings[i + 1][j], rings[i + 1][(j + 1) % n], rings[i][(j + 1) % n]]
+            cx = (q[0][0] + q[2][0]) / 2
+            out = ((q[0][0] + q[2][0]) / 2 - cx, (q[0][1] + q[2][1]) / 2 - H / 2, (q[0][2] + q[2][2]) / 2)
+            m.face_toward(q, 'hay', out, col=(.84, .78, .64, 1.0))
+    m.face_toward(list(rings[0]), 'hay', (-1, 0, 0), col=(.72, .66, .52, 1.0))
+    m.face_toward(list(rings[-1]), 'hay', (1, 0, 0), col=(.72, .66, .52, 1.0))
+    # twine: a flat ribbon 3.2 cm wide that follows the profile, 1.2 cm proud of the straw
+    for x in (-.42, .42):
+        kx = .993 + .012 * (1 - abs(x) / (L / 2)) * .5
+        for j in range(n):
+            quad = []
+            for (z, y), side in ((prof[j], -1), (prof[j], 1), (prof[(j + 1) % n], 1), (prof[(j + 1) % n], -1)):
+                ny, nz = y - H / 2, z
+                ln = math.hypot(nz, ny) or 1.0
+                quad.append((x + side * .016, (y * kx if y > H / 2 else y) + ny / ln * .012, z * kx + nz / ln * .012))
+            mz = (prof[j][0] + prof[(j + 1) % n][0]) / 2
+            my = (prof[j][1] + prof[(j + 1) % n][1]) / 2 - H / 2
+            m.face_toward(quad, 'rope', (0, my, mz), col=(.62, .56, .46, 1.0))
     return m
 
 
@@ -463,6 +529,7 @@ FARM_BUILDERS = {
     'tree_pine': tree_pine,
     'bush': bush,
     'hay_bale': hay_bale,
+    'hay_bale_big': hay_bale_big,
     'hay_stack': hay_stack,
     'water_trough': water_trough,
     'wheelbarrow': wheelbarrow,

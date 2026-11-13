@@ -322,7 +322,7 @@ MATERIALS.update({
                  "double_sided": True, "atlas": True},
     "leaf_ivy_lite": {"albedo": FARM_DIR + "ivy_leaves.png", "tile": 1.0, "tint": [1.08, 1.12, 0.94], "roughness": 1.0, "alpha_cutoff": 0.5,
                       "double_sided": True, "atlas": True},
-    "leaf_core": {"albedo": FARM_DIR + "leaves.jpg", "tile": 1.2, "tint": [0.2, 0.3, 0.16], "roughness": 1.0},
+    "leaf_core": {"albedo": FARM_DIR + "leaves.jpg", "tile": 1.2, "tint": [0.26, 0.38, 0.2], "roughness": 1.0},
     # The perimeter wall (blender/scripts/make_stone_textures.py): irregular weathered blocks, dark mortar, moss, cracks. One repeat
     # is 2.4 m; vertex colours add the dirt, moss and staining on top.
     "stone_wall_old": {"tex": "stone_wall", "tex_dir": FARM_DIR, "tile": 2.4, "tint": [1.0, 1.0, 1.0], "roughness": 1.0, "metallic": 0.0,

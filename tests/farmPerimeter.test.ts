@@ -10,7 +10,8 @@ import { NO_INTENT, PlayerController, type MoveIntent } from '../src/player/Play
 /**
  * Farmstead perimeter wall (2026-11): the visible stone wall is the map boundary. Its collision is the very geometry that is drawn
  * (blender/scripts/lib/perimeter.py), closed at every seam, too tall and too sheer to climb or jump, with no invisible slab behind
- * it; bullets hit its stone faces. Hedges are eight different shapes; the strip hedges still close the margin outside the fence.
+ * it; bullets hit its stone faces. 2026-11-12: nothing stands on top of the stone (no iron or timber extension) and there is no yard fence;
+ * the wall is a metre higher instead. Hedges are eight different shapes (the margin hedges no longer close strips: the yard is open up to the wall).
  */
 vi.setConfig({ testTimeout: 120_000 });
 const { world, layout } = WORLDS.farmstead;
@@ -21,16 +22,16 @@ const catalog = JSON.parse(readFileSync('public/assets/models/shared/props/props
 const wallColliders = () => [...world.all()].filter((c) => c.tag.startsWith('farm:perimeter:'));
 
 describe('perimeter wall: layout and collision', () => {
-  it('stands where the invisible boundary stood and is a thick, slightly low wall', () => {
+  it('stands where the invisible boundary stood and is a thick stone wall a metre above the buildings', () => {
     const [p0, q0, p1, q1] = layout.playArea;
     expect(spec.inner).toEqual([p0 - 0.5, q0 - 0.5, p1 + 0.5, q1 + 0.5]);
     expect(T).toBeGreaterThanOrEqual(0.8);
     expect(spec.corners).toHaveLength(4);
     expect(spec.piers.length).toBeGreaterThanOrEqual(24);
-    // the shorter buildings' walls reach 3.4 m: the wall is at most that, and varies from section to section
+    // the buildings' ground walls reach 3.4 m: the wall is about a metre higher, and varies from section to section
     const tops = spec.sections.map((s) => s.top);
-    expect(Math.max(...tops)).toBeLessThanOrEqual(3.45);
-    expect(Math.min(...tops)).toBeGreaterThanOrEqual(3.05);
+    expect(Math.max(...tops)).toBeLessThanOrEqual(4.5);
+    expect(Math.min(...tops)).toBeGreaterThanOrEqual(4.05);
     expect(new Set(tops).size).toBeGreaterThanOrEqual(4);
     for (const p of [...spec.piers, ...spec.corners]) expect(p.top).toBeGreaterThan(Math.max(...tops));
   });
@@ -118,11 +119,13 @@ describe('perimeter wall: nobody gets over, through or around it', () => {
     for (const [x, z, h] of [[X0 + 4, Z0 + 4, 315], [X1 - 4, Z0 + 4, 45], [X1 - 4, Z1 - 4, 135], [X0 + 4, Z1 - 4, 225]] as const)
       for (const kind of ['walk', 'jump', 'slide'] as const) run({ x, y: 0, z }, h, kind);
   });
-  it('elevated platforms and solid roofs stop physically at the stone or fence', () => {
-    // Include reachable roofs, ridge caps, decks, balconies and railing tops.
+  it('decks, balconies, lofts, railing tops and every roof stop physically at the stone', () => {
+    // Everything a player reaches within 24 m of the wall: walking, jump-spamming and sliding off the platform edge nearest the wall never
+    // clears the stone (the wall is 4.1 to 4.4 m, 4.66 m at the piers). With nothing standing on top of the stone, this is the whole containment.
     const tops = [...world.all()].filter((c) => c.solid && c.tag.startsWith('farm:') && !c.tag.startsWith('farm:perimeter') && !c.tag.includes('ceiling') && c.cy + c.hy >= 2.4 && c.cy + c.hy <= 11 && c.hy > 0.02);
-    const near = tops.filter((c) => Math.min(c.cx - X0, X1 - c.cx, c.cz - Z0, Z1 - c.cz) < 16);
+    const near = tops.filter((c) => Math.min(c.cx - X0, X1 - c.cx, c.cz - Z0, Z1 - c.cz) < 24);
     expect(near.length).toBeGreaterThan(0);
+    expect(near.some((c) => c.tag.includes(':roof:'))).toBe(true);
     let tried = 0;
     for (const c of near) {
       const top = c.cy + c.hy;
@@ -133,7 +136,11 @@ describe('perimeter wall: nobody gets over, through or around it', () => {
       for (const kind of ['walk', 'jump', 'slide'] as const) run({ x, y: top, z }, d[1] as number, kind, 4);
       tried++;
     }
-    expect(tried).toBeGreaterThan(0);
+    expect(tried).toBeGreaterThan(100);
+  });
+  it('whoever does end up outside the inner face is flagged by the shared recovery', () => {
+    expect(unsafeMovement({ x: X1 + 0.2, y: 6, z: 0 }, layout as MapLayout)).toBe('outside_perimeter');
+    expect(unsafeMovement({ x: 0, y: 0, z: Z0 - 0.2 }, layout as MapLayout)).toBe('outside_perimeter');
   });
 });
 
@@ -163,18 +170,14 @@ describe('perimeter wall: bullets', () => {
       expect(hit, `rising ray, heading ${heading}`).toBeNull();
     }
   });
-  it('fence bars block players but bullets pass through their visible gaps', () => {
-    const bars=[...world.all()].filter(c=>c.tag.startsWith('farm:perimeter-fence:')&&c.tag.includes(':bar:'));
-    expect(spec.extensions?.length).toBeGreaterThan(0);
-    expect(spec.extensions!.reduce((n,f)=>n+f.a[1]-f.a[0],0)).toBeLessThan((X1-X0+Z1-Z0)*2);
-    for(const f of spec.extensions!){
-      const prefix=`farm:perimeter-fence:${f.id}:`,parts=bars.filter(c=>c.tag.startsWith(prefix)),a=parts[1],b=parts[2],dx=f.side==='w'?1:f.side==='e'?-1:0,dz=f.side==='n'?1:f.side==='s'?-1:0,y=(f.base+f.top)/2;
-      expect(Math.hypot(a.cx-b.cx,a.cz-b.cz)-.08).toBeLessThan(MOVEMENT.radius*2);
-      const ray=(x:number,z:number)=>world.raycastBullet(x+dx,y,z+dz,-dx,0,-dz,2,c=>c.tag.startsWith(prefix));
-      expect(ray(a.cx,a.cz)?.collider.tag).toContain(':bar:');
-      expect(ray((a.cx+b.cx)/2,(a.cz+b.cz)/2)).toBeNull();
-      expect(world.overlapsCylinder((a.cx+b.cx)/2,(a.cz+b.cz)/2,MOVEMENT.radius,y,y+MOVEMENT.standHeight)).toBe(true);
-    }
+  it('nothing stands on top of the stone: no iron or timber extension, no yard fence', () => {
+    expect([...world.all()].filter((c) => c.tag.startsWith('farm:perimeter-fence') || c.tag.startsWith('farm:fence'))).toHaveLength(0);
+    expect((spec as { extensions?: unknown }).extensions).toBeUndefined();
+    expect((layout.farm as { fences?: unknown }).fences).toBeUndefined();
+    // the highest wall solid is a pier cap (4.66 m): the sections are 4.1 to 4.4 m
+    const top = Math.max(...wallColliders().map((c) => c.cy + c.hy));
+    expect(top).toBeLessThanOrEqual(Math.max(...spec.corners.map((p) => p.top)) + 1e-6);
+    expect(top).toBeLessThan(4.8);
   });
 });
 
@@ -191,22 +194,5 @@ describe('hedgerows: eight shapes, no shortcuts', () => {
     expect([...used].sort()).toEqual([...variants].sort());
     // still taller than a standing eye (1.64 m): every hedge blocks sight and a jump
     for (const k of variants) expect(catalog[k].collider[1]).toBeGreaterThanOrEqual(2.3);
-  });
-  it('the hedges in the four margin strips still close them between the fence and the wall', () => {
-    // walk the strips' centre lines toward the next hedge from both sides: the player must stop at it, never pass
-    const fence = layout.farm!.fences;
-    const f = Object.fromEntries(fence.map((q) => [q.id, q]));
-    const strips: { start: [number, number]; heading: number; limit: (p: PlayerController) => boolean }[] = [
-      { start: [(X0 + f.west.a[0]) / 2, -15], heading: 0, limit: (p) => p.position.z > -30 + 1 },        // west strip, north from z -15 stops before the hedge at -30
-      { start: [(X0 + f.west.a[0]) / 2, 15], heading: 180, limit: (p) => p.position.z < 30 - 1 },
-      { start: [(X1 + f.east.a[0]) / 2, -10], heading: 0, limit: (p) => p.position.z > -24 + 1 },
-      { start: [(X1 + f.east.a[0]) / 2, 15], heading: 180, limit: (p) => p.position.z < 30 - 1 },
-      { start: [-5, (Z0 + f.north.a[1]) / 2], heading: 270, limit: (p) => p.position.x > -18 + 1 },
-      { start: [-5, (Z1 + f.south.a[1]) / 2], heading: 270, limit: (p) => p.position.x > -18 + 1 },
-    ];
-    for (const s of strips) for (const kind of ['walk', 'jump', 'slide'] as const) {
-      const p = run({ x: s.start[0], y: 0, z: s.start[1] }, s.heading, kind, 8);
-      expect(s.limit(p), `strip from ${s.start} (${kind}) ended at ${p.position.x.toFixed(2)},${p.position.z.toFixed(2)}`).toBe(true);
-    }
   });
 });

@@ -1330,6 +1330,19 @@
     0.55
    ]
   },
+  "hay_bale_big": {
+   "file": "hay_bale_big.glb",
+   "size": [
+    1.7,
+    0.9,
+    0.85
+   ],
+   "collider": [
+    1.7,
+    0.9,
+    0.85
+   ]
+  },
   "hay_stack": {
    "file": "hay_stack.glb",
    "size": [

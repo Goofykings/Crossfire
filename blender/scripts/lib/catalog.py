@@ -147,6 +147,7 @@ PROPS = {
     "bush": {"size": [1.8, 1.2, 1.6], "collider": [0.9, 0.9, 0.9]},
     "hay_bale": {"size": [1.1, 0.5, 0.55], "collider": [1.1, 0.5, 0.55]},
     "hay_stack": {"size": [2.2, 1.0, 0.55], "collider": [2.2, 1.0, 0.55]},
+    "hay_bale_big": {"size": [1.7, 0.9, 0.85], "collider": [1.7, 0.9, 0.85]},
     "water_trough": {"size": [2.24, 0.66, 0.74], "collider": [2.24, 0.62, 0.74]},
     "wheelbarrow": {"size": [1.7, 0.75, 0.6], "collider": [1.5, 0.55, 0.6]},
     "firewood_stack": {"size": [1.8, 1.2, 0.6], "collider": [1.8, 1.2, 0.6]},

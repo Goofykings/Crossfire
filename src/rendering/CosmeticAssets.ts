@@ -3,9 +3,10 @@ import { cosmetic, defaultCosmetic, type CosmeticDefinition, type CosmeticCatego
 import { loadContainer } from '../core/loadContainer';
 import { assetUrl } from '../core/assets';
 import { texturesReady } from '../core/assetReadiness';
-import type { MaterialLibrary } from './MaterialLibrary';
+import { MaterialLibrary } from './MaterialLibrary';
 import { SkinFxPlugin } from './SkinFx';
 import { addIcicles } from './Icicles';
+import { followCosmeticQuality } from './CosmeticQuality';
 
 export function visualCosmetic(weapon:CosmeticCategory,id?:string):CosmeticDefinition {
   const item=cosmetic(id);return item?.weapon===weapon&&item.compatibleWith.includes(weapon)?item:cosmetic(defaultCosmetic(weapon))!;
@@ -54,7 +55,7 @@ export async function patchCosmetic(c:Pick<AssetContainer,'materials'|'textures'
     // Skin effect maps are linear data read by the plugin itself; one Texture per file and item.
     const fxTexture=(path:string):Texture=>{let t=fxTextures.get(path);if(!t){t=new Texture(assetUrl(path),scene,false,false);t.gammaSpace=false;fxTextures.set(path,t);c.textures.push(t);}return t;};
     for(const mesh of c.meshes){
-      if(!mesh.material)continue;const name=mesh.material.name;
+      if(!mesh.material)continue;const name=MaterialLibrary.cleanName(mesh.material.name);
       if(name==='reticle_holo'){
         // The new optic's GLB placeholder is opaque white. Use its authored
         // alpha-cutout reticle in Locker/third person; WeaponView supplies its
@@ -69,6 +70,9 @@ export async function patchCosmetic(c:Pick<AssetContainer,'materials'|'textures'
       if(!copy){
         copy=source.clone(`cosmetic:${item.id}:${name}`)!;copies.set(source,copy);c.materials.push(copy);
         if(!(copy instanceof PBRMaterial))throw Error(`Cosmetic material must use PBR: ${name}`);
+        // Babylon clones Texture wrappers as well. Reuse the live source maps;
+        // only authored cosmetic maps belong to this container/cache.
+        const inherited=copy.getActiveTextures();
         if(patch.color)copy.albedoColor=Color3.FromHexString(patch.color);
         if(patch.metallic!==undefined)copy.metallic=patch.metallic;
         if(patch.roughness!==undefined)copy.roughness=patch.roughness;
@@ -94,6 +98,12 @@ export async function patchCosmetic(c:Pick<AssetContainer,'materials'|'textures'
           plugin.configure(fx,fxTexture(fx.map),fx.type==='flow'?fxTexture(fx.ramp):null);
           // The flowing colour replaces the source's own albedo image (the shotgun's walnut); its normal and ORM detail stay.
           if(fx.type==='flow'){copy.albedoTexture=null;copy.emissiveTexture=null;}
+        }
+        if(!(source instanceof PBRMaterial))throw Error(`Cosmetic source must use PBR: ${name}`);
+        followCosmeticQuality(copy,item.asset.binding==='shared'?()=>materials.get(name) as PBRMaterial:()=>source,patch,materials);
+        const active=new Set(copy.getActiveTextures()),borrowed=new Set(source.getActiveTextures());
+        for(const texture of inherited)if(!borrowed.has(texture)){
+          if(active.has(texture))c.textures.push(texture);else texture.dispose();
         }
       }
       mesh.material=copy;

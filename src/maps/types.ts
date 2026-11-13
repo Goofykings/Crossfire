@@ -92,7 +92,7 @@ export interface LightDef {
  * level, reached by stair entrances whose stairwells are the only openings in the street slab. */
 export interface UndergroundPassage {
   id: string;
-  style: 'cellar' | 'metro' | 'farm';
+  style: 'cellar' | 'metro';
   purpose?: string;
   floor: number;
   ceiling: number;
@@ -130,21 +130,17 @@ export interface MapLayout {
     upperRoutes: { id: string; waypoints: Vec3Tuple[] }[];
     groundObstacles: { id: string; rect: Rect }[];
   };
-  /** Farmstead only: buildings authored as wall/slab/stair elements (blender/scripts/lib/farmstead.py) and the gapped fence. */
+  /** Farmstead only: buildings authored as wall/slab/stair elements (blender/scripts/lib/farmstead.py). */
   farm?: {
     structures: { id: string; name: string; rect: Rect; elements: Record<string, unknown>[] }[];
-    fences: { id: string; a: [number, number]; b: [number, number]; gaps: [number, number][] }[];
     /** Street-level footprints of walls, posts and staircases (tactical map and tests). */
     solids: { id: string; kind: string; rect: Rect }[];
-    /** Street to shelter-floor polylines of each underground entrance (tests, Practice debugging). */
-    entranceWalks: Record<string, [number, number, number][]>;
     /** The visible stone perimeter wall (blender/scripts/lib/perimeter.py): the map boundary and its collision. */
     perimeter?: {
       version: number; inner: [number, number, number, number]; thickness: number; plinth: [number, number]; material: string;
       corners: { id: string; side: string; rect: Rect; top: number }[];
       piers: { id: string; side: string; a: [number, number]; rect: Rect; top: number }[];
       sections: { id: string; side: string; a: [number, number]; rect: Rect; top: number; seed: number }[];
-      extensions?: { id: string; side: string; a: [number, number]; base: number; top: number }[];
     };
   };
   buildings: Building[];

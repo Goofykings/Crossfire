@@ -1,3 +1,56 @@
+# Weapon skin compatibility in Chromebook Mode (2026-11-13)
+
+Completed and verified locally. No commit, push or deployment. Existing Farmstead work below is preserved. This fix changes frontend rendering only; no combat, protocol, backend, ownership, reward or deployment configuration changes. Details and repeatable commands: `docs/COSMETIC_COMPATIBILITY.md`.
+
+- Confirmed root cause with actual before/after WebGL renders: Chromebook removes environment reflections and simplifies shared materials, but skin clones reintroduced fully metallic shading, ORM/normal maps and clear coat. Fully metallic surfaces have no diffuse response, so Rich became almost black. Cached clones also missed subsequent quality changes; independent dagger libraries made cold loads and respawns inconsistent. No missing Rich texture or shader compilation failure was found.
+- Added one shared cosmetic quality policy for all patched finishes. Chromebook keeps authored colors, patterns, emission and cheap animated flow/frost variants, using diffuse shading without reflection/normal/ORM/coat costs. Other presets restore the authored finish. Existing material instances follow live quality changes, including separate embedded dagger/preview caches, without model reloads or per-frame quality work. Listeners are removed on disposal.
+- Inherited textures are shared with their source, unused cloned texture wrappers are released, and pruning retains maps referenced by live cosmetics. Shared surface downscaling notifies cosmetic users. Cached authored maps remain available for reversible preset changes.
+- Expanded real-GLB firearm respawn/cache regressions from only extra collections to every current collection, with ADS/reload and quality changes. All registered dagger collections now exercise repeated cached new-life swaps. Added cold Rich, live preset restoration, independent dagger libraries, texture ownership/pruning and listener-cleanup regressions.
+- Added a registry-driven, isolated Chrome audit using real GLBs, textures and shaders. It never adds staged Foundry entries or restores Darkness. All **72 appearances** (66 skins plus 6 defaults: five guns and dual daggers) passed Chromebook, Low, Medium, High and Ultra plus hot switches: **576 samples**, ready textures/shaders, visible geometry, distinct skin/default signatures, attachment preservation, same material references on switches, zero asset/shader errors.
+- Actual first/third-person rigs: **144 cases, 966 captured states**, covering every appearance in High and Chromebook, hip, ADS, reload, recoil, cached new lives and character holds where applicable. **42 animation checks** passed for every Hydro Dip and Rainbow Glow appearance in both modes. Human visual review included Rich gun/ADS/third-person/daggers plus representative Camo, Blossom, Carbon Fiber, Hydro Dip and Frosted renders. Reports/screenshots are in ignored `test-results/cosmetic-compatibility/`.
+- Verification: `npm run typecheck` and `npm run build` passed (existing large-bundle warning); final full frontend run **1103 passed, 1 existing skip, no failures**, 108 passing files (109 including the skipped file). Focused regressions: **7/7**. The initial full run caught a new test fixture assuming steel had an albedo map; it now checks the actual steel normal map and the clean full run passed. Logs: `test-results/cosmetic-vitest-final.log`, `cosmetic-regressions.log`, `cosmetic-build.log`, `cosmetic-compatibility-audit.log`, `cosmetic-contexts.log`, `cosmetic-animations.log`.
+- Limits: desktop Chrome WebGL, not physical Chromebook performance testing. The isolated loader is shared by Locker/Shop previews; full Shop/reward UI interactions were not replayed for all items. Online death/respawn/reconnection were not tested end to end; authoritative appearance-key handling is unchanged and the actual rendering caches/new-life swaps are covered. Not every saved screenshot received human review. Only a frontend release is needed for this rendering fix, when authorized; separate pre-existing map work may have its own matching-backend release requirements.
+
+# Farmstead clean-up: no fence, no underground, higher wall, thin vines, rounded bushes, hay bales (2026-11-12)
+
+Completed and verified locally. Nothing committed, pushed or deployed. Details: `docs/FARMSTEAD.md` "Clean-up 2026-11-12". Visual and layout only; combat, protocol v28,
+Zone Control squares and the Worker code are untouched, but the map layout, collision and assets changed, so the frontend assets and the Worker need a matching release.
+
+- Interpreted as: the "fence around the outer wall" is the post-and-rail yard fence (`farm.fences`); the "tall wooden wall on top of the stone wall" is the 4 to 10 m
+  rusty bar extensions on four runs of the wall (`perimeter.roof_extensions`). Both are deleted with their geometry, collision, tactical footprints and tests.
+- Wall: sections 4.10 to 4.42 m (were 3.10 to 3.42), piers 4.66 m, same footprint and stone. With nothing on top, containment is physical: every deck, balcony, loft,
+  railing top and every roof within 24 m of the wall (walk, jump-spam, slide from the platform edge nearest it) stops at the stone (tests/farmPerimeter.test.ts). The shared
+  `unsafeMovement` recovery remains as a secondary net.
+- Underground removed: `layout.underground = []`, no entrances (house hall and barn stall have normal floors), portals, tunnels, rooms, nav footprints or shelter props;
+  the farm underground style and `farm_underground()` are deleted. Spawns and props re-snapped (253 props -> 218). tests/farmstead.test.ts proves solid ground over every
+  metre of the yard and bot navigation from every spawn.
+- Vines rewritten (`perimeter_ivy.py` + atlas): thin ribbon stems (0.6 to 2.6 cm), small leaves (5 to 13 cm) on both sides flush with the wall, leaf mats, sprigs and modest
+  clumps, patchy, densest in the first metre and climbing up, some vines forking, some reaching the coping. 19.0k leaf/mat/sprig/clump cards + 4.7k stem quads (lite set 8.5k
+  quads). `terrain.glb` is 8.6 MB (5.4 MB committed; test limit 11 MB).
+- Bushes and hedges: unions of rounded lumps with a smooth opaque core; no flat sides, no boxes, cores no longer show; colliders unchanged. `leaf_core` slightly lighter.
+- Hay: new `hay_bale_big` (1.7 x 0.9 x 0.85 m on its side; 0.9 m is under the 1.09 m jump rise), 10 stacks (single, three-bale step, three-bale pyramid; 24 bales) on open
+  ground away from doorways, spawns, zone squares and tree canopies.
+- Thumbnail regenerated (`public/assets/maps/farmstead/thumb.jpg`); review tools `tools/farm-cleanup-shots.mjs`, `tools/farm-hay-jump-test.mjs`; old fence/shelter views removed
+  from `tools/farm-shots.mjs` and `tools/farm-perimeter-shots.mjs`.
+
+Verification:
+- `npm run typecheck` (root and server), `npm run build`, `npm run assets:verify`: pass. Full frontend suite: 107 files passed, 1 skipped; 1098 tests passed, 1 skipped.
+  (A first full run failed tests/zoneControl.test.ts because a bale stack stood on Zone Control square A: fixed by moving the stack; two tests/characterWeapon.test.ts
+  5 s timeouts happened only while Chrome ran at the same time and pass alone.) `npm test --prefix server`: 103/103 on the final layout.
+- New/updated tests: tests/farmHay.test.ts (real shared controller: first bale 0.9 m, second layer 1.8 m, walk-off, placement), tests/farmFoliage.test.ts (thin stems, small
+  leaves, density by height, load budget), tests/farmstead.test.ts, tests/farmPerimeter.test.ts.
+- In the real engine (Chrome, Intel Iris Xe, local `?practice` mode): `node tools/farm-hay-jump-test.mjs` jumped onto a first bale (y 0.90), the second layer (y 1.80) and
+  walked off (y 0) through the game's own input; `node tools/farm-cleanup-shots.mjs` frames of the wall (14 views), vines (10), bushes (12), hedges (12), hay (11), the old
+  entrance spots (10) and six aerials in High, and wall, vines, bushes, hedges and hay in `--chromebook`. Viewed by eye: wall, vines, bushes, hedges, hay, entrances and
+  aerials in High; vines and hedges in Chromebook. No page errors, no missing materials.
+
+Limits:
+- Roofs are walkable and contained by the stone as simulated (sampled from every roof/deck/rail edge, 4 s each); that is a sampled proof, not an exhaustive search.
+- Ivy is flat cards and ribbons, so very close up the leaf mats read as slightly painted patches; the lite set (Chromebook and beyond 42 m) shows a little more core on hedge ends.
+- Frame times were not re-measured for this change (the foliage draw-call structure is unchanged: one batch per cell and material); real Chromebook hardware was not tested.
+- The in-engine hay jump is in local `?practice` mode; network Practice reconciles teleports away, so the same check there would need walking from a spawn.
+- Public Cloudflare behaviour was not validated; old tabs need a refresh after the release.
+
 # Legendary Blossom flower burst and Frosted blizzard kill effects (2026-11-12)
 
 Completed and verified locally. Nothing committed, pushed or deployed. Details: `docs/KILL_EFFECTS.md`.

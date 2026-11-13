@@ -87,7 +87,7 @@ MAP_STAGES = {
                  "ne_road": ((1.5, 1.85, -16), (17, 3.0, -16.5), 18),
                  "courtyard": ((-20.5, 1.7, -5.5), (-14.5, 2.6, 3.5), 16)}},
     "farm": {"id": "farmstead", "title": "Farmstead", "style": "farm", "sky": "sky_1k.hdr",
-             "terrain_desc": "Meadow and dirt paths, the farmhouse, barn, cabin, garage and open shacks, the perimeter fence and the storm shelter",
+             "terrain_desc": "Meadow and dirt paths, the farmhouse, barn, cabin, garage and open shacks, and the perimeter wall",
              "sun": (200, 48), "views": {
                  "aerial": ((-60, 46, 70), (0, 0, 0), 30),
                  "yard": ((-4, 1.7, 36), (2, 2.0, 14), 22),

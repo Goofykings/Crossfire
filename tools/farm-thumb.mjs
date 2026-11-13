@@ -15,7 +15,7 @@ await page.waitForFunction(() => window.__crossfire.ready(), { timeout: 300000 }
 await page.waitForFunction(() => window.__crossfire.loadingState().sceneReady, { timeout: 300000 });
 await delay(5000);
 // the yard seen from the south-west, low enough to stay out of the distance fog
-await page.evaluate(() => window.__crossfire.freeCam(-38, 21, 50, 36, -23));
+await page.evaluate(() => window.__crossfire.freeCam(-50, 30, 62, 36, -26));
 await delay(1500);
 fs.mkdirSync('test-results/farm', { recursive: true });
 await page.screenshot({ path: 'test-results/farm/thumb-source.png' });

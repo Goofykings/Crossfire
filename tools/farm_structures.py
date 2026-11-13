@@ -291,21 +291,6 @@ def structures():
     return [house(), barn(), cabin(), garage()] + [shack(s, n, x, z, h) for (s, n, x, z), h in zip(SHACKS, ('n', 'e', 's', 'w'))]
 
 
-# --- fence ------------------------------------------------------------------------------------------
-FENCE = {'x0': -33.0, 'x1': 33.0, 'z0': -43.0, 'z1': 40.5}
-
-
-def fences():
-    """Perimeter post-and-rail fence with open gaps on every side (the plan's dashed line)."""
-    f = FENCE
-    return [
-        {'id': 'north', 'a': [f['x0'], f['z0']], 'b': [f['x1'], f['z0']], 'gaps': [[-1.5, 5.0]]},
-        {'id': 'south', 'a': [f['x0'], f['z1']], 'b': [f['x1'], f['z1']], 'gaps': [[-4.75, -0.5]]},
-        {'id': 'west', 'a': [f['x0'], f['z0']], 'b': [f['x0'], f['z1']], 'gaps': [[-1.9, 4.75]]},
-        {'id': 'east', 'a': [f['x1'], f['z0']], 'b': [f['x1'], f['z1']], 'gaps': [[-19.9, -13.4], [17.25, 23.75]]},
-    ]
-
-
 # --- decorative posters (posters_fun atlas cells; same set as the other maps) -------------------------------------------
 # (building, cell, x, bottom y, wall-face z or x, normal): each hangs 12 mm proud of a plain stretch of exterior wall.
 POSTER = {'flowers': 0, 'cat': 1, 'concert': 2, 'trattoria': 3, 'water': 4, 'travel': 5, 'tonic': 6, 'sock': 7,

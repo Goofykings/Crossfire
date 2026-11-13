@@ -220,18 +220,6 @@ export function deriveTacticalMap(layout: MapLayout, props: PropCatalog | null, 
     if (sd.kind === 'stairs') farmStairs.push({ type: 'stairs', poly: rectPoly(sd.rect) });
     else walls.push({ id: sd.id, poly: rectPoly(sd.rect) });
   }
-  // Farm fence: thin solid spans between its gaps.
-  for (const f of layout.farm?.fences ?? []) {
-    const alongX = Math.abs(f.b[1] - f.a[1]) < 1e-6;
-    const [lo, hi] = alongX ? [Math.min(f.a[0], f.b[0]), Math.max(f.a[0], f.b[0])] : [Math.min(f.a[1], f.b[1]), Math.max(f.a[1], f.b[1])];
-    const line = alongX ? f.a[1] : f.a[0];
-    let cur = lo;
-    const spans: [number, number][] = [];
-    for (const [g0, g1] of [...f.gaps].sort((a, b) => a[0] - b[0])) { if (g0 > cur) spans.push([cur, g0]); cur = g1; }
-    if (hi > cur) spans.push([cur, hi]);
-    for (const [a0, a1] of spans) walls.push({ id: `fence_${f.id}`, poly: rectPoly(alongX ? [a0, line - .06, a1, line + .06] : [line - .06, a0, line + .06, a1]) });
-  }
-
   const obstacles: TacticalMapData['obstacles'] = [...farmStairs];
   // These plinths block ordinary walking; only the shared slide collider fits.
   for(const p of layout.slidePassages??[]){const [x,z]=p.center,w=p.width/2+.24,d=p.depth/2+.025;

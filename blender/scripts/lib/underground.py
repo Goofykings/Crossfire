@@ -43,11 +43,6 @@ STYLES = {
                'portal': 'stone_blocks', 'roof': 'roof_tiles', 'trim': 'stone_trim', 'beam': 'wood_beam',
                'metal': 'iron', 'lamp': 'lantern_glass', 'pier': 'stone_blocks', 'base': .30,
                'floor_y': -3.5, 'risers': 20, 'run': .24, 'pier_size': .72, 'accent': 'stone_trim', 'door': 'wood_door'},
-    # Farmstead storm shelter: poured concrete, a fieldstone portal under tin, timber joists, caged bulb lamps.
-    'farm': {'wall': 'concrete_wall_stained', 'floor': 'concrete_floor', 'ceiling': 'concrete_wall', 'stair': 'concrete_floor',
-             'portal': 'stone_stacked', 'roof': 'roof_barn', 'trim': 'trim_brown', 'beam': 'wood_beam',
-             'metal': 'iron', 'lamp': 'lantern_glass', 'pier': 'concrete_wall', 'base': .36,
-             'floor_y': -3.5, 'risers': 20, 'run': .24, 'pier_size': .72, 'accent': 'trim_brown', 'door': 'wood_door'},
     'metro': {'wall': 'facade_tiles_light', 'floor': 'pavers', 'ceiling': 'concrete_smooth_light', 'stair': 'granite',
               'portal': 'concrete_smooth_light', 'roof': 'concrete_floor', 'trim': 'concrete_trim', 'beam': None,
               'metal': 'aluminium', 'lamp': 'lamp_led', 'pier': 'facade_tiles_light', 'base': .72,
@@ -170,7 +165,7 @@ def entrance_parts(e, style):
         for u in (0, W - T):
             yield [u, fl - T, 0, u + T, 0, L], s['wall'], 'wall', 'inner'
         # Street guards: two long sides and the far end above the continuing passage.
-        guard = s['portal'] if style in ('cellar', 'farm') else s['metal']
+        guard = s['portal'] if style == 'cellar' else s['metal']
         for u in (0, W - T):
             yield [u, 0, 0, u + T, 1.0, L], guard, 'guard', 'guard'
         # The far guard also closes the street slab's edge above the passage mouth.
@@ -663,7 +658,7 @@ def _lamp_mesh(md, s, x, y, z, facing, p, metro):
     md.box(x - .06 - abs(oz) * .04, y + .26, z - .06 - abs(ox) * .04, x + .06 + abs(oz) * .04, y + .3, z + .06 + abs(ox) * .04, s['metal'])
     md.tube((x - ox * .1, y + .28, z - oz * .1), (x + ox * .1, y + .28, z + oz * .1), .012, s['metal'], segments=5)
     lx, lz = x + ox * .12, z + oz * .12
-    if p['style'] in ('cellar', 'farm'):
+    if p['style'] == 'cellar':
         md.cylinder((lx, y + .02, lz), .085, .2, s['lamp'], segments=8)
         md.cylinder((lx, y + .22, lz), .11, .05, s['metal'], segments=8, radius_top=.04)
         md.cylinder((lx, y - .01, lz), .1, .03, s['metal'], segments=8)
@@ -768,7 +763,7 @@ def _entrance_mesh(md, e, style):
         elif faces == 'inner':
             lbox([b[0], b[1], b[2], b[3], b[4], b[5]], mat, skip=('ny', 'py'))
         elif faces == 'guard':
-            if style in ('cellar', 'farm'):
+            if style == 'cellar':
                 lbox(b, mat, skip=('ny',))
                 lbox([b[0] - .04, b[4], b[2] - .04, b[3] + .04, b[4] + .07, b[5] + .04], s['trim'], skip=('ny',))
         elif faces == 'roof':
@@ -777,7 +772,7 @@ def _entrance_mesh(md, e, style):
         for u in (T + .06, W - T - .06):
             # Wall-mounted handrails follow the flight; posts carry the street guard rails.
             md.tube(world(u, .9, LANDING), world(u, .9 + fl, LANDING + (n - 1) * RUN), .025, s['metal'], segments=6)
-        if style not in ('cellar', 'farm'):
+        if style != 'cellar':
             for b, mat, part, faces in steps:
                 if faces != 'guard':
                     continue

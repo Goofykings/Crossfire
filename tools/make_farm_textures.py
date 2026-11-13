@@ -206,105 +206,94 @@ def _ivy_leaf(d, base, ang, size, color, light, vein, scale=1.0):
         d.line([tf((0, s * .1)), tf((math.sin(rot) * -ln * s, s * .1 + math.cos(rot) * ln * s))], fill=vein, width=max(1, int(s * scale * .03)))
 
 
-def _ivy_cell(kind, rnd):
+GREENS = [((30, 70, 34), (54, 104, 46), (92, 142, 74)), ((38, 82, 38), (62, 114, 50), (100, 150, 78)),
+          ((46, 94, 42), (72, 126, 54), (110, 158, 82)), ((34, 76, 44), (58, 108, 58), (96, 146, 86)),
+          ((54, 104, 44), (84, 136, 58), (120, 166, 86))]
+YOUNG = ((92, 138, 52), (128, 172, 72), (160, 200, 100))
+OLD = ((112, 108, 42), (146, 138, 58), (176, 164, 84))
+STEM = (84, 62, 42, 255)
+
+
+def _tone(rnd, young=.12, old=.02):
+    r = rnd.random()
+    if r < young:
+        c = YOUNG
+    elif r < young + old:
+        c = OLD
+    else:
+        c = rnd.choice(GREENS)
+    return tuple(c[0]) + (255,), tuple(c[1]) + (255,), tuple(c[2]) + (255,)
+
+
+def _vine_cell(kind, rnd):
+    """One cell of the vine atlas, drawn at 1024 px and reduced to 512, standing on its bottom centre:
+    0 a single palmate ivy leaf, 1 a mat of about 14 small overlapping leaves, 2 a short sprig of small leaves on a twig, 3 a weed tuft (a solid bark-brown
+    block sits in its top-left corner: the vine stems sample it)."""
     N = 1024
     img = Image.new("RGBA", (N, N), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    greens = [(26, 62, 30), (34, 76, 34), (44, 90, 38), (54, 104, 42), (64, 116, 48), (40, 84, 52)]
-    lights = [(52, 98, 44), (62, 112, 46), (74, 128, 50), (88, 142, 56), (100, 154, 62), (70, 120, 64)]
-    stem = (84, 62, 42, 255)
-
-    def colors(shade, new=.07, old=.04):
-        i = rnd.randrange(len(greens))
-        c, l = greens[i], lights[i]
-        r = rnd.random()
-        if r < new:
-            c, l = (96, 140, 52), (130, 172, 70)           # fresh pale growth
-        elif r < new + old:
-            c, l = (118, 112, 40), (150, 140, 56)          # a yellowing leaf
-        dark = (max(0, int(c[0] * shade) - 18), max(0, int(c[1] * shade) - 16), max(0, int(c[2] * shade) - 10), 255)
-        return tuple(int(v * shade) for v in c) + (255,), tuple(int(v * shade) for v in l) + (255,), dark
-
-    leaves = []
-    if kind == 0:       # a climbing vine: a sinuous woody stem with alternate leaves, smaller toward the tip, and tendrils
-        pts, x, y, a = [], N / 2, N - 10, 0.0
-        for i in range(61):
+    if kind == 0:
+        c, l, v = _tone(rnd, .0, 0.0)
+        d.line([(N / 2, N - 4), (N / 2, N - 190)], fill=STEM, width=10)
+        _ivy_leaf(d, (N / 2, N - 186), 0.0, 760, c, l, v, 1.0)
+    elif kind == 1:
+        # a mat of small leaves fanning out of the bottom centre, overlapping into a mass (about 14 leaves per 0.45 m card): the
+        # farther leaves are drawn first, so the near ones lie on top
+        leaves = []
+        for i in range(46):
+            v = rnd.random() ** .85
+            px = N / 2 + rnd.uniform(-1, 1) * 380 * (1 - .55 * v * v)
+            py = N - 120 - v * 740
+            ang = math.atan2(px - N / 2, 330) * .9 + rnd.uniform(-.9, .9)
+            leaves.append((abs(px - N / 2) + (N - py) * .5, (px, py), ang, 205 * rnd.uniform(.72, 1.15)))
+        leaves.sort(key=lambda t: -t[0])
+        for k, (dist, base, ang, size) in enumerate(leaves):
+            c, l, v = _tone(rnd, .1, .02)
+            shade = .72 + .28 * (1 - min(1.0, dist / 760))
+            c, l = tuple(int(q * shade) for q in c[:3]) + (255,), tuple(int(q * shade) for q in l[:3]) + (255,)
+            _ivy_leaf(d, base, ang, size, c, l, v)
+    elif kind == 2:
+        pts, x, y, a = [], N / 2, N - 6, 0.0
+        for i in range(30):
             pts.append((x, y))
-            a += rnd.uniform(-.09, .09) - a * .06
-            x += math.sin(a) * 15
-            y -= math.cos(a) * 15
-        d.line(pts, fill=stem, width=11, joint="curve")
-        d.line(pts, fill=(112, 86, 58, 255), width=4)
-        for i in range(2, 60, 2):
-            t = i / 60
-            px, py = pts[i]
-            side = 1 if (i // 2) % 2 else -1
-            ang = side * rnd.uniform(.7, 1.15) + rnd.uniform(-.15, .15)
-            leaves.append((t, (px, py), ang, 170 * (1.05 - .55 * t) * rnd.uniform(.85, 1.1)))
-            if i % 6 == 0:                                  # aerial rootlets and tendrils
-                d.line([(px, py), (px + side * rnd.uniform(14, 34), py + rnd.uniform(8, 26))], fill=stem, width=3)
-        leaves.append((1.0, pts[-1], rnd.uniform(-.2, .2), 130))
-    elif kind == 1:     # a dense patch: leaves fanning out of the bottom centre, overlapping into a mass
-        for i in range(70):
-            r = rnd.random()
-            ang = rnd.uniform(-1.35, 1.35)
-            dist = 60 + 330 * math.sqrt(r) * (1 - .25 * abs(ang) / 1.35)
-            px, py = N / 2 + math.sin(ang) * dist * 1.05, N - 30 - math.cos(ang) * dist * .95
-            leaves.append((r, (px, py), ang + rnd.uniform(-.7, .7), 120 * rnd.uniform(.75, 1.2)))
-            if i % 9 == 0:
-                d.line([(N / 2, N - 20), (px, py)], fill=stem, width=5)
-    elif kind == 2:     # a weed tuft from a crack: grass blades, a few round leaves and tiny pale flowers
-        for i in range(34):
-            a = rnd.uniform(-.75, .75)
-            L = rnd.uniform(300, 720) * (1 - abs(a) * .35)
+            a += rnd.uniform(-.07, .07) - a * .05
+            x += math.sin(a) * 30
+            y -= math.cos(a) * 30
+        d.line(pts, fill=STEM, width=12, joint="curve")
+        leaves = []
+        for i in range(3, 29, 3):
+            t = i / 29
+            side = 1 if (i // 3) % 2 else -1
+            leaves.append((pts[i], side * rnd.uniform(.75, 1.1), 330 * (1.05 - .5 * t) * rnd.uniform(.9, 1.1)))
+        leaves.append((pts[-1], rnd.uniform(-.2, .2), 220))
+        for k, (base, ang, size) in enumerate(leaves):
+            c, l, v = _tone(rnd, .18, .04)
+            _ivy_leaf(d, base, ang, size, c, l, v)
+    else:
+        for i in range(30):
+            a = rnd.uniform(-.7, .7)
+            L = rnd.uniform(260, 640) * (1 - abs(a) * .35)
             bx = N / 2 + rnd.uniform(-70, 70)
-            tipx, tipy = bx + math.sin(a) * L + rnd.uniform(-60, 60), N - 12 - math.cos(a) * L
+            tipx, tipy = bx + math.sin(a) * L + rnd.uniform(-50, 50), N - 12 - math.cos(a) * L
             c = rnd.choice(((58, 104, 34, 255), (74, 122, 40, 255), (46, 88, 30, 255), (92, 134, 50, 255)))
-            wb = rnd.uniform(11, 20)
+            wb = rnd.uniform(9, 16)
             d.polygon([(bx - wb, N - 12), (bx + wb, N - 12), (tipx, tipy)], fill=c)
             d.line([(bx, N - 12), (tipx, tipy)], fill=tuple(min(255, v + 26) for v in c[:3]) + (255,), width=3)
-        for i in range(9):
-            a = rnd.uniform(-1.1, 1.1)
-            leaves.append((rnd.random(), (N / 2 + rnd.uniform(-60, 60), N - 20), a, 95 * rnd.uniform(.7, 1.1)))
-        for i in range(5):
-            fx, fy = N / 2 + rnd.uniform(-190, 190), N - rnd.uniform(300, 640)
-            d.ellipse((fx - 15, fy - 15, fx + 15, fy + 15), fill=rnd.choice(((236, 232, 214, 255), (240, 214, 92, 255))))
-            d.ellipse((fx - 6, fy - 6, fx + 6, fy + 6), fill=(196, 150, 40, 255))
-    else:               # a moss and fern tuft: low rounded mound of tiny leaflets with a few small fronds
-        for i in range(520):
-            ang = rnd.uniform(-1.5, 1.5)
-            dist = 330 * math.sqrt(rnd.random()) * (1 - .35 * abs(ang) / 1.5)
-            px, py = N / 2 + math.sin(ang) * dist * 1.3, N - 18 - math.cos(ang) * dist * .72
-            r = rnd.uniform(8, 20)
-            c = rnd.choice(((54, 92, 34, 255), (68, 108, 40, 255), (80, 122, 48, 255), (44, 78, 30, 255), (96, 138, 56, 255)))
-            d.ellipse((px - r, py - r * .8, px + r, py + r * .8), fill=c)
-        for f in range(16):
-            # small clover-like leaves on thin stalks standing out of the mound
-            a0 = rnd.uniform(-.9, .9)
-            L = rnd.uniform(110, 300)
-            bx, by = N / 2 + math.sin(a0) * rnd.uniform(0, 200), N - 60
-            tx, ty = bx + math.sin(a0) * L * .5, by - math.cos(a0) * L
-            d.line([(bx, by), (tx, ty)], fill=(70, 100, 44, 255), width=4)
-            c = rnd.choice(((70, 112, 42, 255), (86, 128, 50, 255), (58, 98, 38, 255)))
-            for ox, oy in ((-14, 4), (14, 4), (0, -14)):
-                d.ellipse((tx + ox - 17, ty + oy - 15, tx + ox + 17, ty + oy + 15), fill=c)
-    leaves.sort(key=lambda l: l[0])
-    for k, (t, base, ang, size) in enumerate(leaves):
-        shade = .72 + .28 * (k / max(1, len(leaves)))
-        c, l, v = colors(shade)
-        sx, sy = base[0] + math.sin(ang) * 10, base[1] - math.cos(ang) * 10
-        d.line([base, (sx, sy)], fill=stem, width=4)
-        _ivy_leaf(d, (sx, sy), ang, size, c, l, v)
+        for i in range(4):
+            fx, fy = N / 2 + rnd.uniform(-170, 170), N - rnd.uniform(280, 560)
+            d.ellipse((fx - 12, fy - 12, fx + 12, fy + 12), fill=rnd.choice(((236, 232, 214, 255), (240, 214, 92, 255))))
+            d.ellipse((fx - 5, fy - 5, fx + 5, fy + 5), fill=(196, 150, 40, 255))
+        d.rectangle((0, 0, 127, 127), fill=(92, 68, 46, 255))
     return img.resize((512, 512), Image.LANCZOS)
 
 
 def ivy_leaves() -> None:
-    """Wall-vegetation atlas (2 x 2, row 0 = top): 0 vine strand, 1 dense ivy patch, 2 weed tuft with flowers, 3 moss and fern tuft.
+    """Vine atlas for the perimeter wall (2 x 2, row 0 = top): 0 single ivy leaf, 1 mat of small leaves, 2 sprig, 3 weed tuft + stem block.
     Every cell stands on its bottom centre like the bush atlas; edge colour is bled into transparent pixels."""
     rnd = random.Random(5521)
     atlas = Image.new("RGBA", (1024, 1024), (0, 0, 0, 0))
     for kind in range(4):
-        atlas.paste(_ivy_cell(kind, rnd), ((kind % 2) * 512, (kind // 2) * 512))
+        atlas.paste(_vine_cell(kind, rnd), ((kind % 2) * 512, (kind // 2) * 512))
     bg = Image.new("RGBA", atlas.size, (36, 70, 30, 0))
     bg.alpha_composite(atlas)
     bg.save(OUT / "ivy_leaves.png", optimize=True)

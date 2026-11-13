@@ -1,9 +1,10 @@
 # Farmstead (2026-11-07)
 
-A fourth playable map: an open rural yard (about 74 x 92 m play area, a 66 x 83.5 m fence line) with a
-farmhouse, barn, cabin, garage and four open shacks, linked by dirt paths, with a close-quarters storm
-shelter (about 920 m2 of rooms and tunnels) below. Source plan: `references_images/Newoutdoormap.png`
-(0.125 m per pixel, origin at pixel (290, 370), north up); positions, openings and the fence gaps were read
+A fourth playable map: an open rural yard (about 74 x 92 m play area, enclosed by a stone wall) with a
+farmhouse, barn, cabin, garage and four open shacks, linked by dirt paths. **Everything is above ground since
+2026-11-12** (the storm shelter below the yard and the post-and-rail yard fence were removed: see "Clean-up
+2026-11-12" at the end). Source plan: `references_images/Newoutdoormap.png`
+(0.125 m per pixel, origin at pixel (290, 370), north up); positions and openings were read
 from the image, not mirrored or rearranged. Gameplay, protocol (WebSocket v21, HTTP schemas) and Cloudflare
 configuration are unchanged. Nine small posters from the shared `posters_fun` atlas hang on the exterior walls. Map schedule: `MAP_IDS` has a fourth entry and `mapRound` now reshuffles once per
 full pass over the maps (with three maps it was identical).
@@ -12,7 +13,7 @@ full pass over the maps (with three maps it was identical).
 
 | | Plan | Built |
 |---|---|---|
-| Fence | dashed rectangle, gaps on every side | post-and-rail, 1.2 m, x -33..33, z -43..40.5; gaps: north 6.5 m, south gate 4.25 m, west 6.65 m, east 6.5 m and 6.5 m |
+| Fence | dashed rectangle, gaps on every side | **removed 2026-11-12**: the yard is open up to the perimeter wall |
 | Main house | living, hall, kitchen, dining, pantry, stairs, "balcony above" | 26 x 16.5 m; ground floor with all nine plan rooms/openings, east wing has an upper floor (3 bedrooms, landing, stairs) and a 11.5 x 6 m balcony over the dining porch, supported by posts, with a drop-down gap in its south rail |
 | Barn | bay, two stalls, stairs, "balcony above" | 18.5 x 14.5 m; double-height bay (5.2 m), two stalls under a hayloft reached by a stair from the bay, forebay deck over the south yard on heavy posts (railing gap to drop down) |
 | Cabin | two floors, balcony W/S/E | 13 x 10 m log cabin, stair in the east room, balcony wrapping west, south and east (posts and beams), **gap in the south railing** (x 21.2..22.8) |
@@ -28,19 +29,11 @@ Sightlines: the cabin balcony (5.0 m eye), the house balcony and the barn foreba
 paths. Trees, hedgerows, the shacks and the buildings cut the lanes: the longest eye-level axis lane is 76 m
 (the map is 84 m long); `tests/mapOverhaul.test.ts` keeps it under 76.5 m.
 
-## Storm shelter (underground)
+## Storm shelter (underground): removed
 
-Style `farm` in `blender/scripts/lib/underground.py`: floor -3.5 m, 3.2 m clear, poured concrete walls, timber
-joists, concrete piers (0.72 m), caged bulb lamps baked into vertex colours (no extra lights). Authored in
-`tools/underground_layouts.py` `farm_underground()`:
-
-- Eight rooms: Shelter Hall (hub, 6 piers, bunks, shelves), Dry Store, Cold Store (casks, racks), Generator
-  Room, Pump Room (a stone cistern block), Bunk Room, Junction Room (6 piers), Tool Cellar and the Barn Root
-  Cellar, joined by ten short tunnels that are offset so no corridor is a long straight lane; every room has two
-  or more exits and the rooms form a loop.
-- Five surface entrances: the house hall and the barn's first stall (open straight stairs inside the buildings),
-  and three fieldstone storm-cellar portals under tin roofs (north meadow, east yard, south-west yard).
-- 59 floor props (shelves, bunks, barrels, crates, drums, tank, benches).
+The eight rooms, ten tunnels and five entrances (house hall, barn first stall and three fieldstone portals) were deleted on
+2026-11-12; see "Clean-up 2026-11-12". `layout.underground` is `[]`, there are no `underground:` colliders, no stairwell holes in the
+ground, no `entranceWalks`, and the generic `farm` style in underground.py and `farm_underground()` in tools/underground_layouts.py are gone.
 
 ## Pipeline
 
@@ -49,17 +42,17 @@ joists, concrete piers (0.72 m), caged bulb lamps baked into vertex colours (no 
   (every solid is tagged `farm:<id>:<kind>`), so walls, openings, stairs and rails cannot disagree. Roofs are
   visual only; each building has a solid ceiling slab at its eave so bullets and players stay out of the roof.
 - `tools/layout_farm.py --write` assembles `src/maps/farmstead/layout.json` (ground zones, paths, props, spawns,
-  targets, lights, `farm.structures`, `farm.fences`, `farm.solids`, `farm.entranceWalks`) and validates every
+  targets, lights, `farm.structures`, `farm.solids`, `farm.perimeter`) and validates every
   prop against the real solids and stairwells.
 - `blender/scripts/lib/terrain_farm.py` builds the ground (meadow, ragged dirt, exact interior floors) and merges
   the structures; `generate_all.py` stage `farm`; new props in `props_farm.py` (trees, hay, furniture, tractor,
-  shelter storage); new materials in `materials.py` (grass, dirt, siding, logs, bark, leaves, hay...) and new
+  furniture); new materials in `materials.py` (grass, dirt, siding, logs, bark, leaves, hay...) and new
   Poly Haven textures in `tools/fetch_textures.py` (grass, dirt, siding, logs, bark) plus the procedural
   leaf and hay textures from `tools/make_farm_textures.py`.
 - Collision: `collision_gen.map_collision` adds the farm boxes and now reads the play-area limits per axis
   (the map is not square; square maps get the same boundary boxes as before).
 - Runtime: `src/maps/farmstead/index.ts`, `registry.ts`, `shared/maps.ts`, `server/src/world.ts`; the tactical
-  map draws the exact wall/post/stair footprints (`tactical.ts` reads `farm.solids` and `farm.fences`).
+  map draws the exact wall/post/stair footprints (`tactical.ts` reads `farm.solids`).
 
 Rebuild: `python -B -I tools/layout_farm.py --write`, `node tools/run-blender.mjs --only props,farm`, restore
 the tracked `__pycache__` files Blender rewrites (`git checkout -- blender/scripts/lib/__pycache__ tools/__pycache__`
@@ -69,15 +62,15 @@ and delete the new untracked `.pyc`), then `npm test --prefix server` (it rebuil
 
 `tests/farmstead.test.ts` (real shared controller, rifle and sniper rifle where it matters): every open entry of
 every wall both ways, ground windows shut to walkers, every staircase up and down, the cabin balcony (railing
-blocks, the gap drops to the ground, all three sides reachable from the upper rooms), the fence gaps, the shacks'
-open sides, all five shelter entrances walked down and up, and Practice navigation from every spawn to every
-room. The map also runs through the shared `MAP_IDS` suites (integrity audit, collision safety, tactical,
+blocks, the gap drops to the ground, all three sides reachable from the upper rooms), the shacks' open sides, the
+old fence lines walked straight to the wall, solid ground over the whole yard (no hole where an entrance was), and
+Practice navigation from every spawn. The map also runs through the shared `MAP_IDS` suites (integrity audit, collision safety, tactical,
 practice bots, overhaul walks, posters, geometry/z-fight). `tools/farm-shots.mjs` takes the review screenshots
-(aerials, every building inside and out, balconies, loft, shacks, fence gaps, every shelter room).
+(aerials, every building inside and out, balconies, loft, shacks, yard views).
 
 ## Limits
 
-- Interiors are dim (two point lights, as on every map); the shelter is deliberately darker than the yard.
+- Interiors are dim (two point lights, as on every map).
 - The aerial thumbnail is a game screenshot (no Blender preview render for this map).
 - Public Cloudflare behaviour was not validated; the frontend assets and the Worker need a matching release
   (maps and revisions changed). Old tabs need a refresh.
@@ -85,7 +78,7 @@ practice bots, overhaul walks, posters, geometry/z-fight). `tools/farm-shots.mjs
 ## Perimeter wall, ivy and foliage rebuild (2026-11-12)
 
 The invisible boundary is gone: a visible, overgrown fieldstone wall surrounds the whole yard and **is** the boundary. Gameplay
-(buildings, shelter entrances, paths, spawns, Zone Control squares, weapons, movement) is unchanged. Everything is generated:
+(buildings, paths, spawns, Zone Control squares, weapons, movement) is unchanged. Everything is generated:
 
 | Part | Source | Output |
 |---|---|---|
@@ -100,7 +93,7 @@ The invisible boundary is gone: a visible, overgrown fieldstone wall surrounds t
 
 - Inner face at the play area plus half a metre (x -37.5..37.5, z -47.5..45.5): exactly where the old invisible slabs stood, so the
   playable area is unchanged. 0.9 m thick, sunk 2 m into the ground in the collision.
-- Section tops 3.10 to 3.42 m (the house, cabin and barn ground walls are 3.4 m): five heights, never two equal neighbours.
+- Section tops 4.10 to 4.42 m since 2026-11-12 (3.10 to 3.42 before; the house, cabin and barn ground walls are 3.4 m): five heights, never two equal neighbours.
   Separate coping stones, 55% flat and the rest chipped up to 14 cm low, overhanging the outer face only. A plinth 0.55 m high
   and 0.1 m proud, fallen stones against the foot (inside the plinth's 0.28 m, where nobody can stand).
 - Piers 1.3 m wide, 0.4 m proud on both faces, 3.62 m high with a cap and finial, every 9 to 12 m and never within 1.3 m of a
@@ -134,9 +127,9 @@ and density; cards never bridge a lower neighbour, so the steps in the top show.
 
 - Eight hedge shapes (`HEDGE_VARIANTS`): long 3.8 x 2.9 x 0.95, tall 3.4 x 3.7 x 1.05, low 3.9 x 2.35 x 0.9, wide 4.2 x 2.8 x 1.5,
   thin 3.2 x 2.7 x 0.7, short 2.6 x 2.6 x 0.95, block 4.2 x 3.1 x 1.9, run 4.7 x 2.6 x 1.0 (the colliders). Each has an uneven
-  top (a clearly lower section, small swells), rounded or squared ends, thinner stretches and a few gaps in the leaf cover (the core
+  top (a clearly lower section, small swells), rounded ends (since 2026-11-12 every section is two or three rounded lumps), thinner stretches and a few gaps in the leaf cover (the core
   stays: no see-through or walkable gaps). The 20 hedgerows use all eight, a few turned a few degrees; the margin-strip hedges
-  (4.2 m or longer, 4.7 m in the 5 m south strip) still close the strips to 0.1 m of the fence and the wall. Sightline lanes are
+  (4.2 m or longer, 4.7 m in the 5 m south strip) stand against the wall (they no longer close strips: the fence is gone since 2026-11-12). Sightline lanes are
   unchanged (`tests/mapOverhaul.test.ts` limit 76.5 m).
 - `tests/farmFoliage.test.ts` reads the shipped GLBs: no edge-on view (weakest of 26 view directions at least 45% of the mean),
   the silhouette is filled from the front, sides, back and above, shapes stay inside the catalogue size plus 35 cm, both card
@@ -169,3 +162,48 @@ wall's own shadow and would add thousands of casters).
 `node tools/farm-perimeter-shots.mjs <url> [wall corners hedges trees entrances chromebook]` (contact sheets in
 `test-results/farm-perimeter/`), `node tools/farm-wall-impacts.mjs <url>` (bullet marks on the wall, High and Chromebook),
 `python -B -I tools/foliage_stats.py` (extents and triangle counts of every foliage prop).
+
+## Clean-up 2026-11-12: no fence, higher wall, thin vines, rounded bushes, hay bales, no underground
+
+Visual and layout only: combat, protocol, Zone Control squares and the Worker are untouched. Frontend assets and the Worker need a matching release
+(map revision changed). Rebuild: `python -B -I tools/layout_farm.py --write`, `node tools/run-blender.mjs --only materials,props,farm`, restore the tracked
+`__pycache__` (and delete new untracked `.pyc`), `node tools/generate-bullet-surfaces.mjs`, `npm test --prefix server`.
+
+**Removed**
+- The post-and-rail yard fence (`farm.fences`, `fence_spans`/`fence_mesh`/collision in farmstead.py, the tactical-map spans, the `farm:fence` boxes). The meadow
+  zone is now the whole play area; the fence-gap approach zones are gone.
+- The 4 to 10 m rusty iron bars that stood on four runs of the wall (`perimeter.roof_extensions`, `fence_boxes`, `farm:perimeter-fence:*`, spec `extensions`).
+  Nothing stands on the stone any more: no iron, no timber.
+- The storm shelter: `layout.underground = []`, no entrances (so the house hall and the barn's first stall have ordinary floors), no portals, no nav footprints,
+  no `entranceWalks`, no shelter props (253 props became 218 with the new bales). The five holes in the ground slab, the `underground:` colliders and the
+  stairwell footprints are gone with them (collision_gen, terrain_farm and Practice navigation read an empty list).
+
+**Wall**: `SECTION_TOPS` 4.10 to 4.42 m (was 3.10 to 3.42, a metre above the buildings' 3.4 m ground walls), `PIER_TOP` 4.66 m. Same footprint, same
+stone mesh builder (more courses), collision = the drawn geometry. `tests/farmPerimeter.test.ts` now proves containment for every deck, balcony, loft, railing
+top and **every roof** within 24 m of the wall (walk, jump-spam and slide from the platform edge nearest to it: nobody clears the stone, no recovery needed);
+`shared/movementSafety.ts` still flags anyone outside the inner face as a secondary recovery.
+
+**Vines** (`perimeter_ivy.py`, atlas `tools/make_farm_textures.py ivy`): stems are thin ribbons (2.6 cm at the foot of a main vine to 0.6 cm at a tip, 2 to 6 cm off
+the stone); small leaves (5 to 13 cm, bigger and denser near the ground) grow on both sides of them, flush with the wall; vines start at the ground, climb with a
+wandering heading, fork into thinner branches (never downward), some reach the coping and spill a few leaves over it. Density is patchy by a noise field (bare
+stone between growth), highest in the first metre: leaf mats (cell 1: a card of about 14 small overlapping leaves, 0.3 to 0.5 m, lying flat), sprigs (cell 2), modest
+clumps of 5 to 8 leaves, weed tufts at the foot, on the plinth and the coping. Atlas cells: 0 single leaf, 1 leaf mat, 2 sprig, 3 weed tuft plus a bark-brown texel
+that the stems sample. Cards: 19.0k leaves, mats, sprigs and clumps + 4.7k stem quads (lite set: 8.5k quads in all, `STRIDE` per role); neither casts nor receives
+shadows. `terrain.glb` grew from 5.4 to 8.6 MB (the committed file had 6.9k cards); vertex data is 40 bytes, so about 170 bytes per card.
+
+**Bushes and hedges** (`props_farm.lumps`): a union of overlapping rounded lumps (superellipsoid p = 2), each with a small opaque core (bullets stop there) and shingled
+cards over every part of its surface that is not buried in a neighbour; lump radii are drawn `reach` (0.17 m) inside the envelope because the cards stand on the
+surface and reach past it, so the silhouette stays inside the collider's envelope plus 0.16 m. Bush = eight lumps (a mound), hedge = a low lump that touches the ground
+and a domed upper lump per section (plus a shoulder bulge on tall ones), end lumps stop at the envelope, so the sides bulge, the top is a row of domes and nothing
+is a box. Cores use 4 rings x 9 segments (smooth), `leaf_core` is a little lighter (0.26, 0.38, 0.20). Colliders unchanged (`hedge_*` envelope, bush 0.9 m).
+
+**Hay bales** (`hay_bale_big`, 1.7 x 0.9 x 0.85 m lying on their side, rounded edges, two twine loops): 0.9 m is under what a jump rises (1.09 m, `jumpSpeed`
+6.6 and gravity 20), so a running jump from the ground lands on one and a second jump from the first layer reaches the 1.8 m level. `tools/layout_farm.py`
+`bale_stack`: `single`, `step` (two bales end to end and a third on one) and `pyramid` (two and one across the seam on top), 10 stacks (24 bales), all at yaw 0/90
+or a single bale rotated freely (the validator uses axis-aligned footprints). They stand on open ground, 1.6 m or more from every building, away from spawns,
+Zone Control squares and tree canopies. The old small `hay_bale`/`hay_stack` stay for barn and shack interiors.
+
+**Verification**: tests/farmHay.test.ts (real shared controller: first bale, second layer, walk-off, placement), tests/farmFoliage.test.ts (thin stems, small
+leaves, density by height, load budget), tests/farmstead.test.ts (no fence, no underground, no holes), tests/farmPerimeter.test.ts (containment, nothing on
+top); in-engine: `node tools/farm-hay-jump-test.mjs` (local `?practice` mode: 0.9 m, 1.8 m and walk-off through the game's own input) and
+`node tools/farm-cleanup-shots.mjs <url> [group ...] [--chromebook]` (wall, vines, bushes, hedges, hay, entrances, aerial).

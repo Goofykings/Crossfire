@@ -1,5 +1,5 @@
 import {compactSurfaceTexture} from './SurfaceTexture';
-import { Color3, Material, PBRMaterial, Texture, type Scene } from '@babylonjs/core';
+import { Color3, Material, Observable, PBRMaterial, Texture, type Scene } from '@babylonjs/core';
 import { assetUrl, fetchJson } from '../core/assets';
 
 interface MaterialDef {
@@ -41,12 +41,15 @@ export class MaterialLibrary {
   private anisotropy = 4;
   private ultra = false;
   private chromebook=false;
+  readonly onQualityChanged = new Observable<void>();
+  get chromebookMode():boolean {return this.chromebook;}
   private readonly smallTextures=new Map<Texture,Texture>();
   private readonly compactWork=new Map<Texture,Promise<void>>();
   private readonly textureLifetime=new AbortController();
   setChromebook(enabled:boolean):void {
     if(this.chromebook===enabled)return;this.chromebook=enabled;
     for(const [name,m] of this.materials)this.applyQuality(name,this.defs[name],m);
+    this.onQualityChanged.notifyObservers();
     this.releaseUnusedTextures();
   }
   private compactTexture(source:Texture,m:PBRMaterial):void {
@@ -64,6 +67,7 @@ export class MaterialLibrary {
           if(material.albedoTexture===source)material.albedoTexture=copy;
           if(material.emissiveTexture===source)material.emissiveTexture=copy;
         }
+        this.onQualityChanged.notifyObservers();
       })().catch(error=>{
         // A failed image optimization must never leave a missing surface.
         if(!this.scene.isDisposed)console.warn('Keeping original texture',source.name,error);
@@ -142,6 +146,7 @@ export class MaterialLibrary {
     if (this.ultra === enabled) return;
     this.ultra = enabled;
     for (const [name, material] of this.materials) this.applyQuality(name, this.defs[name], material);
+    this.onQualityChanged.notifyObservers();
   }
 
   private applyQuality(name: string, def: MaterialDef, m: PBRMaterial): void {
@@ -339,8 +344,8 @@ export class MaterialLibrary {
       materials++;
     }
     const keep = new Set<Texture>();
-    for (const m of this.materials.values()) {
-      for (const t of [m.albedoTexture, m.bumpTexture, m.metallicTexture, m.emissiveTexture]) if (t) keep.add(t as Texture);
+    for (const m of [...this.materials.values(),...inUse]) {
+      for (const t of m.getActiveTextures()) keep.add(t as Texture);
     }
     let textures = 0;
     for (const [key, t] of this.textures) {
@@ -363,6 +368,7 @@ export class MaterialLibrary {
   }
 
   dispose(): void {
+    this.onQualityChanged.clear();
     for (const m of this.materials.values()) m.dispose();
     for (const t of this.textures.values()) t.dispose();
     for(const t of this.smallTextures.values())t.dispose();this.smallTextures.clear();

@@ -1,4 +1,4 @@
-"""Farmstead structures (2026-11): house, barn, cabin, garage, shacks and the perimeter fence.
+"""Farmstead structures (2026-11): house, barn, cabin, garage and shacks (the perimeter is the stone wall in perimeter.py).
 
 Pure Python (no bpy; MeshData is imported lazily). A structure is a list of *elements* stored in
 layout.json under `farm.structures[*].elements`; the same elements feed the GLB export and the authoritative
@@ -388,29 +388,9 @@ def roof_box(world, ua, ya, va, ub, yb, vb):
     return [min(pa[0], pb[0]), min(pa[1], pb[1]), min(pa[2], pb[2]), max(pa[0], pb[0]), max(pa[1], pb[1]), max(pa[2], pb[2])]
 
 
-# --- fence ----------------------------------------------------------------------------------------
-FENCE_H = 1.2
-FENCE_T = 0.12
-
-
-def fence_spans(f):
-    """Solid spans [lo, hi] (along the fence axis) of one fence line, gaps removed."""
-    (ax, az), (bx, bz) = f['a'], f['b']
-    along_x = abs(bz - az) < EPS
-    lo, hi = sorted((ax, bx)) if along_x else sorted((az, bz))
-    cur, out = lo, []
-    for g0, g1 in sorted(f.get('gaps', [])):
-        if g0 - cur > EPS:
-            out.append((cur, g0))
-        cur = g1
-    if hi - cur > EPS:
-        out.append((cur, hi))
-    return along_x, (az if along_x else ax), out
-
-
 # --- aggregate ------------------------------------------------------------------------------------
 def farm(layout):
-    return layout.get('farm') or {'structures': [], 'fences': []}
+    return layout.get('farm') or {'structures': []}
 
 
 def roof_profiles(el):
@@ -462,17 +442,12 @@ def roof_solids(layout):
 
 
 def collision_boxes(layout):
-    """[(aabb, tag)] of every solid part and the perimeter fence."""
+    """[(aabb, tag)] of every solid part, the perimeter wall and the roofs."""
     out = []
     for s in farm(layout)['structures']:
         for p in structure_parts(s):
             if p.solid:
                 out.append((p.box, f"farm:{s['id']}:{p.kind}"))
-    for f in farm(layout)['fences']:
-        along_x, line, spans = fence_spans(f)
-        for a0, a1 in spans:
-            b = [a0, 0.0, line - FENCE_T / 2, a1, FENCE_H, line + FENCE_T / 2] if along_x else [line - FENCE_T / 2, 0.0, a0, line + FENCE_T / 2, FENCE_H, a1]
-            out.append((b, f"farm:fence:{f['id']}"))
     perimeter = farm(layout).get('perimeter')
     if perimeter:
         import perimeter as wall
@@ -487,7 +462,7 @@ def footprints(layout):
 
 
 def generate(layout):
-    """MeshData of every structure (walls, slabs, stairs, rails, posts, roofs) and the fence."""
+    """MeshData of every structure (walls, slabs, stairs, rails, posts, roofs), the posters and the perimeter wall."""
     from meshkit import MeshData
     md = MeshData()
     for s in farm(layout)['structures']:
@@ -498,7 +473,6 @@ def generate(layout):
         for el in s['elements']:
             if el['t'] == 'roof':
                 roof_mesh(md, el)
-    fence_mesh(md, layout)
     poster_mesh(md, layout)
     perimeter = farm(layout).get('perimeter')
     if perimeter:
@@ -524,23 +498,3 @@ def poster_mesh(md, layout):
                (x + rx * w / 2, y + h, z + rz * w / 2), (x - rx * w / 2, y + h, z - rz * w / 2)]
         u0, v0, u1, v1 = underground.atlas_uv('poster', q['cell'])
         md.face_toward(pts, 'posters_fun', (nx, 0.0, nz), uv=[(u0, v0), (u1, v0), (u1, v1), (u0, v1)])
-
-
-def fence_mesh(md, layout):
-    for f in farm(layout)['fences']:
-        along_x, line, spans = fence_spans(f)
-        mat, post = f.get('mat', 'wood_weathered'), f.get('post', 'wood_dark')
-        for a0, a1 in spans:
-            n = max(1, int(round((a1 - a0) / 2.4)))
-            for i in range(n + 1):
-                p = a0 + (a1 - a0) * i / n
-                end = i in (0, n)
-                w = .085 if end else .065
-                top = 1.32 if end else 1.22
-                b = [p - w, 0, line - w, p + w, top, line + w] if along_x else [line - w, 0, p - w, line + w, top, p + w]
-                md.box(*b, post, skip=('ny',))
-            for yy in (.5, .92):
-                # rails alternate faces so they read as nailed boards, not a solid wall
-                for side in (-1, 1) if False else (1,):
-                    b = [a0, yy, line - .07, a1, yy + .13, line + .07] if along_x else [line - .07, yy, a0, line + .07, yy + .13, a1]
-                    md.box(*b, mat, skip=(('nx', 'px') if along_x else ('nz', 'pz')))

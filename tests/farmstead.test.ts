@@ -9,8 +9,8 @@ import { PracticeNavigation } from '../src/practice/Navigation';
 
 /**
  * Farmstead (2026-11): every opening of every building is walked with the real shared controller, stairs and
- * balconies are climbed in both directions, the fence gaps and the open shacks are crossed, the storm shelter
- * is entered from all five surface entrances, and Practice navigation connects the street and the tunnels.
+ * balconies are climbed in both directions and the open shacks are crossed. Everything is above ground (the storm shelter and the
+ * yard fence were removed 2026-11-12) and Practice navigation connects every spawn.
  */
 // Every opening is walked with the real controller at 120 Hz: a few of these take longer than the default 5 s.
 vi.setConfig({ testTimeout: 120_000 });
@@ -40,44 +40,27 @@ function player(x: number, y: number, z: number, weapon: (typeof WEAPONS)[number
 }
 
 describe('farmstead layout', () => {
-  it('is a registered map with the plan buildings, four shacks, shelter and 16 spawns', () => {
+  it('is a registered map with the plan buildings, four shacks and 16 spawns, all above ground', () => {
     expect(layout.id).toBe('farmstead');
     expect(farm.structures.map((s) => s.id).sort()).toEqual(['barn', 'cabin', 'garage', 'house', 'shack_1', 'shack_2', 'shack_3', 'shack_4']);
     expect(layout.spawns.length).toBeGreaterThanOrEqual(12);
-    expect(layout.underground?.[0].entrances.length).toBe(5);
+    expect(layout.underground ?? []).toEqual([]);
     expect(layout.buildings).toEqual([]);
   });
 
-  it('has open gaps in the perimeter fence on every side and no doors anywhere', () => {
-    for (const side of ['north', 'south', 'east', 'west']) {
-      const f = farm.fences.find((q) => q.id === side)!;
-      expect(f.gaps.length, `${side} fence gaps`).toBeGreaterThan(0);
-      for (const g of f.gaps) expect(g[1] - g[0], `${side} gap width`).toBeGreaterThanOrEqual(4);
-    }
+  it('has no doors anywhere', () => {
     // doorways are holes: no element is a door leaf
     for (const s of farm.structures) for (const e of s.elements) expect(JSON.stringify(e)).not.toMatch(/door_leaf|hinge/);
   });
 
-  it('lets a rifle-carrying player walk through every fence gap, both ways, and blocks the fence between', () => {
-    for (const f of farm.fences) {
-      const alongX = Math.abs(f.b[1] - f.a[1]) < 1e-6;
-      const line = alongX ? f.a[1] : f.a[0];
-      const inward = (alongX ? (line < 0 ? 1 : -1) : (line < 0 ? 1 : -1));
-      for (const [g0, g1] of f.gaps) {
-        const mid = (g0 + g1) / 2;
-        for (const weapon of WEAPONS) for (const dir of [1, -1]) {
-          const a = line - 2.5 * inward * dir, b = line + 2.5 * inward * dir;
-          const p = alongX ? player(mid, 0, a, weapon) : player(a, 0, mid, weapon);
-          if (alongX) walkTo(p, mid, b); else walkTo(p, b, mid);
-          expect(Math.hypot(p.position.x - (alongX ? mid : b), p.position.z - (alongX ? b : mid)), `${f.id} gap ${g0}..${g1} ${weapon} ${dir}`).toBeLessThan(0.2);
-        }
-      }
+  it('has no yard fence: a walker crosses the old fence lines anywhere and only the stone wall stops them', () => {
+    expect((farm as { fences?: unknown }).fences).toBeUndefined();
+    expect([...world.all()].filter((c) => c.tag.startsWith('farm:fence'))).toHaveLength(0);
+    for (const [from, to, heading] of [[[-30.5, -11], [-36, -11], 270], [[30.5, -3], [36, -3], 90], [[14, -40], [14, -46], 0], [[10, 38], [10, 44], 180]] as const) {
+      const p = player(from[0], 0, from[1], null, heading);
+      walkTo(p, to[0], to[1], 6);
+      expect(Math.hypot(p.position.x - to[0], p.position.z - to[1]), `walker from ${from} to the wall`).toBeLessThan(0.2);
     }
-    const west = farm.fences.find((f) => f.id === 'west')!;
-    const p = player(-30.5, 0, -11, null, 270);
-    walkTo(p, -36, -11, 6);
-    expect(p.position.x, 'the fence stops a walker').toBeGreaterThan(-33.1);
-    expect(west.gaps[0][0]).toBeLessThan(0);
   });
 });
 
@@ -104,8 +87,6 @@ describe('farmstead buildings', () => {
           if (world.overlapsCylinder(alongX ? mid : a, alongX ? a : mid, MOVEMENT.radius, y + 0.45, y + MOVEMENT.standHeight)) return Infinity;
           const p = alongX ? player(mid, y, a, weapon) : player(a, y, mid, weapon);
           if (alongX) walkTo(p, mid, b); else walkTo(p, b, mid);
-          // a lane that walks down an underground stair is an entry too (the barn's stall door opens onto its stair)
-          if (p.position.y < y - 0.25) return 0;
           if (Math.abs(p.position.y - y) > 0.2) return Infinity;
           return Math.hypot(p.position.x - (alongX ? mid : b), p.position.z - (alongX ? b : mid));
         });
@@ -202,46 +183,27 @@ describe('farmstead buildings', () => {
   });
 });
 
-describe('farmstead storm shelter', () => {
-  const passage = layout.underground![0];
-
-  it('is entered from five entrances, each walked down to the shelter floor and back up', () => {
-    for (const [id, path] of Object.entries(farm.entranceWalks)) {
-      for (const weapon of WEAPONS) for (const reverse of [false, true]) {
-        const pts = reverse ? [...path].reverse() : path;
-        const p = player(pts[0][0], pts[0][1], pts[0][2], weapon);
-        let low = Infinity;
-        for (let i = 1; i < pts.length; i++) { walkTo(p, pts[i][0], pts[i][2]); low = Math.min(low, p.position.y); }
-        expect(low, `${id} ${weapon} never reached the floor`).toBeLessThan(passage.floor + 0.05);
-        expect(Math.hypot(p.position.x - pts.at(-1)![0], p.position.z - pts.at(-1)![2]), `${id} ${weapon} ${reverse}`).toBeLessThan(0.3);
-      }
+describe('farmstead is entirely above ground', () => {
+  it('has no underground passage, stair, tunnel or hole in the ground', () => {
+    expect(layout.underground ?? []).toEqual([]);
+    expect([...world.all()].filter((c) => c.tag.startsWith('underground:'))).toHaveLength(0);
+    expect(farm.solids.filter((s) => s.id.startsWith('underground'))).toHaveLength(0);
+    expect((farm as { entranceWalks?: unknown }).entranceWalks).toBeUndefined();
+    // every metre of the yard has solid ground at street level: nothing drops away where an entrance used to be
+    const [x0, z0, x1, z1] = layout.playArea;
+    let holes = 0;
+    for (let x = x0 + .5; x < x1; x += 1) for (let z = z0 + .5; z < z1; z += 1) {
+      if (world.groundHeight(x, z, MOVEMENT.radius, 1.2) < -0.05) holes++;
     }
+    expect(holes, 'points without street-level ground').toBe(0);
   });
 
-  it('is large, tall enough for a stand and made of several rooms joined by tunnels', () => {
-    const area = passage.segments.reduce((a, r) => a + (r[2] - r[0]) * (r[3] - r[1]), 0);
-    expect(area).toBeGreaterThan(600);
-    expect(passage.ceiling - passage.floor).toBeGreaterThan(2.8);
-    const rooms = passage.segments.filter((r) => (r[2] - r[0]) * (r[3] - r[1]) > 50);
-    expect(rooms.length).toBeGreaterThanOrEqual(8);
-    expect((passage.piers ?? []).length).toBeGreaterThan(8);
-  });
-
-  it('is connected to the street, every spawn and every room for Practice bots', () => {
+  it('is connected for Practice bots from every spawn', () => {
     const nav = new PracticeNavigation(world, layout as MapLayout);
     const street = nav.nearest({ x: layout.spawns[0].pos[0], y: 0, z: layout.spawns[0].pos[2] })!;
     for (const s of layout.spawns) {
       const n = nav.nearest({ x: s.pos[0], y: 0, z: s.pos[2] })!;
       expect(n.component, `spawn ${s.id}`).toBe(street.component);
-    }
-    for (const r of passage.segments.filter((q) => (q[2] - q[0]) * (q[3] - q[1]) > 50)) {
-      const n = nav.nearest({ x: (r[0] + r[2]) / 2, y: passage.floor, z: (r[1] + r[3]) / 2 }, street.component);
-      expect(n, `room ${JSON.stringify(r)} is not on the street's navigation component`).toBeDefined();
-      expect(Math.hypot(n!.x - (r[0] + r[2]) / 2, n!.z - (r[1] + r[3]) / 2), `room ${JSON.stringify(r)}`).toBeLessThan(3.5);
-    }
-    for (const e of passage.entrances) {
-      const path = nav.path({ x: layout.spawns[0].pos[0], y: 0, z: layout.spawns[0].pos[2] }, { x: (e.rect[0] + e.rect[2]) / 2, y: passage.floor, z: (e.rect[1] + e.rect[3]) / 2 });
-      expect(path.length, `bot path to ${e.id}`).toBeGreaterThan(5);
     }
   }, 120_000);
 });

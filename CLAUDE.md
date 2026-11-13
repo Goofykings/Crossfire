@@ -1,3 +1,18 @@
+## Farmstead clean-up: no fence, no underground, higher wall, thin vines (2026-11-12)
+
+See docs/FARMSTEAD.md "Clean-up 2026-11-12" and the newest PROGRESS entry. Visual/layout only; combat, protocol v28 and Zone Control untouched. This SUPERSEDES
+the older Farmstead notes below where they differ. Gone for good: the post-and-rail yard fence, the 4-10 m iron extensions on the wall (nothing may stand on the
+stone), the whole storm shelter (`layout.underground` is `[]`, no `entranceWalks`, no `farm` underground style); never reintroduce a fence-like piece to "fix" a
+roof route: `tests/farmPerimeter.test.ts` proves every deck, rail and roof within 24 m stops at the stone. Wall tops are 4.10 to 4.42 m (piers 4.66 m); the
+margin-strip hedges no longer close anything. Vines (`perimeter_ivy.py`): thin ribbon stems + small single leaves, leaf mats (atlas cell 1), sprigs and weeds in one
+alpha atlas (`leaf_ivy`/`leaf_ivy_lite`, cell 3's top-left texel is the stem colour); keep leaves small (5-13 cm), density patchy and highest in the first metre,
+and watch `terrain.glb` (8.6 MB, test limit 11 MB: about 170 bytes per card). Bushes and hedges are unions of rounded lumps (`props_farm.lumps`: radii are drawn
+inside the envelope by the card reach; a box-shaped puff or exposed core is a regression). Hay: `hay_bale_big` is 0.9 m high on purpose (a jump rises 1.09 m);
+stacks are separate props (upper bale at y 0.9) built by `bale_stack` in tools/layout_farm.py; keep them off spawns, zone squares, doorways and tree canopies.
+Review: `node tools/farm-cleanup-shots.mjs <url> [group] [--chromebook]`, `node tools/farm-hay-jump-test.mjs <url>` (needs the local `?practice` mode: teleport does
+not stick in network Practice). Run vitest from PowerShell with an upper-case `C:` working directory; shell heredocs with an odd number of apostrophes break the Bash
+tool, so write patch scripts with the Write tool. No commit/push/deploy.
+
 ## Legendary kill effects: Blossom and Frosted (2026-11-12)
 
 See docs/KILL_EFFECTS.md and the newest PROGRESS entry. Visual only; combat, protocol v28 and the Worker are untouched. Effects are drawn by
