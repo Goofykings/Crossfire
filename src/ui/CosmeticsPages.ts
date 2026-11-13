@@ -20,7 +20,7 @@ export class CosmeticsPages {
   private readonly openButton=node('button','btn primary shop-open');private readonly shopStatus=node('p','cosmetic-status');
   private readonly reveal=new CrateReveal();private gems:number|null=null;
   private offer:CrateOffer|null=null;private offerAt=0;private saleTimer:ReturnType<typeof setInterval>|null=null;private offerRequest:AbortController|null=null;private nextOffer=0;
-  private readonly prices=node('div','crate-prices');private readonly regular=node('s','crate-regular','250 GEMS');private readonly price=node('strong');private readonly sale=node('span','crate-sale-badge','SALE');private readonly countdown=node('span','crate-sale-countdown');
+  private readonly prices=node('div','crate-prices');private readonly regular=node('s','crate-regular','250 GEMS');private readonly sale=node('span','crate-sale-badge','SALE');private readonly countdown=node('span','crate-sale-countdown');
   constructor(screen:(id:'shop'|'locker'|'cosmetic-preview')=>HTMLElement,navigate:(id:'menu'|'locker')=>void){
     const shop=screen('shop'),locker=screen('locker');this.previewScreen=screen('cosmetic-preview');
     for(const page of [shop,locker]){page.classList.add('cosmetic-page');const bg=node('img','cosmetic-background');bg.src=assetUrl('assets/ui/town-plaza.webp');bg.alt='';page.append(bg);}
@@ -31,7 +31,7 @@ export class CosmeticsPages {
     const shopHeading=node('header','cosmetic-heading');shopHeading.append(node('h1','','SHOP'));
     const content=node('div','shop-content'),stage=node('div','shop-crate-stage'),crate=node('img','shop-crate');crate.src=assetUrl('assets/cosmetics/crate/reward-crate/thumbnail.png');crate.alt='Crossfire reward crate';stage.append(crate);
     const offer=node('section','shop-offer');this.openButton.type='button';this.openButton.onclick=()=>this.openCrate();this.shopStatus.setAttribute('role','status');
-    this.prices.append(this.regular,this.price,this.countdown);stage.append(this.sale);this.sale.hidden=true;
+    this.prices.append(this.regular,this.countdown);this.prices.hidden=true;stage.append(this.sale);this.sale.hidden=true;
     offer.append(node('h2','','REWARD CRATE'),node('p','shop-offer-copy','One weapon skin per crate. You never get a duplicate.'),this.prices,this.openButton,this.shopStatus);
     const distribution=node('section','crate-distribution');distribution.setAttribute('aria-label','Crate odds');distribution.append(node('p','','ODDS'));
     for(const entry of CRATE.distribution){const label=node('span','',`${RARITIES[entry.rarity].name.toUpperCase()} — ${entry.percent}%`);label.style.color=RARITIES[entry.rarity].color;distribution.append(label);}
@@ -48,7 +48,7 @@ export class CosmeticsPages {
   private renderShop(){
     const left=this.inventory?crateItems().filter(c=>!this.inventory!.owned.includes(c.id)).length:null;
     const price=this.currentPrice(),active=this.offer?.windows.find(w=>this.now()>=w.startsAt&&this.now()<w.endsAt);
-    this.price.textContent=`${price} GEMS`;this.regular.hidden=this.sale.hidden=!active;
+    this.prices.hidden=this.regular.hidden=this.sale.hidden=!active;
     const seconds=active?Math.max(0,Math.ceil((active.endsAt-this.now())/1000)):0;
     this.countdown.textContent=active?`${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')} remaining`:'';
     this.openButton.textContent=left===0?'ALL SKINS OWNED':`OPEN — ${price} GEMS`;this.openButton.disabled=!this.canOpen();

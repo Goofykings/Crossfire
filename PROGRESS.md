@@ -1,3 +1,23 @@
+# Shotgun: side-by-side barrels, no sights, centred ADS (2026-11-13)
+
+Visual only: damage, pellet count/spread, range, fire rate, protocol and the Worker are untouched. Nothing committed, pushed or deployed.
+
+- `shotgun()` (blender/scripts/lib/weapon.py): the stacked barrel + magazine tube became two identical level barrels side by side (`BX` 8.2 mm off the centre line, `BR` 8.5 mm, joined by a rib and one clamp band). Their outer width equals the receiver, so receiver, pump, stock and the skin inserts did not move; the ghost-ring rear sight, front post and fibre dot are gone (no sights, no scope: `scope` was already false). The `sight` anchor now sits on the centre line `SHOT_EYE_RISE` (8.5 cm) above the bore axis; `RIG_CONFIGS.shotgun.eye` is 0.15.
+- ADS: the existing hip-to-ADS blend now puts the eye behind and above the pair, looking along the bore: the barrels run up the bottom centre of the view, no overlay, surroundings visible. Pellets are unchanged: they leave from the camera aim, never per barrel.
+- Rebuilt: shotgun.glb (810 -> about 640 triangles), weapon.blend, Crimson Forge model.glb/.blend (it is built from the same function; thumbnail not re-rendered), manifests and the foundry base hash. hands.glb and smg.glb restored from git (the weapon stage rewrites them).
+- Checks: typecheck, build, assets:verify and the weapon/cosmetic/character/rendering suites (10 files, 120 tests) pass. In the real engine (`node tools/shotgun-ads-shots.mjs`, local `?practice`): hip, ADS, fire and reload frames viewed, no page errors. Locker contact sheet (`tools/review-weapon-angles.mjs`, ten angles) viewed; the back-face diagnosis shows only the small pre-existing underside decal pixels (up to 144 px).
+- Limits: the Epic shotgun skins reuse the default GLB so they follow automatically; the Crimson Forge Locker thumbnail PNG still shows the old barrel layout; the third-person head weld follows the raised sight anchor and was checked by tests only, not by eye.
+
+# Small Shop and character proportion refinements (2026-11-13)
+
+Completed and verified locally. No commit, push or deployment.
+
+- Shop: removed the separate large crate price. The existing purchase button still shows the current authoritative price; purchase handling is unchanged. The crossed-out regular price, sale badge and countdown remain during sales. Outside a sale, the metadata row is hidden without reserving empty space.
+- Character: extended the existing shared bind-mesh modifier, adding approximately 12.5% arm/leg thickness and 9% torso width relative to the previous proportions. Limb depth is increased around each bone's actual axis as well as width. Vertex heights, head/hands, joint centres, bind matrices, animation clips and weapon attachment transforms are preserved. Normals are corrected for the width/depth transform; shared geometry is adjusted once. The same change applies to home/remote/Practice characters and first-person dagger arms. No gameplay, hitbox, movement, collision or protocol changes.
+- Files: `src/ui/CosmeticsPages.ts`, `src/styles.css`, `src/game/CharacterProportions.ts`, `tests/characterProportions.test.ts`, this log. Expanded the real-GLB proportion regression to both full body and first-person arm assets, checking intended limb cross-sections, preserved height/hands/rig/clips/UVs and idempotence.
+- Verification: **28/28 tests passed** across character proportions, character weapon poses/grips, melee rigs/animations, ragdolls and sale pricing (`test-results/ui-proportions-tests.log`). `npm run build` passed, including TypeScript checks; only the existing large-chunk warning (`test-results/small-ui-body-build.log`).
+- Local Chrome visual checks passed for normal and sale Shop layouts at 1280x720 and 800x600, including discounted button price, countdown, badge, no duplicate large price and no empty normal-price row. Reviewed actual third-person body/weapon and first-person dagger-arm renders (11 pose captures, no page errors). Screenshots: `test-results/small-ui-body/`; log: `test-results/small-ui-visual.log`. Shop checks used a display-only offer fixture; no purchases or online matches were performed.
+
 # Weapon skin compatibility in Chromebook Mode (2026-11-13)
 
 Completed and verified locally. No commit, push or deployment. Existing Farmstead work below is preserved. This fix changes frontend rendering only; no combat, protocol, backend, ownership, reward or deployment configuration changes. Details and repeatable commands: `docs/COSMETIC_COMPATIBILITY.md`.

@@ -1786,10 +1786,9 @@ body[data-home-page='leaderboard'] #ui{background:#10192366}
 .developer-name { color:#9bdbff !important; text-shadow:0 0 7px #ffffff88,0 1px 3px #0009; }
 .developer-badge { display:inline-flex; vertical-align:middle; margin-left:.45em; padding:.14em .42em; border-radius:8px; background:#cbe9ff1c; color:#9bdbff; font-size:.63em; font-weight:700; letter-spacing:.05em; line-height:1.2; text-shadow:0 0 6px #ffffff99; }
 .developer-name .developer-badge { color:#9bdbff; }
-.crate-prices { min-height:74px; display:flex; align-items:baseline; justify-content:center; flex-wrap:wrap; gap:8px 16px; font-variant-numeric:tabular-nums; }
-.crate-prices strong { font-size:clamp(23px,3vw,36px); }
+.crate-prices { display:flex; align-items:baseline; justify-content:flex-start; flex-wrap:wrap; gap:8px 16px; font-variant-numeric:tabular-nums; }
+.crate-prices[hidden] { display:none; }
 .crate-regular { color:#a9b5c6; }
-.crate-regular[hidden] { visibility:hidden; display:inline; }
 .crate-sale-countdown { width:100%; min-height:1.3em; color:#b6d9ff; font-size:13px; }
 .shop-crate-stage { position:relative; }
 .crate-sale-badge { position:absolute; right:10%; bottom:10%; border-radius:8px; background:#408de5; padding:8px 15px; font-size:17px; font-weight:800; transform:rotate(-9deg); box-shadow:0 4px 18px #0004; }

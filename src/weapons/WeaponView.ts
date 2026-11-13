@@ -75,7 +75,7 @@ export const RIG_CONFIGS: Record<WeaponId, RigConfig> = {
     file: cosmetic(defaultCosmetic('shotgun'))!.asset.model,
     hip: [0.22, -0.13, -0.54],
     hipRot: [0.03, 0.09, -0.06],
-    eye: 0.16,
+    eye: 0.15,
     casing: 'casing_shell',
     flash: 1.5,
     kick: 2.6,

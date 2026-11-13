@@ -1,7 +1,7 @@
 {
  "generator": "blender/scripts/generate_all.py",
  "blender": "5.2.3 LTS",
- "generated": "2026-11-12 22:32:52",
+ "generated": "2026-11-13 06:48:23",
  "assets": [
   {
    "path": "assets/characters/player-albedo.png",
@@ -1838,10 +1838,10 @@
   {
    "path": "assets/models/shared/weapons/shotgun.glb",
    "kind": "weapon",
-   "bytes": 69664,
+   "bytes": 56988,
    "description": "shotgun first-person model: moving parts (pump, shell) and anchors (muzzle, sight, eject, grip_r, grip_l, port)",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 810
+   "triangles": 642
   },
   {
    "path": "assets/models/shared/weapons/smg.glb",
@@ -1953,7 +1953,7 @@
   {
    "path": "blender/source/weapon.blend",
    "kind": "blend",
-   "bytes": 347548,
+   "bytes": 344976,
    "description": "Editable source: rifle, shotgun, sniper, SMG, hands, casings",
    "script": "blender/scripts/generate_all.py"
   }

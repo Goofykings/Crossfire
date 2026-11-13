@@ -294,6 +294,10 @@ def rifle():
 # Pump shotgun (oiled walnut grip, stock and forend; blued barrel and magazine tube; ghost-ring sights)
 # =====================================================================================================================
 SHOT_BORE = 0.058
+BX = 0.0082   # each barrel's offset from the centre line
+BR = 0.0085   # barrel radius
+# ADS eye point: on the centre line, this far above the bore axis (barrels sit low in the aimed view)
+SHOT_EYE_RISE = 0.085
 
 
 def shotgun():
@@ -311,28 +315,13 @@ def shotgun():
     box(body, -0.004, -0.04, -0.062, 0.004, -0.012, -0.056, "gun_black")
     box(body, -0.003, -0.03, -0.03, 0.003, -0.012, -0.024, "gun_steel")
     xtube(body, -0.016, 0.016, -0.006, 0.012, 0.0035, "gun_steel", sides=8)
-    # ghost-ring rear sight on the receiver
-    GY = 0.087
-    box(body, -0.012, 0.079, -0.03, 0.012, 0.084, 0.004, "gun_black")
+    # Two identical barrels side by side (2026-11-13): parallel, level, touching along a narrow rib, no sights of any kind.
+    # The pair's outer width (2 * (BX + BR) = 33.4 mm) matches the receiver, so the receiver and its skin inserts are unchanged.
     for sx in (-1, 1):
-        box(body, sx * 0.008, 0.084, -0.016, sx * 0.0115, 0.094, -0.01, "gun_black")
-    seg = 14
-    for i in range(seg):
-        a0, a1 = 2 * math.pi * i / seg, 2 * math.pi * (i + 1) / seg
-        ro, ri = 0.0068, 0.0042
-        p = [(math.cos(a0) * ro, GY + math.sin(a0) * ro), (math.cos(a1) * ro, GY + math.sin(a1) * ro),
-             (math.cos(a1) * ri, GY + math.sin(a1) * ri), (math.cos(a0) * ri, GY + math.sin(a0) * ri)]
-        body.face_toward([(x, y, -0.011) for x, y in p], "gun_black", (0, 0, 1))
-        body.face_toward([(x, y, -0.015) for x, y in p], "gun_black", (0, 0, -1))
-    # barrel with a vent rib, front sight post with a fibre dot
-    ztube(body, -0.215, -0.665, B, 0.0108, "gun_steel", sides=14)
-    box(body, -0.004, B + 0.0105, -0.665, 0.004, B + 0.0135, -0.24, "gun_steel")
-    box(body, -0.0022, B + 0.0135, -0.655, 0.0022, GY - 0.0028, -0.643, "gun_black")
-    ztube(body, -0.6485, -0.6495, GY - 0.0018, 0.0022, "sight_dot", sides=8, caps=(True, True))
-    # tube magazine, end cap and barrel clamp
-    ztube(body, -0.215, -0.6, 0.029, 0.0104, "gun_steel", sides=12)
-    ztube(body, -0.6, -0.618, 0.029, 0.0118, "gun_black", sides=12)
-    box(body, -0.011, 0.024, -0.585, 0.011, B + 0.006, -0.565, "gun_black")
+        ztube(body, -0.215, -0.665, B, BR, "gun_steel", sides=14, x=sx * BX)
+    box(body, -0.0025, B - 0.004, -0.665, 0.0025, B + 0.0035, -0.215, "gun_steel")
+    # barrel clamp (a band round both barrels near the muzzle)
+    box(body, -0.0185, B - 0.0098, -0.585, 0.0185, B + 0.0098, -0.565, "gun_black")
     # pistol grip and buttstock (walnut) with a rubber recoil pad
     solid(body, [(0.008, 0.0), (0.042, 0.0), (0.076, -0.108), (0.062, -0.12), (0.03, -0.118), (0.014, -0.03)],
           -0.0135, 0.0135, "gun_wood", 0.004)
@@ -360,7 +349,7 @@ def shotgun():
     grain_along(body)
     grain_along(pump)
     anchors = {
-        "muzzle": (0.0, B, -0.67), "sight": (0.0, GY, -0.012), "eject": (0.018, 0.05, -0.135),
+        "muzzle": (0.0, B, -0.67), "sight": (0.0, B + SHOT_EYE_RISE, -0.012), "eject": (0.018, 0.05, -0.135),
         "grip_r": (0.0, -0.05, 0.034), "grip_l": (0.0, 0.008, -0.335), "port": (0.0, -0.004, -0.15),
     }
     return {"body": body, "pump": pump, "shell": shell}, anchors

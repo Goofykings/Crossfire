@@ -137,7 +137,7 @@
         "thirdPersonPreset": "WEAPON_HOLDS.shotgun"
       },
       "baseModel": "assets/models/shared/weapons/shotgun.glb",
-      "baseSha256": "50326dfb6b6415dfa83c15dd0077db814941875b90cb8ac0602d7b4fb43f1312"
+      "baseSha256": "615184dd6ad7db2d6d9dcc70199aa8d366cba6d7e0e55deed25b4de2e29609cd"
     },
     {
       "catalogEntry": {
