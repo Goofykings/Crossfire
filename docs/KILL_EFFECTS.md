@@ -68,3 +68,24 @@ a fifth spin the other way, a slow rising spiral and two sine turbulences, so it
 - A separate spectator view was not tested; spectators use the same world-space path (the free-camera frames are that path).
 - Real Chromebook hardware was not measured; the numbers above are an iGPU with Chromebook mode on.
 - Frame times are from headless Chrome and include the whole scene.
+
+
+## Upgrade 2026-11-13: Blossom becomes flowers, Frosted doubles and gets trails
+
+Same rules as above (visual only, confirmed event only). Details and test numbers are in the newest PROGRESS entry. This SUPERSEDES the counts, hold
+times and speeds in the sections above where they differ.
+
+- Counts per burst: High Blossom 39 flowers + 66 petals (was 26/44), Frosted 108 flakes + 16 sparkles (was 54/10). Chromebook: 14 + 20 and 30 + 6.
+- Blossom victim: `RemotePlayers.eliminate(event, vanish)` hides the model on the first frame for a confirmed `blossom-flower-burst` (no `captureDeath`, no
+  fall, no material clones; the avatar object lives out the normal 2.2 s so snapshots, respawn and cleanup are untouched; `setSpectated` keeps it hidden).
+  `Game.blossomVanishes` also requires the burst to be in draw range (150 m) so a far victim never just disappears. Flowers start where the model was drawn
+  (`vanishedAt`, if within 2.5 m of the authoritative position). Flowers and petals spawn inside the body column, pop within ~90 ms, hold 0.07-0.15 s, burst
+  (reach ~1.4 m), then float down with per-piece spin, wobble, sway and fall speed; life 1.45-2.0 s, fade over the last 0.5 s.
+- Frosted: inclined, surging, partly reversed orbits (`swirlAt`, closed form). A quarter of the flakes (28, or 6 on Chromebook) draw a ribbon trail: ONE
+  dynamic mesh (`Ribbons`), camera-facing, points re-evaluated from `swirlAt` at earlier times (exactly curved, no history), tapered, alpha along the tail
+  on High, opaque taper only on Chromebook, gone before the dispersal. Keep the whole index list drawn and zero unused ribbons: shortening the sub-mesh
+  index range loses its bounding info and Babylon's transparent sort throws.
+- Hooks: DEV `__crossfire.eliminateRemoteWith(effect|null, id, dx, dz)`; `killBurstInfo()` now reports `trails`, `trailCapacity`, `trailSegments`,
+  `updateMs`; `rendered` entries carry `shown` and `death.vanish`.
+- Review: `node tools/kill-effects-upgrade-test.mjs http://localhost:5181/ [--chromebook]` (needs Practice bots; waits for steady frames and uses real
+  render frames before each screenshot because a cold session renders at 0.3 s per frame).

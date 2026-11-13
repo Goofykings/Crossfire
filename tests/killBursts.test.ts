@@ -86,8 +86,10 @@ it('Frosted trails: curved ribbons for a portion of the flakes, in one mesh, gon
   bursts.emit('frosted-blizzard',at());run(.4);
   let i=bursts.inspect();
   expect(i.trails).toBe(full.trails);expect(i.trails).toBeLessThan(full.flakes/2);expect(trailMesh.isEnabled()).toBe(true);
-  expect(trailMesh.subMeshes[0].indexCount).toBe(full.trails*full.trailSegments*6);
+  // The whole index list stays drawn (a shortened sub-mesh range loses its bounding info and breaks Babylon's transparent sort); unused ribbons are zeroed.
+  expect(trailMesh.subMeshes[0].indexCount).toBe(i.trailCapacity*full.trailSegments*6);expect(trailMesh.subMeshes[0].IsGlobal).toBe(true);
   const pos=trailMesh.getVerticesData('position')!,stride=(full.trailSegments+1)*6;
+  expect(Array.from(pos.slice(full.trails*stride)).every((v)=>v===0)).toBe(true);
   expect(Array.from(pos.slice(0,full.trails*stride)).every(Number.isFinite)).toBe(true);
   // A ribbon is narrow and bends: its centre line is not straight (curvature) while each cross-section stays thin.
   const mid=(k:number)=>[0,1,2].map(a=>(pos[k*6+a]+pos[k*6+3+a])/2);

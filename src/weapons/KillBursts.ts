@@ -31,7 +31,7 @@ interface Budget { bursts: number; flowers: number; petals: number; flakes: numb
  * shorter and opaque trails. */
 export const BURST_BUDGET: { full: Budget; lite: Budget } = {
   full: { bursts: 3, flowers: 39, petals: 66, flakes: 108, sparkles: 16, trails: 28, trailSegments: 14 },
-  lite: { bursts: 2, flowers: 14, petals: 20, flakes: 30, sparkles: 6, trails: 6, trailSegments: 6 },
+  lite: { bursts: 2, flowers: 14, petals: 20, flakes: 30, sparkles: 6, trails: 6, trailSegments: 8 },
 };
 const MAX_DISTANCE = 150;
 /** Whether a burst at this distance is drawn at all (Game also hides a Blossom victim only when it will be replaced by flowers). */
@@ -189,7 +189,7 @@ class Ribbons {
   }
   /** Chooses the ribbon length for the active quality mode (rebuilds the index list only when it changes). */
   configure(segments: number, blended: boolean): void {
-    if (segments !== this.segments) { this.segments = segments; this.mesh.setIndices(this.indicesFor(segments)); this.mesh.alwaysSelectAsActiveMesh = true; }
+    if (segments !== this.segments) { this.segments = segments; this.used = 0; this.positions.fill(0); this.mesh.setIndices(this.indicesFor(segments)); this.mesh.alwaysSelectAsActiveMesh = true; }
     if (blended !== this.blended) { this.blended = blended; this.mesh.hasVertexAlpha = blended; }
   }
   get segmentCount(): number { return this.segments; }
@@ -200,11 +200,14 @@ class Ribbons {
     P[p] = x + sx; P[p + 1] = y + sy; P[p + 2] = z + sz; P[p + 3] = x - sx; P[p + 4] = y - sy; P[p + 5] = z - sz;
     for (let i = 0; i < 2; i++) { C[c + i * 4] = r; C[c + i * 4 + 1] = g; C[c + i * 4 + 2] = b; C[c + i * 4 + 3] = a; }
   }
+  /** Uploads the first `count` ribbons. The draw range stays the whole index list on purpose (a sub-mesh with a shortened range loses its
+   * bounding info and Babylon's transparent sort then throws): unused ribbons are zeroed so they are degenerate triangles that draw nothing. */
   commit(count: number): void {
+    const previous = this.used, stride = (this.segments + 1) * 6;
     this.used = count; this.mesh.setEnabled(count > 0);
+    if (count < previous) this.positions.fill(0, count * stride, previous * stride);
     if (count === 0) return;
     this.mesh.updateVerticesData('position', this.positions, false, false); this.mesh.updateVerticesData('color', this.colors, false, false);
-    const sub = this.mesh.subMeshes[0]; if (sub) sub.indexCount = count * this.segments * 6;
   }
   clear(): void { this.commit(0); }
   dispose(): void { this.mesh.material?.dispose(); this.mesh.dispose(); }
@@ -461,13 +464,13 @@ export class KillBursts {
    * tapering to nothing, fading along its length (alpha in blended mode, taper only in Chromebook mode), gone before the flake disperses. */
   private writeTrail(x: Particle, t: number, fade: number, blended: boolean, c: readonly [number, number, number]): void {
     const segs = this.ribbons.segmentCount, pts = this.trailPts, slot = this.trailsLastFrame++;
-    const span = x.tlen * (blended ? 1 : .8);
+    const span = x.tlen * (blended ? 1 : .7);
     for (let k = 0; k <= segs; k++) { this.swirlAt(x, Math.max(0, t - span * k / segs)); pts[k * 3] = this.ox; pts[k * 3 + 1] = this.oy; pts[k * 3 + 2] = this.oz; }
     // Appears with the flake, shortens away before the dispersal so it never smears across the kick.
     const life = smooth(t / .1) * smooth((x.end - t) / .14) * fade;
-    const half = x.size * .2 * (blended ? 1 : Math.max(.05, life));
+    const half = x.size * (blended ? .3 : .15) * (blended ? 1 : Math.max(.05, life));
     // White with just a hint of the flake's own ice tint.
-    const cr = .65 + .35 * c[0], cg = .65 + .35 * c[1], cb = .65 + .35 * c[2];
+    const keep = blended ? .35 : .15, cr = 1 - keep * (1 - c[0]), cg = 1 - keep * (1 - c[1]), cb = 1 - keep * (1 - c[2]);
     for (let k = 0; k <= segs; k++) {
       const a = Math.max(0, k - 1) * 3, b = Math.min(segs, k + 1) * 3;
       const dx = pts[b] - pts[a], dy = pts[b + 1] - pts[a + 1], dz = pts[b + 2] - pts[a + 2];
@@ -476,7 +479,7 @@ export class KillBursts {
       let sx = dy * vz - dz * vy, sy = dz * vx - dx * vz, sz = dx * vy - dy * vx;
       const sl = Math.hypot(sx, sy, sz), taper = Math.pow(1 - k / (segs + 1), .85), w = sl > 1e-7 ? half * taper / sl : 0;
       sx *= w; sy *= w; sz *= w;
-      const alpha = blended ? life * .6 * Math.pow(1 - k / (segs + 1), 1.4) : 1;
+      const alpha = blended ? life * .7 * Math.pow(1 - k / (segs + 1), 1.4) : 1;
       this.ribbons.point(slot, k, pts[k * 3], pts[k * 3 + 1], pts[k * 3 + 2], sx, sy, sz, cr, cg, cb, alpha);
     }
   }

@@ -24,7 +24,7 @@ const browser = await puppeteer.launch({ executablePath: 'C:/Program Files/Googl
 try {
   const page = await browser.newPage();
   page.on('pageerror', (e) => errors.push(String(e)));
-  page.on('console', (m) => { if (m.type() === 'error' && !/favicon|ERR_CONNECTION_REFUSED|Failed to load resource/.test(m.text())) errors.push(m.text()); });
+  page.on('console', (m) => { if (m.type() === 'error' && !/favicon|ERR_CONNECTION_REFUSED|Failed to load resource|CORS policy|workers.dev/.test(m.text())) errors.push(m.text()); });
   page.on('response', (r) => { if (r.status() >= 400 && r.url().includes('/assets/')) errors.push(r.status() + ' ' + r.url()); });
   await page.goto(base + `?quality=${chromebook ? 'low' : 'high'}&nohud`, { waitUntil: 'domcontentloaded', timeout: 240000 });
   await completeGuestProfile(page, 'Kill FX');
@@ -42,26 +42,30 @@ try {
     await page.waitForFunction(() => window.__crossfire.ready(), { timeout: 180000 });
     if (chromebook) await page.evaluate(() => window.__crossfire.setSetting({ chromebookMode: true }));
     await page.waitForFunction(() => window.__crossfire.network().rendered.some((p) => p.source === 'glb' && !p.death), { timeout: 120000 });
+    // A fresh session compiles shaders for a few seconds: wait for steady frames so the screenshots show the real state.
+    for (let n = 0; n < 40; n++) { const t = await frameTimes(); if (t.reduce((x, y) => x + y, 0) / t.length < 80) break; }
   };
+  const frameTimes = () => page.evaluate(() => new Promise((resolve) => { const t = []; let last = performance.now(); const step = (now) => { t.push(now - last); last = now; if (t.length < 50) requestAnimationFrame(step); else resolve(t.slice(5)); }; requestAnimationFrame(step); }));
+  const stat = (t) => ({ mean: +(t.reduce((x, y) => x + y, 0) / t.length).toFixed(2), worst: +Math.max(...t).toFixed(2) });
   const info = () => page.evaluate(() => window.__crossfire.killBurstInfo());
+  /** Two real render frames: a screenshot taken before the engine has drawn again shows the previous state (frames can take 0.3 s on a cold session). */
+  const settle = () => page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(r)))));
   const rendered = () => page.evaluate(() => window.__crossfire.network().rendered);
   const shot = async (name) => { const data = await page.screenshot({ type: 'jpeg', quality: 84 }); fs.writeFileSync(`${out}/${name}.jpg`, data); };
   /** A free camera with a clear line of sight to the bot (the renderer's own visibility flag). The camera pauses the sim: stay quick. */
   const frame = async (id, distance, height, pitch) => {
-    for (const offset of [90, -90, 60, -60, 120, -120]) for (const d of [distance, distance - 1.2]) {
+    for (const offset of [90, -90, 60, -60, 120, -120]) for (const d of [distance, distance - 1, distance - 1.8]) {
       await page.evaluate(({ offset, d, id, height, pitch }) => {
         const bot = window.__crossfire.network().rendered.find((p) => p.id === id);
         const heading = -bot.yaw * 180 / Math.PI + offset, r = heading * Math.PI / 180;
         window.__crossfire.freeCam(bot.x + Math.sin(r) * d, bot.y + height, bot.z - Math.cos(r) * d, heading + 180, pitch);
       }, { offset, d, id, height, pitch });
-      await delay(80);
+      await settle();
       if (await page.evaluate((i) => window.__crossfire.network().rendered.find((p) => p.id === i)?.visible, id)) return { offset, d };
     }
     return null;
   };
   const AGES = { blossom: [0, .03, .08, .15, .25, .4, .6, .9, 1.25, 1.6, 1.95], frosted: [.1, .25, .45, .65, .85, 1.0, 1.15, 1.3] };
-  const frameTimes = () => page.evaluate(() => new Promise((resolve) => { const t = []; let last = performance.now(); const step = (now) => { t.push(now - last); last = now; if (t.length < 50) requestAnimationFrame(step); else resolve(t.slice(5)); }; requestAnimationFrame(step); }));
-  const stat = (t) => ({ mean: +(t.reduce((x, y) => x + y, 0) / t.length).toFixed(2), worst: +Math.max(...t).toFixed(2) });
 
   await startPractice();
   report.idleFrameMs = stat(await frameTimes()); console.log('idle frame ms', report.idleFrameMs);
@@ -72,14 +76,14 @@ try {
     const bots = (await rendered()).filter((p) => p.source === 'glb' && !p.death);
     assert.ok(bots.length, 'no live bot to eliminate');
     const id = bots[0].id;
-    const distance = view === 'wide' ? 6.5 : 3.6, height = view === 'wide' ? 1.9 : 1.3;
+    const distance = view === 'wide' ? 5.2 : 3.6, height = view === 'wide' ? 1.9 : 1.3;
     const framing = await frame(id, distance, height, view === 'wide' ? -12 : -6);
     // The plain kill is only a control for the pose state: a missing view does not matter there.
     if (kind !== 'plain') assert.ok(framing, `${kind}/${view}: no clear view of the bot`);
     const bot = (await rendered()).find((p) => p.id === id);
     const effect = kind === 'blossom' ? 'blossom-flower-burst' : kind === 'frosted' ? 'frosted-blizzard' : null;
     const dir = { x: Math.sin(bot.yaw), z: Math.cos(bot.yaw) };
-    await shot(`${kind}-${view}-before`);
+    await settle(); await shot(`${kind}-${view}-before`);
     await page.evaluate(() => window.__crossfire.freezeKillBursts(true));
     const victim = await page.evaluate(({ effect, id, dir }) => window.__crossfire.eliminateRemoteWith(effect, id, dir.x, dir.z), { effect, id, dir });
     assert.equal(victim, id);
@@ -87,7 +91,7 @@ try {
     report[`${kind}-${view}-first`] = { shown: first.shown, vanish: first.death?.vanish, alpha: first.death?.alpha };
     const taken = []; let last = 0;
     for (const age of (kind === 'blossom' ? AGES.blossom : kind === 'frosted' ? AGES.frosted : [0.05, 0.3, 0.6, 1.0])) {
-      await page.evaluate((d) => window.__crossfire.stepKillBursts(d), age - last); last = age; await delay(100);
+      await page.evaluate((d) => window.__crossfire.stepKillBursts(d), age - last); last = age; await settle(); await delay(40);
       const state = await info(), r = (await rendered()).find((p) => p.id === id);
       const name = `${kind}-${view}-${String(Math.round(age * 1000)).padStart(5, '0')}ms`;
       await shot(name);

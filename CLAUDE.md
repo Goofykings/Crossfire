@@ -1,3 +1,12 @@
+## Kill effects upgrade: Blossom vanish + Frosted trails (2026-11-13)
+
+See docs/KILL_EFFECTS.md "Upgrade 2026-11-13" and the newest PROGRESS entry. Visual only; combat, protocol v28, the Worker and kill/reward/respawn handling untouched.
+A confirmed Blossom elimination hides the victim model at once (`RemotePlayers.eliminate(event, vanish)` via `Game.blossomVanishes`): never add the fall back for
+it, never hide a player for any other effect, and keep the avatar object alive for the normal death lifetime (snapshots/respawn rely on it). Budgets: Blossom 39 +
+66 (Chromebook 14 + 20), Frosted 108 + 16 (30 + 6) with ribbon trails on 28 (6) flakes. Trails are ONE dynamic mesh evaluated from the closed-form `swirlAt`;
+keep the full index range drawn with unused ribbons zeroed (a shortened sub-mesh range makes Babylon's transparent sort throw), opaque taper on Chromebook.
+Review: `node tools/kill-effects-upgrade-test.mjs <vite url> [--chromebook]` (localhost, real Practice bots). No commit/push/deploy.
+
 ## Round hay bales and bush coverage (2026-11-13)
 
 See docs/FARMSTEAD.md "Round bales and bush coverage" and the newest PROGRESS entry. Visual/layout only. The big hay prop is `hay_bale_round`: rounded collision comes from the optional
