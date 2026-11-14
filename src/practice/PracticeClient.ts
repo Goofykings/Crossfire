@@ -4,7 +4,9 @@ import type {MultiplayerClient,ConnectionState} from '../network/MultiplayerClie
 import type {Snapshot,InputFrame} from '../../shared/protocol';
 import {NETWORK_HZ} from '../../shared/protocol';
 import type {PlayerController,MoveIntent} from '../player/PlayerController';
+import {sameControllerState} from '../player/controllerState';
 import {FIXED_DT,MOVEMENT} from '../config/constants';
+import {elapsedSimulationTime,simulationSteps} from '../core/simulationBudget';
 import {NO_COMBAT,type CombatIntent} from '../../shared/combat';
 import type {Weapon,WeaponId} from '../weapons/Weapon';
 import type {EnvironmentFrame} from '../../shared/environment';
@@ -12,7 +14,7 @@ import {PracticeSimulation,type PracticeWorld} from './PracticeSimulation';
 import type {PracticeSetup} from './config';
 type SessionFields='canPredict'|'latency'|'presentationTime'|'melee'|'onMelee'|'state'|'selfId'|'latest'|'environment'|'clockOffset'|'onRoomExit'|'onCareer'|'onSnapshot'|'onShot'|'onElimination'|'onGrenade'|'onEnvironment'|'onChat'|'onSystem'|'onChatError'|'onState'|'spawn'|'fixedInput'|'reconcile'|'sendChat'|'disconnect'|'leaveRoom'|'reconnect';
 /** Presentation contract only. A local session never manufactures a WebSocket handshake. */
-export type MatchSession=Pick<MultiplayerClient,SessionFields>&{connect():Promise<unknown>;inspect():unknown};
+export type MatchSession=Pick<MultiplayerClient,SessionFields>&{connect():Promise<unknown>;inspect():unknown;appliedSnapshot?:(snapshot:Snapshot)=>void};
 export class PracticeClient implements MatchSession {
  readonly latency=0;
  get canPredict():boolean{return this.state==='connected';}
@@ -40,7 +42,7 @@ export class PracticeClient implements MatchSession {
   this.onSnapshot(this.latest);this.sinceSnapshot=0;
  }
  advance(dt:number,paused=false){
-  if(this.state!=='connected')return;if(!paused){this.accumulator+=Math.min(.25,Math.max(0,dt));while(this.accumulator>=FIXED_DT){this.simulation.step(this.queue.shift()??null);this.accumulator-=FIXED_DT;this.sinceSnapshot+=FIXED_DT;}if(this.sinceSnapshot>=1/NETWORK_HZ||this.simulation.events.length||this.simulation.result&&!this.latest?.result)this.publish();}
+  if(this.state!=='connected')return;if(!paused){this.accumulator+=elapsedSimulationTime(dt);const due=simulationSteps(this.accumulator);for(let i=0;i<due;i++){this.simulation.step(this.queue.shift()??null);this.accumulator-=FIXED_DT;this.sinceSnapshot+=FIXED_DT;}if(this.sinceSnapshot>=1/NETWORK_HZ||this.simulation.events.length||this.simulation.result&&!this.latest?.result)this.publish();}
   this.clockOffset=this.simulation.now-Date.now();
  }
  async spawn(weapon:WeaponId){if(this.state!=='connected')throw Error('Practice is closed.');this.queue=[];this.pending=[];this.inputTimes.clear();this.melee=createMeleeState();this.accumulator=0;this.sinceSnapshot=0;this.simulation.spawnHuman(weapon);this.publish(true);return this.latest!;}
@@ -48,10 +50,13 @@ export class PracticeClient implements MatchSession {
   if(this.state!=='connected'||!this.simulation.actors[0].state.alive)return;stepMelee(this.melee,Math.floor(this.simulation.now),combat,this.simulation.actors[0].gun?.action==='idle');const frame={seq:++this.sequence,yaw:player.yaw,pitch:player.pitch,intent:{...intent},combat:{...combat}};this.inputTimes.set(frame.seq,Math.floor(this.simulation.now));this.queue.push(frame);this.pending.push(frame);
  }
  reconcile(player:PlayerController,snapshot:Snapshot,gun?:Weapon){
+  const before=player.capture(),previous={...player.prevPosition},previousCrouch=player.prevCrouch,previousLean=player.prevLean;
   const self=snapshot.players.find(p=>p.id===this.selfId);if(!self?.alive)return;this.melee=structuredClone(self.combat.melee??createMeleeState());for(const seq of this.inputTimes.keys())if(seq<=self.ack)this.inputTimes.delete(seq);const yaw=player.yaw,pitch=player.pitch;player.restore(self.motion);player.weaponClearance=meleeBlocked(this.melee)?null:self.weapon;if(gun&&self.combat.gun)gun.restore(self.combat.gun);
   let trigger=self.combat.triggerHeld,reload=self.combat.reloadHeld;
   for(const f of this.pending)if(f.seq>self.ack){player.weaponClearance=meleeBlocked(this.melee)?null:self.weapon;stepMelee(this.melee,Math.max(this.melee.startedAt,this.inputTimes.get(f.seq)??snapshot.serverTime),f.combat,gun?.action==='idle');const blocked=meleeBlocked(this.melee);player.yaw=f.yaw;player.pitch=f.pitch;player.fixedUpdate(FIXED_DT,f.intent);gun?.update(FIXED_DT,{trigger:!blocked&&f.combat.trigger,triggerPressed:!blocked&&f.combat.trigger&&!trigger,reloadPressed:!blocked&&f.combat.reload&&!reload,aim:!blocked&&f.intent.aim,moveFactor:player.horizontalSpeed/MOVEMENT.weaponMoveReference,airborne:!player.grounded,sprinting:false});trigger=f.combat.trigger;reload=f.combat.reload;}
   player.yaw=yaw;player.pitch=pitch;
+  // An identical authoritative tick must not erase the preceding render endpoint.
+  if(sameControllerState(before,player.capture())){Object.assign(player.prevPosition,previous);player.prevCrouch=previousCrouch;player.prevLean=previousLean;}
  }
  sendChat(_text:string){return false;}reconnect(){/* This local session has no transport to reconnect. */}
  disconnect(_forget=true){this.state='closed';this.queue=[];this.pending=[];this.latest=null;this.environment=null;this.simulation.events.length=0;this.onState('closed');}

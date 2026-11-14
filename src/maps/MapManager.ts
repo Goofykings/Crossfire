@@ -20,6 +20,7 @@ import { TargetSystem } from '../game/Targets';
 import type { CollisionWorld } from '../physics/CollisionWorld';
 import { createMapWorld, mapVersion } from '../../shared/world';
 import type {BulletCatalog} from '../physics/BulletMesh';
+import {prepareBulletWorld} from '../physics/prepareBulletWorld';
 import { Environment } from '../rendering/Environment';
 import { FoliageLod } from './FoliageLod';
 import { MaterialLibrary } from '../rendering/MaterialLibrary';
@@ -145,6 +146,7 @@ export class MapManager {
       // --- props --------------------------------------------------------------------------------
       const world = createMapWorld(collision, def.layout, catalog,interactive,this.bulletCatalog);
       cleanup.push(() => world.clear());
+      await prepareBulletWorld(world,active);
       const placements: PropPlacement[] = [...def.layout.props, ...def.layout.obstacles];
       const byType = new Map<string, PropPlacement[]>();
       for (const p of placements) {

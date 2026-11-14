@@ -14,6 +14,12 @@ export function opaqueAt(mesh:BulletMesh,triangle:number,u:number,v:number):bool
 type Node={min:number[];max:number[];left?:Node;right?:Node;triangles?:number[]};
 const cache=new WeakMap<BulletMesh,Node>();
 const point=(mesh:BulletMesh,triangle:number,corner:number)=>mesh.indices[triangle*3+corner]*3;
+/** Build the same shared acceleration data during map loading, never on the
+ * first combat ray. Weak keys keep unloaded maps collectible. */
+export function prepareBulletMesh(mesh:BulletMesh):void {
+ if(mesh.indices.length)tree(mesh);
+ for(const mask of mesh.masks??[])if(!alphaCache.has(mask))alphaCache.set(mask,Uint8Array.from(atob(mask.bits),c=>c.charCodeAt(0)));
+}
 function tree(mesh:BulletMesh):Node {
  let root=cache.get(mesh);if(root)return root;
  const build=(triangles:number[]):Node=>{const min=[Infinity,Infinity,Infinity],max=[-Infinity,-Infinity,-Infinity];for(const t of triangles)for(let k=0;k<3;k++){const i=point(mesh,t,k);for(let a=0;a<3;a++){min[a]=Math.min(min[a],mesh.vertices[i+a]);max[a]=Math.max(max[a],mesh.vertices[i+a]);}}

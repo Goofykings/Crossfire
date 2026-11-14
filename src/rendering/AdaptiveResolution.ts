@@ -8,7 +8,7 @@ export class AdaptiveResolution {
   reset():void {this.scale=.5;this.elapsed=this.frames=this.goodFor=0;}
   sample(seconds:number):boolean {
     // Loading, a background tab or a debugger pause is not a rendering sample.
-    if(!Number.isFinite(seconds)||seconds<=0||seconds>.1){this.elapsed=this.frames=this.goodFor=0;return false;}
+    if(!Number.isFinite(seconds)||seconds<=0||seconds>.5){this.elapsed=this.frames=this.goodFor=0;return false;}
     this.elapsed+=seconds;this.frames++;
     if(this.elapsed<1.5)return false;
     const ms=this.elapsed/this.frames*1000,period=this.elapsed;

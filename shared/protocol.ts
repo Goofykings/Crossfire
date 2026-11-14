@@ -120,7 +120,8 @@ export type ServerMessage =
   | { v: typeof PROTOCOL_VERSION; type: 'spawned'; requestId: string; snapshot: Snapshot }
   | { v: typeof PROTOCOL_VERSION; type: 'snapshot'; snapshot: Snapshot }
   | { v: typeof PROTOCOL_VERSION; type: 'left'; id: string }
-  | { v: typeof PROTOCOL_VERSION; type: 'pong'; at: number; serverTime: number }
+  | { v: typeof PROTOCOL_VERSION; type: 'pong'; at: number; serverTime: number;
+      processingMs?:number;tickMs?:number;tickDebtMs?:number;queuedInputs?:number }
   | { v: typeof PROTOCOL_VERSION; type: 'error'; code: string; message: string; fatal: boolean };
 
 const record = (x: unknown): x is Record<string, unknown> => !!x && typeof x === 'object' && !Array.isArray(x);
@@ -286,7 +287,9 @@ export function parseServerMessage(text: string): ServerMessage | null {
     return validElimination(x.elimination) ? x as unknown as ServerMessage : null;
   }
   if (x.type === 'left' && typeof x.id === 'string') return x as unknown as ServerMessage;
-  if (x.type === 'pong' && finite(x.at) && finite(x.serverTime)) return x as unknown as ServerMessage;
+  if (x.type === 'pong' && finite(x.at) && finite(x.serverTime)
+    && ['processingMs','tickMs','tickDebtMs'].every(k=>x[k]===undefined||finite(x[k])&&x[k]>=0)
+    &&(x.queuedInputs===undefined||natural(x.queuedInputs)&&x.queuedInputs<=48)) return x as unknown as ServerMessage;
   if (x.type === 'error' && typeof x.code === 'string' && typeof x.message === 'string' && typeof x.fatal === 'boolean') return x as unknown as ServerMessage;
   if (x.type !== 'snapshot' && x.type !== 'welcome' && x.type !== 'spawned') return null;
   if (x.type === 'spawned' && typeof x.requestId !== 'string') return null;

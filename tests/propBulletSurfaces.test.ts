@@ -7,6 +7,7 @@ import surfaces from '../public/assets/models/shared/props/bullet-surfaces.json'
 import catalog from '../public/assets/models/shared/props/props.json';
 import {CollisionWorld} from '../src/physics/CollisionWorld';
 import {rayBulletMesh,opaqueAt,type BulletMesh} from '../src/physics/BulletMesh';
+import {prepareBulletWorld} from '../src/physics/prepareBulletWorld';
 import {propImpactMark,MARK_OFFSET,MARK_VERTICES} from '../src/physics/ImpactMark';
 import {MAP_IDS} from '../shared/maps';
 import {WORLDS} from '../server/src/world';
@@ -14,6 +15,25 @@ import {traceWeaponShot} from '../shared/hitscan';
 import {WEAPONS} from '../src/weapons/Weapon';
 const meshes=surfaces.meshes as Record<string,BulletMesh>;
 const fixture=(type:string,yaw=0,position=[0,0,0])=>{const world=new CollisionWorld(),size=(catalog.props as Record<string,{collider:number[]|null}>)[type].collider!;const box=world.add({c:[position[0],position[1]+size[1]/2,position[2]],h:size.map(v=>v/2) as [number,number,number],yaw,tag:type});world.addBulletSurface(meshes[type],position,yaw,type,[box]);return {world,box};};
+it('loading prewarms each selected geometry once without changing precise hits or movement',async()=>{
+ const {world,box}=fixture('barrel');world.addBulletSurface(meshes.barrel,[3,0,0],.7,'second',[]);
+ const before=world.raycastBullet(.2,.45,2,0,0,-1,4);
+ expect(await prepareBulletWorld(world)).toBe(1);
+ expect(world.raycastBullet(.2,.45,2,0,0,-1,4)).toEqual(before);
+ expect(world.raycast(.29,2,.29,0,-1,0,4)?.collider).toBe(box);
+ const cancel=new AbortController();cancel.abort();await expect(prepareBulletWorld(world,cancel.signal)).rejects.toThrow();
+});
+it('the first combat ray uses the acceleration cache prepared during loading',async()=>{
+ const shape=structuredClone(meshes.barrel),vertices=shape.vertices;let reads=0;
+ Object.defineProperty(shape,'vertices',{get(){reads++;return vertices;}});
+ const world=new CollisionWorld();world.addBulletSurface(shape,[0,0,0],0,'barrel',[]);
+ await prepareBulletWorld(world);expect(reads).toBeGreaterThan(1);reads=0;
+ const hit=world.raycastBullet(.2,.45,2,0,0,-1,4)!;
+ expect(hit.point.z).toBeGreaterThan(.15);expect(hit.point.z).toBeLessThan(.3);
+ // A traversal reads the packed vertex buffer once. Building the old BVH
+ // recursively touched it thousands of times on this first shot.
+ expect(reads).toBe(1);
+});
 it('generated surfaces are current for every solid GLB and extraction is deterministic',()=>{
  for(const [file,sha]of Object.entries(surfaces.sources))expect(createHash('sha256').update(readFileSync((file.startsWith('assets/')?'public/':'public/assets/models/shared/props/')+file)).digest('hex'),file).toBe(sha);
  expect(execFileSync(process.execPath,['tools/generate-bullet-surfaces.mjs','--check'],{encoding:'utf8'})).toContain('match all solid');

@@ -9,6 +9,9 @@ import { NO_COMBAT, type CombatIntent } from '../../shared/combat';
 import type { GrenadeEvent } from '../../shared/grenades';
 import { multiplayerEndpoint } from './endpoint';
 import {NetworkTiming} from './NetworkTiming';
+import {NetworkDiagnostics} from './NetworkDiagnostics';
+import {sameControllerState} from '../player/controllerState';
+import type {ControllerState} from '../player/PlayerController';
 import {encodeClientMessage} from '../../shared/inputWire';
 import { PROTOCOL_VERSION, INPUT_BATCH_LIMIT, NETWORK_HZ, parseServerMessage, type ClientMessage, type InputFrame,
   type ServerMessage, type Snapshot, type ShotResult, type Elimination } from '../../shared/protocol';
@@ -32,6 +35,9 @@ export class MultiplayerClient {
   }
   clockOffset = 0;
   private readonly timing=new NetworkTiming();
+  readonly diagnostics: NetworkDiagnostics;
+  private appliedServerTime: number | null = null;
+  private readonly pingTimes = new Map<number, number>();
   private renderedAt=0;
   get latency():number{return this.timing.rtt;}
   presentationTime():number {return this.renderedAt=this.timing.time(Date.now());}
@@ -82,7 +88,8 @@ export class MultiplayerClient {
   private ackLatency = 0;
   private staleSnapshots=0;
   private readonly correctionCounterSince=Date.now();
-  private corrections={count:0,significant:0,last:0,max:0,replayed:0,ms:0,smoothed:0};
+  private corrections={count:0,significant:0,nonzero:0,last:0,max:0,replayed:0,ms:0,smoothed:0,preserved:0};
+  private reconciled=new WeakMap<PlayerController,{key:string;sequence:number;motion:ControllerState}>();
   /** Never simulate ticks that cannot be retained and replayed. Same budget on every device. */
   get canPredict():boolean {return this.state==='connected'&&this.pending.length<48;}
 
@@ -107,13 +114,15 @@ export class MultiplayerClient {
   private lastSlide = false;
   private lastAim = false;
   private lastLean = 0;
+  private lastMove = { x: 0, z: 0, crouch: false };
   private lastCombat: CombatIntent = { ...NO_COMBAT };
   private life = -1;
   private round = -1;
   private readonly url: string;
   private spawning: { id: string; resolve: (s: Snapshot) => void; reject: (e: Error) => void; timeout: number } | null = null;
 
-  constructor(url: string, private readonly name: string | (() => string) = 'Player', private readonly options: { debug?: boolean; profileToken?: () => string | undefined; profileScope?: () => string | undefined; roomTicket?:string } = {}) {
+  constructor(url: string, private readonly name: string | (() => string) = 'Player', private readonly options: { debug?: boolean; diagnostics?:boolean; profileToken?: () => string | undefined; profileScope?: () => string | undefined; roomTicket?:string } = {}) {
+    this.diagnostics = new NetworkDiagnostics(!!options.diagnostics);
     const parsed = multiplayerEndpoint(url);
     this.url = parsed.href;
     try {
@@ -139,6 +148,21 @@ export class MultiplayerClient {
       timing:this.timing.inspect(),corrections:{...this.corrections,perSecond:this.corrections.count/Math.max(1,(Date.now()-this.correctionCounterSince)/1000)},staleSnapshots:this.staleSnapshots,
       snapshotAge:this.latest?Math.max(0,Date.now()+this.clockOffset-this.latest.serverTime):null,bufferedBytes:this.socket?.bufferedAmount??0,
       events: [...this.events] };
+  }
+  appliedSnapshot(snapshot: Snapshot): void {
+    this.appliedServerTime=snapshot.serverTime;this.diagnostics.count('appliedSnapshots');
+  }
+  /** Explicit whitelist: no tokens, usernames, input bodies or free-form server messages. */
+  diagnosticReport() {
+    const now=Date.now();
+    return { protocol:PROTOCOL_VERSION,state:this.state,opens:this.opens,closes:this.closes,attempts:this.attempts,
+      pending:this.pending.length,unsent:this.unsent.length,inFlight:this.sentSequence-this.lastAck,
+      bufferedBytes:this.socket?.bufferedAmount??0,ackAgeMs:Math.max(0,now-this.lastAckAt),
+      receivedSnapshotAgeMs:this.latest?Math.max(0,now+this.clockOffset-this.latest.serverTime):null,
+      appliedSnapshotAgeMs:this.appliedServerTime===null?null:Math.max(0,now+this.clockOffset-this.appliedServerTime),
+      timing:this.timing.inspect(),corrections:{...this.corrections},telemetry:this.diagnostics.report(),
+      events:this.events.map(e=>({at:e.at,event:e.event,...(typeof e.detail.code==='number'?{code:e.detail.code}:{}),
+        ...(e.event==='state'?{from:e.detail.from,to:e.detail.to}:{})})) };
   }
   // Even if all packets arrive together, outstanding input must fit the server's
   // unchanged 48-frame queue. Longer delays apply backpressure, never reconnect.
@@ -171,6 +195,8 @@ export class MultiplayerClient {
     this.connectedAt = 0;
     this.resumedAt = 0;
     this.sentAt.clear(); this.ackLatency = 0;
+    this.pingTimes.clear();this.appliedServerTime=null;
+    this.reconciled=new WeakMap();
     this.setState(this.attempts ? 'reconnecting' : 'connecting');
     this.pending = [];this.inputTimes.clear();
     this.unsent = [];
@@ -178,6 +204,7 @@ export class MultiplayerClient {
     this.lastSlide = false;
     this.lastAim = false;
     this.lastLean = 0;
+    this.lastMove = { x: 0, z: 0, crouch: false };
     this.lastCombat = { ...NO_COMBAT };
     const socket = new WebSocket(this.url);
     this.socket = socket;
@@ -194,6 +221,11 @@ export class MultiplayerClient {
     };
     socket.onmessage = (event) => {
       if (this.socket !== socket || typeof event.data !== 'string') return;
+      const started=performance.now();
+      this.diagnostics.count('messages');
+      if(typeof event.timeStamp==='number'&&event.timeStamp>0&&started>=event.timeStamp&&started-event.timeStamp<60000)
+        this.diagnostics.record('dispatchAgeMs',started-event.timeStamp);
+      try {
       const m = parseServerMessage(event.data);
       if (!m) {
         let version: unknown = null;
@@ -205,6 +237,7 @@ export class MultiplayerClient {
         socket.close(4002, 'protocol_error'); return;
       }
       this.lastMessage = Date.now();
+      if('snapshot' in m)this.diagnostics.snapshot(this.diagnostics.enabled?new TextEncoder().encode(event.data).byteLength:0,started);
       if(m.type==='room_exit'){this.stopped=true;this.stopTimers();this.cancelSpawn(m.message);this.setState('closed');this.onRoomExit(m.message);return;}
       if (m.type === 'error') {
         this.trace('server_error', { code: m.code, fatal: m.fatal });
@@ -272,6 +305,7 @@ export class MultiplayerClient {
           if (sent !== undefined) {
             const sample = Math.max(0, Date.now() - sent);
             this.ackLatency = this.ackLatency ? this.ackLatency * .8 + sample * .2 : sample;
+            this.diagnostics.record('ackLatencyMs',sample);
           }
           this.lastAckAt = Date.now();
         }
@@ -312,7 +346,14 @@ export class MultiplayerClient {
         this.lastPong = Date.now();
         this.trace('pong', { sentAt: m.at, receivedAt: this.lastPong, rtt: this.lastPong - m.at });
         if(this.timing.probe(m.at,m.serverTime,Date.now()))this.clockOffset=this.timing.offset;
+        const sent=this.pingTimes.get(m.at);
+        if(sent!==undefined){this.diagnostics.rtt(Math.max(0,performance.now()-sent));this.pingTimes.delete(m.at);}
+        if(m.processingMs!==undefined)this.diagnostics.record('serverHandlerMs',m.processingMs);
+        if(m.tickMs!==undefined)this.diagnostics.record('serverTickMs',m.tickMs);
+        if(m.tickDebtMs!==undefined)this.diagnostics.record('serverDebtMs',m.tickDebtMs);
+        if(m.queuedInputs!==undefined)this.diagnostics.record('serverQueuedInputs',m.queuedInputs);
       }
+      } finally {this.diagnostics.record('handlerMs',performance.now()-started);}
     };
     socket.onerror = () => { if (this.socket === socket) this.trace('socket_error'); /* Close owns retries. */ };
     socket.onclose = (event) => {
@@ -372,8 +413,11 @@ export class MultiplayerClient {
   private ping(): void {
     this.lastPing = Date.now(); this.trace('ping', { sentAt: this.lastPing, lastPong: this.lastPong });
     this.send({ v: PROTOCOL_VERSION, type: 'ping', at: this.lastPing });
+    if(this.diagnostics.enabled){this.pingTimes.set(this.lastPing,performance.now());
+      if(this.pingTimes.size>8)this.pingTimes.delete(this.pingTimes.keys().next().value!);}
   }
   private stopTimers(): void {
+    this.pingTimes.clear();
     window.clearTimeout(this.urgentTimer);this.urgentTimer=0;
     for (const t of [this.flushTimer, this.pingTimer]) window.clearInterval(t);
     window.clearTimeout(this.deadline);
@@ -395,6 +439,7 @@ export class MultiplayerClient {
     const frames=this.unsent.splice(0,count);
     this.send({v:PROTOCOL_VERSION,type:'input',roundId:this.latest.roundId,mapVersion:this.latest.mapVersion,frames});
     this.sentSequence=frames[frames.length-1].seq;this.sentAt.set(this.sentSequence,Date.now());available-=count;
+    this.diagnostics.count('inputPackets');this.diagnostics.count('inputs',count);
     }
   }
 
@@ -420,11 +465,13 @@ export class MultiplayerClient {
     // No need to stream 120 identical standing frames per second. The room's
     // neutral input still settles gravity/friction, and heartbeats maintain liveness.
     if (player.grounded && Math.hypot(player.velocity.x, player.velocity.y, player.velocity.z) < 0.001
-      && player.crouch === 0 && !intent.crouch && !player.sliding && player.slideCooldown === 0 && !this.lastSlide && !intent.slide && !intent.jumpPressed && intent.x === 0 && intent.z === 0
+      && player.crouch === 0 && !intent.crouch && !this.lastMove.crouch && !player.sliding && player.slideCooldown === 0 && !this.lastSlide && !intent.slide && !intent.jumpPressed && intent.x === 0 && intent.z === 0 && this.lastMove.x === 0 && this.lastMove.z === 0
       && !intent.aim && !this.lastAim && !intent.lean && !this.lastLean && player.lean === 0
       && !combat.melee && !this.lastCombat.melee && !combat.grenadeCancel && !combat.grenade && !this.lastCombat.grenade && !combat.trigger && !combat.reload && !this.lastCombat.trigger && !this.lastCombat.reload
       && yaw === this.lastYaw && player.pitch === this.lastPitch) return;
-    const urgent=intent.jumpPressed||intent.slide&&!this.lastSlide||combat.trigger&&!this.lastCombat.trigger||combat.reload&&!this.lastCombat.reload
+    const movementEdge=intent.x!==this.lastMove.x||intent.z!==this.lastMove.z||!!intent.crouch!==this.lastMove.crouch
+      ||intent.slide!==this.lastSlide||intent.aim!==this.lastAim||(intent.lean??0)!==this.lastLean;
+    const urgent=movementEdge||intent.jumpPressed||combat.trigger&&!this.lastCombat.trigger||combat.reload&&!this.lastCombat.reload
       ||combat.melee&&!this.lastCombat.melee||combat.grenade&&!this.lastCombat.grenade||combat.grenadeCancel;
     this.lastYaw = yaw;
     this.lastPitch = player.pitch;
@@ -432,6 +479,7 @@ export class MultiplayerClient {
     this.lastSlide = intent.slide;
     this.lastAim = intent.aim;
     this.lastLean = intent.lean ?? 0;
+    this.lastMove = { x: intent.x, z: intent.z, crouch: !!intent.crouch };
     this.lastCombat = { ...combat };
     const frame: InputFrame = { viewTime:Math.max(0,Math.floor(this.renderedAt||this.presentationTime())),seq: ++this.sequence, yaw, pitch: player.pitch, intent: { ...intent }, combat: { ...combat } };
     this.inputTimes.set(frame.seq,Math.floor(Date.now()+this.clockOffset));
@@ -445,7 +493,18 @@ export class MultiplayerClient {
   reconcile(player: PlayerController, snapshot: Snapshot, gun?: Weapon): void {
     const self = snapshot.players.find((p) => p.id === this.selfId);
     if (!self?.alive) return;
+    const latest=this.latest,own=latest?.players.find(p=>p.id===this.selfId);
+    if(latest&&(snapshot.roundId<latest.roundId||snapshot.roundId===latest.roundId&&(
+      snapshot.serverTime<latest.serverTime||own&&(self.life<own.life||self.life===own.life&&self.ack<own.ack)))){
+      this.diagnostics.count('staleReconciliations');return;
+    }
+    const beforeMotion=player.capture(),key=JSON.stringify([snapshot.roundId,self.life,self.ack,snapshot.serverTime,self.weapon,self.motion,self.combat]);
+    const prior=this.reconciled.get(player);
+    if(prior?.key===key&&prior.sequence===this.sequence&&sameControllerState(beforeMotion,prior.motion,true)){
+      this.diagnostics.count('duplicateReconciliations');return;
+    }
     const started=performance.now(),before={...player.position},previous={...player.prevPosition};let replayed=0;
+    const previousCrouch=player.prevCrouch,previousLean=player.prevLean;
     this.melee=structuredClone(self.combat.melee??createMeleeState());
     for(const seq of this.inputTimes.keys())if(seq<=self.ack)this.inputTimes.delete(seq);
     const yaw = player.yaw, pitch = player.pitch;
@@ -472,8 +531,19 @@ export class MultiplayerClient {
     player.yaw = yaw;
     player.pitch = pitch;
     const delta=Math.hypot(player.position.x-before.x,player.position.y-before.y,player.position.z-before.z),c=this.corrections;
-    if(delta>.0001&&delta<.04&&player.retainInterpolation(previous))c.smoothed++;
+    const afterMotion=player.capture();
+    if(sameControllerState(beforeMotion,afterMotion)){
+      // This is not smoothing a correction: the authoritative replay changed nothing.
+      // Retain the already validated preceding tick, including airborne/slide poses.
+      Object.assign(player.prevPosition,previous);player.prevCrouch=previousCrouch;player.prevLean=previousLean;c.preserved++;
+    }else if(delta>.0001&&delta<.04&&player.retainInterpolation(previous))c.smoothed++;
+    if(delta>.0001)c.nonzero++;
+    this.reconciled.set(player,{key,sequence:this.sequence,motion:afterMotion});
     c.count++;if(delta>.01)c.significant++;c.last=delta;c.max=Math.max(c.max,delta);c.replayed=replayed;c.ms=performance.now()-started;
+    this.diagnostics.record('correctionM',delta);this.diagnostics.record('reconcileMs',c.ms);
+    this.diagnostics.record('cameraCorrectionRad',Math.hypot(player.yaw-yaw,player.pitch-pitch));
+    if(this.diagnostics.enabled)this.diagnostics.correction({atMs:performance.now(),metres:delta,ack:self.ack,replayed,
+      snapshotAgeMs:Math.max(0,Date.now()+this.clockOffset-snapshot.serverTime),groundedBefore:beforeMotion.grounded,groundedAfter:afterMotion.grounded});
   }
 
   /** Deliberate transport interruption for diagnostics; resumes the existing authenticated session. */

@@ -1,5 +1,7 @@
 import {LegendaryEffects} from './LegendaryEffects';
 import {PerformanceDiagnostics} from '../core/PerformanceDiagnostics';
+import {NetworkDiagnosticsOverlay} from '../ui/NetworkDiagnosticsOverlay';
+import {elapsedSimulationTime,activeSimulationTime,simulationSteps,simulationAlpha} from '../core/simulationBudget';
 import {HealthSaturation} from '../rendering/HealthSaturation';
 import {ZoneControlView} from './ZoneControlView';
 import {teamMode,modeName} from '../../shared/combat';
@@ -107,7 +109,9 @@ export class Game {
   readonly maps: MapManager;
   private readonly postfx: PostFX;
   private readonly instrumentation: SceneInstrumentation;
-  private readonly performanceDiagnostics=new PerformanceDiagnostics(new URLSearchParams(location.search).get('perf')==='1');
+  private readonly networkDiagnosticsEnabled=new URLSearchParams(location.search).get('netDiagnostics')==='1';
+  private readonly performanceDiagnostics=new PerformanceDiagnostics(this.networkDiagnosticsEnabled||new URLSearchParams(location.search).get('perf')==='1');
+  private readonly networkOverlay=new NetworkDiagnosticsOverlay(this.networkDiagnosticsEnabled,()=>this.networkReport());
   private gpuInstrumentation:EngineInstrumentation|null=null;
   map: LoadedMap | null = null;
   player: PlayerController | null = null;
@@ -141,6 +145,7 @@ export class Game {
   private readonly damage = new DamageSystem();
   state: State = 'menu';
   private acc = 0;
+  private simulationActiveSince=performance.now();
   private pendingSnapshot:{session:MatchSession;snapshot:Snapshot}|null=null;
   private health = PLAYER_MAX_HEALTH;
   private stepDistance = 0;
@@ -214,8 +219,14 @@ export class Game {
     this.postfx = new PostFX(this.ctx.scene, this.ctx.camera);
     this.instrumentation = new SceneInstrumentation(this.ctx.scene);
     this.instrumentation.captureFrameTime = true;
-    if(this.performanceDiagnostics.enabled){this.gpuInstrumentation=new EngineInstrumentation(this.ctx.engine);this.gpuInstrumentation.captureGPUFrameTime=true;}
-    this.ctx.scene.onDisposeObservable.addOnce(()=>{this.performanceDiagnostics.dispose();this.gpuInstrumentation?.dispose();});
+    if(this.performanceDiagnostics.enabled){
+      this.gpuInstrumentation=new EngineInstrumentation(this.ctx.engine);this.gpuInstrumentation.captureGPUFrameTime=true;
+      this.gpuInstrumentation.captureShaderCompilationTime=true;
+      this.instrumentation.captureActiveMeshesEvaluationTime=true;
+      this.instrumentation.captureAnimationsTime=true;
+      this.instrumentation.captureRenderTargetsRenderTime=true;
+    }
+    this.ctx.scene.onDisposeObservable.addOnce(()=>{this.networkOverlay.dispose();this.performanceDiagnostics.dispose();this.gpuInstrumentation?.dispose();});
     this.attacker = {
       id: 'player',
       position: () => {
@@ -300,7 +311,7 @@ export class Game {
     window.addEventListener('keyup', (e) => { if (this.input.matches('leaderboard', e.code)) { this.tabHeld = false; this.ui.scoreboard.setVisible(false); } });
     window.addEventListener('mouseup', (e) => { if (this.input.matches('leaderboard', `Mouse${e.button}`)) { this.tabHeld = false; this.ui.scoreboard.setVisible(false); } });
     window.addEventListener('blur', () => { this.tabHeld = false; this.ui.scoreboard.setVisible(false); });
-    document.addEventListener('visibilitychange', () => { if (document.hidden) { this.tabHeld = false; this.input.clearState(); this.ui.scoreboard.setVisible(false); } });
+    document.addEventListener('visibilitychange', () => { this.simulationActiveSince=performance.now();if (document.hidden) { this.tabHeld = false; this.input.clearState(); this.ui.scoreboard.setVisible(false); } });
     window.addEventListener('keydown', (e) => {
       if (this.ui.chatOpen || isTextInput(e.target)) return;
       if (this.input.matches('chat', e.code) && this.state === 'playing' && !e.repeat) {
@@ -529,7 +540,7 @@ export class Game {
           if (!this.multiplayerBackend.ok) throw new Error(this.multiplayerBackend.error);
           await this.career?.ensure().catch(() => {});signal.throwIfAborted();
           network = new MultiplayerClient(this.admission?this.roomClient!.socket(this.admission.room.id):this.multiplayerBackend.url, () => this.guestProfile.value.username,
-            { ...(this.admission?{roomTicket:this.admission.ticket}:{}),debug: new URLSearchParams(location.search).has('networkDebug'), profileToken: () => this.career?.joinCredential(), profileScope: () => this.career?.sessionScope() });
+            { ...(this.admission?{roomTicket:this.admission.ticket}:{}),diagnostics:this.performanceDiagnostics.enabled,debug: new URLSearchParams(location.search).has('networkDebug'), profileToken: () => this.career?.joinCredential(), profileScope: () => this.career?.sessionScope() });
         }
         this.network = network;
         network.onRoomExit=message=>{if(this.network===network){this.quitToMenu();this.ui.rooms.open(message);}};
@@ -598,6 +609,7 @@ export class Game {
           // Coalesce only ordinary living updates; deaths, spawns, results and
           // map changes remain immediate and all confirmed combat events still run.
           if(this.state==='playing'&&this.networkReady&&!snapshot.result&&snapshot.roundId===this.loadedRound&&own?.alive&&own.life===this.networkLife&&own.id===this.appliedPlayerId){
+            if(this.pendingSnapshot&&network instanceof MultiplayerClient)network.diagnostics.count('coalescedSnapshots');
             this.pendingSnapshot={session:network,snapshot};
           }else{this.pendingSnapshot=null;this.acceptSnapshot(snapshot);}
         };
@@ -810,6 +822,7 @@ export class Game {
         this.ui.setWeaponName(this.weapon.stats.name);
         if (self.combat.gun) this.weapon.restore(self.combat.gun);
         this.acc = 0;
+        this.simulationActiveSince=performance.now();
         this.cameraRig?.snapFov(this.settings.value.fov);
       } else this.network.reconcile(this.player, snapshot, this.weapon);
     } else if (self.death) {
@@ -818,6 +831,7 @@ export class Game {
     } else if (this.state === 'playing' || this.state === 'spectating' || (this.state === 'paused' && !this.preSpawnPaused)) this.showPreSpawn();
     this.ui.damage.observeHealth({ id: self.id, life: self.life, round: snapshot.roundId,
       at: snapshot.serverTime, health: self.health, max: PLAYER_MAX_HEALTH, alive: self.alive });
+    this.network.appliedSnapshot?.(snapshot);
     this.performanceDiagnostics.end('snapshot',snapshotStarted);
   }
 
@@ -924,6 +938,7 @@ export class Game {
   }
 
   private activateWithoutLock(): void {
+    this.simulationActiveSince=performance.now();
     this.preSpawnPaused = false;
     this.spectatingDeath = null; this.remotePlayers.setSpectated(null);
     this.state = 'playing';
@@ -1006,6 +1021,7 @@ export class Game {
         return;
       }
       if (this.state === 'start' || this.state === 'paused' || this.state === 'playing') {
+        if(this.state!=='playing')this.simulationActiveSince=performance.now();
         this.state = 'playing';
         this.input.enabled = true;
         this.input.clearState();
@@ -1100,6 +1116,7 @@ export class Game {
     const frameStarted=this.performanceDiagnostics.start();
     const pending=this.pendingSnapshot;this.pendingSnapshot=null;
     if(pending&&this.network===pending.session)this.acceptSnapshot(pending.snapshot);
+    this.networkOverlay.update(performance.now());
     this.ctx.updateResolution(rawDt,this.state==='playing'&&!document.hidden);
     this.ui.rooms.update(this.network?.latest??null,this.network?.selfId??'',Date.now()+(this.network?.clockOffset??0),!['menu','loading','results'].includes(this.state));
     this.ui.challenges.update(this.guestProfile.value.username, this.career?.serverNow ?? null);
@@ -1112,6 +1129,7 @@ export class Game {
       || (this.options.multiplayer && this.network?.state !== 'connected'))) this.cancelGrenadeCharge();
     if (this.state === 'menu') { this.remotePlayers.setWorldSaturation(this.healthSaturation.reset());this.ui.update(rawDt); this.input.endFrame(); return; }
     const dt = Math.min(MAX_FRAME_DT, Math.max(0, rawDt));
+    const simulationElapsed=activeSimulationTime(rawDt,performance.now(),this.simulationActiveSince,!document.hidden);
     this.fps.frames++;
     this.fps.time += rawDt;
     if (this.fps.time >= 0.5) {
@@ -1121,11 +1139,13 @@ export class Game {
     }
     if (this.state === 'playing' && this.player && this.map) {
       const simulationStarted=this.performanceDiagnostics.start();
-      this.simulate(dt);this.performanceDiagnostics.end('simulation',simulationStarted);
+      this.simulate(dt,simulationElapsed);this.performanceDiagnostics.end('simulation',simulationStarted);
     } else if (this.map && (this.state === 'start' || this.state === 'loading')) {
       this.selectionCamera(dt);
     }
-    this.localPractice?.advance(dt,this.state==='paused'||this.state==='loading');
+    const practiceStarted=this.performanceDiagnostics.start();
+    this.localPractice?.advance(simulationElapsed,this.state==='paused'||this.state==='loading'||document.hidden);
+    this.performanceDiagnostics.end('practice',practiceStarted);
     this.practiceChallenges?.update();
     if(this.practiceDebug&&this.localPractice)this.practiceDebug.update(this.localPractice.simulation,this.fps.value);
     this.updateScoreboard();
@@ -1136,7 +1156,9 @@ export class Game {
     this.remotePlayers.setPresentationVisible(this.ui.currentScreen === 'hud' || this.state === 'spectating');
     // Inputs above refer to the previously drawn pose. Advance the remote
     // playhead only when that new pose is actually about to be presented.
+    const remoteStarted=this.performanceDiagnostics.start();
     if (this.network?.state === 'connected') this.remotePlayers.update(this.network.presentationTime(), dt);
+    this.performanceDiagnostics.end('remote',remoteStarted);
     this.ui.combatFeed.setVisible(this.ui.currentScreen === 'hud' || this.ui.currentScreen === 'spectate');
     let spectatorScoped = false;
     if (this.state === 'spectating' && this.spectatingDeath && !localState?.alive) {
@@ -1181,6 +1203,7 @@ export class Game {
     this.remotePlayers.setSpectatorScope(spectatorScoped);
     this.effects?.setReduced(this.settings.value.chromebookMode);
     this.trails.setReduced(this.settings.value.chromebookMode);
+    const effectsStarted=this.performanceDiagnostics.start();
     this.effects?.update(dt);
     if (this.map?.foliage && this.state !== 'loading') this.map.foliage.update(this.ctx.camera.position);
     if(this.map&&this.state!=='loading')this.map.props.update(dt,Date.now()+(this.network?.clockOffset??0),!this.options.multiplayer);
@@ -1190,6 +1213,8 @@ export class Game {
       this.grenadeView?.setChromebook(this.settings.value.chromebookMode);
       this.grenadeView?.update(dt, Date.now() + (this.network?.clockOffset ?? 0), this.map.world);
     }
+    this.performanceDiagnostics.end('effects',effectsStarted);
+    const hudStarted=this.performanceDiagnostics.start();
     this.ui.update(dt);
     const cameraAngles = this.ctx.camera.rotationQuaternion?.toEulerAngles();
     this.ui.damage.update(cameraAngles?.y ?? this.player?.yaw ?? 0, cameraAngles?.x ?? this.player?.pitch ?? 0);
@@ -1198,6 +1223,7 @@ export class Game {
     this.ui.matchHud.update(this.network?.latest ?? null, Date.now() + (this.network?.clockOffset ?? 0),
       this.ui.currentScreen === 'hud' || this.ui.currentScreen === 'spectate', this.network?.selfId);
     this.audio.setListener(this.ctx.camera.globalPosition,this.ctx.camera.getDirection(Vector3.Forward(true)),this.ctx.camera.getDirection(Vector3.Up()));
+    this.performanceDiagnostics.end('hud',hudStarted);
     this.trails.update();
     // The first-person daggers only show while this player is simulated (not spectating/menus).
     if (!this.meleeShown && this.meleeView?.root.isEnabled()) { this.meleeView.setVisible(false); this.meleeView.update(this.weaponView?.motion.pose ?? { x: 0, y: 0, z: 0, pitch: 0, yaw: 0, roll: 0 }); }
@@ -1265,7 +1291,7 @@ export class Game {
     return this.loadout.current;
   }
 
-  private simulate(dt: number): void {
+  private simulate(dt: number, elapsed = dt): void {
     if (this.options.multiplayer && (this.network?.state !== 'connected' || !this.network.latest?.players.find((p) => p.id === this.network?.selfId)?.alive)) return;
     const player = this.player!;
     const rig = this.cameraRig!;
@@ -1316,9 +1342,13 @@ export class Game {
     let jumpEdge=edges.jump,fireEdge=edges.fire,reloadEdge=edges.reload,grenadeEdge=edges.grenade;
 
     for (const e of events) this.onWeaponEvent(e);
-    this.acc += dt;
-    while (this.acc >= FIXED_DT) {
-      if(this.network&&!this.network.canPredict){this.acc=0;break;}
+    this.acc += elapsedSimulationTime(elapsed);
+    const due=simulationSteps(this.acc);
+    if(this.network instanceof MultiplayerClient){this.network.diagnostics.record('frameDebtMs',this.acc*1000);
+      if(this.acc>due*FIXED_DT+FIXED_DT)this.network.diagnostics.count('frameBudgetHits');}
+    for(let tick=0;tick<due;tick++) {
+      // Keep both elapsed debt and unconsumed press edges when the input window is full.
+      if(this.network&&!this.network.canPredict)break;
       it.slide = input.isDown('slide') && !this.slideReleasePending;
       this.slideReleasePending = false;
       it.jumpPressed = jumpEdge;
@@ -1367,7 +1397,7 @@ export class Game {
       jumpEdge = fireEdge = reloadEdge = grenadeEdge = false;
       this.acc -= FIXED_DT;
     }
-    const alpha = this.acc / FIXED_DT;
+    const alpha = simulationAlpha(this.acc);
     const w = this.weapon;
     // sniper scope: the overlay fades in over the last part of the aim and replaces the weapon in view
     this.scope = w.stats.scope ? Math.max(0, Math.min(1, (w.ads - 0.72) / 0.22)) : 0;
@@ -1591,12 +1621,30 @@ export class Game {
   }
 
   // --- automation hooks (used by tools/browser-test.mjs) ---------------------------------------
+  private networkReport() {
+    return {format:'crossfire-network-v1',at:Date.now(),
+      network:this.network instanceof MultiplayerClient?this.network.diagnosticReport():null,
+      frames:this.performanceDiagnostics.inspect(),
+      graphics:{chromebookMode:this.settings.value.chromebookMode,quality:this.settings.value.graphicsQuality},
+      notes:{rtt:'Application RTT includes server and browser scheduling; it is not a pure network measurement.',
+        serverHandler:'Optional runtime-clock timing excludes dispatch wait. Deployed Cloudflare timers can be frozen during CPU work; 0 ms does not prove zero CPU cost.',
+        dispatchAge:'Measured from MessageEvent.timeStamp where meaningful; native receive buffering is not exposed.',
+        snapshotAge:'Quiet rooms may stop publishing snapshots; age alone is not a measure of network delay.',
+        outbound:'WebSocket.bufferedAmount measures outgoing bytes only.'}};
+  }
   debugApi() {
     return {
+      networkReport:()=>this.networkReport(),
       resetPerformance:()=>this.performanceDiagnostics.reset(),
       performance:()=>({frames:this.performanceDiagnostics.inspect(),network:this.network?.inspect()??null,
         gpuFrameMs:this.gpuInstrumentation&&this.gpuInstrumentation.gpuFrameTimeCounter.count>0?this.gpuInstrumentation.gpuFrameTimeCounter.current/1e6:null,
-        renderCpuMs:this.instrumentation.frameTimeCounter.current}),
+        renderCpuMs:this.instrumentation.frameTimeCounter.current,
+        activeMeshMs:this.instrumentation.activeMeshesEvaluationTimeCounter.current,
+        animationMs:this.instrumentation.animationsTimeCounter.current,
+        renderTargetsMs:this.instrumentation.renderTargetsRenderTimeCounter.current,
+        shaders:this.gpuInstrumentation?{count:this.gpuInstrumentation.shaderCompilationTimeCounter.count,totalMs:this.gpuInstrumentation.shaderCompilationTimeCounter.total,maxMs:this.gpuInstrumentation.shaderCompilationTimeCounter.max}:null,
+        resources:{meshes:this.ctx.scene.meshes.length,materials:this.ctx.scene.materials.length,textures:this.ctx.scene.textures.length,
+          triangles:this.ctx.scene.getActiveIndices()/3}}),
       ready: () => this.state === 'playing' && !!this.map && (!this.options.multiplayer || this.network?.state === 'connected'),
       /** Local GPU inspection only; never expose the live scene in production. */
       renderScene: () => import.meta.env.DEV ? this.ctx.scene : null,
@@ -1617,7 +1665,7 @@ export class Game {
       loadingState: () => ({ round: this.loadedRound, networkReady: this.networkReady, mapLoad: this.loading?.id,
         roundLoad: !!this.roundLoad, sceneReady: this.ctx.scene.isReady() }),
       teleport: (x: number, y: number, z: number, heading = 0, pitch = 0) => {
-        if (this.state === 'paused' && this.options.autoplay) this.state = 'playing';
+        if (this.state === 'paused' && this.options.autoplay) {this.state = 'playing';this.simulationActiveSince=performance.now();this.acc=0;}
         this.player?.teleport({ x, y, z }, heading);
         this.cameraRig?.resetMotion();this.sniperZoom.reset();
         if (this.player) this.player.pitch = (pitch * Math.PI) / 180;

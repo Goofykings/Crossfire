@@ -216,6 +216,19 @@ export class PublicRoom extends ProductionRoom {
     if (!e) throw new Error('Requires a real joined session');
     return { health: e.session.health, regenAt: e.session.regenAt, now: Date.now() };
   }
+  async observeNextJumpForTest(id) {
+    const e=this.players.get(id);
+    if(!e?.session.alive)throw new Error('Requires a real living session');
+    this.jumpObservation=null;
+    const room=this,original=e.controller.fixedUpdate;
+    e.controller.fixedUpdate=function(dt,intent){
+      if(!intent.jumpPressed)return original.call(this,dt,intent);
+      const before=this.capture();original.call(this,dt,intent);
+      room.jumpObservation={ack:e.session.ack,before,after:this.capture()};
+      this.fixedUpdate=original;
+    };
+  }
+  async observedJumpForTest(){return this.jumpObservation??null;}
   async dropSocketForTest(id) {
     const e = this.players.get(id);
     if (!e?.socket) throw new Error('Requires a connected real session');
@@ -320,6 +333,7 @@ export class PublicRoom extends ProductionRoom {
     const [x, y, z] = pos;
     if (this.activeMap.world.overlapsCylinder(x, z, .34, y + .42, y + 1.8)) throw new Error('Arena position intersects map solids');
     e.controller.teleport({ x, y, z }, heading);
+    e.movement.reset();
     this.start();
     await this.persist();for(const p of this.players.values())this.attach(p);
     this.attach(e);
@@ -328,7 +342,7 @@ export class PublicRoom extends ProductionRoom {
   }
   async placeManyForCombatTest(placements) {
     for(const {id,pos}of placements){const e=this.players.get(id),[x,y,z]=pos;if(!e?.session.alive||this.activeMap.world.overlapsCylinder(x,z,.34,y+.42,y+1.8))throw Error('Requires clear positions and actual spawned sessions');}
-    for(const {id,pos,heading=0}of placements){const e=this.players.get(id);e.controller.teleport({x:pos[0],y:pos[1],z:pos[2]},heading);}
+    for(const {id,pos,heading=0}of placements){const e=this.players.get(id);e.controller.teleport({x:pos[0],y:pos[1],z:pos[2]},heading);e.movement.reset();}
     this.start();await this.persist();for(const e of this.players.values())this.attach(e);this.broadcast();return this.snapshot();
   }
   async smokeObservationForTest(position) {

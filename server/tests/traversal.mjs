@@ -19,7 +19,7 @@ test('Industrial loading dock: normal jumps land with all weapons and synchroniz
     await h.spawn(a,weapon);const life=roomSelf(a).life;
     await room.placeForCombatTest(a.id,[7,0,-5],90);
     await roomUntil(()=>Math.abs(roomSelf(a).motion.position.x-7)<.001,'approach position');
-    let jumped=false,landed=false;
+    let jumped=false,landed=false,pausedInput=false;
     for(let tick=0;tick<180;tick+=6){
       const p=roomSelf(a).motion.position,distance=10-p.x;
       const jump=!jumped&&distance<1.1;jumped ||= jump;
@@ -28,6 +28,8 @@ test('Industrial loading dock: normal jumps land with all weapons and synchroniz
           intent:{x:0,z:distance>-.8?1:0,slide:false,aim:false,jumpPressed:jump&&i===0},combat:{trigger:false,reload:false}}))});
       await roomUntil(()=>roomSelf(a).ack>=a.seq,'jump input acknowledgment');
       const state=roomSelf(a);landed ||= state.motion.grounded&&Math.abs(state.motion.position.y-1)<.001;
+      // Reproduce the real gap at the edge/apex, not just delayed snapshot playback.
+      if(!pausedInput&&state.motion.position.y>.3){pausedInput=true;await delay(250);}
       assert.ok(state.motion.position.y>=0);assert.equal(state.health,100);assert.equal(state.life,life);
       if(landed&&state.motion.velocity.x===0)break;
     }
@@ -83,6 +85,9 @@ test('enclosed interiors: authoritative stair loops synchronize across two real 
           const rawYaw=-heading*Math.PI/180,yaw=Math.atan2(Math.sin(rawYaw),Math.cos(rawYaw)),s=Math.sin(yaw),c=Math.cos(yaw),x=dx/dist,z=dz/dist;
           const frames=Array.from({length:4},()=>({seq:++a.seq,yaw,pitch:0,
             intent:{x:Math.max(-1,Math.min(1,x*c-z*s)),z:Math.max(-1,Math.min(1,-x*s-z*c)),slide:false,aim:false,jumpPressed:false},combat:{trigger:false,reload:false}}));
+          // This driver requests a four-tick steering burst, not a continuously
+          // held key. Explicitly release before waiting for the next observation.
+          frames.push({seq:++a.seq,yaw,pitch:0,intent:{x:0,z:0,slide:false,aim:false,jumpPressed:false},combat:{trigger:false,reload:false}});
           a.send({type:'input',roundId:a.snapshot.roundId,mapVersion:a.snapshot.mapVersion,frames});await until(()=>{
             const error=a.messages.find(m=>m.type==='error');if(error)throw Error(JSON.stringify(error));return me(a).ack>=a.seq;
           });

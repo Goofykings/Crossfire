@@ -2,7 +2,8 @@ import {defaultEquipment} from '../../shared/cosmetics';
 import {eliminationEffect} from '../../shared/eliminationCosmetics';
 import {createMeleeState,stepMelee,meleeBlocked,traceMelee,meleeKnockback,MELEE} from '../../shared/melee';
 import {FIXED_DT,MOVEMENT,PLAYER_MAX_HEALTH} from '../config/constants';
-import {PlayerController,NO_INTENT,type Vec3} from '../player/PlayerController';
+import {MovementHold} from '../../shared/movementHold';
+import {PlayerController,type Vec3} from '../player/PlayerController';
 import {WEAPONS,Weapon,type WeaponId} from '../weapons/Weapon';
 import {DamageSystem} from '../game/Damage';
 import type {CollisionWorld} from '../physics/CollisionWorld';
@@ -33,6 +34,7 @@ export interface PracticeWorld {world:CollisionWorld;layout:MapLayout;revision:s
  * Orchestration is local; movement, hitscan, damage, spread, grenades, regeneration,
  * spawn validation, assists, scoring and final rankings reuse production rules. */
 export class PracticeSimulation {
+ private readonly movement=new WeakMap<PracticeActor,MovementHold>();
  readonly policy=PRACTICE_POLICY;readonly selfId='practice-player';readonly actors:PracticeActor[]=[];readonly nav:PracticeNavigation;
  readonly random:PracticeRandom;readonly events:PracticeEvent[]=[];readonly roundId:number;
  now:number;started=false;endsAt:number|null=null;result:RoundResult|null=null;private serial=0;private environmentSeq=0;
@@ -55,7 +57,7 @@ export class PracticeSimulation {
   if(this.result||a.state.alive||a.state.death&&this.now<a.state.death.respawnAt)return false;
   const occupants=this.actors.filter(p=>p!==a&&p.state.alive).map(p=>({...p.controller.position,eyeHeight:p.controller.eyeHeight,opponent:!teammates(this.setup.mode,a.state.team,p.state.team)}));
   const spawn=selectSpawn(this.data.layout,this.data.world,occupants);if(!spawn)return false;
-  a.controller.teleport({x:spawn.pos[0],y:spawn.pos[1],z:spawn.pos[2]},spawn.heading);a.controller.weaponClearance=weapon;a.gun=new Weapon(WEAPONS.find(w=>w.id===weapon)!);a.charge.reset();a.input=null;
+  a.controller.teleport({x:spawn.pos[0],y:spawn.pos[1],z:spawn.pos[2]},spawn.heading);a.controller.weaponClearance=weapon;a.gun=new Weapon(WEAPONS.find(w=>w.id===weapon)!);a.charge.reset();a.input=null;this.movement.delete(a);
   Object.assign(a.state,{alive:true,health:PLAYER_MAX_HEALTH,life:a.state.life+1,death:null,regenAt:null,grenades:GRENADE.perLife,weapon,cosmeticId:defaultCosmetic(weapon),lastPlayedRound:this.roundId,lastPlayedTeam:a.state.team,combat:{melee:createMeleeState(),gun:a.gun.capture(),triggerHeld:false,reloadHeld:false,aimHeld:false,grenadeHeld:false}});
   resetCombo(a.state);this.contributions.clear(a.state.id);a.brain?.reset(this.now);return true;
  }
@@ -121,7 +123,8 @@ export class PracticeSimulation {
   for(const a of this.actors){
    if(!a.state.alive)continue;const frame=a===this.actors[0]?input:a.brain?.input(this.botContext,dt)??null;a.input=frame;
    if(frame){a.controller.yaw=frame.yaw;a.controller.pitch=frame.pitch;a.state.ack=frame.seq;}
-   a.controller.weaponClearance=meleeBlocked(a.state.combat.melee)?null:a.state.weapon;a.controller.fixedUpdate(dt,frame?.intent??{...NO_INTENT});
+   let held=this.movement.get(a);if(!held)this.movement.set(a,held=new MovementHold());
+   a.controller.weaponClearance=meleeBlocked(a.state.combat.melee)?null:a.state.weapon;a.controller.fixedUpdate(dt,held.sample(frame?.intent,this.now));
    if(unsafeMovement(a.controller.position,this.data.layout)||a.controller.position.y<MOVEMENT.killY||a.brain&&a.brain.stuckFor>10)this.eliminate(a,null);
   }
   // Move everyone first, exactly like the Worker; resolve all weapons from this pose.

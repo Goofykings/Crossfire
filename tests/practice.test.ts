@@ -95,6 +95,21 @@ it('local transport reconciles movement, pauses its clock and permanently closes
  await client.leaveRoom();expect(client.state).toBe('closed');const closed=client.simulation.now;client.reconnect();client.advance(1);expect(client.simulation.now).toBe(closed);expect(client.latest).toBeNull();expect(client.inspect().opens).toBe(0);
 });
 
+it('identical real Practice checkpoints preserve interpolation, while actual corrections still apply',async()=>{
+ const data=arena(),client=new PracticeClient({...DEFAULT_PRACTICE,bots:0},data,'Local');await client.connect();await client.spawn('rifle');
+ try{
+  const player=new PlayerController(data.world);player.restore(client.latest!.players[0].motion);player.weaponClearance='rifle';
+  for(let i=0;i<7;i++){const intent={...NO_INTENT,x:1};player.fixedUpdate(FIXED_DT,intent);client.fixedInput(player,intent);}
+  client.advance(7*FIXED_DT);const snapshot=client.latest!;
+  expect(player.capture()).toEqual(snapshot.players[0].motion);
+  const previous={...player.prevPosition},position={...player.position};expect(previous.x).not.toBe(position.x);
+  player.yaw=.37;player.pitch=-.2;client.reconcile(player,snapshot);
+  expect(player.prevPosition).toEqual(previous);expect(player.position).toEqual(position);expect(player.yaw).toBe(.37);expect(player.pitch).toBe(-.2);
+  const changed=structuredClone(snapshot);changed.players[0].motion.position.x+=.5;
+  client.reconcile(player,changed);expect(player.position.x).toBe(position.x+.5);expect(player.prevPosition.x).toBe(player.position.x);
+ }finally{client.disconnect();}
+});
+
 it('Absurd targets the actual leaned head with zero AI error, but preserves the weapon spread',()=>{
  const sim=new PracticeSimulation({...DEFAULT_PRACTICE,bots:1,difficulty:'absurd'},arena(),'Local',{now:0});sim.spawnHuman('rifle');const [human,bot]=sim.actors;human.controller.teleport({x:0,y:0,z:-5},20);human.controller.lean=.8;bot.controller.teleport({x:0,y:0,z:5},0);bot.brain!.reset(0);
  const ctx={actors:sim.actors,nav:sim.nav,now:0,mode:'ffa' as const,random:sim.random,switchWeapon:()=>{}};let fired=false;

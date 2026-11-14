@@ -1,7 +1,7 @@
 import {username} from '../ui/Username';
 import {meleeClip,meleeBlocked} from '../../shared/melee';
 import { visualCosmetic } from '../rendering/CosmeticAssets';
-import { Color3, Frustum, Material, Matrix, MeshBuilder, Quaternion, StandardMaterial, TransformNode, Vector3, type Scene, type Mesh, type BaseTexture } from '@babylonjs/core';
+import { Color3, Frustum, Material, Matrix, MeshBuilder, Quaternion, StandardMaterial, TransformNode, Vector3, type Scene, type Mesh, type BaseTexture, type Camera, type Plane, type Viewport } from '@babylonjs/core';
 import type { Elimination, PlayerState, Snapshot } from '../../shared/protocol';
 import { playerColor } from '../ui/teamColors';
 import { CharacterAssetLibrary, type CharacterInstance } from './CharacterAsset';
@@ -15,6 +15,7 @@ import type { MeleeClipName, MeleeStage } from './melee/MeleeAnimation';
 import { MeleeTrails, trailPlan } from './melee/MeleeTrail';
 import { presentedAction, ShotTimeline } from './RemoteTimeline';
 import type { MaterialLibrary } from '../rendering/MaterialLibrary';
+
 import { WEAPONS, type WeaponId, type WeaponState } from '../weapons/Weapon';
 import { MOVEMENT, PLAYER_MAX_HEALTH } from '../config/constants';
 import { LEAN_CAMERA_ANGLE, leanOffset } from '../../shared/lean';
@@ -23,6 +24,8 @@ import {hashSeed} from './LimpBody';
 import type {CollisionWorld} from '../physics/CollisionWorld';
 import type {AimTarget} from '../player/AimAssist';
 import {extrapolatedPosition} from '../network/remoteMotion';
+
+interface LabelView {camera:Camera;eye:Vector3;forward:Vector3;planes:Plane[];viewport:Viewport;width:number;height:number}
 
 interface Sample { at: number; player: PlayerState }
 interface Avatar {
@@ -98,9 +101,17 @@ export class RemotePlayers {
     // Read actual animated bone positions after the engine evaluates this frame.
     scene.onBeforeAnimationsObservable.add(() => { for (const a of this.avatars.values()) { if(a.character&&!a.death)a.root.scaling.y=1; a.weapon?.restore(); a.character?.restoreLean(); } });
     scene.onAfterAnimationsObservable.add(() => {
+      if(!this.avatars.size){this.silhouettes?.update(this.outlinesEnabled&&this.presenting);return;}
       const camera = scene.activeCamera;
+      camera?.getViewMatrix();camera?.getProjectionMatrix();
+      camera?.computeWorldMatrix();
       const planes = camera ? Frustum.GetPlanes(camera.getTransformationMatrix()) : null;
       const eye = camera?.globalPosition;
+      // Read CSS layout once, before any avatar label writes. Re-reading it
+      // after each label mutation forces layout once per visible player.
+      const engine=scene.getEngine(),canvas=engine.getRenderingCanvas();
+      const width=canvas?.clientWidth||engine.getRenderWidth(),height=canvas?.clientHeight||engine.getRenderHeight();
+      const view:LabelView|null=camera&&planes&&eye?{camera,eye,planes,width,height,viewport:camera.viewport.toGlobal(width,height),forward:camera.getForwardRay().direction}:null;
       for (const [id, a] of this.avatars) {
         a.character?.applyLean();
         if(a.death&&!a.death.vanish)a.character?.poseDeath(a.death.elapsed,a.death.motion.angle,a.death.axis);
@@ -114,7 +125,7 @@ export class RemotePlayers {
         // body, hands and held model together. Nonuniform pre-IK scale twists grips.
         if(a.character&&!a.death){a.root.scaling.y=a.visualScaleY;a.root.computeWorldMatrix(true);}
         this.trail(a, id, eye);
-        this.presentation(a, this.dt);
+        this.presentation(a, this.dt,view);
       }
       this.silhouettes?.update(this.outlinesEnabled && this.presenting);
     });
@@ -409,7 +420,9 @@ export class RemotePlayers {
         a.correction=error.length()<1.5?{x:error.x,y:error.y,z:error.z}:undefined;
       }
       if(a.correction){const decay=Math.exp(-Math.max(0,dt)*24);a.correction.x*=decay;a.correction.y*=decay;a.correction.z*=decay;
-        const offset=this.collisionWorld?.moveCylinder(position.x,position.z,a.correction.x,a.correction.z,MOVEMENT.radius,position.y+MOVEMENT.stepHeight,position.y+a.height);
+        const grounded=(predicted?n:k<.5?m:n).grounded;
+        const offset=this.collisionWorld?.moveCylinder(position.x,position.z,a.correction.x,a.correction.z,MOVEMENT.radius,
+          position.y+(grounded?MOVEMENT.stepHeight:.00001),position.y+a.height);
         position.x=offset?.x??position.x+a.correction.x;position.z=offset?.z??position.z+a.correction.z;
         // Vertical corrections stay on the actual interpolated floor/ceiling band.
       }
@@ -453,22 +466,15 @@ export class RemotePlayers {
         velocity: animationVelocity(m, n, (newer.at - older.at) / 1000, k) }, dt);
     }
   }
-  private presentation(a: Avatar, dt: number): void {
+  private presentation(a: Avatar, dt: number,view:LabelView|null): void {
     if (a.death || !a.root.isEnabled()) { a.label.hidden = true; return; }
-    const cam = this.scene.activeCamera;
-    if (!cam) return;
-    cam.computeWorldMatrix();
-    const engine = this.scene.getEngine();
-    const canvas = engine.getRenderingCanvas();
-    const width = canvas?.clientWidth || engine.getRenderWidth(), height = canvas?.clientHeight || engine.getRenderHeight();
-    const eye = cam.globalPosition;
+    if (!view) return;
+    const {camera:cam,eye,forward,planes,viewport,width,height}=view;
     const head = a.character?.headPosition() ?? a.root.position.add(new Vector3(0, a.height + .14, 0));
-    const screen = Vector3.Project(head, Matrix.IdentityReadOnly, cam.getTransformationMatrix(), cam.viewport.toGlobal(width, height));
-    const forward = cam.getForwardRay().direction;
+    const screen = Vector3.Project(head, Matrix.IdentityReadOnly, cam.getTransformationMatrix(), viewport);
     const inView = Vector3.Dot(head.subtract(eye), forward) > .1 && screen.z >= 0 && screen.z <= 1
       && screen.x >= 0 && screen.x <= width && screen.y >= 0 && screen.y <= height;
     const distance = Vector3.Distance(eye, head);
-    const planes = Frustum.GetPlanes(cam.getTransformationMatrix());
     const bodyInView = a.meshes.some((mesh) => { mesh.computeWorldMatrix(); return mesh.isInFrustum(planes); });
     // A scoped torso can be visible while its head marker is above the viewport.
     // Do not use the name anchor to decide whether the body outline can render.

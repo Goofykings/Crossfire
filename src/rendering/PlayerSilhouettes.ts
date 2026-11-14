@@ -1,6 +1,7 @@
 import { Color3, Color4, Effect, Frustum, PostProcess, RenderTargetTexture, StandardMaterial, Texture,
   type AbstractMesh, type Camera, type Scene } from '@babylonjs/core';
 import { WEAPON_RENDER_GROUP } from '../weapons/WeaponView';
+import {batchSilhouetteGeometry} from './SilhouetteGeometry';
 
 // One union mask, independent of material/part boundaries. An inward 1.5 CSS-pixel
 // border never expands concealed pixels around a wall or onto the crosshair gun.
@@ -42,7 +43,10 @@ export class PlayerSilhouettes {
   private enabled = false;
   private saturation=1;
   private submittedOccluders=0;
-  constructor(private readonly scene: Scene, private readonly camera: Camera) {
+  private readonly renderList:AbstractMesh[]=[];
+  private staticBatches:AbstractMesh[]=[];
+  private staticSources=0;
+  constructor(private readonly scene: Scene, private readonly camera: Camera,private readonly batchStatic=true) {
     const flat = (name: string, color: Color3) => {
       const m = new StandardMaterial(name, scene);
       m.disableLighting = true; m.emissiveColor = color; m.diffuseColor = Color3.Black();
@@ -73,8 +77,11 @@ export class PlayerSilhouettes {
     camera.detachPostProcess(this.composite);
   }
   setWorld(meshes: readonly AbstractMesh[]): void {
+    this.releaseBatches();
     this.occluders = meshes.filter((m) => (m.metadata?.canonical || m.renderingGroupId === WEAPON_RENDER_GROUP)
       && (m.material?.alpha ?? 1) >= .99);
+    if(this.batchStatic){const batch=batchSilhouetteGeometry(this.scene,this.occluders,this.world);this.staticBatches=batch.meshes;this.staticSources=batch.sources.size;
+      this.occluders=[...this.occluders.filter(m=>!batch.sources.has(m)),...batch.meshes];}
     for (const m of this.occluders) this.mask.setMaterialForRendering(m, this.world);
   }
   set(meshes: readonly AbstractMesh[], friendly: boolean, visible: boolean): void {
@@ -91,24 +98,31 @@ export class PlayerSilhouettes {
     // ordering only when needed, before this frame's camera pass is prepared.
     this.enabled = enabled && this.players.size > 0;
     if(this.grading){if(this.camera._postProcesses.filter(p=>p!==null).at(-1)!==this.composite)this.keepLast();}
-    else this.camera.detachPostProcess(this.composite);
+    else if(this.camera._postProcesses.includes(this.composite))this.camera.detachPostProcess(this.composite);
     const targets = this.scene.customRenderTargets;
     const index = targets.indexOf(this.mask);
     if (this.enabled) {
       // An explicit RTT renderList bypasses Babylon's normal frustum culling.
       // Keep the exact same depth mask while avoiding off-camera world draws.
       const planes=Frustum.GetPlanes(this.camera.getTransformationMatrix());
-      const visible=this.occluders.filter(m=>{
-        if(!m.isEnabled()||!m.isVisible)return false;
+      // Babylon observes push/splice on an assigned RTT list. Refilling from
+      // empty with push dirties lighting defines on EVERY scene mesh each frame.
+      // Indexed writes + truncation reuse storage without those notifications;
+      // this color/depth mask does not change any lighting/shadow capability.
+      let count=0;
+      for(const m of this.occluders){
+        if(!m.isEnabled()||!m.isVisible)continue;
         m.computeWorldMatrix(); // Held weapons can move before the main scene evaluates its meshes.
-        return m.isInFrustum(planes);
-      });
-      this.submittedOccluders=visible.length;
-      this.mask.renderList = [...visible, ...this.players.keys()];
+        if(m.isInFrustum(planes))this.renderList[count++]=m;
+      }
+      this.submittedOccluders=count;
+      for(const mesh of this.players.keys())this.renderList[count++]=mesh;
+      this.renderList.length=count;
+      this.mask.renderList = this.renderList;
       if (index < 0) targets.push(this.mask);
     } else {
       if (index >= 0) targets.splice(index, 1);
-      this.mask.renderList = [];
+      this.renderList.length=0;this.mask.renderList = this.renderList;
       this.submittedOccluders=0;
     }
   }
@@ -134,9 +148,10 @@ export class PlayerSilhouettes {
     }
     return points;
   }
-  inspect() { return { enabled: this.enabled, players: this.players.size, occluders: this.occluders.length, submittedOccluders:this.submittedOccluders, size: this.mask.getSize(), saturation:this.saturation, passes: this.grading?1:0,
+  inspect() { return { enabled: this.enabled, players: this.players.size, occluders: this.occluders.length, submittedOccluders:this.submittedOccluders, staticBatches:this.staticBatches.length,staticSources:this.staticSources, size: this.mask.getSize(), saturation:this.saturation, passes: this.grading?1:0,
     last: !this.grading||this.camera._postProcesses.filter((p) => p !== null).at(-1) === this.composite,
     chain: this.camera._postProcesses.filter((p) => p !== null).map((p) => p.name) }; }
-  clear(): void { this.saturation=1;this.players.clear(); this.occluders = []; this.update(false); this.mask.renderList = []; }
+  private releaseBatches():void{for(const mesh of this.staticBatches)mesh.dispose();this.staticBatches=[];this.staticSources=0;}
+  clear(): void { this.saturation=1;this.players.clear(); this.occluders = []; this.update(false); this.mask.renderList = [];this.releaseBatches(); }
   dispose(): void { this.clear(); this.composite.dispose(); this.mask.dispose(); this.world.dispose(); this.red.dispose(); this.blue.dispose(); }
 }

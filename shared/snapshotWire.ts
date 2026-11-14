@@ -5,16 +5,16 @@ const gunKeys=['ammo','ads','action','progress','time','duration','cues','cooldo
 const meleeKeys=['phase','stage','startedAt','sequence','contactDone','buffered','comboAt','toggleHeld','triggerHeld'] as const;
 const record=(v:unknown):v is Record<string,unknown>=>!!v&&typeof v==='object'&&!Array.isArray(v);
 const vectorKeys=['x','y','z'] as const;
-const quantize=(v:unknown):unknown=>typeof v==='number'&&Number.isFinite(v)&&!Number.isInteger(v)?Math.round(v*10000)/10000:v;
 
 /** Independent snapshots: no delta chain to lose during stalls or reconnects.
- * Arrays remove repeated hot-path field names; pose precision remains submillimetre. */
+ * Arrays remove repeated hot-path field names. Simulation checkpoints are lossless:
+ * rounding even a timer changes coyote/jump/slide/cooldown threshold decisions. */
 export function encodeServerMessage(message:ServerMessage,compact=false):string {
  if(!compact||!('snapshot'in message))return JSON.stringify(message);
  const players=message.snapshot.players.map(p=>{
   const m=p.motion,c=p.combat;
-  return {...p,motion:[...vectorKeys.map(k=>quantize(m.position[k])),...vectorKeys.map(k=>quantize(m.velocity[k])),...motionKeys.map(k=>quantize(m[k]??false))],
-   combat:[c.gun?gunKeys.map(k=>k==='cues'?c.gun![k]:quantize(c.gun![k])):null,c.melee?meleeKeys.map(k=>c.melee![k]):null,c.triggerHeld,c.reloadHeld,c.aimHeld,c.grenadeHeld]};
+  return {...p,motion:[...vectorKeys.map(k=>m.position[k]),...vectorKeys.map(k=>m.velocity[k]),...motionKeys.map(k=>m[k]??false)],
+   combat:[c.gun?gunKeys.map(k=>c.gun![k]):null,c.melee?meleeKeys.map(k=>c.melee![k]):null,c.triggerHeld,c.reloadHeld,c.aimHeld,c.grenadeHeld]};
  });
  return JSON.stringify({...message,compact:1,snapshot:{...message.snapshot,players}});
 }

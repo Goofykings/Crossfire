@@ -28,6 +28,14 @@ it('snapshot gaps use bounded velocity prediction and never cross a solid wall',
  world.add({c:[.8,1,0],h:[.1,1,2]});
  expect(extrapolatedPosition(m,100,world).x).toBeLessThan(.37);
 });
+it('remote airborne extrapolation uses the foot collision band and cannot step upward into a low ledge',()=>{
+ const world=new CollisionWorld(),p=new PlayerController(world);p.position.y=.5;
+ const m=p.capture();m.grounded=false;m.velocity={x:4.7,y:-1,z:0};
+ world.add({c:[1,.35,0],h:[.3,.35,2]});
+ const extrapolated=extrapolatedPosition(m,100,world);
+ expect(extrapolated.x).toBeLessThanOrEqual(.360001);
+ expect(extrapolated.y).toBeLessThanOrEqual(m.position.y);
+});
 it('historical hits test the displayed body, clamp time claims and never mix lives or maps',()=>{
  const p=new PlayerController(new CollisionWorld()),history=new MotionHistory();p.teleport({x:0,y:0,z:-5});
  const old=p.capture();history.record(1000,1,1,old);p.position.x=1.2;history.record(1100,1,1,p.capture());

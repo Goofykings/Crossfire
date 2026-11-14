@@ -85,7 +85,19 @@ test('rooms: 2, 6 and 10 real clients, simultaneous rooms and movement acknowled
  const six=await h.create(tokens[0],{maxPlayers:6}),peers=[];
  async function add(ad,token){const c=await h.open(ad,token);assert.equal(c.welcome.type,'welcome');await h.spawn(c);peers.push(c);return c;}
  await add(six,tokens[0]);await add(await h.admission(tokens[1],{roomId:six.room.id}),tokens[1]);
- async function exercise(group,ms){const end=Date.now()+ms;while(Date.now()<end){for(const c of group)frames(c,{yaw:Math.sin(Date.now()/1000)*.1,x:Math.floor(Date.now()/500)%2?.3:-.3});await delay(50);}await Promise.all(group.map(c=>ack(c)));for(const c of group)assert.equal(c.ws.readyState,1);}
+ async function exercise(group,ms){
+  const check=c=>{const error=c.messages.find(m=>m.type==='error');assert.equal(error,undefined,JSON.stringify(error));assert.equal(c.ws.readyState,1);};
+  const end=Date.now()+ms;
+  while(Date.now()<end){
+   for(const c of group){check(c);
+    // Match the real transport's unchanged 48-frame admission window. A slow
+    // authority must apply backpressure, rather than receive a fixture flood.
+    if(c.seq-self(c).ack+6<=48)frames(c,{yaw:Math.sin(Date.now()/1000)*.1,x:Math.floor(Date.now()/500)%2?.3:-.3});
+   }
+   await delay(50);
+  }
+  await Promise.all(group.map(c=>ack(c)));for(const c of group)check(c);
+ }
  await exercise(peers,700);for(let i=2;i<6;i++)await add(await h.admission(tokens[i],{roomId:six.room.id}),tokens[i]);await exercise(peers,1700);
  const ten=await h.create(tokens[6],{name:'Ten players',maxPlayers:10,mapId:'modern-city',mode:'teams'});await add(ten,tokens[6]);for(let i=7;i<16;i++)await add(await h.admission(tokens[i],{roomId:ten.room.id}),tokens[i]);
  await exercise(peers,3500);for(const [ad,count]of [[six,6],[ten,10]]){const state=await h.room(ad.room.id).snapshotForTest();assert.equal(state.players.length,count);assert.equal(new Set(state.players.map(p=>p.id)).size,count);assert.ok(state.players.every(p=>p.alive&&p.ack>0));}

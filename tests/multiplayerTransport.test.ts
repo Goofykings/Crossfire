@@ -35,11 +35,11 @@ const snapshot = (p: PlayerState): Snapshot => ({ result: null, grenades: [], ex
   mapVersion: 'fixture', serverTime: Date.now(), match: { mode: 'ffa', endsAt: Date.now() + 600000, teamScores: null }, players: [p] });
 let client: MultiplayerClient | undefined;
 afterEach(() => { client?.disconnect(); client = undefined; vi.useRealTimers(); vi.unstubAllGlobals(); });
-async function connect(documentFixture?: object) {
+async function connect(documentFixture?: object, diagnostics=false) {
   vi.useFakeTimers(); vi.stubGlobal('window', globalThis); vi.stubGlobal('WebSocket', SocketFixture);
   if (documentFixture) vi.stubGlobal('document', documentFixture);
   SocketFixture.instances = [];
-  client = new MultiplayerClient('ws://127.0.0.1:8787/ws');
+  client = new MultiplayerClient('ws://127.0.0.1:8787/ws','Private Test Username',{diagnostics});
   const ready = client.connect(), socket = SocketFixture.latest, p = player();
   socket.onopen?.();
   socket.receive({ v: PROTOCOL_VERSION, type: 'welcome', selfId: p.id, resumeToken: 'a'.repeat(64), resumed: false, snapshot: snapshot(p) });
@@ -47,6 +47,56 @@ async function connect(documentFixture?: object) {
   return { socket, p, client };
 }
 const frames = (s: SocketFixture) => s.sent.filter((m) => m.type === 'input').flatMap((m) => m.frames!);
+it('downloadable telemetry never includes profile/session credentials, usernames or raw payloads',async()=>{
+ const {client,socket,p}=await connect(undefined,true);const name='Private Test Username';
+ p.name=name;socket.receive({v:PROTOCOL_VERSION,type:'snapshot',snapshot:snapshot(p)});
+ client.appliedSnapshot(client.latest!);
+ const report=client.diagnosticReport(),json=JSON.stringify(report);
+ expect(json).not.toContain('a'.repeat(64));expect(json).not.toContain(name);expect(json).not.toContain('resumeToken');
+ expect(json).not.toContain('profileToken');expect(json).not.toContain('players');expect(json).not.toContain('roomTicket');
+ expect(report.telemetry.enabled).toBe(true);expect(report.appliedSnapshotAgeMs).toBeGreaterThanOrEqual(0);
+});
+it('flushes movement starts, stops and stance edges without waiting for the 50 ms batch timer',async()=>{
+ const {client,socket}=await connect();
+ for(const intent of [{...NO_INTENT,z:1},{...NO_INTENT},{...NO_INTENT,crouch:true},{...NO_INTENT,lean:1 as const}]){
+  const before=frames(socket).length;client.fixedInput(controller,intent);vi.advanceTimersByTime(1);
+  expect(frames(socket).length).toBe(before+1);
+ }
+});
+it('sends a movement release even when collision already stopped the player',async()=>{
+ const {client,socket}=await connect(),local=new PlayerController(new CollisionWorld());
+ local.grounded=true;local.position.y=0;local.velocity.x=local.velocity.y=local.velocity.z=0;
+ client.fixedInput(local,{...NO_INTENT,z:1});vi.advanceTimersByTime(1);
+ expect(frames(socket)).toHaveLength(1);
+ client.fixedInput(local,{...NO_INTENT});vi.advanceTimersByTime(1);
+ expect(frames(socket)).toHaveLength(2);expect(frames(socket)[1]).toMatchObject({intent:{x:0,z:0}});
+ client.fixedInput(local,{...NO_INTENT});vi.advanceTimersByTime(1);
+ expect(frames(socket)).toHaveLength(2);
+});
+it('sends a quick crouch release even when the predicted body is already upright',async()=>{
+ const {client,socket}=await connect(),world=new CollisionWorld();world.add({c:[0,-1,0],h:[20,1,20]});
+ const local=new PlayerController(world);local.teleport({x:0,y:0,z:0});
+ local.fixedUpdate(FIXED_DT,{...NO_INTENT,crouch:true});client.fixedInput(local,{...NO_INTENT,crouch:true});vi.advanceTimersByTime(1);
+ expect(local.crouch).toBeGreaterThan(0);
+ local.fixedUpdate(FIXED_DT,NO_INTENT);expect(local.crouch).toBe(0);
+ client.fixedInput(local,NO_INTENT);vi.advanceTimersByTime(1);
+ expect(frames(socket)).toHaveLength(2);expect(frames(socket)[1]).toMatchObject({intent:{crouch:false}});
+});
+it('an exact authoritative checkpoint preserves the existing render interpolation instead of nudging the camera',async()=>{
+ const {client,p}=await connect(),world=new CollisionWorld();world.add({c:[0,-1,0],h:[20,1,20]});
+ const local=new PlayerController(world);local.teleport({x:0,y:0,z:0});
+ for(let i=0;i<12;i++)local.fixedUpdate(FIXED_DT,{...NO_INTENT,z:1});
+ const before=local.interpolated(.4,{x:0,y:0,z:0});
+ p.motion=local.capture();client.reconcile(local,snapshot(p));
+ expect(local.interpolated(.4,{x:0,y:0,z:0})).toEqual(before);
+});
+it('does not replay an identical checkpoint twice, but still accepts a genuine authoritative correction',async()=>{
+ const {client,p}=await connect(),local=new PlayerController(new CollisionWorld());p.motion=local.capture();
+ const checkpoint=snapshot(p);client.reconcile(local,checkpoint);const count=client.inspect().corrections.count;
+ local.yaw=.25;client.reconcile(local,checkpoint);expect(client.inspect().corrections.count).toBe(count);
+ const changed=structuredClone(checkpoint);changed.players[0].motion.position.x=2;
+ client.reconcile(local,changed);expect(local.position.x).toBe(2);expect(local.yaw).toBe(.25);
+});
 it('flushes combat edges before the 20 Hz batch timer and tags the displayed timeline',async()=>{
  const {client,socket}=await connect();
  const shown=client.presentationTime();

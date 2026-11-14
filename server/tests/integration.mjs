@@ -204,20 +204,34 @@ test('Public room: real Workers runtime and real WebSocket clients', { timeout: 
     });
     await t.test('slide-to-jump is accepted and synchronized with cooldown and momentum', async () => {
       const c = await open(), id = c.welcome.selfId;
+      const room=testRoom(mf,'public-main');
+      try {
+      await room.observeNextJumpForTest(id);
       const yaw = c.welcome.snapshot.players.find((p) => p.id === id).motion.yaw;
       const mark = b.messages.length;
       c.send({ type: 'input', mapVersion: c.welcome.snapshot.mapVersion,
         frames: Array.from({ length: 12 }, (_, i) => ({ ...frame(i + 1, yaw), intent: { ...frame(i + 1).intent, slide: true } })) });
       const active = await b.wait((m) => m.type === 'snapshot' && m.snapshot.players.some((p) => p.id === id && p.ack >= 12 && p.motion.slideRemaining > 0), mark);
       const before = active.snapshot.players.find((p) => p.id === id).motion;
+      // Exercise a real delayed jump command. Slide speed legitimately decays
+      // during this authoritative state progression; it is not lost jump momentum.
+      await b.wait(m=>m.type==='snapshot'&&m.snapshot.players.some(p=>p.id===id&&p.motion.slideRemaining>0&&p.motion.slideRemaining<before.slideRemaining-.1),mark);
       c.send({ type: 'input', mapVersion: c.welcome.snapshot.mapVersion,
         frames: [{ ...frame(13, yaw), intent: { ...frame(13).intent, slide: true, jumpPressed: true } }] });
       const airborne = await b.wait((m) => m.type === 'snapshot' && m.snapshot.players.some((p) => p.id === id && p.ack >= 13 && !p.motion.grounded), mark);
       const motion = airborne.snapshot.players.find((p) => p.id === id).motion;
       assert.equal(motion.slideRemaining, 0); assert.ok(motion.slideCooldown > .7);
-      assert.ok(Math.hypot(motion.velocity.x, motion.velocity.z) > Math.hypot(before.velocity.x, before.velocity.z) - .2);
+      const jump=await room.observedJumpForTest();assert.equal(jump.ack,13);
+      assert.ok(jump.before.slideRemaining>0);assert.equal(jump.after.slideRemaining,0);assert.equal(jump.after.grounded,false);
+      const speed=m=>Math.hypot(m.velocity.x,m.velocity.z);
+      assert.ok(speed(jump.after)>speed(jump.before)-.2,JSON.stringify(jump));
+      console.info('Slide-jump timing regression',JSON.stringify({observedSpeedDrop:speed(before)-speed(motion),actualJumpSpeedDrop:speed(jump.before)-speed(jump.after)}));
       assert.ok(Math.hypot(motion.velocity.x, motion.velocity.z) <= 7.81);
-      c.send({ type: 'leave' }); await delay(100);
+      } finally {
+        room[Symbol.dispose]?.();
+        if(c.ws.readyState===WebSocket.OPEN){const leaveMark=b.messages.length;c.send({type:'leave'});
+          await b.wait(m=>m.type==='left'&&m.id===id,leaveMark);}
+      }
     });
     await t.test('replayed input is rejected without granting extra simulation', async () => {
       const mark = a.messages.length;

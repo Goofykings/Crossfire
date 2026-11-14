@@ -1,5 +1,5 @@
 /** Actual WebGL cosmetic audit, with a local Vite server owned/closed by this script. */
-import fs from 'node:fs';import assert from 'node:assert/strict';import {build,preview} from 'vite';import puppeteer from 'puppeteer-core';
+import fs from 'node:fs';import assert from 'node:assert/strict';import {execFileSync} from 'node:child_process';import {build,preview} from 'vite';import puppeteer from 'puppeteer-core';
 const out='test-results/cosmetic-compatibility',diagnose=process.argv.includes('--diagnose'),contexts=process.argv.includes('--contexts'),animations=process.argv.includes('--animations');fs.mkdirSync(out,{recursive:true});let vite,browser;
 try{
  if(!process.argv.includes('--reuse')){console.log('Building isolated audit');await build({configFile:false,base:'/',logLevel:'warn',build:{outDir:'.cache/cosmetic-compatibility-dist',rolldownOptions:{input:'tools/cosmetic-compatibility-lab.html'}}});}
@@ -38,4 +38,8 @@ try{
   }
  }
  fs.writeFileSync(`${out}/${animations?'animations':contexts?'contexts':diagnose?'baseline':'audit'}.json`,JSON.stringify({items:items.length,report,errors},null,2));assert.deepEqual(errors,[]);console.log('PASS asset/shader audit, samples '+report.length);
-}finally{await browser?.close();if(vite)await new Promise(resolve=>vite.httpServer.close(resolve));}
+}finally{
+ if(browser){let timer;const closed=await Promise.race([browser.close().then(()=>true,()=>false),new Promise(resolve=>{timer=setTimeout(()=>resolve(false),15000);})]);clearTimeout(timer);
+  if(!closed){console.warn('Bounded cleanup: closing only the owned audit browser');const owned=browser.process();if(owned){try{if(process.platform==='win32')execFileSync('taskkill',['/PID',String(owned.pid),'/T','/F'],{stdio:'ignore'});else owned.kill('SIGKILL');}catch{}for(const stream of owned.stdio)stream?.destroy();owned.unref();}browser.disconnect();}}
+ if(vite){vite.httpServer.closeAllConnections();await new Promise(resolve=>vite.httpServer.close(resolve));}
+}

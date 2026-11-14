@@ -4,6 +4,8 @@ import {CrateSales} from './crateSales';
 import {cratePrice} from '../../shared/crateSales';
 import {advanceZoneControl,createZoneControl,validZoneControl,zoneScores,zoneEligible,type ZoneControlState} from '../../shared/zoneControl';
 import {createMeleeState,stepMelee,meleeBlocked,traceMelee,meleeKnockback,MELEE,validMelee} from '../../shared/melee';
+import {elapsedSimulationTime,simulationSteps} from '../../src/core/simulationBudget';
+import {MovementHold} from '../../shared/movementHold';
 import { traceWeaponShot } from '../../shared/hitscan';
 import {MotionHistory,shotViewTime} from '../../shared/lagCompensation';
 import {encodeServerMessage} from '../../shared/snapshotWire';
@@ -29,7 +31,7 @@ import { GRENADE_SMOKE_MS } from '../../shared/grenades';
 import { EnvironmentSimulation, ENVIRONMENT, validPropState, type PropState, type EnvironmentFrame } from '../../shared/environment';
 import { DurableObject } from 'cloudflare:workers';
 import { FIXED_DT, PLAYER_MAX_HEALTH } from '../../src/config/constants';
-import { NO_INTENT, PlayerController, type ControllerState } from '../../src/player/PlayerController';
+import { PlayerController, type ControllerState } from '../../src/player/PlayerController';
 import { HEARTBEAT_TIMEOUT_MS, NETWORK_HZ, PROTOCOL_VERSION, PUBLIC_ROOM, RESPAWN_DELAY_MS, SESSION_GRACE_MS, parseClientMessage, validMotion, validGun,
   type CombatState, type InputFrame, type PlayerState, type ServerMessage, type Snapshot, type ShotResult } from '../../shared/protocol';
 import { WORLDS, MOVEMENT } from './world';
@@ -103,6 +105,7 @@ interface Entry {
   session: Session;
   controller: PlayerController;
   queue: InputFrame[];
+  movement: MovementHold;
   received: number;
   socket?: WebSocket;
   lastSeen: number;
@@ -411,6 +414,7 @@ export class PublicRoom extends DurableObject<Bindings> {
   private timer: ReturnType<typeof setInterval> | null = null;
   private lastTick = Date.now();
   private accumulator = 0;
+  private lastSimulationMs = 0;
   private lastSave = 0;
   private schedule!: MapSchedule;
   private round!: MapRound;
@@ -585,7 +589,8 @@ export class PublicRoom extends DurableObject<Bindings> {
     const stats = WEAPONS.find((w) => w.id === session.weapon);
     const gun = stats ? new Weapon(stats) : null;
     if (gun && validGun(session.combat.gun)) gun.restore(session.combat.gun);
-    return { history:new MotionHistory(),rtt:0,session, controller, gun, queue: [], received: session.ack, lastSeen: Date.now(), rateAt: Date.now(), rateCount: 0, leanHeld: 0, crouchHeld: session.crouchHeld??false, lastChatAt: 0 };
+    const movement=new MovementHold();movement.reset({crouch:session.crouchHeld??false,slide:controller.slideHeld});
+    return { movement,history:new MotionHistory(),rtt:0,session, controller, gun, queue: [], received: session.ack, lastSeen: Date.now(), rateAt: Date.now(), rateCount: 0, leanHeld: 0, crouchHeld: session.crouchHeld??false, lastChatAt: 0 };
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -628,7 +633,7 @@ export class PublicRoom extends DurableObject<Bindings> {
   }
 
   private simulationNeeded(): boolean {
-    return this.zones!==null&&this.connected().length>0 || this.environment.active>0 || this.grenades.length>0 || [...this.players.values()].some((e) => e.socket && e.session.alive && (e.queue.length > 0 || !!unsafeMovement(e.controller.position, this.activeMap.layout) || !e.controller.grounded
+    return this.accumulator>=FIXED_DT || this.zones!==null&&this.connected().length>0 || this.environment.active>0 || this.grenades.length>0 || [...this.players.values()].some((e) => e.socket && e.session.alive && (e.queue.length > 0 || !!unsafeMovement(e.controller.position, this.activeMap.layout) || !e.controller.grounded
       || (e.controller.crouch !== Number(e.crouchHeld) && (e.crouchHeld || this.activeMap.world.ceilingHeight(
           e.controller.position.x, e.controller.position.z, MOVEMENT.radius * .95,
           e.controller.position.y + MOVEMENT.stepHeight + .01) >= e.controller.position.y + MOVEMENT.standHeight))
@@ -665,6 +670,7 @@ export class PublicRoom extends DurableObject<Bindings> {
   }
 
   async webSocketMessage(socket: WebSocket, raw: string | ArrayBuffer): Promise<void> {
+    const handlerStarted=performance.now();
     this.ensureRound();
     if (typeof raw !== 'string') { this.error(socket, 'invalid_message', 'Expected a JSON message', true); return; }
     const message = parseClientMessage(raw);
@@ -699,7 +705,9 @@ export class PublicRoom extends DurableObject<Bindings> {
     } else if (message.type === 'ping') {
       this.trace('heartbeat', { id: e.session.id, sentAt: message.at, receivedAt: now, lastSeen: e.lastSeen });
       this.attach(e);
-      this.send(socket, { v: PROTOCOL_VERSION, type: 'pong', at: message.at, serverTime: now });
+      this.send(socket, { v: PROTOCOL_VERSION, type: 'pong', at: message.at, serverTime: now,
+        processingMs:Math.max(0,performance.now()-handlerStarted),tickMs:this.lastSimulationMs,
+        tickDebtMs:Math.max(0,this.accumulator*1000),queuedInputs:e.queue.length });
       this.probe(e);
       // Active rooms already publish at 20 Hz. A heartbeat must not trigger an
       // extra full-roster broadcast to every other connection.
@@ -734,7 +742,7 @@ export class PublicRoom extends DurableObject<Bindings> {
       e.history.record(now,e.session.life,this.round.id,e.controller.capture());
       e.session.activityAt=Date.now();e.session.activitySignature=undefined;
       e.session.weapon = message.weapon;
-      e.queue.length = 0;
+      e.queue.length = 0; e.movement.reset({slide:e.controller.slideHeld,crouch:e.crouchHeld,lean:e.leanHeld});
       e.received = e.session.ack;
       this.attach(e);
       await this.persist();
@@ -804,7 +812,7 @@ export class PublicRoom extends DurableObject<Bindings> {
     e.socket = socket;
     e.session.generation++;
     e.session.expiresAt = 0;
-    e.queue.length = 0;
+    e.queue.length = 0; e.movement.reset({slide:e.controller.slideHeld,crouch:e.crouchHeld,lean:e.leanHeld});
     e.session.combat.triggerHeld = e.session.combat.reloadHeld = e.session.combat.aimHeld = false;
     e.session.combat.grenadeHeld = false;
     e.grenadeCharge?.reset();
@@ -904,7 +912,7 @@ export class PublicRoom extends DurableObject<Bindings> {
       e.session.score = 0;
       resetCombo(e.session);
       e.controller = new PlayerController(this.activeMap.world);
-      e.queue.length = 0;
+      e.queue.length = 0; e.movement.reset({slide:e.controller.slideHeld,crouch:e.crouchHeld,lean:e.leanHeld});
       e.received = e.session.ack;
       this.attach(e);
     }
@@ -949,7 +957,7 @@ export class PublicRoom extends DurableObject<Bindings> {
     victim.session.regenAt = null;
     resetCombo(victim.session);
     victim.session.deaths++;victim.session.activityAt=Date.now();
-    victim.queue.length = 0;
+    victim.queue.length = 0; victim.movement.reset();
     victim.received = victim.session.ack;
     const at = Date.now();
     const credited = killer && killer !== victim ? killer : null;
@@ -1095,6 +1103,7 @@ export class PublicRoom extends DurableObject<Bindings> {
   }
 
   private runTick(): void {
+    const simulationStarted=performance.now();
     const now = Date.now();
     this.ensureRound();
     let eliminated = false;
@@ -1105,10 +1114,11 @@ export class PublicRoom extends DurableObject<Bindings> {
       const healed = regenerate(e.session, now);
       regeneratedToFull ||= healed > 0 && e.session.health === PLAYER_MAX_HEALTH;
     }
-    this.accumulator += Math.min(0.25, Math.max(0, (now - this.lastTick) / 1000));
+    this.accumulator += elapsedSimulationTime((now - this.lastTick) / 1000);
     this.lastTick = now;
     // Input volume cannot advance this loop: only elapsed server time can.
-    while (this.accumulator >= FIXED_DT) {
+    const due=simulationSteps(this.accumulator);
+    for(let tick=0;tick<due;tick++) {
       const frames = new Map<Entry, InputFrame | undefined>();
       for (const e of this.players.values()) {
         if (!e.socket || !e.session.alive) continue;
@@ -1117,7 +1127,7 @@ export class PublicRoom extends DurableObject<Bindings> {
         if (frame) { e.controller.yaw = frame.yaw; e.controller.pitch = frame.pitch; e.session.ack = frame.seq; e.leanHeld = frame.intent.lean ?? 0; e.crouchHeld=frame.intent.crouch??false; }
         e.controller.weaponClearance = meleeBlocked(e.session.combat.melee)?null:e.session.weapon;
         const grounded=e.controller.grounded;
-        e.controller.fixedUpdate(FIXED_DT, frame?.intent ?? { ...NO_INTENT, slide: e.controller.slideHeld, lean: e.leanHeld, crouch:e.crouchHeld });
+        e.controller.fixedUpdate(FIXED_DT, e.movement.sample(frame?.intent,now));
         if(frame?.intent.jumpPressed&&grounded&&!e.controller.grounded)e.session.activityAt=now;
         const unsafe = unsafeMovement(e.controller.position, this.activeMap.layout);
         if (unsafe || e.controller.position.y < MOVEMENT.killY) {
@@ -1133,7 +1143,7 @@ export class PublicRoom extends DurableObject<Bindings> {
             if (safe) e.controller.teleport({ x: safe.pos[0], y: safe.pos[1], z: safe.pos[2] }, safe.heading);
           }
           eliminated = true;
-          e.queue.length = 0;
+          e.queue.length = 0; e.movement.reset({slide:e.controller.slideHeld,crouch:e.crouchHeld,lean:e.leanHeld});
           e.received = e.session.ack;
         }
       }
@@ -1187,6 +1197,7 @@ export class PublicRoom extends DurableObject<Bindings> {
       this.broadcast();
       if (this.zoneRevision>this.zoneSaved || this.contributions.dirty || environmentSettled || eliminated || regeneratedToFull || now - this.lastSave >= 1000) { this.lastSave = now; void this.persist(); }
     }
+    this.lastSimulationMs=Math.max(0,performance.now()-simulationStarted);
     if (!this.simulationNeeded()) {
       if (this.timer) clearInterval(this.timer);
       this.timer = null;
@@ -1211,7 +1222,7 @@ export class PublicRoom extends DurableObject<Bindings> {
     }
     this.careerSent.delete(e.session.id);
     e.socket = undefined; e.grenadeCharge?.reset();
-    e.queue.length = 0;
+    e.queue.length = 0; e.movement.reset({slide:e.controller.slideHeld,crouch:e.crouchHeld,lean:e.leanHeld});
     e.session.expiresAt = Date.now() + this.grace;
     if (forget) {
       const live=this.grenades.filter(g=>g.ownerId===e.session.id);

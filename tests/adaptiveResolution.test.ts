@@ -19,3 +19,8 @@ it('bounds Chromebook fill rate independently of screen density while leaving de
  expect(3840*ratio*2160*ratio).toBeCloseTo(1280*720);
  expect(renderPixelRatio(1366,768,2,.85,false)).toBe(1.7);
 });
+it('sustained slow active frames still lower quality instead of resetting every window',()=>{
+ const r=new AdaptiveResolution();for(let i=0;i<60*60;i++)r.sample(1/60);expect(r.scale).toBe(.8);
+ for(let i=0;i<60;i++)r.sample(.15);expect(r.scale).toBe(.5);
+ expect(r.sample(2)).toBe(false);expect(r.scale).toBe(.5);
+});
