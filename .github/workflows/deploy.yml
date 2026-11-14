@@ -37,8 +37,8 @@ jobs:
         env:
           BASE_PATH: ./
           VITE_MULTIPLAYER_PROVIDER: custom
-          VITE_MULTIPLAYER_URL: "wss://handmade-rich-discounted-famous.trycloudflare.com/ws"
-          VITE_CUSTOM_MULTIPLAYER_URL: "wss://handmade-rich-discounted-famous.trycloudflare.com/ws"
+          VITE_MULTIPLAYER_URL: "wss://suspected-occupational-photographer-jason.trycloudflare.com/ws"
+          VITE_CUSTOM_MULTIPLAYER_URL: "wss://suspected-occupational-photographer-jason.trycloudflare.com/ws"
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
