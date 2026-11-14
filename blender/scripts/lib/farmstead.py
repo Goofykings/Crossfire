@@ -124,7 +124,8 @@ def frame_parts(el):
         a0, a1 = o['a']
         sill = o.get('sill', 0.0)
         top = y0 + o['top']
-        bot = y0 + sill
+        # `frame_floor`: door boards start this high (a raised floor or sidewalk covers the bottom of the opening)
+        bot = y0 + (sill if sill > EPS else el.get('frame_floor', 0.0))
         for lo_c, hi_c in ((c1, c1 + FRAME), (c0 - FRAME, c0)):
             def put(a_lo, a_hi, ya, yb):
                 b = [a_lo, ya, lo_c, a_hi, yb, hi_c] if ax == 'x' else [lo_c, ya, a_lo, hi_c, yb, a_hi]

@@ -1,3 +1,90 @@
+# Neon Backstreets polish and upgrade (2026-11-14)
+
+Second pass over the fifth map using the newly added reference images (rainy ramen alleys, vending machine rows, fire escapes over
+wet streets). Full write-up: **`docs/NEON_BACKSTREETS.md`** ("Polish and upgrade pass"). No commit, push or deploy; no protocol,
+weapon, movement or scoring change; spawns, zone squares, stair feet and doorways are untouched.
+
+- **Weak points found (audit):** dim, low-contrast facades with few signs; wet ground that only read as dull streaks; no air between
+  the viewer and the signs; few believable lit props; plain storefronts and interiors; the east lane a 35 m run with one parked
+  car, the crossing and the back alley with long open stretches (measured with a 2 m-cell openness / cover-count map).
+- **Lighting and neon:** 10 vertical blades + 3 boards + an arch sign over the crossing, 9 more tubes (door outlines, interior wall
+  strips), halos +30 % and washes +25 %, light shafts under tall blades and sodium cones under the streetlights, lantern strings inside
+  the ramen shop and over the east lane, 23 cables, tinted fog (density 0.0115) that fades alleys into a glowing haze.
+- **Wet ground:** a second, longer reflection streak under every sign, puddle glints in the colours of the nearest signs, stronger
+  pools, cracked asphalt cards, rain splash sprays (55 % on puddles). Still static (no planar mirror).
+- **Details:** colourful lit vending machines (`vend_*`), phone booth, gacha bank, sandwich board, bamboo pots (all lit props throw
+  pools and halos), 4 solid canvas awnings, red noren with brushed glyphs, 4 visual-only fire escapes, rain-streak / rust / sticker
+  decals, steam from 7 vents, rooftop clutter with aviation lights, strip lights in the mart, laundromat and underpass.
+- **Layout adjustments:** two dumpsters and a barrier in the east lane, a phone booth and a planter in the crossing, a wrapped
+  pallet load and pallets in the back alley, vending banks on the west and east lanes (134 props, was 105).
+- **Collision / geometry fixes found by the audits:** the phone booth's back panel faced the wrong way (see-through), the sandwich
+  board was hollow from the side, the noren needed a back face, the bamboo's collider covered only the pot, and ground cards
+  collided with display floors, slats and room fill (reflection streaks now have their own heights, listed in the doc).
+- **Performance:** 136 draw calls on Low (was 124): can colours share one vertex-coloured material, steam is three tint groups,
+  Chromebook keeps two steam groups at half rate and no splashes. Dev iGPU 1600 x 900: low 65 / medium 57 / high 48 / Chromebook 200
+  fps against Modern City 77 / 64 / 54 / 163 (same run); before the pass 63 / 58 / 49 / 166 against 80 / 66 / 56 / 150.
+- **Chromebook:** reviewed at street, lane and crossing views: all signs, tubes, halos, the arch, lanterns and noren survive; the
+  violet night fill keeps the mood.
+- **Verification:** frontend **1265 passed / 1 existing opt-in skip** (`npx vitest run --maxWorkers=1`, PowerShell, `C:`; the first full run found two real issues, now fixed: a coplanar AC/vent pair on the ramen roof and a bamboo pot on the balcony that blocked the upper-room door for the rifle/sniper walk test); production build, root + Worker typecheck and `assets:verify` pass; backend **105/105**; integrity audit 0 errors (36 climb / 18 walk-through warnings: prop tops and the dumpster/AC colliders that were already shorter than their meshes); real Practice match (5 Advanced bots, 40 s): 22 eliminations, 20/25 cells visited, no page errors.
+- **Remaining limits:** reflections are static streaks; splashes are sprays, not rings; the arch, fire escapes and rooftop clutter
+  have no collision (out of reach); standard presets run about 12-15 % below Modern City on the dev iGPU and physical Chromebooks
+  are unmeasured. Frontend and Worker must be released together (fifth `MAP_ID`, unchanged by this pass).
+
+# New map: Neon Backstreets (2026-11-14)
+
+Fifth map `neon-backstreets`: a compact, rain-soaked city block at night for 1v1 and 2–4 player free-for-all (Teams and Zone
+Control work too). Full write-up, plan, rebuild steps and measurements: **`docs/NEON_BACKSTREETS.md`**. No commit, push or
+deploy; no protocol bump; no combat, weapon, movement or scoring change.
+
+- **Layout concept:** 40 × 40 m (the smallest map). Neon Street (north, one-way road with parked van and car, fenced end with
+  a street vista), a back alley (south), side lanes east and west, and a small central crossing with a kiosk and a lit
+  advertising column. Around it: a walk-through 24/7 Mart (3 doors, aisles, drink fridges), a two-storey Ramen shop (counter, booths,
+  kitchen, interior stair to an upstairs staff lounge whose open windows overlook Neon Street, a balcony over the crossing), a
+  Laundromat (2 doors, washer island, dryers), and a hostel block with an underpass, a roof terrace and a stairwell. Outer ring
+  plus inner cross form several loops, and there are no dead ends. Shops and alleys are close range, the crossing and lanes medium,
+  and Neon Street, the lanes and the back alley are 26–39 m sniper lanes (no axis line crosses the block).
+- **Verticality:** the ramen balcony and the hostel terrace (both 3.55 m) face each other across the crossing. Each has two
+  independent routes up and a drop-down gap.
+- **Spawns:** 13, chosen by a line-of-sight search: no visible pair within 13 m, 6 m apart, all quadrants, clear of the
+  Zone Control squares (A Neon Street, B crossing, C back alley).
+- **Art:** buildings are element-authored with the Farmstead helpers (`tools/neon_structures.py`), so the mesh and collision
+  come from one spec. The dressing (`tools/neon_dressing.py` → `blender/scripts/lib/neon.py`) adds 56 lit signs, 7 blade signs,
+  2 rooftop billboards, 17 neon tubes, 65 paper lanterns and bulbs, 18 overhead cables, pipes, 11 graffiti tags, posters, lit
+  and dark upper windows with AC units, shop displays behind the perimeter glass, a distant skyline, and street vistas
+  beyond three fences. Wet asphalt and concrete, puddles, road paint, crosswalks, drains and manholes are on the ground
+  (`terrain_neon.py`). There are 7 new props (store shelf, drink fridge, washers, dryers, scooter, bicycle, ramen cart). All
+  textures (sign, panel, window and graffiti atlases, glow cards, skyline, night sky) are original and painted by
+  `tools/make_neon_textures.py`.
+- **Lighting approach:** new `unlit` and `additive` material flags (MaterialLibrary). Self-lit tubes, signs, windows and towers;
+  additive halos, wall washes, ground pools, wet reflection streaks, tube ribbons and interior room fill. Light pools from
+  33 sources are baked into vertex colours (with contact darkening). The real lights are a dim blue moon, the night HDR, two
+  neon point lights and the ramen pendant, all inside Babylon's four-light budget. Cosmetic rain (`src/rendering/Rain.ts`, one
+  bounded particle system that never falls through roofs or decks) is off under reduced motion.
+- **Chromebook mode:** keeps every sign, tube, card, bake and window. New optional `EnvironmentConfig.lowSpecAmbient` gives this
+  map a dim violet night fill instead of the daytime hemisphere light. Rain drops to about 25 % of the particles. Geometry,
+  collision and visibility are unchanged.
+- **Integration:** `MAP_IDS`, registry, Worker worlds, Zone Control squares, Blender stage `neon`, interactive props (loose crate
+  and barrel, ramen pendant), menu thumbnail (captured in game), tactical export (`docs/tactical/neon-backstreets.*`). Two shared
+  fixes surfaced by the map: the tactical map no longer draws furniture on upper floors and decks (above 2.5 m) as ground
+  obstacles, and `VisibilityWorld` no longer treats blended materials as occluders. `farmstead.frame_parts` gained an optional
+  `frame_floor` (the default leaves the Farmstead unchanged).
+- **Self-check passes:** several rounds of real-renderer review (high, ultra, Chromebook) fixed: too dusky a night
+  (sky/ambient darkened, glow strengthened), dim shop interiors (room fill), an empty back alley (more neon), a purple veil over
+  windows from inside, and towers competing with the foreground (dimmed). Gameplay fixes: the ramen interior stair (cramped
+  foot, guard blocking side entry, rebuilt with 1.8 m clear), the hostel stairwell (landing plus room for long guns), a planter
+  blocking the laundromat door, booths blocking the ramen door, benches against walls, and stair side guards on the lowest
+  steps that caught a bot's gun (guards now start above 1.2 m). Spawn screening was also improved.
+- **Verification:** frontend **1265 passed / 1 existing opt-in skip** (`npx vitest run --maxWorkers=1`, PowerShell, `C:`); root
+  TypeScript + production build pass; Worker typecheck passes; backend **105/105** (third run; the two previous runs each had one
+  different timing-sensitive grenade test time out, both pinned to other maps; the map's own backend checks passed every time).
+  The new `tests/neonBackstreets.test.ts` (19 tests) and all shared map suites pass for the map, with an integrity audit of 0 errors
+  (28 climb / 5 walk-through warnings: prop tops, pipes). Real Practice match through the UI (5 Advanced bots, 40 s): bots move,
+  cover 20 of 25 cells, stay inside and score 20 eliminations, with no page errors. Perf on the dev iGPU at 1600 × 900: low 63 /
+  medium 58 / high 49 / Chromebook 166 fps (Modern City 80 / 66 / 56 / 150).
+- **Limits / release:** no reference images were attached. Reflections are static, and the rain has no splashes. Standard
+  presets run about 10–20 % behind Modern City, and physical Chromebooks are unmeasured. Frontend and Worker must be released
+  together when authorised (a fifth `MAP_ID` changes the shuffle bags; old clients reject the new map id); the protocol version is unchanged.
+
 # Final full-system performance audit (2026-11-14)
 
 Completed the preceding Chromebook pass's remaining checks/documentation, independently reviewed the resulting networking/rendering code, and completed the final audit. Full acceptance report, file manifest, measured tables, reproduction commands, physical Chromebook procedure and limitations: **`docs/PERFORMANCE_AUDIT.md`**. No commit, push, deployment, endpoint/configuration switch, protocol bump or weapon/physics/scoring change.

@@ -11,8 +11,9 @@ import { WORLDS } from '../server/src/world';
 import { selectSpawn, spawnVisible, type SpawnOccupant } from '../shared/spawns';
 
 const catalog = JSON.parse(readFileSync('public/assets/models/shared/props/props.json','utf8')) as PropCatalog;
-// The farmstead is an open yard, not a compact street map: tests/farmstead.test.ts covers it.
-describe.each(MAP_IDS.filter((id) => id !== 'farmstead'))('%s compact routes', (id) => {
+// The farmstead and Neon Backstreets are element-authored, not street-block maps: tests/farmstead.test.ts and
+// tests/neonBackstreets.test.ts cover them.
+describe.each(MAP_IDS.filter((id) => !['farmstead', 'neon-backstreets'].includes(id)))('%s compact routes', (id) => {
   const layout = JSON.parse(readFileSync(`src/maps/${id}/layout.json`,'utf8')) as MapLayout;
   const collision = JSON.parse(readFileSync(`public/assets/models/${id}/collision.json`,'utf8')) as CollisionFile;
   const environment=JSON.parse(readFileSync(`public/assets/models/${id}/environment.json`,'utf8')) as EnvironmentDefinition;

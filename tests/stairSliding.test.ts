@@ -6,7 +6,7 @@ import { PlayerController, NO_INTENT } from '../src/player/PlayerController';
 import { FIXED_DT } from '../src/config/constants';
 
 // (The farmstead has no street stair flights: tests/farmstead.test.ts walks its stairs.)
-describe.each(MAP_IDS.filter(id=>id!=='farmstead'))('%s slide stair clearance',id=>{
+describe.each(MAP_IDS.filter(id=>!['farmstead', 'neon-backstreets'].includes(id)))('%s slide stair clearance',id=>{
   const layout=JSON.parse(readFileSync(`src/maps/${id}/layout.json`,'utf8'));
   const path=layout.circulationRoutes[0].waypoints as number[][];
   it.each(['rifle','smg','shotgun','sniper'] as const)('%s preserves momentum on both interior flights and the exterior stairs',weapon=>{

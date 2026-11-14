@@ -35,6 +35,14 @@ export type Action =
 
 export class Input {
   private readonly down = new Set<Action>();
+  private readonly controllerDown = new Set<Action>();
+  controllerX = 0;
+  controllerZ = 0;
+  setController(a: Action, held: boolean): void {
+    if (held) { if (!this.controllerDown.has(a) && !this.down.has(a)) this.pressedEdges.add(a); this.controllerDown.add(a); }
+    else this.controllerDown.delete(a);
+  }
+  clearController(): void { this.controllerDown.clear(); this.controllerX = this.controllerZ = 0; }
   private readonly heldControls = new Set<string>();
   private bindings: KeyBindings = defaultBindings();
   private readonly pressedEdges = new Set<Action>();
@@ -70,7 +78,7 @@ export class Input {
       if (this.enabled || action === 'toggleFps') {
         // keep the browser from scrolling / triggering shortcuts while playing
         if (this.enabled) e.preventDefault();
-        if (!e.repeat && !this.down.has(action)) this.pressedEdges.add(action);
+        if (!e.repeat && !this.down.has(action) && !this.controllerDown.has(action)) this.pressedEdges.add(action);
         this.heldControls.add(e.code);
         this.down.add(action);
       }
@@ -84,7 +92,7 @@ export class Input {
       const action = this.actionFor(code);
       if (!action || !this.enabled) return;
       e.preventDefault();
-      if (!this.down.has(action)) this.pressedEdges.add(action);
+      if (!this.down.has(action) && !this.controllerDown.has(action)) this.pressedEdges.add(action);
       this.heldControls.add(code);
       this.down.add(action);
     });
@@ -152,7 +160,7 @@ export class Input {
   }
 
   isDown(a: Action): boolean {
-    return this.enabled && this.down.has(a);
+    return this.enabled && (this.down.has(a) || this.controllerDown.has(a));
   }
 
   /** True once per physical press; cleared by `endFrame`. */
@@ -177,7 +185,7 @@ export class Input {
   /** Inject a held action (automation/tests). */
   simulate(a: Action, held: boolean): void {
     if (held) {
-      if (!this.down.has(a)) this.pressedEdges.add(a);
+      if (!this.down.has(a) && !this.controllerDown.has(a)) this.pressedEdges.add(a);
       this.down.add(a);
     } else {
       this.down.delete(a);
@@ -196,6 +204,7 @@ export class Input {
   clearState(): void {
     this.onClear();
     this.down.clear();
+    this.clearController();
     this.heldControls.clear();
     this.pressedEdges.clear();
     this.mouseDX = this.mouseDY = 0;

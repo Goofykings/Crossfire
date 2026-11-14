@@ -31,7 +31,8 @@ export class VisibilityWorld {
   }
 
   static fromMeshes(all: readonly AbstractMesh[]): VisibilityWorld {
-    const meshes = all.filter((m) => m.metadata?.canonical && m.isEnabled() && m.isVisible && (m.material?.alpha ?? 1) >= .99);
+    // Additive glow cards (Neon Backstreets halos and light spill) are blended, never occluders.
+    const meshes = all.filter((m) => m.metadata?.canonical && m.isEnabled() && m.isVisible && (m.material?.alpha ?? 1) >= .99 && !m.material?.needAlphaBlending());
     const total = meshes.reduce((n, m) => n + (m.getIndices()?.length ?? 0) * 3, 0);
     const triangles = new Float32Array(total);
     let out = 0;

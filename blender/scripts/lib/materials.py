@@ -19,6 +19,8 @@ Fields
   decal      thin layer over another surface: the renderer applies a polygon offset to it
   atlas      the UVs address regions of one image (text signs, posters): the runtime must not flip the image
              vertically (glTF UVs are top-origin; flipping is only harmless for tiling textures)
+  unlit      self-lit surface (neon tubes, lit signs and windows): albedo x tint x vertex colour, no lighting
+  additive   unlit glow card added onto what is behind it (halos, light spill, wet reflections): no depth write, no fog
 """
 from __future__ import annotations
 
@@ -34,6 +36,7 @@ IND_DIR = "assets/textures/industrial-complex/"
 CITY_DIR = "assets/textures/modern-city/"
 WEAPON_DIR = "assets/textures/weapons/"
 FARM_DIR = "assets/textures/farmstead/"
+NEON_DIR = "assets/textures/neon-backstreets/"
 
 MATERIALS: dict[str, dict] = {
     # --- architecture ----------------------------------------------------------------------------
@@ -361,6 +364,32 @@ MATERIALS.update({
 })
 
 
+# --- Neon Backstreets (2026-11) ----------------------------------------------------------------------------------
+# Self-lit materials carry their hue in vertex colours (neon.py), so one material serves every tube colour and the
+# batcher keeps them in one draw. Tints above 1 push the tube cores toward white after tone mapping (and into bloom).
+MATERIALS.update({
+    "neon_tube": {"tint": [2.6, 2.6, 2.6], "roughness": 1.0, "metallic": 0.0, "unlit": True},
+    "neon_signs": {"albedo": NEON_DIR + "neon_signs.jpg", "tile": 1.0, "tint": [1.45, 1.45, 1.45], "unlit": True, "atlas": True},
+    "neon_panels": {"albedo": NEON_DIR + "neon_panels.jpg", "tile": 1.0, "tint": [1.05, 1.05, 1.05], "unlit": True, "atlas": True},
+    "neon_windows": {"albedo": NEON_DIR + "neon_windows.jpg", "tile": 1.0, "tint": [1.0, 1.0, 1.0], "unlit": True, "atlas": True},
+    "neon_skyline": {"albedo": NEON_DIR + "skyline_windows.jpg", "tile": 9.0, "tint": [0.8, 0.8, 0.85], "unlit": True},
+    "neon_glow": {"albedo": NEON_DIR + "glow_soft.png", "tile": 1.0, "tint": [1.0, 1.0, 1.0], "additive": True, "atlas": True},
+    "neon_wet": {"albedo": NEON_DIR + "glow_wet.png", "tile": 1.0, "tint": [1.0, 1.0, 1.0], "additive": True, "atlas": True},
+    # vending machine products: self-lit, the hue lives in vertex colours (props_neon.vend_neon), so one material serves every can
+    "can_lit": {"tint": [0.9, 0.9, 0.9], "roughness": 1.0, "metallic": 0.0, "unlit": True},
+    "lamp_vend": {"tint": [0.5, 0.52, 0.58], "roughness": 0.4, "metallic": 0.0, "emissive": [0.85, 0.9, 1.0]},
+    "neon_beam": {"albedo": NEON_DIR + "beam.png", "tile": 1.0, "tint": [1.0, 1.0, 1.0], "additive": True, "atlas": True},
+    "neon_graffiti": {"albedo": NEON_DIR + "neon_graffiti.png", "tile": 1.0, "roughness": 0.8, "alpha_cutoff": 0.4, "decal": True,
+                      "atlas": True},
+    # wet streets: the scanned asphalt and concrete, darker and glossy enough to pick up the coloured sky glow
+    "neon_asphalt": {"tex": "asphalt", "tile": 4.5, "tint": [0.6, 0.6, 0.66], "roughness": 0.42, "normal": 0.8},
+    "neon_concrete": {"tex": "concrete_dark", "tile": 3.0, "tint": [0.78, 0.78, 0.84], "roughness": 0.5, "normal": 0.8},
+    "neon_puddle": {"tint": [0.025, 0.028, 0.036], "roughness": 0.03, "metallic": 0.0, "decal": True},
+    "roof_tiles_flat": {"tex": "slabs", "tile": 1.4, "tint": [0.6, 0.58, 0.57]},
+})
+_tints("canvas", {"tex": "plaster", "tile": 1.0, "roughness": 0.95}, {"indigo": [0.06, 0.08, 0.26]})
+
+
 def wall_material(palette: str) -> str:
     """Material name for a palette's main wall."""
     pal = PALETTES[palette]
@@ -386,7 +415,7 @@ def manifest() -> dict:
     for name, m in MATERIALS.items():
         e = {"tile": m.get("tile", 1.0), "tint": m.get("tint", [1.0, 1.0, 1.0])}
         e.update(texture_files(name))
-        for k in ("roughness", "metallic", "emissive", "alpha_cutoff", "alpha", "double_sided", "emissive_tex", "decal", "atlas"):
+        for k in ("roughness", "metallic", "emissive", "alpha_cutoff", "alpha", "double_sided", "emissive_tex", "decal", "atlas", "unlit", "additive"):
             if k in m:
                 e[k] = m[k]
         if "normal" in m:

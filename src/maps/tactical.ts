@@ -182,6 +182,8 @@ function center(r: Rect): Point2 {
 }
 
 export function deriveTacticalMap(layout: MapLayout, props: PropCatalog | null, opts: TacticalOptions = {}): TacticalMapData {
+  // above any raised street or terrace (the town's are 1.3 m): only upper floors, lofts and decks
+  const MAX_GROUND_PROP_Y = 2.5;
   const margin = opts.margin ?? 2;
   const minArea = opts.minObstacleArea ?? 1.0;
   const [px0, pz0, px1, pz1] = layout.playArea;
@@ -233,8 +235,9 @@ export function deriveTacticalMap(layout: MapLayout, props: PropCatalog | null, 
   if (props) {
     for (const p of [...layout.props, ...layout.obstacles]) {
       const col = props.props[p.type]?.collider;
-      // Props standing on an underground floor (pos y below the street) are not obstacles on this map.
-      if (!col || col[0] * col[2] < minArea || col[1] < 0.8 || p.pos[1] < -0.01) continue;
+      // Props standing on an underground floor (pos y below the street), or up on a deck or an upper floor, are not
+      // obstacles on this street-level map.
+      if (!col || col[0] * col[2] < minArea || col[1] < 0.8 || p.pos[1] < -0.01 || p.pos[1] > MAX_GROUND_PROP_Y) continue;
       obstacles.push({ type: p.type, poly: orientedRect(p.pos[0], p.pos[2], col[0] / 2, col[2] / 2, p.heading) });
     }
   }

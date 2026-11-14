@@ -3,7 +3,7 @@ import { MultiplayerClient } from '../src/network/MultiplayerClient';
 import { PlayerController, NO_INTENT, type MoveIntent } from '../src/player/PlayerController';
 import { CollisionWorld } from '../src/physics/CollisionWorld';
 import { Weapon, WEAPONS } from '../src/weapons/Weapon';
-import { PROTOCOL_VERSION,parseClientMessage, type PlayerState, type Snapshot } from '../shared/protocol';
+import { PROTOCOL_VERSION,parseClientMessage, type PlayerState, type Snapshot, type InputFrame } from '../shared/protocol';
 import { createMeleeState } from '../shared/melee';
 import { WORLDS } from '../server/src/world';
 import { FIXED_DT } from '../src/config/constants';
@@ -61,6 +61,30 @@ it('flushes movement starts, stops and stance edges without waiting for the 50 m
  for(const intent of [{...NO_INTENT,z:1},{...NO_INTENT},{...NO_INTENT,crouch:true},{...NO_INTENT,lean:1 as const}]){
   const before=frames(socket).length;client.fixedInput(controller,intent);vi.advanceTimersByTime(1);
   expect(frames(socket).length).toBe(before+1);
+ }
+});
+it('batches tiny analog changes without losing their precision or delaying start/stop',async()=>{
+ const {client,socket,p}=await connect();
+ client.fixedInput(controller,{...NO_INTENT,z:.2});vi.advanceTimersByTime(1);expect(frames(socket)).toHaveLength(1);
+ const expected=[{x:0,z:.2}];
+ for(let i=0;i<24;i++){
+  const move={x:i%2?.001:-.001,z:.2+i*.003};expected.push(move);
+  client.fixedInput(controller,{...NO_INTENT,...move});vi.advanceTimersByTime(1000/120);
+ }
+ expect(socket.sent.filter(m=>m.type==='input').length).toBeLessThanOrEqual(6);
+ // Acknowledge only delivered frames, just as authority does. Otherwise the
+ // deliberately bounded 24-frame in-flight window correctly retains frame 25.
+ p.ack=frames(socket).at(-1)!.seq;socket.receive({v:PROTOCOL_VERSION,type:'snapshot',snapshot:snapshot(p)});
+ vi.advanceTimersByTime(50);
+ expect((frames(socket) as InputFrame[]).map(f=>({x:f.intent.x,z:f.intent.z}))).toEqual(expected);
+ client.fixedInput(controller,NO_INTENT);vi.advanceTimersByTime(1);
+ expect(frames(socket).at(-1)).toMatchObject({intent:{x:0,z:0}});
+});
+it('still flushes keyboard diagonals and direction changes immediately',async()=>{
+ const {client,socket}=await connect();
+ for(const move of [{x:0,z:1},{x:1,z:1},{x:1,z:0},{x:-1,z:0}]){
+  const before=frames(socket).length;client.fixedInput(controller,{...NO_INTENT,...move});vi.advanceTimersByTime(1);
+  expect(frames(socket)).toHaveLength(before+1);
  }
 });
 it('sends a movement release even when collision already stopped the player',async()=>{

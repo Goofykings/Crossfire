@@ -110,6 +110,27 @@ export interface UndergroundPassage {
   name?: string;
 }
 
+/** Where cosmetic rain may fall (src/rendering/Rain.ts; written by tools/neon_dressing.py). */
+export interface RainSpec {
+  /** Roofed footprints: no drop starts above them (shops, the underpass, the area outside the block). */
+  roofs: readonly Rect[];
+  /** Raised open surfaces where drops land instead of the street: [rect, height]. */
+  decks: readonly (readonly [Rect, number])[];
+  /** Sidewalks and shop floors (0.15 m): drops end on them, not 15 cm below. */
+  raised: readonly Rect[];
+  /** Puddles [x, z, rx, rz]: rain splashes concentrate on them. */
+  puddles?: readonly (readonly number[])[];
+}
+
+/** One steam vent (src/rendering/Steam.ts; written by tools/neon_dressing.py): position, tint, puffs per second, rise speed, size. */
+export interface SteamSpec {
+  p: readonly [number, number, number];
+  col: readonly [number, number, number];
+  rate: number;
+  rise: number;
+  size: number;
+}
+
 export interface MapLayout {
   id: string;
   name: string;
@@ -143,6 +164,8 @@ export interface MapLayout {
       sections: { id: string; side: string; a: [number, number]; rect: Rect; top: number; seed: number }[];
     };
   };
+  /** Neon Backstreets visual layer (tools/neon_dressing.py); only the rain areas are read at runtime. */
+  neon?: { rain?: RainSpec; steam?: readonly SteamSpec[] } & Record<string, unknown>;
   buildings: Building[];
   walls: { id: string; rect: Rect; height: number; style: string; gates: { rect: Rect }[] }[];
   arches: { id: string; rect: Rect; spring: number; axis: 'x' | 'z' }[];
@@ -205,6 +228,8 @@ export interface EnvironmentConfig {
   fogDensity: number;
   exposure: number;
   contrast: number;
+  /** Chromebook mode replaces image-based lighting with a hemisphere light; night maps keep it dim and coloured. */
+  lowSpecAmbient?: { intensity: number; sky: Vec3Tuple; ground: Vec3Tuple };
 }
 
 /** Everything the engine needs to load and run a map. One entry per map in the registry. */

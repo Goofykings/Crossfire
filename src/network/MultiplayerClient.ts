@@ -469,7 +469,12 @@ export class MultiplayerClient {
       && !intent.aim && !this.lastAim && !intent.lean && !this.lastLean && player.lean === 0
       && !combat.melee && !this.lastCombat.melee && !combat.grenadeCancel && !combat.grenade && !this.lastCombat.grenade && !combat.trigger && !combat.reload && !this.lastCombat.trigger && !this.lastCombat.reload
       && yaw === this.lastYaw && player.pitch === this.lastPitch) return;
-    const movementEdge=intent.x!==this.lastMove.x||intent.z!==this.lastMove.z||!!intent.crouch!==this.lastMove.crouch
+    // Analog magnitude/steering changes stay in the existing 20 Hz batches.
+    // Keep immediate starts/stops and the discrete direction edges used by keys.
+    const directionChanged=intent.x!==this.lastMove.x||intent.z!==this.lastMove.z;
+    const digitalDirections=Number.isInteger(intent.x)&&Number.isInteger(intent.z)&&Number.isInteger(this.lastMove.x)&&Number.isInteger(this.lastMove.z);
+    const movingChanged=(intent.x!==0||intent.z!==0)!==(this.lastMove.x!==0||this.lastMove.z!==0);
+    const movementEdge=movingChanged||(directionChanged&&digitalDirections)||!!intent.crouch!==this.lastMove.crouch
       ||intent.slide!==this.lastSlide||intent.aim!==this.lastAim||(intent.lean??0)!==this.lastLean;
     const urgent=movementEdge||intent.jumpPressed||combat.trigger&&!this.lastCombat.trigger||combat.reload&&!this.lastCombat.reload
       ||combat.melee&&!this.lastCombat.melee||combat.grenade&&!this.lastCombat.grenade||combat.grenadeCancel;

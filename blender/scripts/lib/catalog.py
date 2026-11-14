@@ -76,6 +76,10 @@ PROPS = {
     "flower_box": {"size": [1.44,.68,.48], "collider": [1.44,.42,.48]},
     "vending_machine": {"size": [1.0, 1.95, 0.85], "collider": [1.0, 1.95, 0.85]},
     "vending_machine_blue": {"size": [1.0, 1.95, 0.85], "collider": [1.0, 1.95, 0.85]},
+    "vend_red": {"size": [1.0, 1.95, 0.85], "collider": [1.0, 1.95, 0.85]},
+    "vend_blue": {"size": [1.0, 1.95, 0.85], "collider": [1.0, 1.95, 0.85]},
+    "vend_yellow": {"size": [1.0, 1.95, 0.85], "collider": [1.0, 1.95, 0.85]},
+    "vend_white": {"size": [1.0, 1.95, 0.85], "collider": [1.0, 1.95, 0.85]},
     "wet_floor_sign": {"size": [0.4, 0.67, 0.45], "collider": None},
     "wine_rack": {"size": [2.0, 1.9, 0.5], "collider": [2.0, 1.9, 0.5]},
     "cask": {"size": [1.5, 1.25, 1.25], "collider": [1.5, 1.25, 1.25]},
@@ -195,6 +199,18 @@ PROPS = {
     "hedge_short": {"size": [3, 2.8, 1.4], "collider": [2.6, 2.6, 0.95]},
     "hedge_block": {"size": [4.6, 3.3, 2.3], "collider": [4.2, 3.1, 1.9]},
     "hedge_run": {"size": [5.1, 2.8, 1.4], "collider": [4.7, 2.6, 1]},
+    # --- Neon Backstreets (props_neon.py) ---
+    "store_shelf": {"size": [2.0, 1.45, 0.62], "collider": [2.0, 1.45, 0.62]},
+    "drink_fridge": {"size": [1.6, 2.05, 0.76], "collider": [1.6, 2.05, 0.74]},
+    "washer_row": {"size": [2.4, 1.0, 0.72], "collider": [2.4, 1.0, 0.72]},
+    "dryer_stack": {"size": [2.4, 1.9, 0.72], "collider": [2.4, 1.9, 0.72]},
+    "scooter": {"size": [0.66, 1.18, 1.76], "collider": [0.5, 0.95, 1.6]},
+    "bicycle": {"size": [0.56, 1.02, 1.72], "collider": None},
+    "food_cart": {"size": [1.9, 2.45, 1.05], "collider": [1.9, 1.05, 1.0]},
+    "phone_booth": {"size": [1.04, 2.45, 1.04], "collider": [1.0, 2.45, 1.0]},
+    "gacha_bank": {"size": [1.72, 1.45, 0.5], "collider": [1.7, 1.2, 0.5]},
+    "sandwich_board": {"size": [0.55, 0.9, 0.5], "collider": None},
+    "bamboo_pot": {"size": [0.7, 2.1, 0.7], "collider": [0.6, 2.0, 0.6]},
 }
 
 # Modular kit pieces exported for future maps (not instanced by the European Town layout itself).

@@ -17,6 +17,7 @@ export const ZONE_MAPS:Record<MapId,readonly ZoneDefinition[]>={
  'industrial-complex':[{id:'A',position:[-13,0,-15]},{id:'B',position:[-15,0,19]},{id:'C',position:[17,0,11]}],
  'modern-city':[{id:'A',position:[-15,0,-15]},{id:'B',position:[5,0,19]},{id:'C',position:[21,0,-9]}],
  farmstead:[{id:'A',position:[-33,0,1]},{id:'B',position:[25,0,-39]},{id:'C',position:[29,0,31]}],
+ 'neon-backstreets':[{id:'A',position:[-6.5,0,-16.4]},{id:'B',position:[2.6,0,-0.6]},{id:'C',position:[-10,0,17.6]}],
 };
 export const zoneEligible=(id:MapId):boolean=>ZONE_MAPS[id].length===3;
 export interface ZoneState {

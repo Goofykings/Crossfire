@@ -1805,3 +1805,14 @@ body[data-home-page='leaderboard'] #ui{background:#10192366}
 .network-diagnostics{position:fixed;right:12px;top:12px;z-index:20000;max-width:calc(100vw - 24px);padding:12px;background:#07111be8;color:#e5f4ff;border-radius:8px;pointer-events:none}
 .network-diagnostics pre{margin:0 0 8px;font:11px/1.5 monospace;white-space:pre-wrap}
 .network-diagnostics button{pointer-events:auto;font:12px monospace;padding:6px 12px;color:#fff;background:#2462a0;border:1px solid #ffffff30;border-radius:4px}
+/* Controller focus uses the same controls as mouse/keyboard; it is visible after programmatic focus. */
+.controller-active :is(button,input,select,textarea,a,[role="slider"]):focus {
+  outline: 2px solid #76bfff; outline-offset: 4px;
+}
+.controller-prompt { position:fixed;bottom:12px;left:50%;transform:translateX(-50%);z-index:100;
+  pointer-events:none;color:#dceaff;background:rgba(12,20,32,.72);padding:5px 12px;border-radius:6px;
+  font-size:12px;font-family:inherit;max-width:90vw;text-align:center; }
+.controller-prompt[hidden] { display:none; }
+.controller-help { font-size:12px;line-height:1.5;opacity:.75; }
+.controller-settings > p { max-width:100%;overflow-wrap:anywhere; }
+.controller-settings .control-row { min-height:44px; }

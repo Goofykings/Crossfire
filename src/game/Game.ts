@@ -29,6 +29,9 @@ import { ArcRotateCamera, Color3, Mesh, MeshBuilder, PBRMaterial, Quaternion, En
 import { AudioManager, type SoundName } from '../audio/AudioManager';
 import { FIXED_DT, MAX_FRAME_DT, MOVEMENT, PLAYER_MAX_HEALTH } from '../config/constants';
 import { SettingsStore, effectiveSettings, type Settings } from '../config/settings';
+import { Controller } from '../core/Controller';
+import { ControllerMenu } from '../ui/ControllerMenu';
+import { controllerName } from '../config/controller';
 import { isTextInput } from '../config/keybindings';
 import { GuestProfileStore } from '../config/guestProfile';
 import { LastUsedWeapon } from '../config/lastUsedWeapon';
@@ -94,6 +97,9 @@ export class Game {
   readonly ctx: RenderContext;
   readonly input: Input;
   readonly settings = new SettingsStore();
+  private readonly controller: Controller;
+  private readonly controllerMenu = new ControllerMenu();
+  private readonly controllerPrompt = document.createElement('div');
   private cosmetics:CosmeticsClient|null=null;
   private shownCosmetic='';
   private readonly healthSaturation=new HealthSaturation();
@@ -211,6 +217,13 @@ export class Game {
     this.input = new Input(canvas);
     this.input.setBindings(this.settings.value.keyBindings);
     this.ui = new UI(uiRoot, this.settings, this.audio, this.guestProfile);
+    this.controller = new Controller(this.input, () => this.settings.value.controller);
+    this.controllerPrompt.className = 'controller-prompt'; this.controllerPrompt.hidden = true; uiRoot.append(this.controllerPrompt);
+    this.controller.onMethod = active => { document.body.classList.toggle('controller-active', active); this.controllerPrompt.hidden = !active; };
+    this.controller.onMenu = (pad, dt) => this.controllerMenu.update(pad, dt);
+    this.controllerMenu.onPreview = (x,y,dt) => this.ui.cosmetics.controllerOrbit(x,y,dt);
+    this.controller.onLost = () => { this.input.clearState(); if (this.state === 'playing') this.pausePlay(); };
+    this.ctx.scene.onDisposeObservable.addOnce(() => { this.controller.dispose(); this.controllerPrompt.remove(); });
     this.homeCharacter = new HomeCharacter(uiRoot.querySelector('#menu')!);
     this.materials = new MaterialLibrary(this.ctx.scene);
     this.maps = new MapManager(this.ctx, this.materials, () => graphicsPreset(this.settings.value), !options.multiplayer);
@@ -264,7 +277,7 @@ export class Game {
 
     // Public Play has no silent practice fallback.
     this.input.onWheel=direction=>{if(this.state!=='playing'||!this.weapon.stats.scope||this.weapon.ads<.72||meleeBlocked(this.network?.melee??this.localMelee))return false;this.sniperZoom.scroll(-direction);return true;};
-    this.input.onClear = () => {this.edgesPending={jump:false,fire:false,reload:false,grenade:false};this.meleeTogglePending=false;this.cancelGrenadeCharge();};
+    this.input.onClear = () => {this.controller.release();this.edgesPending={jump:false,fire:false,reload:false,grenade:false};this.meleeTogglePending=false;this.cancelGrenadeCharge();};
     this.ui.onGrenade = (held, cancel) => {
       if (cancel) { this.cancelGrenadeCharge(); return; }
       if (this.state !== 'playing') return;
@@ -289,7 +302,7 @@ export class Game {
     this.ui.onChatClose = () => {
       if (this.state !== 'playing') return;
       this.input.clearState();
-      if (this.options.autoplay) this.input.enabled = true;
+      if (this.options.autoplay || this.controller.active) this.input.enabled = true;
       else void this.input.requestLock().then(() => { if (!this.input.pointerLocked && this.state === 'playing') this.ui.setLockHint(true); });
     };
     this.input.lockListeners.add((locked) => this.onPointerLock(locked));
@@ -574,6 +587,7 @@ export class Game {
           this.stats.hits++;
           if (head) this.stats.headshots++;
           this.ui.hitMarker(head);
+          this.controller.vibrate();
           this.sound(head ? 'hit_head' : 'hit', .65);
           this.lastShot = { weapon: shot.weapon, pellets: WEAPONS.find((w) => w.id === shot.weapon)!.pellets,
             hits: shot.hits.length, damage: shot.hits.reduce((n, h) => n + h.amount, 0), head, target: shot.hits[0].id };
@@ -993,12 +1007,17 @@ export class Game {
     this.cameraRig?.snapFov(this.settings.value.fov);
   }
 
+  private pausePlay(): void {
+    this.state='paused';this.input.enabled=false;this.input.clearState();this.controller.release();this.input.releaseLock();this.ui.show('pause',true);
+  }
+
   private async enterPlay(): Promise<void> {
     if (this.options.multiplayer && !this.network?.latest?.players.find((p) => p.id === this.network?.selfId)?.alive) return;
     this.audio.unlock();
     if(this.state==='start')this.performanceDiagnostics.reset();
     this.preSpawnPaused = false;
     this.cameraRig?.snapFov(this.settings.value.fov);
+    if (this.controller.active) { this.onPointerLock(true); return; }
     await this.input.requestLock();
     if (this.options.multiplayer && !this.network?.latest?.players.find((p) => p.id === this.network?.selfId)?.alive) {
       this.input.releaseLock();
@@ -1029,7 +1048,7 @@ export class Game {
         this.ui.setLockHint(false);
         this.weaponView?.setVisible(true);
       }
-    } else if (this.state === 'playing' && !this.options.autoplay && !this.ui.chatOpen) {
+    } else if (this.state === 'playing' && !this.options.autoplay && !this.ui.chatOpen && !this.controller.active) {
       this.state = 'paused';
       this.input.enabled = false;
       this.ui.show('pause', true);
@@ -1037,6 +1056,7 @@ export class Game {
   }
 
   private quitToMenu(): void {
+    this.controller.release(); this.controllerMenu.reset();
     this.zoneView.clear();this.killBursts?.clear();
     const wasPractice=!!this.practiceSetup||!!this.localPractice;
     this.practiceChallenges?.stop();this.practiceChallenges=null;
@@ -1079,6 +1099,7 @@ export class Game {
   }
 
   private applySettings(raw: Readonly<Settings>, changed: (keyof Settings)[]): void {
+    if(changed.includes('controller'))this.controller.release();
     const v=effectiveSettings(raw);
     if(changed.includes('chromebookMode'))changed=[...new Set([...changed,'resolutionScale','graphicsQuality','shadowQuality'] as (keyof Settings)[])];
     if (changed.includes('keyBindings')) { this.input.setBindings(v.keyBindings); this.ui.setChatBinding(v.keyBindings.chat[0]); }
@@ -1112,6 +1133,21 @@ export class Game {
 
   // --- main loop -------------------------------------------------------------------------------
   private frame(rawDt: number): void {
+    const controllerGameplay=this.state==='playing'&&this.input.enabled&&!this.ui.chatOpen;
+    this.controller.onCapture=this.ui.currentScreen==='settings'&&!this.ui.controllerPanel.element.closest('[hidden]')?this.ui.controllerPanel.capture:null;
+    this.controller.poll(rawDt,controllerGameplay);
+    this.ui.controllerPanel.connection(this.controller.status,this.controller.family);
+    if(this.controller.active&&this.state==='playing'&&!this.input.enabled&&!this.ui.chatOpen)this.onPointerLock(true);
+    if(controllerGameplay&&this.input.consume('pause'))this.pausePlay();
+    if(controllerGameplay&&this.input.consume('toggleFps'))this.settings.update({showFps:!this.settings.value.showFps});
+    if(controllerGameplay&&this.input.consume('chat')){
+      if(this.localPractice||this.network?.state!=='connected')this.ui.showToast('Chat is available in multiplayer','warn');
+      else{this.input.enabled=false;this.input.clearState();this.ui.openChat();this.input.releaseLock();}
+    }
+    if(this.controller.active){const b=this.settings.value.controller.bindings,f=this.controller.family;
+      const prompt=this.state==='playing'?`${controllerName(b.fire,f)} Fire · ${controllerName(b.reload,f)} Reload · ${controllerName(b.pause||'b9',f)} Pause`:`${controllerName('b0',f)} Select · ${controllerName('b1',f)} Back`;
+      if(this.controllerPrompt.textContent!==prompt)this.controllerPrompt.textContent=prompt;
+    }
     if(this.state==='playing')this.performanceDiagnostics.frame(rawDt);
     const frameStarted=this.performanceDiagnostics.start();
     const pending=this.pendingSnapshot;this.pendingSnapshot=null;
@@ -1320,6 +1356,9 @@ export class Game {
     const look = input.takeMouseDelta();
     const manualYaw=player.yaw,manualPitch=player.pitch;
     rig.applyLook(look.dx, look.dy, s.mouseSensitivity, s.invertY, zoom);
+    const [controllerYaw,controllerPitch]=this.controller.takeLook(dt,this.weapon.ads);
+    player.yaw=Math.atan2(Math.sin(player.yaw+controllerYaw),Math.cos(player.yaw+controllerYaw));
+    player.pitch=Math.max(-88*Math.PI/180,Math.min(88*Math.PI/180,player.pitch+controllerPitch));
     if(s.aimAssist&&!blockedMelee){const eye=player.leanEye(),now=performance.now(),assist=this.aimAssist.step({enabled:true,now,dt,yaw:player.yaw,pitch:player.pitch,
       inputYaw:Math.atan2(Math.sin(player.yaw-manualYaw),Math.cos(player.yaw-manualYaw)),inputPitch:player.pitch-manualPitch,eye,
       boosted:this.ui.aimAssistBoosted,targets:this.remotePlayers.aimTargets(this.ui.aimAssistBoosted),canSee:target=>this.remotePlayers.aimVisible(target,eye),firing:input.isDown('fire')||input.wasPressed('fire'),recoiling:rig.recoiling||this.weapon.capture().cooldown>0});
@@ -1328,8 +1367,8 @@ export class Game {
     this.weaponView?.addSway(look.dx, look.dy);
 
     const it = this.intent;
-    it.x = (input.isDown('right') ? 1 : 0) - (input.isDown('left') ? 1 : 0);
-    it.z = (input.isDown('forward') ? 1 : 0) - (input.isDown('back') ? 1 : 0);
+    it.x = Math.max(-1,Math.min(1,(input.isDown('right') ? 1 : 0) - (input.isDown('left') ? 1 : 0)+input.controllerX));
+    it.z = Math.max(-1,Math.min(1,(input.isDown('forward') ? 1 : 0) - (input.isDown('back') ? 1 : 0)+input.controllerZ));
     it.slide = input.isDown('slide');
     it.crouch = input.isDown('crouch');
     // Preserve a quick physical release/repress even when both events fall between

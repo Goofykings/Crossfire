@@ -1,0 +1,9 @@
+{
+ "map": "neon-backstreets",
+ "models": [
+  "terrain.glb"
+ ],
+ "collision": "collision.json",
+ "collisionDebug": "collision_debug.glb",
+ "environment": "environment.json"
+}

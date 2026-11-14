@@ -1,7 +1,7 @@
 {
  "generator": "blender/scripts/generate_all.py",
  "blender": "5.2.3 LTS",
- "generated": "2026-11-13 16:04:38",
+ "generated": "2026-11-14 17:24:53",
  "assets": [
   {
    "path": "assets/characters/player-albedo.png",
@@ -36,7 +36,7 @@
   {
    "path": "assets/materials.json",
    "kind": "materials",
-   "bytes": 64909,
+   "bytes": 68370,
    "description": "Material table (names, texture sets, tiling, tint, PBR factors)",
    "script": "blender/scripts/lib/materials.py"
   },
@@ -403,6 +403,43 @@
    "description": "Roads, sidewalks and curbs, crossings, alleys, plazas, garden walls, railings, overhead wires",
    "script": "blender/scripts/generate_all.py",
    "triangles": 9718
+  },
+  {
+   "path": "assets/models/neon-backstreets/collision.json",
+   "kind": "collision",
+   "bytes": 40321,
+   "description": "488 oriented collision boxes (runtime physics)",
+   "script": "blender/scripts/lib/collision_gen.py"
+  },
+  {
+   "path": "assets/models/neon-backstreets/collision_debug.glb",
+   "kind": "collision-debug",
+   "bytes": 577388,
+   "description": "Collision boxes as meshes for in-game debug view (F2)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 5856
+  },
+  {
+   "path": "assets/models/neon-backstreets/environment.json",
+   "kind": "interactive-definitions",
+   "bytes": 15069,
+   "description": "Shared authored prop bodies, sign hinges and precise stall collision",
+   "script": "blender/scripts/lib/interactive_environment.py"
+  },
+  {
+   "path": "assets/models/neon-backstreets/map-assets.json",
+   "kind": "map-index",
+   "bytes": 181,
+   "description": "List of model files the runtime loads for this map",
+   "script": "blender/scripts/generate_all.py"
+  },
+  {
+   "path": "assets/models/neon-backstreets/terrain.glb",
+   "kind": "map-terrain",
+   "bytes": 5217176,
+   "description": "Night-time city block: wet streets, mart, ramen shop, laundromat, hostel block, neon signs and glow cards",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 88518
   },
   {
    "path": "assets/models/shared/buildings/archway_v1.glb",
@@ -821,6 +858,14 @@
    "triangles": 126
   },
   {
+   "path": "assets/models/shared/props/bamboo_pot.glb",
+   "kind": "prop",
+   "bytes": 69296,
+   "description": "bamboo_pot (0.7 x 2.1 x 0.7 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 660
+  },
+  {
    "path": "assets/models/shared/props/barrel.glb",
    "kind": "prop",
    "bytes": 19524,
@@ -859,6 +904,14 @@
    "description": "bench_modern (1.8 x 0.85 x 0.51 m)",
    "script": "blender/scripts/generate_all.py",
    "triangles": 174
+  },
+  {
+   "path": "assets/models/shared/props/bicycle.glb",
+   "kind": "prop",
+   "bytes": 42784,
+   "description": "bicycle (0.56 x 1.02 x 1.72 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 444
   },
   {
    "path": "assets/models/shared/props/bike_rack.glb",
@@ -1101,12 +1154,28 @@
    "triangles": 134
   },
   {
+   "path": "assets/models/shared/props/drink_fridge.glb",
+   "kind": "prop",
+   "bytes": 124332,
+   "description": "drink_fridge (1.6 x 2.05 x 0.76 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 1460
+  },
+  {
    "path": "assets/models/shared/props/drum_group.glb",
    "kind": "prop",
    "bytes": 66552,
    "description": "drum_group (1.2 x 1 x 1 m)",
    "script": "blender/scripts/generate_all.py",
    "triangles": 1028
+  },
+  {
+   "path": "assets/models/shared/props/dryer_stack.glb",
+   "kind": "prop",
+   "bytes": 22600,
+   "description": "dryer_stack (2.4 x 1.9 x 0.72 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 226
   },
   {
    "path": "assets/models/shared/props/dumpster.glb",
@@ -1205,6 +1274,14 @@
    "triangles": 136
   },
   {
+   "path": "assets/models/shared/props/food_cart.glb",
+   "kind": "prop",
+   "bytes": 49340,
+   "description": "food_cart (1.9 x 2.45 x 1.05 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 488
+  },
+  {
    "path": "assets/models/shared/props/forklift.glb",
    "kind": "prop",
    "bytes": 63708,
@@ -1219,6 +1296,14 @@
    "description": "fridge (0.8 x 1.8 x 0.72 m)",
    "script": "blender/scripts/generate_all.py",
    "triangles": 48
+  },
+  {
+   "path": "assets/models/shared/props/gacha_bank.glb",
+   "kind": "prop",
+   "bytes": 151524,
+   "description": "gacha_bank (1.72 x 1.45 x 0.5 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 1412
   },
   {
    "path": "assets/models/shared/props/gas_cage.glb",
@@ -1421,6 +1506,14 @@
    "triangles": 216
   },
   {
+   "path": "assets/models/shared/props/phone_booth.glb",
+   "kind": "prop",
+   "bytes": 19624,
+   "description": "phone_booth (1.04 x 2.45 x 1.04 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 168
+  },
+  {
    "path": "assets/models/shared/props/pipe_bundle.glb",
    "kind": "prop",
    "bytes": 37516,
@@ -1447,7 +1540,7 @@
   {
    "path": "assets/models/shared/props/props.json",
    "kind": "prop-catalog",
-   "bytes": 20030,
+   "bytes": 22381,
    "description": "Prop sizes and collision boxes used by the runtime",
    "script": "blender/scripts/lib/catalog.py"
   },
@@ -1466,6 +1559,22 @@
    "description": "railing (2 x 1 x 0.08 m)",
    "script": "blender/scripts/generate_all.py",
    "triangles": 240
+  },
+  {
+   "path": "assets/models/shared/props/sandwich_board.glb",
+   "kind": "prop",
+   "bytes": 5480,
+   "description": "sandwich_board (0.55 x 0.9 x 0.5 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 24
+  },
+  {
+   "path": "assets/models/shared/props/scooter.glb",
+   "kind": "prop",
+   "bytes": 23760,
+   "description": "scooter (0.66 x 1.18 x 1.76 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 204
   },
   {
    "path": "assets/models/shared/props/shelving_rack.glb",
@@ -1562,6 +1671,14 @@
    "description": "storage_shelf (2 x 1.9 x 0.5 m)",
    "script": "blender/scripts/generate_all.py",
    "triangles": 900
+  },
+  {
+   "path": "assets/models/shared/props/store_shelf.glb",
+   "kind": "prop",
+   "bytes": 88620,
+   "description": "store_shelf (2 x 1.45 x 0.62 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 960
   },
   {
    "path": "assets/models/shared/props/street_lantern.glb",
@@ -1716,6 +1833,38 @@
    "triangles": 488
   },
   {
+   "path": "assets/models/shared/props/vend_blue.glb",
+   "kind": "prop",
+   "bytes": 58768,
+   "description": "vend_blue (1 x 1.95 x 0.85 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 600
+  },
+  {
+   "path": "assets/models/shared/props/vend_red.glb",
+   "kind": "prop",
+   "bytes": 58768,
+   "description": "vend_red (1 x 1.95 x 0.85 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 600
+  },
+  {
+   "path": "assets/models/shared/props/vend_white.glb",
+   "kind": "prop",
+   "bytes": 58772,
+   "description": "vend_white (1 x 1.95 x 0.85 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 600
+  },
+  {
+   "path": "assets/models/shared/props/vend_yellow.glb",
+   "kind": "prop",
+   "bytes": 58776,
+   "description": "vend_yellow (1 x 1.95 x 0.85 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 600
+  },
+  {
    "path": "assets/models/shared/props/vending_machine.glb",
    "kind": "prop",
    "bytes": 52208,
@@ -1728,6 +1877,22 @@
    "kind": "prop",
    "bytes": 52216,
    "description": "vending_machine_blue (1 x 1.95 x 0.85 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 492
+  },
+  {
+   "path": "assets/models/shared/props/vending_machine_white.glb",
+   "kind": "prop",
+   "bytes": 52220,
+   "description": "vending_machine_white (1 x 1.95 x 0.85 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 492
+  },
+  {
+   "path": "assets/models/shared/props/vending_machine_yellow.glb",
+   "kind": "prop",
+   "bytes": 52224,
+   "description": "vending_machine_yellow (1 x 1.95 x 0.85 m)",
    "script": "blender/scripts/generate_all.py",
    "triangles": 492
   },
@@ -1746,6 +1911,14 @@
    "description": "wardrobe (1.26 x 2.06 x 0.66 m)",
    "script": "blender/scripts/generate_all.py",
    "triangles": 72
+  },
+  {
+   "path": "assets/models/shared/props/washer_row.glb",
+   "kind": "prop",
+   "bytes": 22224,
+   "description": "washer_row (2.4 x 1 x 0.72 m)",
+   "script": "blender/scripts/generate_all.py",
+   "triangles": 240
   },
   {
    "path": "assets/models/shared/props/water_trough.glb",
@@ -1930,9 +2103,16 @@
    "script": "blender/scripts/generate_all.py"
   },
   {
+   "path": "blender/source/neon-backstreets.blend",
+   "kind": "blend",
+   "bytes": 2457502,
+   "description": "Editable source: buildings, terrain, collision, markers, prop preview",
+   "script": "blender/scripts/generate_all.py"
+  },
+  {
    "path": "blender/source/props.blend",
    "kind": "blend",
-   "bytes": 2344944,
+   "bytes": 2470116,
    "description": "Editable source: all street props",
    "script": "blender/scripts/generate_all.py"
   },

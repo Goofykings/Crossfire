@@ -40,6 +40,11 @@ const VIEWS = {
     ['north st', [-25, 0.2, -24, 90, 0]],
     ['long view', [1, 0.2, -16, 90, 0]],
   ],
+  'neon-backstreets': [
+    ['crossing', [-12, 0, 0.5, 90, 0]],
+    ['neon st', [-17.2, 0, -16.6, 90, 0]],
+    ['back alley', [-18, 0, 17.5, 90, 0]],
+  ],
 };
 const views = VIEWS[MAP];
 if (!views) {

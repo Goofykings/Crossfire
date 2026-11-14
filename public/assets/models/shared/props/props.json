@@ -1596,6 +1596,193 @@
     3.4
    ]
   },
+  "store_shelf": {
+   "file": "store_shelf.glb",
+   "size": [
+    2.0,
+    1.45,
+    0.62
+   ],
+   "collider": [
+    2.0,
+    1.45,
+    0.62
+   ]
+  },
+  "drink_fridge": {
+   "file": "drink_fridge.glb",
+   "size": [
+    1.6,
+    2.05,
+    0.76
+   ],
+   "collider": [
+    1.6,
+    2.05,
+    0.74
+   ]
+  },
+  "washer_row": {
+   "file": "washer_row.glb",
+   "size": [
+    2.4,
+    1.0,
+    0.72
+   ],
+   "collider": [
+    2.4,
+    1.0,
+    0.72
+   ]
+  },
+  "dryer_stack": {
+   "file": "dryer_stack.glb",
+   "size": [
+    2.4,
+    1.9,
+    0.72
+   ],
+   "collider": [
+    2.4,
+    1.9,
+    0.72
+   ]
+  },
+  "scooter": {
+   "file": "scooter.glb",
+   "size": [
+    0.66,
+    1.18,
+    1.76
+   ],
+   "collider": [
+    0.5,
+    0.95,
+    1.6
+   ]
+  },
+  "bicycle": {
+   "file": "bicycle.glb",
+   "size": [
+    0.56,
+    1.02,
+    1.72
+   ],
+   "collider": null
+  },
+  "food_cart": {
+   "file": "food_cart.glb",
+   "size": [
+    1.9,
+    2.45,
+    1.05
+   ],
+   "collider": [
+    1.9,
+    1.05,
+    1.0
+   ]
+  },
+  "vend_red": {
+   "file": "vend_red.glb",
+   "size": [
+    1.0,
+    1.95,
+    0.85
+   ],
+   "collider": [
+    1.0,
+    1.95,
+    0.85
+   ]
+  },
+  "vend_blue": {
+   "file": "vend_blue.glb",
+   "size": [
+    1.0,
+    1.95,
+    0.85
+   ],
+   "collider": [
+    1.0,
+    1.95,
+    0.85
+   ]
+  },
+  "vend_yellow": {
+   "file": "vend_yellow.glb",
+   "size": [
+    1.0,
+    1.95,
+    0.85
+   ],
+   "collider": [
+    1.0,
+    1.95,
+    0.85
+   ]
+  },
+  "vend_white": {
+   "file": "vend_white.glb",
+   "size": [
+    1.0,
+    1.95,
+    0.85
+   ],
+   "collider": [
+    1.0,
+    1.95,
+    0.85
+   ]
+  },
+  "phone_booth": {
+   "file": "phone_booth.glb",
+   "size": [
+    1.04,
+    2.45,
+    1.04
+   ],
+   "collider": [
+    1.0,
+    2.45,
+    1.0
+   ]
+  },
+  "gacha_bank": {
+   "file": "gacha_bank.glb",
+   "size": [
+    1.72,
+    1.45,
+    0.5
+   ],
+   "collider": [
+    1.7,
+    1.2,
+    0.5
+   ]
+  },
+  "sandwich_board": {
+   "file": "sandwich_board.glb",
+   "size": [
+    0.55,
+    0.9,
+    0.5
+   ],
+   "collider": null
+  },
+  "bamboo_pot": {
+   "file": "bamboo_pot.glb",
+   "size": [
+    0.7,
+    2.1,
+    0.7
+   ],
+   "collider": [
+    0.6,
+    2.0,
+    0.6
+   ]
+  },
   "target": {
    "file": "target.glb",
    "size": [

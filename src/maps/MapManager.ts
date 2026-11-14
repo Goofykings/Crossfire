@@ -22,6 +22,8 @@ import { createMapWorld, mapVersion } from '../../shared/world';
 import type {BulletCatalog} from '../physics/BulletMesh';
 import {prepareBulletWorld} from '../physics/prepareBulletWorld';
 import { Environment } from '../rendering/Environment';
+import { Rain } from '../rendering/Rain';
+import { Steam } from '../rendering/Steam';
 import { FoliageLod } from './FoliageLod';
 import { MaterialLibrary } from '../rendering/MaterialLibrary';
 import type { RenderContext } from '../rendering/RenderContext';
@@ -194,6 +196,14 @@ export class MapManager {
       cleanup.push(() => targets.dispose());
       if (this.practiceTargets) await targets.load(def.layout.targets, active);
 
+      // cosmetic weather (Neon Backstreets): around the active camera, bounded, off with reduced motion
+      const rainSpec = def.layout.neon?.rain;
+      const rain = rainSpec && !Rain.reducedMotion() ? new Rain(scene, rainSpec, () => this.graphics().noReflections === true) : null;
+      if (rain) cleanup.push(() => rain.dispose());
+      const steamSpec = def.layout.neon?.steam;
+      const steam = steamSpec && !Rain.reducedMotion() ? new Steam(scene, steamSpec, this.graphics().noReflections === true) : null;
+      if (steam) cleanup.push(() => steam.dispose());
+
       const lights: PointLight[] = [];
       for (const l of def.layout.lights) {
         const pl = new PointLight('light:map', new Vector3(l.pos[0], l.pos[1], l.pos[2]), scene);
@@ -279,6 +289,8 @@ export class MapManager {
           props.dispose();
           targets.dispose();
           for (const l of lights) l.dispose();
+          rain?.dispose();
+          steam?.dispose();
           for (const m of created) m.dispose(false, false);
           for (const c of containers) c.dispose();
           environment.dispose();

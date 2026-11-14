@@ -1,5 +1,6 @@
 /** Player settings persisted in localStorage. */
 import { defaultBindings, sanitizeBindings, type KeyBindings } from './keybindings';
+import { defaultControllerSettings, sanitizeController, type ControllerSettings } from './controller';
 
 export type GraphicsQuality = 'low' | 'medium' | 'high' | 'ultra';
 export type ShadowQuality = 'off' | 'low' | 'medium' | 'high';
@@ -24,6 +25,7 @@ export interface Settings {
   chromebookMode: boolean;
   adaptiveResolution: boolean;
   keyBindings: KeyBindings;
+  controller: ControllerSettings;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -41,6 +43,7 @@ export const DEFAULT_SETTINGS: Settings = {
   chromebookMode: false,
   adaptiveResolution: true,
   keyBindings: defaultBindings(),
+  controller: defaultControllerSettings(),
 };
 
 export const SETTING_LIMITS = {
@@ -82,6 +85,7 @@ export function sanitizeSettings(raw: unknown): Settings {
   if (typeof r.reducedEffects === 'boolean') s.reducedEffects = r.reducedEffects;
   if (typeof r.showFps === 'boolean') s.showFps = r.showFps;
   s.keyBindings = sanitizeBindings(r.keyBindings);
+  s.controller = sanitizeController(r.controller);
   if (r.graphicsQuality === 'low' || r.graphicsQuality === 'medium' || r.graphicsQuality === 'high' || r.graphicsQuality === 'ultra') {
     s.graphicsQuality = r.graphicsQuality;
   }
@@ -148,7 +152,7 @@ export class SettingsStore {
 }
 
 export function sameSetting(key: keyof Settings, a: Settings[keyof Settings], b: Settings[keyof Settings]): boolean {
-  return key === 'keyBindings' ? JSON.stringify(a) === JSON.stringify(b) : a === b;
+  return key === 'keyBindings' || key === 'controller' ? JSON.stringify(a) === JSON.stringify(b) : a === b;
 }
 
 /** Overrides are derived: disabling Chromebook mode restores the saved preferences exactly. */

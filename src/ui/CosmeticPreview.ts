@@ -36,6 +36,7 @@ export class CosmeticPreview {
   }
   close(){this.abort?.abort();this.abort=null;window.removeEventListener('resize',this.resize);this.engine?.stopRenderLoop();this.container=null;this.scene?.dispose();this.scene=null;this.engine?.dispose();this.engine=null;this.canvas?.remove();this.canvas=null;}
   inspect(){return {active:!!this.engine,meshes:this.container?.meshes.filter(m=>m.getTotalVertices()>0).length??0};}
+  orbit(x:number,y:number,dt:number){if(!this.camera)return;this.camera.alpha-=x*dt*1.8;this.camera.beta=Math.max(.15,Math.min(Math.PI-.15,this.camera.beta+y*dt*1.5));}
   /** Review hooks (tools/review-weapon-angles.mjs): orbit to an azimuth/elevation in degrees (0, 0 = from the right side, +x) and render one frame. */
   setAngles(azimuthDeg:number,elevationDeg:number):void{
     if(!this.camera||!this.scene)return;

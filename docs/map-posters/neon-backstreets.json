@@ -1,0 +1,145 @@
+{
+ "map": "neon-backstreets",
+ "facade": [
+  {
+   "building": "mart",
+   "cell": 2,
+   "framed": false,
+   "w": 0.65,
+   "h": 0.975,
+   "x": -14.62,
+   "y": 1.0,
+   "z": -3.488,
+   "normal": [
+    0,
+    1
+   ]
+  },
+  {
+   "building": "mart",
+   "cell": 9,
+   "framed": false,
+   "w": 0.65,
+   "h": 0.975,
+   "x": -5.488,
+   "y": 1.1,
+   "z": -11.95,
+   "normal": [
+    1,
+    0
+   ]
+  },
+  {
+   "building": "laundromat",
+   "cell": 11,
+   "framed": false,
+   "w": 0.65,
+   "h": 0.975,
+   "x": -4.988,
+   "y": 1.1,
+   "z": 14.4,
+   "normal": [
+    1,
+    0
+   ]
+  },
+  {
+   "building": "laundromat",
+   "cell": 8,
+   "framed": false,
+   "w": 0.65,
+   "h": 0.975,
+   "x": -4.988,
+   "y": 1.2,
+   "z": 9.3,
+   "normal": [
+    1,
+    0
+   ]
+  },
+  {
+   "building": "se_block",
+   "cell": 1,
+   "framed": false,
+   "w": 0.65,
+   "h": 0.975,
+   "x": 3.6,
+   "y": 1.05,
+   "z": 15.012,
+   "normal": [
+    0,
+    1
+   ]
+  },
+  {
+   "building": "se_block",
+   "cell": 10,
+   "framed": false,
+   "w": 0.65,
+   "h": 0.975,
+   "x": 9.8,
+   "y": 1.15,
+   "z": 4.488,
+   "normal": [
+    0,
+    -1
+   ]
+  },
+  {
+   "building": "s_back_m",
+   "cell": 5,
+   "framed": false,
+   "w": 0.65,
+   "h": 0.975,
+   "x": 0.4,
+   "y": 1.2,
+   "z": 19.988,
+   "normal": [
+    0,
+    -1
+   ]
+  },
+  {
+   "building": "s_back_m",
+   "cell": 6,
+   "framed": false,
+   "w": 0.65,
+   "h": 0.975,
+   "x": 1.2,
+   "y": 1.05,
+   "z": 19.988,
+   "normal": [
+    0,
+    -1
+   ]
+  },
+  {
+   "building": "w_shop_s",
+   "cell": 0,
+   "framed": false,
+   "w": 0.65,
+   "h": 0.975,
+   "x": -19.988,
+   "y": 1.25,
+   "z": 7.6,
+   "normal": [
+    1,
+    0
+   ]
+  },
+  {
+   "building": "e_shop",
+   "cell": 7,
+   "framed": false,
+   "w": 0.65,
+   "h": 0.975,
+   "x": 19.988,
+   "y": 1.2,
+   "z": 19.4,
+   "normal": [
+    -1,
+    0
+   ]
+  }
+ ]
+}

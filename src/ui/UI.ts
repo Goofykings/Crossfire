@@ -14,6 +14,7 @@ import { CrosshairMotion } from './CrosshairMotion';
 import type { AudioManager } from '../audio/AudioManager';
 import { SETTING_LIMITS, type Settings, type SettingsStore } from '../config/settings';
 import { SettingsDraft } from '../config/settingsDraft';
+import { ControllerSettingsPanel } from './ControllerSettings';
 import { AimAssistUnlock } from '../player/AimAssist';
 import { BINDABLE_ACTIONS, BINDING_LABELS, DEFAULT_BINDINGS, bindingConflict, bindingName, defaultBindings, supportedBinding, type BindableAction } from '../config/keybindings';
 import type { GuestProfileStore } from '../config/guestProfile';
@@ -78,6 +79,7 @@ export class UI {
   private settingsFocus: HTMLElement | null = null;
   /** What the settings screen edits. The game only sees changes when Apply hands them to the SettingsStore. */
   private readonly draft: SettingsDraft;
+  controllerPanel!: ControllerSettingsPanel;
   private readonly aimUnlock = new AimAssistUnlock();
   private aimBoostDraft = false;
   aimAssistBoosted = false;
@@ -641,6 +643,7 @@ export class UI {
 
   /** Back: drop every unapplied edit and return to where settings were opened from. */
   private closeSettings(): void {
+    this.controllerPanel.cancel();
     this.rebinding = null;
     this.draft.discard();
     this.aimBoostDraft=this.aimAssistBoosted;this.aimUnlock.reset();
@@ -707,6 +710,7 @@ export class UI {
         ],
       },
       { key: 'controls', title: 'Controls', rows: [] },
+      { key: 'controller', title: 'Controller', rows: [] },
       {
         key: 'sound',
         title: 'Sound',
@@ -759,6 +763,7 @@ export class UI {
         this.settingRows.set(key, row);
       }
       if (c.key === 'controls') panel.appendChild(this.buildControls());
+      if (c.key === 'controller') { this.controllerPanel = new ControllerSettingsPanel(this.draft, () => this.syncSettings()); panel.appendChild(this.controllerPanel.element); }
       panel.tabIndex = 0;
       const index = this.settingTabs.length;
       tab.addEventListener('click', () => this.selectSettingsTab(index, false));
@@ -773,7 +778,7 @@ export class UI {
       });
       tabs.appendChild(tab);
       panels.appendChild(panel);
-      this.settingTabs.push({ key: c.key, tab, panel, keys: [...c.rows.map(([k]) => k), ...(c.key === 'controls' ? ['keyBindings' as const] : [])] });
+      this.settingTabs.push({ key: c.key, tab, panel, keys: [...c.rows.map(([k]) => k), ...(c.key === 'controls' ? ['keyBindings' as const] : c.key === 'controller' ? ['controller' as const] : [])] });
     }
 
     const foot = el('div', 'settings-foot');
@@ -864,6 +869,7 @@ export class UI {
   }
 
   private selectSettingsTab(index: number, focus: boolean): void {
+    this.controllerPanel?.cancel();
     this.settingTabs.forEach((t, i) => {
       const on = i === index;
       t.tab.setAttribute('aria-selected', String(on));
@@ -894,6 +900,7 @@ export class UI {
 
   /** Push the draft into every control and refresh the "unapplied" markers. */
   private syncSettings(): void {
+    this.controllerPanel?.sync();
     for (const f of this.settingSyncs) f();
     const overridden=this.draft.value.chromebookMode;
     for(const key of ['graphicsQuality','shadowQuality','resolutionScale','reducedEffects'] as const){

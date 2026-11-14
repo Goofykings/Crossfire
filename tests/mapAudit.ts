@@ -251,7 +251,7 @@ export function loadMap(id: string, root = '.'): LoadedMap {
   const catalog = JSON.parse(readFileSync(`${root}/public/assets/models/shared/props/props.json`, 'utf8')) as PropCatalog;
   const environment = existsSync(`${dir}/environment.json`) ? JSON.parse(readFileSync(`${dir}/environment.json`, 'utf8')) as EnvironmentDefinition : undefined;
   const assets = JSON.parse(readFileSync(`${dir}/map-assets.json`, 'utf8')) as { models: string[] };
-  const materials = (JSON.parse(readFileSync(`${root}/public/assets/materials.json`, 'utf8')) as { materials: Record<string, { double_sided?: boolean; decal?: boolean }> }).materials;
+  const materials = (JSON.parse(readFileSync(`${root}/public/assets/materials.json`, 'utf8')) as { materials: Record<string, { double_sided?: boolean; decal?: boolean; additive?: boolean }> }).materials;
   const tris = new TriangleSet();
   for (const model of assets.models) tris.addGlb(`${dir}/${model}`, model.startsWith('buildings') ? 'building' : 'terrain');
   const byType = new Map<string, Mat[]>();
@@ -266,7 +266,8 @@ export function loadMap(id: string, root = '.'): LoadedMap {
   for (const [type, places] of byType) tris.addGlb(`${root}/public/assets/models/shared/props/${catalog.props[type].file}`, `prop:${type}`, places);
   const world = createMapWorld(collision, layout, catalog, environment);
   const doubleSided = new Set(Object.entries(materials).filter(([, m]) => m.double_sided).map(([n]) => n));
-  const decals = new Set(Object.entries(materials).filter(([, m]) => m.decal).map(([n]) => n));
+  // Additive glow cards (light spill, halos) are not surfaces either: the eye sees through them like a decal.
+  const decals = new Set(Object.entries(materials).filter(([, m]) => m.decal || m.additive).map(([n]) => n));
   return { id, layout, collision, catalog, environment, world, tris, grid: new TriangleGrid(tris), doubleSided, decals };
 }
 

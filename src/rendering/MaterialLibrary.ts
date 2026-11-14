@@ -1,5 +1,5 @@
 import {compactSurfaceTexture} from './SurfaceTexture';
-import { Color3, Material, Observable, PBRMaterial, Texture, type Scene } from '@babylonjs/core';
+import { Color3, Constants, Material, Observable, PBRMaterial, Texture, type Scene } from '@babylonjs/core';
 import { assetUrl, fetchJson } from '../core/assets';
 
 interface MaterialDef {
@@ -20,6 +20,10 @@ interface MaterialDef {
   decal?: boolean;
   /** UVs address regions of one image (signs, posters): load it without the vertical flip. */
   atlas?: boolean;
+  /** Self-lit (neon tubes, lit signs/windows): albedo x tint x vertex colour, no scene lighting. */
+  unlit?: boolean;
+  /** Unlit glow card added onto the frame (halos, light spill, wet reflections): no depth write, no fog. */
+  additive?: boolean;
 }
 
 interface MaterialFile {
@@ -223,6 +227,8 @@ export class MaterialLibrary {
     'signal_off', 'headlight', 'taillight', 'chainlink', 'aluminium',
     // backs of door and shop openings: inside the wall, never in the light's path
     'interior_dark',
+    // Neon Backstreets: self-lit and additive surfaces, graffiti and puddle decals
+    'neon_tube', 'neon_signs', 'neon_panels', 'neon_windows', 'neon_skyline', 'neon_glow', 'neon_wet', 'neon_beam', 'neon_graffiti', 'neon_puddle',
   ]);
 
   /**
@@ -305,6 +311,16 @@ export class MaterialLibrary {
     if (def.double_sided) {
       m.backFaceCulling = false;
       m.twoSidedLighting = true;
+    }
+    if (def.unlit || def.additive) m.unlit = true;
+    if (def.additive) {
+      // Glow cards add light: order-independent, never occlude, never fogged (fog would tint the whole quad).
+      if (m.albedoTexture) { m.albedoTexture.hasAlpha = true; m.useAlphaFromAlbedoTexture = true; }
+      m.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHABLEND;
+      m.alphaMode = Constants.ALPHA_ADD;
+      m.disableDepthWrite = true;
+      m.fogEnabled = false;
+      m.backFaceCulling = false;
     }
     if (def.decal) {
       // intentional layering only: pull towards the camera so the layer wins against the surface it lies on

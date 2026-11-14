@@ -1,5 +1,6 @@
 import { testRoom } from './test-rpc.mjs';
 import { PROTOCOL_VERSION } from '../../tools/protocol-version.mjs';
+import { MAP_IDS } from '../../shared/maps.ts';
 /** Real player-to-player combat through TCP WebSockets and the actual Worker.
  * The test-only RPC positions real spawned sessions; it never applies damage or assigns scores.
  */
@@ -100,7 +101,11 @@ for (const mode of (process.env.CROSSFIRE_SCORING_ONLY ? ['ffa'] : ['ffa', 'team
   }
   try {
     const snapshot = await stub.advanceMapForTest();
-    for (let i = 0, current = snapshot; current.mapId !== 'european-town' && i < 4; i++) current = await stub.advanceMapForTest();
+    // We may start partway through a shuffle bag. Two bags cover every map
+    // even when Town is last in the next bag; never place Town's arena on another map.
+    let current = snapshot;
+    for (let i = 0; current.mapId !== 'european-town' && i < 2 * MAP_IDS.length - 2; i++) current = await stub.advanceMapForTest();
+    assert.equal(current.mapId, 'european-town', 'combat fixture must select its intended map before placing players');
     if (mode === 'ffa') await t.test('real headshot combos, duplicate protection, resume and frozen round results', async () => {
       let a = await open('sniper');
       const dead = [];

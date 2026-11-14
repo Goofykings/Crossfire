@@ -144,8 +144,9 @@ export class Environment {
       if(this.hdrSettled){this.hdr?.dispose();this.hdr=null;this.hdrSettled=false;}
       if(this.ultraSettled){this.ultraHdr?.dispose();this.ultraHdr=null;this.ultraSettled=false;this.ultraReady=false;}
       if(!this.ambient){this.ambient=new HemisphericLight('chromebook-ambient',Vector3.Up(),this.scene);
-        this.ambient.diffuse=new Color3(.78,.84,1);this.ambient.groundColor=new Color3(.28,.3,.34);
-        this.ambient.specular=Color3.Black();this.ambient.intensity=this.cfg.environmentIntensity*.65;this.ambient.renderPriority=2;}
+        const low=this.cfg.lowSpecAmbient;
+        this.ambient.diffuse=low?new Color3(...low.sky):new Color3(.78,.84,1);this.ambient.groundColor=low?new Color3(...low.ground):new Color3(.28,.3,.34);
+        this.ambient.specular=Color3.Black();this.ambient.intensity=low?.intensity??this.cfg.environmentIntensity*.65;this.ambient.renderPriority=2;}
       this.ambient.setEnabled(true);
       // Babylon reorders scene.lights on a priority change, but existing meshes
       // retain their old light list. Refresh once so ambient survives the 4-light cap.

@@ -118,5 +118,6 @@ export class CosmeticsPages {
     try{this.inventory=await this.client.equip(item.id,request.signal);if(!request.signal.aborted)this.previewStatus.textContent='';}catch(error){if(!request.signal.aborted)this.previewStatus.textContent=(error as Error).message;}finally{this.pending=false;this.updateEquip();}
   }
   inspect(){return {inventory:this.inventory,preview:this.preview.inspect(),reveal:this.reveal.inspect()};}
+  controllerOrbit(x:number,y:number,dt:number){if(this.selected==='cosmetic-preview')this.preview.orbit(x,y,dt);}
   revealDebug(paused:boolean,seek?:number){this.reveal.debug(paused,seek);}
 }

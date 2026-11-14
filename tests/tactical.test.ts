@@ -150,7 +150,8 @@ describe.each(MAPS)('tactical map of %s', (id) => {
     const [bx0, bz0, bx1, bz1] = tactical.bounds;
     const [px0, pz0, px1, pz1] = layout.playArea;
     expect(bx0 <= px0 && bz0 <= pz0 && bx1 >= px1 && bz1 >= pz1).toBe(true);
-    for (const s of layout.spawns) expect(classifyPoint(tactical, s.pos[0], s.pos[2]), `spawn ${s.pos}`).toBe('open');
+    // (Neon Backstreets screens two spawns inside shops: a covered interior is walkable ground too)
+    for (const s of layout.spawns) expect(['open', 'covered'], `spawn ${s.pos}`).toContain(classifyPoint(tactical, s.pos[0], s.pos[2]));
   });
 
   it('marks roofed routes as walkable (passages, rooms, interiors)', () => {

@@ -2,15 +2,18 @@ import townEnvironment from '../../public/assets/models/european-town/environmen
 import industrialEnvironment from '../../public/assets/models/industrial-complex/environment.json';
 import cityEnvironment from '../../public/assets/models/modern-city/environment.json';
 import farmEnvironment from '../../public/assets/models/farmstead/environment.json';
+import neonEnvironment from '../../public/assets/models/neon-backstreets/environment.json';
 import type { EnvironmentDefinition } from '../../shared/environment';
 import townCollision from '../../public/assets/models/european-town/collision.json';
 import industrialCollision from '../../public/assets/models/industrial-complex/collision.json';
 import cityCollision from '../../public/assets/models/modern-city/collision.json';
 import farmCollision from '../../public/assets/models/farmstead/collision.json';
+import neonCollision from '../../public/assets/models/neon-backstreets/collision.json';
 import townLayout from '../../src/maps/european-town/layout.json';
 import industrialLayout from '../../src/maps/industrial-complex/layout.json';
 import cityLayout from '../../src/maps/modern-city/layout.json';
 import farmLayout from '../../src/maps/farmstead/layout.json';
+import neonLayout from '../../src/maps/neon-backstreets/layout.json';
 import catalog from '../../public/assets/models/shared/props/props.json';
 import bullets from '../../public/assets/models/shared/props/bullet-surfaces.json';
 import type {BulletCatalog} from '../../src/physics/BulletMesh';
@@ -31,4 +34,5 @@ export const WORLDS = {
   'industrial-complex': makeWorld(industrialCollision as CollisionFile, industrialLayout,industrialEnvironment as EnvironmentDefinition),
   'modern-city': makeWorld(cityCollision as CollisionFile, cityLayout,cityEnvironment as EnvironmentDefinition),
   'farmstead': makeWorld(farmCollision as CollisionFile, farmLayout,farmEnvironment as EnvironmentDefinition),
+  'neon-backstreets': makeWorld(neonCollision as CollisionFile, neonLayout,neonEnvironment as unknown as EnvironmentDefinition),
 } satisfies Record<MapId, ReturnType<typeof makeWorld>>;

@@ -45,6 +45,16 @@ describe('canonical public map schedule', () => {
     expect(mapRound(JSON.parse(JSON.stringify(saved)), now)).toEqual(a);
     expect(mapRound(saved, now)).toEqual(a);
   });
+  it('a combat fixture can reach Town from every shuffled offset within two map bags', () => {
+    let exceedsOldFourStepLimit=false;
+    for(let seed=1;seed<=100;seed++)for(let offset=0;offset<MAP_IDS.length*3;offset++){
+      const schedule={epoch:0,seed};let steps=0;
+      while(mapRound(schedule,(offset+steps)*ROUND_MS).mapId!=='european-town'&&steps<2*MAP_IDS.length-2)steps++;
+      expect(mapRound(schedule,(offset+steps)*ROUND_MS).mapId).toBe('european-town');
+      exceedsOldFourStepLimit ||= steps>4;
+    }
+    expect(exceedsOldFourStepLimit).toBe(true);
+  });
 });
 
 describe('selectable SMG', () => {

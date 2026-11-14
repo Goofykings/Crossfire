@@ -456,3 +456,6 @@ from props_compact import COMPACT_BUILDERS
 PROP_BUILDERS.update(COMPACT_BUILDERS)
 from props_farm import FARM_BUILDERS  # noqa: E402
 PROP_BUILDERS.update(FARM_BUILDERS)
+
+from props_neon import NEON_BUILDERS  # noqa: E402
+PROP_BUILDERS.update(NEON_BUILDERS)

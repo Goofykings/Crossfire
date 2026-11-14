@@ -9,6 +9,7 @@ Stages (default: all except previews)
                blender/source/european-town.blend
     industrial the same outputs for the Industrial Complex (models/industrial-complex/, industrial-complex.blend)
     city       the same outputs for the Modern City (models/modern-city/, modern-city.blend)
+    farm       the Farmstead (models/farmstead/); neon: Neon Backstreets (models/neon-backstreets/)
     props      models/shared/props/*.glb, blender/source/props.blend
     environment models/shared/environment/*.glb, blender/source/environment.blend
     weapon     models/shared/weapons/{rifle,shotgun,sniper,smg,hands,casings}.glb, blender/source/weapon.blend
@@ -49,6 +50,7 @@ from terrain import TerrainBuilder  # noqa: E402
 from terrain_industrial import IndustrialTerrain  # noqa: E402
 from terrain_modern import ModernTerrain  # noqa: E402
 from terrain_farm import FarmTerrain  # noqa: E402
+from terrain_neon import NeonTerrain  # noqa: E402
 
 ROOT = HERE.parent.parent
 PUBLIC = ROOT / "public"
@@ -93,12 +95,20 @@ MAP_STAGES = {
                  "yard": ((-4, 1.7, 36), (2, 2.0, 14), 22),
                  "cabin": ((12, 1.7, -14), (22, 3.0, -30), 22),
                  "barn": ((-26, 1.7, -8), (-22, 3.0, -28), 22)}},
+    "neon": {"id": "neon-backstreets", "title": "Neon Backstreets", "style": "neon", "sky": "sky_neon_1k.hdr",
+             "terrain_desc": "Night-time city block: wet streets, mart, ramen shop, laundromat, hostel block, neon signs and glow cards",
+             "sun": (140, 34), "views": {
+                 "aerial": ((-34, 30, 34), (0, 0, 0), 30),
+                 "crossing": ((-10, 1.7, 0.5), (6, 2.4, -2), 20),
+                 "street": ((-17, 1.7, -16.5), (10, 3.0, -16.5), 22)}},
 }
 
 
 def make_generators(style: str, index):
     if style == "farm":
         return None, FarmTerrain
+    if style == "neon":
+        return None, NeonTerrain
     if style == "industrial":
         return IndustrialBuildingGenerator(index), IndustrialTerrain
     if style == "modern":

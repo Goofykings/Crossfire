@@ -107,7 +107,8 @@ def map_data(layout, collision, catalog):
     desired={'farmstead':[(-5.5,-13.5),(15.5,-9.5)],
              'european-town':[(-18.3,-9.3),(10.4,12.3)],
              'industrial-complex':[(-4.6,-9.6),(19.0,-0.5)],
-             'modern-city':[(-19.0,2.0),(21.5,-12.5)]}
+             'modern-city':[(-19.0,2.0),(21.5,-12.5)],
+             'neon-backstreets':[(-3.5,18.4),(-17.6,1.6)]}
     for n,(x,z) in enumerate(desired[layout['id']]):
         radius,half,mass,asset=(.23,.16,1.2,'loose_crate') if n==0 else (.20,.20,2.5,'loose_barrel')
         candidate=next(((x+dx,z+dz) for dx,dz in [(0,0),(.6,0),(-.6,0),(0,.6),(0,-.6),(.6,.6),(-.6,-.6)]
@@ -121,6 +122,10 @@ def map_data(layout, collision, catalog):
     if layout['id']=='farmstead':
         # the kitchen lamp: its plate is a ceiling fixture of the house (tools/farm_structures.py)
         data['lights'].append({'id':'light-house','asset':'hanging_light','position':[6.0,3.1,-4.5],'yaw':0})
+        return data
+    if layout['id']=='neon-backstreets':
+        # the ramen shop's dining-room pendant: its plate is a ceiling fixture of tools/neon_structures.py ramen()
+        data['lights'].append({'id':'light-ramen','asset':'hanging_light','position':[4.5,3.25,-6.4],'yaw':0})
         return data
     from circulation import point,dimensions
     b=next(b for b in layout['buildings'] if b.get('circulation'));w,d=dimensions(b)

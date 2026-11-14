@@ -1,3 +1,33 @@
+## Neon Backstreets polish (2026-11-14)
+
+See docs/NEON_BACKSTREETS.md "Polish and upgrade pass" and the newest PROGRESS entry. Visual plus a few cover props; spawns, zones, stairs
+and doorways untouched. New dressing is data in tools/neon_dressing.py (grime, cracks, noren, fire_escapes, steam, spans, rooftops;
+blades/signs/tubes/lanterns/cables extended) and tools/layout_neon.py (`DETAIL` props, `derived_light`: prop glows, shafts and bake
+sources follow the props), built by blender/scripts/lib/neon.py. Ground cards have fixed heights above the floor (list in the doc): never
+put a new one within 2 mm of another or the z-fight test fails; keep every visual-only piece 8 cm off a facade; a single-sided card
+needs a back face or end caps (seeThrough audit); a collider must cover all of a prop (walkThrough audit). Lit props are materials
+with the hue in vertex colours (`can_lit`, like `neon_tube`): do not add one material per colour. Steam (src/rendering/Steam.ts, three
+tint groups) and rain splashes (Rain.ts) are cosmetic and off with reduced motion (Chromebook: two steam groups, no splashes). The
+sign atlas is 2048 x 3328, the panel atlas 2048 x 1280, the decal atlas 1024 x 1536 (cells 8-11: streaks, rust, cracks, stickers).
+Review: `node tools/neon-shots.mjs <url> [group] [--cam=label:x,z,heading,pitch[,y]] [--chromebook]` (localhost), neon-practice-test,
+neon-perf. Rebuild: make_neon_textures, `layout_neon.py --write`, Blender `--only materials,props,neon`, generate-bullet-surfaces,
+`npm test --prefix server`. No commit/push/deploy.
+
+## Neon Backstreets map (2026-11-14)
+
+See docs/NEON_BACKSTREETS.md and the newest PROGRESS entry. Fifth map `neon-backstreets` (40 x 40 m night city block). Buildings
+are Farmstead-style elements in tools/neon_structures.py (layout `farm.structures`, no `farm.perimeter`: the four invisible
+boundary slabs stay behind facades and fences); dressing in tools/neon_dressing.py (layout `neon`) built by
+blender/scripts/lib/neon.py + terrain_neon.py (stage `neon`, one terrain.glb). Glow = `unlit`/`additive` materials (hue in
+vertex colours), additive cards (no depth write/fog; VisibilityWorld and the audit ignore blended materials) and a vertex-colour
+bake; real lights stay at sun + 2 point + ramen pendant (Babylon's 4). Keep additive cards >= 1 cm off any surface they lie on
+(the geometry test catches coplanar stacks). Stairs need about 1.8 m clear at a foot that faces a wall (a sniper's barrel) and
+side guards only above 1.2 m (low guards trap bots). Spawns were picked by a line-of-sight search; re-run it when moving them.
+Rain (src/rendering/Rain.ts) reads `neon.rain`; Chromebook ambient comes from `EnvironmentConfig.lowSpecAmbient`. Rebuild:
+make_neon_textures (art only), `layout_neon.py --write`, Blender `--only neon` (+ materials,props and generate-bullet-surfaces
+when those change), `npm test --prefix server`. Review: tools/neon-shots.mjs, neon-practice-test.mjs, neon-perf.mjs. Frontend
+and Worker must ship together (fifth MAP_ID). No commit/push/deploy.
+
 ## Kill effects upgrade: Blossom vanish + Frosted trails (2026-11-13)
 
 See docs/KILL_EFFECTS.md "Upgrade 2026-11-13" and the newest PROGRESS entry. Visual only; combat, protocol v28, the Worker and kill/reward/respawn handling untouched.
