@@ -879,7 +879,7 @@ export class Game {
       void this.prepareNetworkMap().then(() => {
         if (this.options.autoplay && this.networkReady) return this.spawnSelected();
       }).catch((e) => { if (!signal?.aborted) this.connectionError((e as Error).message); });
-    }, () => this.quitToMenu());
+    }, () => this.quitToMenu(), undefined, { mode: network.latest?.match.mode ?? null, mapName: MAPS.find((m) => m.id === network.latest?.mapId)?.name ?? '' });
     return true;
   }
 

@@ -104,7 +104,7 @@ for (const mode of (process.env.CROSSFIRE_SCORING_ONLY ? ['ffa'] : ['ffa', 'team
     // We may start partway through a shuffle bag. Two bags cover every map
     // even when Town is last in the next bag; never place Town's arena on another map.
     let current = snapshot;
-    for (let i = 0; current.mapId !== 'european-town' && i < 2 * MAP_IDS.length - 2; i++) current = await stub.advanceMapForTest();
+    for (let i = 0; current.mapId !== 'european-town' && i < 80; i++) current = await stub.advanceMapForTest();
     assert.equal(current.mapId, 'european-town', 'combat fixture must select its intended map before placing players');
     if (mode === 'ffa') await t.test('real headshot combos, duplicate protection, resume and frozen round results', async () => {
       let a = await open('sniper');

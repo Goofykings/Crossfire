@@ -35,10 +35,11 @@ import { PlayerController, type ControllerState } from '../../src/player/PlayerC
 import { HEARTBEAT_TIMEOUT_MS, NETWORK_HZ, PROTOCOL_VERSION, PUBLIC_ROOM, RESPAWN_DELAY_MS, SESSION_GRACE_MS, parseClientMessage, validMotion, validGun,
   type CombatState, type InputFrame, type PlayerState, type ServerMessage, type Snapshot, type ShotResult } from '../../shared/protocol';
 import { WORLDS, MOVEMENT } from './world';
-import { mapRound, type MapSchedule, type MapRound } from '../../shared/maps';
+import { type MapSchedule, type MapRound } from '../../shared/maps';
+import { mapRound } from '../../shared/rotation';
 import { Weapon, WEAPONS, type WeaponId } from '../../src/weapons/Weapon';
 import { DamageSystem } from '../../src/game/Damage';
-import { NO_COMBAT, roundMode, teammates,teamMode, type PlayerTeam, type MatchMode } from '../../shared/combat';
+import { NO_COMBAT, teammates,teamMode, type PlayerTeam, type MatchMode } from '../../shared/combat';
 import { normalizeUsername } from '../../shared/username';
 import { regenerate, REGEN_DELAY_MS } from './health';
 import { selectSpawn } from '../../shared/spawns';
@@ -238,7 +239,11 @@ export class PublicRoom extends DurableObject<Bindings> {
   private get roomId(){return this.config?.id??PUBLIC_ROOM;}
   private get authority(){return this.env.ROOM.getByName(PUBLIC_ROOM);}
   private scheduledRound():MapRound {
-    const r=mapRound(this.schedule,Date.now());return this.config?{...r,mapId:this.config.mapId}:r;
+    const r=mapRound(this.schedule,Date.now());
+    if(this.config)return {...r,mapId:this.config.mapId,mode:this.config.mode};
+    // A code release must not change the map or mode of a round that is already running.
+    const l=this.ledger as MatchLedger|undefined;
+    return l&&l.roundId===r.id?{...r,mapId:l.mapId,mode:l.mode}:r;
   }
   private get expiredRoom(){const c=this.config;if(!c)return false;return c.closed||!c.hadGuest&&Date.now()>=c.createdAt+positive(this.env.ROOM_SOLO_MS??'',ROOM_LIMITS.soloMs)
     ||c.hadMember&&c.emptySince!==null&&Date.now()>=c.emptySince+positive(this.env.ROOM_EMPTY_MS??'',ROOM_LIMITS.emptyMs);}
@@ -454,6 +459,8 @@ export class PublicRoom extends DurableObject<Bindings> {
       this.activeMap = WORLDS[this.round.mapId];
       const scores = await ctx.storage.get<typeof this.scores>('team-scores');
       const ledger = migrateResult(await ctx.storage.get<MatchLedger>('round-ledger'));
+      // The saved ledger pins the map and mode of a round that was already running before this release.
+      this.ledger = ledger as MatchLedger; this.round = this.scheduledRound(); this.activeMap = WORLDS[this.round.mapId];
       const zoneState=await ctx.storage.get<ZoneControlState>('zone-control');
       if(ledger?.mode==='zone-control'&&validZoneControl(zoneState,ledger.mapId,ledger.roundId,ledger.endsAt)){
         this.zones=zoneState;
@@ -530,7 +537,7 @@ export class PublicRoom extends DurableObject<Bindings> {
     if(this.config)return this.config.mode;
     if(this.env.MATCH_MODE === 'ffa' || this.env.MATCH_MODE === 'teams')return this.env.MATCH_MODE;
     // A code deployment must not change the mode of an already running round.
-    return this.ledger?.roundId===this.round.id ? this.ledger.mode : roundMode(this.schedule.seed,this.round.id);
+    return this.ledger?.roundId===this.round.id ? this.ledger.mode : this.round.mode;
   }
   private chooseTeam(): PlayerTeam {
     if (!teamMode(this.mode)) return null;

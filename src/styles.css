@@ -1816,3 +1816,7 @@ body[data-home-page='leaderboard'] #ui{background:#10192366}
 .controller-help { font-size:12px;line-height:1.5;opacity:.75; }
 .controller-settings > p { max-width:100%;overflow-wrap:anywhere; }
 .controller-settings .control-row { min-height:44px; }
+.result-upcoming { display: flex; align-items: baseline; justify-content: center; flex-wrap: wrap; gap: .5em 1em; margin: 8px 0 16px; padding: 10px 12px; border: 1px solid #ffffff22; border-radius: 6px; background: #ffffff08; animation: result-details-in 320ms 480ms ease-out both; }
+.result-upcoming small { color: #a8ceff; letter-spacing: .2em; }
+.result-upcoming strong { font-size: 1.1em; letter-spacing: .08em; }
+.result-upcoming span { opacity: .85; }

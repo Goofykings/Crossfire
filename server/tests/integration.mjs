@@ -367,9 +367,9 @@ test('Public room: real Workers runtime and real WebSocket clients', { timeout: 
       const seen = new Set();
       let current = c.welcome.snapshot;
       try {
-        // Earlier checks may leave us in the middle of a shuffle bag. Nine
-        // consecutive rounds include a complete five-map bag from any offset.
-        for (let i = 0; i < 9 && seen.size < 5; i++) {
+        // The rotation is random with no immediate repeats, so a bounded run (not a fixed bag) is used. Eighty
+        // consecutive rounds reach every map with overwhelming probability.
+        for (let i = 0; i < 80 && seen.size < 5; i++) {
           if (i) {
             const before = current;
             current = await stub.advanceMapForTest();

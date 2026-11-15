@@ -1,7 +1,7 @@
 import {username} from './Username';
 import {teamMode,modeName} from '../../shared/combat';
 import { playerColor, displayTeam, teamOrder } from './teamColors';
-import { type PlayerTeam } from '../../shared/combat';
+import { type PlayerTeam, type MatchMode } from '../../shared/combat';
 import { pointsOrder, resultOutcome, type RoundResult, type RoundStanding } from '../../shared/scoring';
 import { formatScore } from './matchFormatting';
 import { weaponIcon } from './WeaponIcons';
@@ -28,7 +28,7 @@ function node<K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', text = ''
 }
 
 /** Built once per immutable server result. No polling, animation timers or live-round data. */
-export function createRoundResults(result: RoundResult, selfId: string, team: PlayerTeam, next: () => void, home: () => void,practice?:{settings:()=>void}): HTMLElement {
+export function createRoundResults(result: RoundResult, selfId: string, team: PlayerTeam, next: () => void, home: () => void,practice?:{settings:()=>void},upcoming?:{mode:MatchMode|null;mapName:string}|null): HTMLElement {
   const shownTeam=(value:PlayerTeam)=>result.mode==='zone-control'?value:displayTeam(value,team);
   const outcome = resultOutcome(result, selfId, team);
   const panel = node('div', 'round-results'); panel.dataset.outcome = outcome.toLowerCase();
@@ -71,6 +71,9 @@ export function createRoundResults(result: RoundResult, selfId: string, team: Pl
   if (!result.draw) winner.classList.add(`score-name-${teamMode(result.mode) ? (result.winningTeam === team ? 'friendly' : 'opponent') : playerColor(result.mode, selfId, team, result.winner?.id ?? null, null)}`);
   mvp.append(node('small', '', 'MVP'), username(node('strong'),result.mvp?.name??'No participants',result.mvp?.developer), node('span', '', result.mvp ? `${result.mvp.score} points` : ''));
   panel.append(mvp);
+  // The server has already rotated to the next round: its mode and map are the upcoming match, announced before it starts.
+  if(upcoming&&!practice&&upcoming.mode){const up=node('p','result-upcoming');up.dataset.mode=upcoming.mode;up.setAttribute('role','status');
+    up.append(node('small','','UP NEXT'),node('strong','',modeName(upcoming.mode).toUpperCase()),node('span','',upcoming.mapName));panel.append(up);}
   const actions = node('div', 'result-actions');
   const play = node('button', 'btn primary', practice?'RESTART':'PLAY AGAIN'), lobby = node('button', 'btn leave-match', practice?'RETURN HOME':'RETURN TO LOBBY');
   let activated = false;

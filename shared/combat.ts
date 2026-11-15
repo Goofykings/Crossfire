@@ -1,3 +1,4 @@
+import { rotationAt } from './rotation';
 import { MOVEMENT } from '../src/config/constants';
 import type { ControllerState, Vec3 } from '../src/player/PlayerController';
 import type { HitZone } from '../src/game/Damage';
@@ -14,12 +15,8 @@ export const NO_COMBAT: CombatIntent = { trigger: false, reload: false };
 export const teammates = (mode: MatchMode | null, a: PlayerTeam, b: PlayerTeam): boolean =>
   teamMode(mode) && a !== null && a === b;
 
-/** Server-seeded and stable across eviction/restart, with no client mode selection. */
-export function roundMode(seed: number, roundId: number): MatchMode {
-  let h = (seed ^ Math.imul(roundId + 1, 0x9e3779b1)) >>> 0;
-  h = Math.imul(h ^ (h >>> 16), 0x85ebca6b) >>> 0;
-  return (['ffa', 'teams'] as const)[((h ^ (h >>> 13)) >>> 0) % 2];
-}
+/** Server-seeded and stable across eviction/restart, with no client mode selection (see shared/rotation.ts). */
+export const roundMode = (seed: number, roundId: number): MatchMode => rotationAt(seed, roundId).mode;
 
 export function playerHeight(m: ControllerState): number {
   return MOVEMENT.standHeight + ((m.lowClearance ? MOVEMENT.slideHeight : MOVEMENT.crouchHeight) - MOVEMENT.standHeight) * m.crouch;

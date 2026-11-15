@@ -34,7 +34,7 @@ it('migrates retired stored abilities without clearing scores or changing normal
  migrateSession(old);expect(old.health).toBe(80);expect(old.score).toBe(345);expect(old).not.toHaveProperty('powerup');expect(old).not.toHaveProperty('burn');expect(old.death.weapon).toBeNull();expect(validMotion(old.motion)).toBe(true);
  const normal={health:75,motion};migrateSession(normal);expect(normal.health).toBe(75);expect(normal.motion).toEqual(motion);
  const ledger={mode:'powerups',players:{a:{score:345}}};migrateResult(ledger);expect(ledger).toEqual({mode:'ffa',players:{a:{score:345,assists:0}}});
- expect(new Set(Array.from({length:30},(_,i)=>roundMode(123,i)))).toEqual(new Set(['ffa','teams']));
+ expect(new Set(Array.from({length:60},(_,i)=>roundMode(123,i)))).toEqual(new Set(['ffa','teams','zone-control']));
  expect(validMotion({...motion,scale:1})).toBe(false);
  expect(parseServerMessage(JSON.stringify({v:PROTOCOL_VERSION,type:'powerup',event:{}}))).toBeNull();
 });

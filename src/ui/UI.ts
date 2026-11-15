@@ -30,7 +30,7 @@ import { weaponIcon } from './WeaponIcons';
 import { MatchHud } from './MatchHud';
 import type { RoundResult } from '../../shared/scoring';
 import { createRoundResults,updateResultGems } from './RoundResults';
-import type { PlayerTeam } from '../../shared/combat';
+import type { PlayerTeam, MatchMode } from '../../shared/combat';
 
 export type Screen = 'practice-setup' | 'shop'|'locker'|'cosmetic-preview' | 'modes' | 'create-room' | 'menu' | 'leaderboard' | 'loading' | 'start' | 'spectate' | 'results' | 'weapons' | 'hud' | 'pause' | 'settings' | 'error';
 
@@ -220,8 +220,8 @@ export class UI {
     return s;
   }
 
-  showRoundResult(result: RoundResult, selfId: string, team: PlayerTeam, next: () => void, home: () => void, practice?:{settings:()=>void}): void {
-    this.resultBody.replaceChildren(createRoundResults(result, selfId, team, next, home,practice)); this.show('results');
+  showRoundResult(result: RoundResult, selfId: string, team: PlayerTeam, next: () => void, home: () => void, practice?:{settings:()=>void}, upcoming?:{mode:MatchMode|null;mapName:string}|null): void {
+    this.resultBody.replaceChildren(createRoundResults(result, selfId, team, next, home,practice,upcoming)); this.show('results');
   }
   setPractice(active:boolean){document.body.dataset.practice=String(active);}
   updateResultGems(result:RoundResult,selfId:string){const panel=this.resultBody.querySelector<HTMLElement>('.round-results');if(panel)updateResultGems(panel,result,selfId);}

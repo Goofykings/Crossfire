@@ -1,3 +1,36 @@
+# Random public lobby: mode and map rotation (2026-11-15)
+
+The main public lobby (`public-main`) now picks both the mode and the map of every ten-minute match itself. No commit, push or deploy;
+no protocol bump (the WebSocket and HTTP schemas are unchanged: clients already receive `match.mode` and `mapId` in every snapshot).
+
+- **Rule (shared/rotation.ts, `pickRotation`):** mode is FFA, Teams or Zone Control with equal probability among the modes that have a
+  playable map; never the previous mode while another candidate exists. Map is uniform among the maps eligible for that mode
+  (Zone Control: only maps with the authored A/B/C squares, i.e. everything except European Town today; FFA/Teams: all five,
+  Neon Backstreets included); never the previous map while another exists. If no map ever supported Zone Control it is dropped from
+  the candidates instead of starting a broken match. The function takes a random source, so tests drive it with exact values.
+- **Server-authoritative and deterministic:** `rotationAt(seed, roundId)` walks a seeded chain (each pick avoids its predecessor) and
+  memoises it, so a restarted or evicted room, an empty room catching up and every late joiner agree without extra storage. `mapRound`
+  (now in shared/rotation.ts; `shared/maps.ts` keeps only constants and types so node-run Worker tests can import it) returns
+  `{id, mapId, mode, endsAt}`. `roundMode` delegates to it. The Worker's `scheduledRound()` pins the map and mode of a round that is
+  already running to the saved ledger, so releasing this change cannot swap the map under a live match.
+- **Transitions:** unchanged lifecycle (`ensureRound`): results are frozen and rewards/statistics finish first, then scores,
+  Zone Control state (`createZoneControl` for Zone Control rounds, `null` otherwise), deaths, loadouts and combat state reset and
+  teams are re-dealt alternately for Teams and Zone Control (cleared for FFA). Sessions, identities, weapon selections, cosmetics,
+  gems and statistics are untouched.
+- **Upcoming match shown:** the results screen has an "UP NEXT: <MODE> <map name>" strip (`.result-upcoming`, built from the new
+  round's snapshot, which the server has already rotated to). Practice results do not show it.
+- **Private rooms and custom public rooms** keep their fixed `config.mode`/`config.mapId` (also across rounds); the rotation is only
+  used when there is no room config. The `MATCH_MODE` binding (`ffa`/`teams`) still overrides the mode for test fixtures.
+- **Tests:** tests/publicRotation.test.ts (scripted random values, exact picks, no repeats, equal probability over a uniform grid,
+  Zone Control eligibility, long chains for four seeds, deterministic/restart-safe, every transition type, Zone Control excluded when
+  no map supports it); server/tests/public-rotation.mjs (real Worker, four real clients over 40 rounds of `public-main` with
+  `MATCH_MODE` unset: no repeats, everyone sees the same mode/map, no duplicate players, balanced teams in team modes and none in FFA,
+  Zone Control state only in Zone Control rounds and reset each round, spawning works, all five maps and the three key transitions
+  occur, a custom FFA room stays on Town, late join and reconnection resume once). Older tests that assumed five-map bags now loop to the
+  map they need (combat/integration bounds raised to 80 rounds).
+- **Limits:** the main lobby can now start Zone Control, so its HUD/scoreboard/results rely on the existing Zone Control UI (unchanged).
+  Fixtures that set `MATCH_MODE` never rotate the mode. Frontend and Worker should still be released together.
+
 # Neon Backstreets polish and upgrade (2026-11-14)
 
 Second pass over the fifth map using the newly added reference images (rainy ramen alleys, vending machine rows, fire escapes over

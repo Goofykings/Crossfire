@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { MAP_IDS, ROUND_MS, mapRound } from '../shared/maps';
+import { MAP_IDS, ROUND_MS } from '../shared/maps';
+import { mapRound } from '../shared/rotation';
 import { MAPS } from '../src/maps/registry';
 import { WORLDS } from '../server/src/world';
 import { MOVEMENT, FIXED_DT } from '../src/config/constants';
@@ -22,18 +23,6 @@ describe('canonical public map schedule', () => {
       }
     }
   });
-  it('randomizes complete bags of every map, rather than hardcoding a single map', () => {
-    const first = new Set<string>();
-    const n = MAP_IDS.length;
-    for (let seed = 1; seed <= 100; seed++) {
-      const schedule = { epoch: 1000, seed };
-      first.add(mapRound(schedule, 1000).mapId);
-      for (let bag = 0; bag < 10; bag++) {
-        expect(new Set(MAP_IDS.map((_, i) => mapRound(schedule, 1000 + (bag * n + i) * ROUND_MS).mapId))).toEqual(new Set(MAP_IDS));
-      }
-    }
-    expect(first).toEqual(new Set(MAP_IDS));
-  });
   it('uses exact deadlines for late joins, duplicate wakeups, restart and empty-room catch-up', () => {
     const saved = { epoch: 123456, seed: 123456789 };
     expect(mapRound(saved, saved.epoch + ROUND_MS - 1).id).toBe(0);
@@ -44,16 +33,6 @@ describe('canonical public map schedule', () => {
     expect(a.endsAt - now).toBe(145000);
     expect(mapRound(JSON.parse(JSON.stringify(saved)), now)).toEqual(a);
     expect(mapRound(saved, now)).toEqual(a);
-  });
-  it('a combat fixture can reach Town from every shuffled offset within two map bags', () => {
-    let exceedsOldFourStepLimit=false;
-    for(let seed=1;seed<=100;seed++)for(let offset=0;offset<MAP_IDS.length*3;offset++){
-      const schedule={epoch:0,seed};let steps=0;
-      while(mapRound(schedule,(offset+steps)*ROUND_MS).mapId!=='european-town'&&steps<2*MAP_IDS.length-2)steps++;
-      expect(mapRound(schedule,(offset+steps)*ROUND_MS).mapId).toBe('european-town');
-      exceedsOldFourStepLimit ||= steps>4;
-    }
-    expect(exceedsOldFourStepLimit).toBe(true);
   });
 });
 

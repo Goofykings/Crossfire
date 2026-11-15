@@ -1,3 +1,12 @@
+## Random public lobby rotation (2026-11-15)
+
+See PROGRESS.md (newest entry). `public-main` picks mode (FFA/Teams/Zone Control) and map per round via shared/rotation.ts (`pickRotation`
+with an injectable random source, `rotationAt` seeded chain, `mapRound` now lives there; shared/maps.ts must stay free of runtime imports
+because node-run Worker tests import it). No immediate mode/map repeats, Zone Control only on maps with A/B/C squares (`zoneEligible`),
+the ledger pins a running round's map/mode across releases, custom/private rooms keep their config. Results screen shows UP NEXT. Tests
+that need Town loop (bounds 80) instead of assuming five-map bags; harness `MATCH_MODE:''` enables real rotation. No protocol change.
+No commit/push/deploy.
+
 ## Neon Backstreets polish (2026-11-14)
 
 See docs/NEON_BACKSTREETS.md "Polish and upgrade pass" and the newest PROGRESS entry. Visual plus a few cover props; spawns, zones, stairs

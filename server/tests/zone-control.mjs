@@ -67,5 +67,5 @@ for(const privacy of ['public','private'])test(`Zone Control: ${privacy} room, r
  assert.equal(result.teamScores.red,0);assert.ok(result.teamScores.blue>0);assert.equal(result.players.find(p=>p.id===a.id).score,0);
  assert.ok(a.snapshot.zoneControl.zones.every(z=>z.owner===null&&z.progress===0));assert.deepEqual(a.snapshot.match.teamScores,{blue:0,red:0});assert.equal(self(a).alive,false);
  // Canonical room remains unchanged by either custom public/private objective room.
- const canonical=await h.central.snapshotForTest();assert.equal(canonical.match.mode,'ffa');assert.equal(canonical.zoneControl,undefined);
+ const canonical=await h.central.snapshotForTest();assert.equal(canonical.zoneControl!==undefined,canonical.match.mode==='zone-control','the canonical lobby keeps its own rotated mode, not the custom room mode');if(canonical.zoneControl)assert.equal(canonical.zoneControl.mapId,canonical.mapId);
 });
