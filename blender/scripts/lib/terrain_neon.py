@@ -12,6 +12,7 @@ import math
 
 import farmstead
 import neon
+import neon_art as art
 from meshkit import MeshData
 from terrain_farm import subtract_rects, vnoise
 
@@ -26,6 +27,10 @@ class NeonTerrain:
         zones = layout['ground']['zones']
         self.raised = [z['rect'] for z in zones if z.get('height', 0) > 0]
         self.streets = [z['rect'] for z in zones if z['kind'] == 'street']
+        # small warm tiles in the food alley and the market court; flags everywhere else off the roads
+        self.tiled = [z['rect'] for z in zones if z['id'] in ('noodle_alley', 'market_court')]
+        ox, oz = art.PLAZA['origin']
+        self.plaza = (ox, oz, ox + art.PLAZA['size'], oz + art.PLAZA['size'])
         # closed footprints with their own floor boxes (west unit of the SE block)
         self.cut = list(self.raised) + [[3.3, 4.8, 6.2, 14.7]]
 
@@ -37,10 +42,15 @@ class NeonTerrain:
         return 0.0
 
     def material(self, x: float, z: float) -> str:
+        p = self.plaza
+        if p[0] <= x <= p[2] and p[1] <= z <= p[3]:
+            return 'neon_plaza'
         if any(r[0] <= x <= r[2] and r[1] <= z <= r[3] for r in self.streets):
             return 'neon_asphalt'
+        if any(r[0] <= x <= r[2] and r[1] <= z <= r[3] for r in self.tiled):
+            return 'neon_tile'
         if self.play[0] <= x <= self.play[2] and self.play[1] <= z <= self.play[3]:
-            return 'neon_concrete'
+            return 'neon_pave'
         return 'neon_asphalt'
 
     def shade(self, x, z):
@@ -67,7 +77,9 @@ class NeonTerrain:
     def quad(self, md, r, mat):
         x0, z0, x1, z1 = r
         pts = [(x0, 0.0, z0), (x0, 0.0, z1), (x1, 0.0, z1), (x1, 0.0, z0)]
-        md.face(pts, mat, col=[self.shade(p[0], p[2]) for p in pts])
+        # the plaza is one image over its square: u east, v south in metres from its north-west corner (tile = its size)
+        uv = [(p[0] - self.plaza[0], p[2] - self.plaza[1]) for p in pts] if mat == 'neon_plaza' else None
+        md.face(pts, mat, uv=uv, col=[self.shade(p[0], p[2]) for p in pts])
 
     # --- paint, puddles, street furniture flush with the ground --------------------------------------------------------
     def markings(self, md: MeshData):
@@ -151,9 +163,7 @@ class NeonTerrain:
                 o = k * .1
                 bx0, bz0, bx1, bz1 = (x + o - .02, z - hz + .03, x + o + .02, z + hz - .03) if along == 'x' else (x - hx + .03, z + o - .02, x + hx - .03, z + o + .02)
                 md.face_toward([(bx0, y + .004, bz0), (bx1, y + .004, bz0), (bx1, y + .004, bz1), (bx0, y + .004, bz1)], 'rubber', (0, 1, 0))
-        for cx, cz in ((-8.0, -16.3), (6.5, -16.0), (16.1, 8.0), (-2.0, 1.0 + 1.5), (-17.0, 6.0), (2.0, 17.6)):
-            if -3.4 < cx < -0.8 and -0.2 < cz < 1.6:
-                continue
+        for cx, cz in ((-8.0, -16.3), (6.5, -16.0), (16.1, 8.0)):
             pts = [(cx + math.cos(i / 10 * 2 * math.pi) * .36, y, cz + math.sin(i / 10 * 2 * math.pi) * .36) for i in range(10)]
             md.face_toward(pts, 'steel_dark', (0, 1, 0))
 

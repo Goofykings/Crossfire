@@ -104,26 +104,26 @@ STREET = [
     P('van_white', 4.5, -17.4, 90), P('car_black', -11.5, -15.0, 270),
     P('food_cart', -15.6, -19.36, 180, F),
     P('jersey_barrier', -19.35, -17.3, 90), P('jersey_barrier', -19.35, -15.2, 90),
-    P('traffic_cone', -18.2, -18.0, 0), P('traffic_cone', -18.4, -14.6, 0),
+    P('traffic_cone', -18.2, -18.0, 0),
     P('fire_hydrant', 0.55, -13.6, 0, F), P('bike_rack', 10.6, -13.45, 0, F),
-    P('bicycle', 10.0, -13.2, 92, F), P('scooter', -13.0, -13.25, 90, F), P('scooter', -6.9, -13.3, 84, F),
-    P('newspaper_box', -0.8, -19.65, 180, F), P('trash_bags', 12.4, -19.45, 180, F), P('trash_bin', 11.5, -19.55, 180, F),
+    P('bicycle', 10.0, -13.2, 92, F), P('scooter', -13.0, -13.25, 90, F),
+    P('trash_bags', 12.4, -19.45, 180, F), P('trash_bin', 11.5, -19.55, 180, F),
     P('streetlight', 10.6, -19.75, 180, F), P('bollard_steel', -5.2, -13.3, 0, F), P('bollard_steel', -0.3, -13.3, 0, F),
     # East lane: a parked car, scooters, a newspaper box, a streetlight
-    P('car_red', 17.6, 1.0, 0), P('scooter', 19.3, -8.0, 0, F), P('scooter', 19.3, -5.8, 0, F),
-    P('newspaper_box', 13.15, -10.0, 270, F), P('streetlight', 19.75, -2.6, 270, F), P('trash_bags', 19.4, 12.4, 270, F),
+    P('car_red', 17.6, 1.0, 0), P('scooter', 19.3, -8.0, 0, F),
+    P('streetlight', 19.75, -2.6, 270, F), P('trash_bags', 19.4, 12.4, 270, F),
     P('bike_rack', 19.3, 8.0, 90, F),
 ]
 LANES = [
     # west lane: vending machines on the mart wall, a dumpster, bags, pallets, a cabinet, an AC condenser
-    P('vend_red', -15.43, -10.7, 270), P('vend_blue', -15.43, -9.6, 270), P('trash_bin_grey', -19.6, -11.6, 90),
+    P('vend_red', -15.43, -10.7, 270), P('vend_blue', -15.43, -9.6, 270),
     P('dumpster', -19.33, -1.5, 90), P('trash_bags', -19.4, 0.55, 90), P('pallet_stack', -19.43, 6.6, 90),
     P('electrical_cabinet', -19.7, 9.0, 90), P('ac_condenser', -14.22, 13.6, 270), P('crate', -18.6, 12.6, 15),
     # noodle alley: a blue vending machine, crates by the hatch, a bin
     P('vend_blue', -5.07, -8.75, 90), P('crate', -0.5, -7.0, 0), P('crate_small', -0.42, -7.05, 25, 0.8),
     P('trash_bin', -5.1, -4.3, 90),
     # back alley: dumpsters, a skip, bags, pallets, AC condensers, a scooter
-    P('dumpster', -13.2, 19.3, 0), P('dumpster_blue', 8.5, 19.3, 0), P('skip_bin', 17.6, 18.9, 0),
+    P('dumpster', -13.2, 19.3, 0), P('dumpster_blue', 8.5, 19.3, 0), P('dumpster', 17.3, 19.3, 0),
     P('trash_bags', -15.0, 19.4, 0), P('trash_bags', 10.4, 19.45, 0), P('pallet_stack', 1.0, 19.5, 0),
     P('ac_condenser', 4.8, 15.22, 180), P('ac_condenser', 11.2, 15.22, 180), P('scooter', -7.0, 15.6, 90),
     P('crate_stack', -18.9, 16.0, 90),
@@ -139,7 +139,6 @@ CROSSING = [
 TERRACE = [
     P('ac_condenser', 11.95, 6.0, 270, UP), P('ac_condenser', 11.95, 7.3, 270, UP),
     P('crate', 6.0, 7.9, 10, UP), P('crate_small', 6.9, 7.85, 40, UP), P('flower_pot', 3.8, 5.3, 0, UP),
-    P('bamboo_pot', 11.5, 4.95, 0, UP),
 ]
 INTERIORS = [
     # 24/7 Mart: checkout counter by the door, two aisles of shelves, drink fridges along the back wall
@@ -167,22 +166,23 @@ INTERIORS = [
 # stands against a wall or breaks a long lane; none blocks a doorway, a stair foot or a spawn.
 DETAIL = [
     # Neon Street: the ramen door gets a menu board and two bamboo pots, the pharmacy a bin and a planter-height cone cluster
-    P('sandwich_board', 4.35, -13.25, 0, F), P('bamboo_pot', 1.05, -13.15, 0, F), P('bamboo_pot', 5.05, -13.15, 0, F),
-    P('traffic_cone', 8.6, -17.0, 0), P('traffic_cone', 9.1, -17.4, 0),
+    P('sandwich_board', 4.35, -13.25, 0, F), P('flower_pot', 1.05, -13.15, 0, F), P('flower_pot', 5.05, -13.15, 0, F),
+    P('traffic_cone', 8.6, -17.0, 0),
     # west lane south: a vending bank and a gacha bank against the wall, pallets and bags, a phone booth in the crossing
-    P('vend_yellow', -19.45, 2.2, 90), P('vend_white', -19.45, 3.3, 90),
-    P('phone_booth', -12.6, 3.45, 0), P('pallet', -18.6, -6.9, 8), P('trash_bags', -19.35, -7.9, 80), P('traffic_cone', -18.0, -6.4, 0),
-    # noodle alley: a gacha bank beside the mart window
-    P('gacha_bank', -5.2, -11.3, 90),
+    P('vend_yellow', -19.45, 2.2, 90),
+    P('pallet', -18.6, -6.9, 8), P('trash_bags', -19.35, -7.9, 80), P('traffic_cone', -18.0, -6.4, 0),
     # east lane: another bank of vending machines by the service gap, a bin, scooters
     P('vend_red', 19.45, 10.3, 270, F), P('vend_yellow', 19.45, 11.4, 270, F),
     # east lane cover (it was a 35 m run with a single parked car): a dumpster on the west edge, another further south, a barrier
     P('dumpster', 14.45, -10.8, 90), P('dumpster_blue', 15.0, 5.6, 90), P('jersey_barrier', 16.4, -16.5, 90),
     # back alley: pallets and a wrapped load in the loading bay break the 40 m lane, cones, a chair of crates, plants
-    P('pallet_wrapped', -1.6, 17.5, 0), P('pallet', 2.2, 18.8, 15), P('traffic_cone', 3.9, 16.6, 0), P('traffic_cone', 4.2, 17.3, 0),
-    P('trash_bags', 15.2, 19.4, 0), P('crate_small', 12.4, 19.5, 30), P('bamboo_pot', 13.6, 19.45, 0),
+    P('crate_stack', -1.6, 17.5, 0), P('pallet', 2.2, 18.8, 15), P('traffic_cone', 3.9, 16.6, 0),
+    P('trash_bags', 15.2, 19.4, 0), P('crate_small', 12.4, 19.5, 30),
     # market court and crossing: a planter row, crates by the stalls
     P('planter_long', -13.8, -1.3, 0), P('flower_pot', -4.7, 14.0, 0), P('market_crate', -3.7, 8.9, 40),
+    # overhaul (2026-11-15): pots at the stair feet, a barrel by the shoji screen, tyres and drums in the working back alley
+    P('flower_pot', 10.25, 1.5, 0), P('flower_pot', 1.25, 13.0, 0), P('barrel', -0.47, -5.86, 0),
+    P('tire_stack', 3.75, 15.52, 0),
 ]
 
 
@@ -190,8 +190,7 @@ def derived_light(layout, catalog):
     """Glows, shafts and bake sources that follow from the props and the blade signs (so moving a prop moves its light)."""
     neon = layout['neon']
     glows, beams, bake = [], [], []
-    tint = {'vend_red': [1.0, .62, .55], 'vend_blue': [.55, .8, 1.0], 'vend_yellow': [1.0, .9, .5],
-            'vend_white': [.85, .95, 1.0], 'phone_booth': [.4, .95, 1.0], 'gacha_bank': [1.0, .6, .85]}
+    tint = {'vend_red': [1.0, .62, .55], 'vend_blue': [.55, .8, 1.0], 'vend_yellow': [1.0, .9, .5]}
     for p in layout['props']:
         t = p['type']
         x, y, z = p['pos']
@@ -199,12 +198,7 @@ def derived_light(layout, catalog):
         fx, fz = math.sin(r), -math.cos(r)
         n = [round(fx), round(fz)]
         if t in tint and abs(fx - n[0]) < 1e-6 and abs(fz - n[1]) < 1e-6 and y < 1:
-            if t == 'phone_booth':
-                for nn in ([0, -1], [0, 1], [-1, 0], [1, 0]):
-                    glows.append({'pos': [x, z], 'n': nn, 'col': tint[t], 'k': .55, 'y': 1.3, 'w': 1.2, 'h': 2.2})
-            else:
-                glows.append({'pos': [x, z], 'n': n, 'col': tint[t], 'k': .75 if t != 'gacha_bank' else .6, 'y': 1.1 if t != 'gacha_bank' else .9,
-                              'w': 1.3 if t != 'gacha_bank' else 1.9, 'h': 1.8 if t != 'gacha_bank' else 1.5})
+            glows.append({'pos': [x, z], 'n': n, 'col': tint[t], 'k': .6, 'y': 1.1, 'w': 1.3, 'h': 1.8})
             bake.append({'pos': [x + n[0] * .9, y + 1.2, z + n[1] * .9], 'col': tint[t], 'r': 3.2, 'i': .5})
         if t == 'streetlight':
             lx, lz = x + fx * 1.5, z + fz * 1.5

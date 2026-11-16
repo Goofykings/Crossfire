@@ -1,3 +1,36 @@
+# Neon Backstreets overhaul: paving, plaza, zone light, wall hardware (2026-11-15)
+
+Third pass over the fifth map, driven by five new reference screenshots and web research. Full write-up:
+**`docs/NEON_BACKSTREETS.md`** ("Overhaul (2026-11-15)"). No commit, push or deploy; no protocol, weapon, movement or scoring
+change; routes, stairs, doorways, spawns and zone squares are untouched (prop colliders changed: see "Props").
+
+- **Weak points found:** featureless dark ground (no joints, markings or plaza), the same violet-pink light in every zone, bare
+  walls at eye level, stairs and the court as black silhouettes, standard presets darker than Chromebook mode.
+- **Ground:** painted paving sets with normal and ORM maps (flags, warm small tiles, glazed wall tiles; wet hollows and joints),
+  a circular plaza in the crossing (hazard ring, radial paving, medallion; one 9 m image), a markings atlas (road arrows, stop
+  and slow kanji, hatched bay, bay numbers, tyre marks, runoff stains, litter, three cat-and-waves cast covers, wall stencils,
+  plates, flyers; 60 placements).
+- **Lighting:** one colour family per zone (teal west lanes, warm Lantern Alley and Market Court, sodium Loading Alley, magenta
+  Karaoke Lane, white plaza under a bulb festoon, cyan tiled underpass) by re-assigning blades and boards, five new blade arts
+  and soft bake fills; light strips up every stair; shoji screens; `environmentIntensity` 1.55 so the darkest zones read.
+- **Walls:** 26 pieces of wall hardware (meters, junction boxes and conduits, vents, hose cabinets, ducts), five more bulkhead
+  lamps, tiled underpass walls.
+- **Props (clean-up of the weak ones):** deleted from the catalogue: phone booth, capsule-machine bank, bamboo pot, white vending
+  machine (blown-out white panels, crude models). Removed from the map: wrapped pallet, skip, pale grey bin, newspaper boxes,
+  three cones, two scooters. Replacements: crate stack, dumpster, flower pots; vending machine headers are no longer white light
+  boxes. Added: barrel, tyre stack, stair-foot pots. 124 props (was 133).
+- **Rain:** drips from the balcony lip, the kiosk roof, the court landing and the awnings (off on Chromebook / reduced motion).
+- **Collision / geometry:** the geometry test caught and I fixed duct flanges sharing a back plane with the duct, a blade sign
+  crossing a window AC unit, a vent edge on a light-shaft plane and a stair strip's ribbon on a rail post; the integrity audit,
+  the walk tests and the real Practice match pass (bots: 21 eliminations in 40 s, 21 of 25 cells, nobody left the play area).
+- **Performance:** 139 draw calls on Low after the prop clean-up (143 before it, 136 on 2026-11-14), terrain 5.7 MB (was 5.2). The ratios below are from the one clean run, before the clean-up; two later runs were disturbed by other GPU load (Chromebook read 0.71-0.75 there) and need repeating. Same-run ratios to Modern City on the dev iGPU:
+  low 0.87, medium 0.95, high 0.93, Chromebook 1.03 (2026-11-14: 0.85 / 0.89 / 0.88 / 1.23; the iGPU was warm, see the doc).
+- **Callouts:** Neon Street, Karaoke Lane, Vending Lane, Laundry Lane, Lantern Alley, Loading Alley, Plaza, Balcony Arcade,
+  Market Court, Tiled Underpass, 24/7 Mart, Ramen, Laundromat.
+- **Verification (after the prop clean-up):** frontend **1283 passed / 1 existing opt-in skip** (`npx vitest run --maxWorkers=1`, PowerShell, `C:`), root typecheck, production build and `assets:verify` pass; backend **106/106** (`npm test --prefix server`, rebuilt Worker bundle); geometry z-fight, integrity audit and walk tests pass; real Practice match: 21 eliminations in 40 s, no page errors.
+- **Remaining limits:** no planar reflections; wall hardware has no collision; the layout itself was not restructured;
+  physical Chromebooks are unmeasured. Frontend and Worker must be released together (the map data changed).
+
 # Random public lobby: mode and map rotation (2026-11-15)
 
 The main public lobby (`public-main`) now picks both the mode and the map of every ten-minute match itself. No commit, push or deploy;

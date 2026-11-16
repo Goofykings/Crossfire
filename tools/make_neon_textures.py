@@ -223,6 +223,12 @@ def paint_signs():
     put('mahjong_v', neon_sign(v, [(vtext_mask(v, '麻雀', jp(150)), RED, 12)], border=ORANGE))
     put('cafe_v', neon_sign(v, [(vtext_mask(v, 'CAFE', font('bahnschrift.ttf', 112), .08), CYAN, 12)], border=GREEN))
     put('pachinko_v', neon_sign(v, [(vtext_mask(v, 'パチンコ', jp(120)), YELLOW, 12)], border=RED))
+    # overhaul (2026-11-15): warm blades for the food alley, a bathhouse and an electronics blade for the cool west lane
+    put('yakitori_v', neon_sign(v, [(vtext_mask(v, '焼鳥', jp(150)), ORANGE, 12)], border=RED))
+    put('sento_v', neon_sign(v, [(vtext_mask(v, '銭湯', jp(150)), CYAN, 12)], border=WHITE))
+    put('gyoza_v', neon_sign(v, [(vtext_mask(v, '餃子', jp(150)), YELLOW, 12)], border=RED))
+    put('denki_v', neon_sign(v, [(vtext_mask(v, '電器', jp(150)), BLUE, 12)], border=CYAN))
+    put('oden_v', neon_sign(v, [(vtext_mask(v, 'おでん', jp(130)), RED, 12)], border=ORANGE))
     put('izakaya', neon_sign((1024, 256), [(text_mask((1024, 256), '居酒屋', jp(150), (290, 128)), PINK, 14),
                                            (text_mask((1024, 256), 'IZAKAYA', font('bahnschrift.ttf', 96), (730, 128), spacing=6), YELLOW, 12)], border=ORANGE))
     put('udon', neon_sign((512, 256), [(text_mask((512, 256), 'うどん', jp(130)), ORANGE, 12)], border=RED))
@@ -431,6 +437,29 @@ def paint_panels():
     d.text((128, 160), '豚骨ラーメン', font=jp(34), fill=(255, 235, 170), anchor='mm')
     d.text((128, 205), '¥ 900', font=font('segoeprb.ttf', 40), fill=(250, 245, 235), anchor='mm')
     put('specials', sp)
+    # overhaul: shoji screens. Warm paper lit from inside behind a dark timber lattice, with a darker kick board
+    for name, size, cols in (('shoji', (512, 256), 8), ('shoji_tall', (256, 256), 4)):
+        sh = gradient(size, (255, 214, 130), (232, 150, 60))
+        d = ImageDraw.Draw(sh)
+        rnd3 = random.Random(9)
+        for _ in range(6):      # faint silhouettes and stains behind the paper
+            xx, yy = rnd3.randrange(size[0]), rnd3.randrange(40, 200)
+            d.ellipse([xx - 30, yy - 44, xx + 30, yy + 44], fill=(236, 170, 84))
+        sh = sh.filter(ImageFilter.GaussianBlur(7))
+        d = ImageDraw.Draw(sh)
+        wood = (38, 24, 16)
+        cw = size[0] / cols
+        for k in range(cols + 1):
+            x = min(size[0] - 4, max(4, k * cw))
+            d.rectangle([x - 4, 0, x + 4, size[1]], fill=wood)
+            if k < cols:
+                for j in (1, 2):
+                    d.rectangle([x + cw * j / 3 - 1.5, 0, x + cw * j / 3 + 1.5, 206], fill=wood)
+        for y in (0, 52, 104, 156, 206):
+            d.rectangle([0, y - 3, size[0], y + 3], fill=wood)
+        d.rectangle([0, 210, size[0], size[1]], fill=(52, 34, 22))
+        d.rectangle([0, 0, size[0], 7], fill=wood)
+        put(name, sh)
     sheet.save(OUT / 'neon_panels.jpg', quality=90)
 
 
@@ -738,6 +767,9 @@ def main():
     paint_glows()
     paint_skyline()
     paint_sky()
+    sys.path.insert(0, str(ROOT / 'tools'))
+    import neon_ground_art
+    neon_ground_art.paint_all(sys.modules[__name__])
     print('wrote', OUT, 'and', ENV / 'sky_neon_1k.hdr')
 
 

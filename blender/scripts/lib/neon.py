@@ -20,7 +20,7 @@ import neon_art as art
 from meshkit import MeshData
 
 UNLIT = {'neon_tube', 'neon_signs', 'neon_panels', 'neon_windows', 'neon_skyline', 'neon_glow', 'neon_wet', 'neon_beam'}
-NO_BAKE = UNLIT | {'neon_graffiti', 'neon_puddle', 'glass_store', 'chainlink', 'paint_white', 'paint_yellow', 'oil_stain', 'posters_fun'}
+NO_BAKE = UNLIT | {'neon_graffiti', 'neon_marks', 'neon_puddle', 'glass_store', 'chainlink', 'paint_white', 'paint_yellow', 'oil_stain', 'posters_fun'}
 AMBIENT = 0.7
 
 
@@ -336,6 +336,88 @@ def crack(md, g, floor):
         pts.append((cx + lx * ca - lz * sa, y, cz + lx * sa + lz * ca))
     u0, v0, u1, v1 = art.graffiti_uv(g.get('cell', 10))
     md.face_toward(pts, 'neon_graffiti', (0, 1, 0), uv=[(u0, v1), (u1, v1), (u1, v0), (u0, v0)])
+
+
+def mark(md, g, floor):
+    """Paint from the marks atlas (road arrows, kanji, hatching, bay numbers, stencils, plates, litter, cast covers).
+    Ground: c = [x, z], the top of the art points along the compass heading `rot`, 5 mm up (+ `lift`). Wall: c = [x, y, z] and
+    the wall normal n, 16 mm proud (tags lie at 8 mm, grime at 12 mm)."""
+    u0, v0, u1, v1 = art.marks_uv(g['art'])
+    w, h = g['w'], g['h']
+    if 'n' in g:
+        wall_quad(md, g['c'], g['n'], w, h, 'neon_marks', .016, uv=(u0, v0, u1, v1))
+        return
+    cx, cz = g['c']
+    a = math.radians(g.get('rot', 0))
+    ca, sa = math.cos(a), math.sin(a)
+    y = floor(cx, cz) + .005 + g.get('lift', 0.0)
+    pts = [(cx + lx * ca - lz * sa, y, cz + lx * sa + lz * ca) for lx, lz in ((-w / 2, -h / 2), (w / 2, -h / 2), (w / 2, h / 2), (-w / 2, h / 2))]
+    md.face_toward(pts, 'neon_marks', (0, 1, 0), uv=[(u0, v1), (u1, v1), (u1, v0), (u0, v0)])
+
+
+def _wbox(md, c, n, w, h, d, mat, off=0.0, **kw):
+    """A box mounted on a wall: centre c on the wall plane, w along the wall, h high, from `off` to `off + d` proud."""
+    nx, nz = n
+    rx, rz = right_of(n)
+    xa, xb = c[0] + nx * off, c[0] + nx * (off + d)
+    za, zb = c[2] + nz * off, c[2] + nz * (off + d)
+    md.box(min(xa, xb) - abs(rx) * w / 2, c[1] - h / 2, min(za, zb) - abs(rz) * w / 2,
+           max(xa, xb) + abs(rx) * w / 2, c[1] + h / 2, max(za, zb) + abs(rz) * w / 2, mat, **kw)
+
+
+def fixture(md, f):
+    """Eye-level wall hardware (visual only, at most 19 cm proud): electricity meters with their conduits, junction boxes with
+    a conduit run, louvred vents, fire-hose cabinets and sheet-metal ducts. c = point on the wall plane, n = wall normal."""
+    kind, c, n = f['kind'], f['c'], f['n']
+    nx, nz = n
+    rx, rz = right_of(n)
+    x, y, z = c
+
+    def along(s, dy=0.0, off=0.0):
+        return (x + rx * s + nx * off, y + dy, z + rz * s + nz * off)
+    if kind == 'meter':
+        k = f.get('count', 3)
+        for i in range(k):
+            s = (i - (k - 1) / 2) * .36
+            _wbox(md, along(s), n, .3, .42, .123, 'steel_grey')
+            _wbox(md, along(s, .07), n, .17, .11, .011, 'plastic_white', off=.123)
+            _wbox(md, along(s, -.13), n, .2, .05, .009, 'steel_dark', off=.123)
+            md.tube(along(s, .21, .05), along(s, f.get('top', 3.3) - y, .05), .017, 'galvanized', segments=5)
+        _wbox(md, along(0, .52), n, k * .36 + .1, .05, .09, 'steel_dark')
+    elif kind == 'junction':
+        _wbox(md, c, n, .46, .56, .147, 'steel_grey')
+        _wbox(md, along(.17), n, .03, .5, .008, 'steel_dark', off=.147)
+        _wbox(md, along(-.08, .06), n, .16, .16, .006, 'steel_yellow', off=.147)
+        run = f.get('run', 0)
+        if run:
+            sgn = 1 if run > 0 else -1
+            for dy in (.16, .1):
+                md.tube(along(sgn * .23, dy, .04), along(run, dy, .04), .016, 'galvanized', segments=5)
+            s = sgn * .8
+            while abs(s) < abs(run):
+                _wbox(md, along(s, .13), n, .04, .16, .062, 'steel_dark')
+                s += sgn * 1.3
+            md.tube(along(run, .16, .04), along(run, f.get('drop', -1.0), .04), .016, 'galvanized', segments=5)
+    elif kind == 'vent':
+        w, h = f.get('w', .7), f.get('h', .5)
+        _wbox(md, c, n, w, h, .043, 'steel_dark')
+        m = int(h / .085)
+        for i in range(m):
+            _wbox(md, along(0, -h / 2 + .06 + i * (h - .12) / max(1, m - 1)), n, w - .1, .035, .027, 'galvanized', off=.043)
+    elif kind == 'reel':
+        _wbox(md, c, n, .62, .62, .187, 'steel_red')
+        _wbox(md, along(0, 0), n, .4, .4, .008, 'plastic_white', off=.187)
+        _wbox(md, along(.24, 0), n, .03, .2, .03, 'steel_dark', off=.187)
+    elif kind == 'duct':
+        L, w, h = f['len'], f.get('w', .34), f.get('h', .3)
+        _wbox(md, along(L / 2), n, L, h, w, 'galvanized', off=.02)
+        s = .0
+        while s <= L + .01:
+            _wbox(md, along(s), n, .05, h + .06, w + .04, 'steel_dark', off=.011)
+            s += 1.5
+        if f.get('down'):     # a drop at the far end, ending in a cowl
+            _wbox(md, along(L, -f['down'] / 2 - h / 2 - .004), n, h - .016, f['down'], w - .016, 'galvanized', off=.028)
+            _wbox(md, along(L, -f['down']), n, h + .12, .08, w + .1, 'steel_dark', off=0.0)
 
 
 def noren(md, g):
@@ -761,6 +843,10 @@ def dressing(layout, floor):
         crack(md, g, floor)
     for g in spec.get('noren', []):
         noren(md, g)
+    for g in spec.get('marks', []):
+        mark(md, g, floor)
+    for g in spec.get('fixtures', []):
+        fixture(md, g)
     for g in spec.get('beams', []):
         beam(md, g)
     for g in spec.get('prop_glows', []):

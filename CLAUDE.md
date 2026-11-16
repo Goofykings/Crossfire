@@ -7,6 +7,22 @@ the ledger pins a running round's map/mode across releases, custom/private rooms
 that need Town loop (bounds 80) instead of assuming five-map bags; harness `MATCH_MODE:''` enables real rotation. No protocol change.
 No commit/push/deploy.
 
+## Neon Backstreets overhaul (2026-11-15)
+
+See docs/NEON_BACKSTREETS.md "Overhaul (2026-11-15)" and the newest PROGRESS entry. Visual plus a prop clean-up; routes, spawns,
+zones, stairs and doorways untouched. The user asked for weak props to go: `phone_booth`, `gacha_bank`, `bamboo_pot` and
+`vend_white` are deleted (do not bring them back), and this map no longer uses `pallet_wrapped`, `skip_bin`, `trash_bin_grey` or
+`newspaper_box`; never give a prop a large pure-white emissive panel (it blows out at night). Ground art is tools/neon_ground_art.py (called by make_neon_textures): texture sets
+`pave`, `tile`, `walltile`, `plaza` (albedo/normal/ORM in the map's texture folder via `tex_dir`) and the alpha-tested marks atlas
+(`neon_marks`, cells in neon_art.MARKS; `neon_art.PLAZA` places the 9 m plaza image, whose ground cells pass explicit UVs). Dressing
+data: `marks()` and `fixtures()` in tools/neon_dressing.py, built by `mark` / `fixture` in blender/scripts/lib/neon.py. Ground marks
+share the road paint's 5 mm height (never overlap paint or each other; cast covers 17 mm); wall marks 16 mm; wall hardware is
+visual only (max 19 cm proud; two boxes must not share a back plane). Each zone has one light colour family (teal west lanes, warm
+Lantern Alley / Market Court, sodium Loading Alley, magenta Karaoke Lane, white Plaza, cyan Underpass): keep new signs in their
+zone's family. The bake only modulates albedo: brighten a zone with `environmentIntensity` (now 1.55), not the bake. Rain drips
+(`rain.drips` edges) are off on Chromebook / reduced motion. The sign atlas is 2048 x 4096. Rebuild as in the polish section
+(Blender `--only materials,neon` takes about 12 s). No commit/push/deploy.
+
 ## Neon Backstreets polish (2026-11-14)
 
 See docs/NEON_BACKSTREETS.md "Polish and upgrade pass" and the newest PROGRESS entry. Visual plus a few cover props; spawns, zones, stairs

@@ -8,12 +8,13 @@ const inside = (r: Rect, x: number, z: number) => x >= r[0] && x <= r[2] && z >=
  * Cosmetic rain around the active camera (Neon Backstreets). One bounded CPU particle system of stretched additive
  * streaks: drops spawn only outside roofed footprints and each one's lifetime ends exactly on the surface below it,
  * so nothing falls through a ceiling or a deck. A second small system throws short splash sprays where drops land
- * (half of them on puddles). Chromebook mode keeps about a quarter of the drops and no splashes; reduced motion
- * turns it all off. No gameplay, network or collision involvement.
+ * (half of them on puddles), and a third lets heavy drops fall from dripping edges (balcony, kiosk roof, awnings).
+ * Chromebook mode keeps about a quarter of the drops and no splashes or drips; reduced motion turns it all off. No gameplay, network or collision involvement.
  */
 export class Rain {
   private readonly system: ParticleSystem;
   private readonly splash: ParticleSystem;
+  private readonly drips: ParticleSystem | null = null;
   private readonly texture: Texture;
   private readonly observer;
   private disposed = false;
@@ -69,6 +70,42 @@ export class Rain {
     sp.renderingGroupId = 0;
     sp.start();
     this.splash = sp;
+    // drips: a few heavy drops that gather on an edge and fall straight down (world-space emitter; gravity does the work)
+    const edges = spec.drips ?? [];
+    if (edges.length) {
+      const total = edges.reduce((n, e) => n + Math.hypot(e[2] - e[0], e[3] - e[1]), 0);
+      const dr = new ParticleSystem('rain-drips', 160, scene);
+      dr.particleTexture = this.texture;
+      dr.emitter = new Vector3();
+      dr.billboardMode = ParticleSystem.BILLBOARDMODE_STRETCHED;
+      dr.blendMode = ParticleSystem.BLENDMODE_ADD;
+      dr.minSize = .04; dr.maxSize = .055;
+      dr.minScaleX = .5; dr.maxScaleX = .7;
+      dr.minScaleY = 3; dr.maxScaleY = 5;
+      dr.color1 = new Color4(.75, .82, 1, .8);
+      dr.color2 = new Color4(.9, .8, 1, .7);
+      dr.colorDead = new Color4(.7, .76, 1, .6);
+      dr.direction1 = new Vector3(0, -1, 0);
+      dr.direction2 = new Vector3(0, -1, 0);
+      dr.minEmitPower = dr.maxEmitPower = .3;
+      dr.gravity = new Vector3(0, -9.8, 0);
+      dr.updateSpeed = 1 / 60;
+      dr.isLocal = false;
+      dr.startPositionFunction = (_world, position, particle) => {
+        // pick an edge by length so the drops spread evenly
+        let t = Math.random() * total, e = edges[0];
+        for (const edge of edges) { const len = Math.hypot(edge[2] - edge[0], edge[3] - edge[1]); if (t <= len) { e = edge; break; } t -= len; }
+        const k = Math.random(), x = e[0] + (e[2] - e[0]) * k, z = e[1] + (e[3] - e[1]) * k;
+        position.set(x, e[4], z);
+        // 0.3 m/s start: the fall time from the edge to the surface below
+        const h = Math.max(.1, e[4] - this.floorAt(x, z));
+        particle.lifeTime = (-.3 + Math.sqrt(.09 + 2 * 9.8 * h)) / 9.8;
+      };
+      dr.renderingGroupId = 0;
+      dr.emitRate = Math.min(70, total * 1.6);
+      dr.start();
+      this.drips = dr;
+    }
     this.observer = scene.onBeforeRenderObservable.add(() => this.follow());
   }
 
@@ -119,6 +156,7 @@ export class Rain {
     // ~0.7 s of flight: 2400/s keeps about 1700 drops in the air; Chromebook mode about 450 and no splashes
     this.system.emitRate = low ? 650 : 2400;
     this.splash.emitRate = low ? 0 : 340;
+    if (this.drips) { if (low && this.drips.isStarted()) this.drips.stop(); else if (!low && !this.drips.isStarted()) this.drips.start(); }
   }
 
   static reducedMotion(): boolean {
@@ -131,6 +169,7 @@ export class Rain {
     this.scene.onBeforeRenderObservable.remove(this.observer);
     this.system.dispose(false);
     this.splash.dispose(false);
+    this.drips?.dispose(false);
     this.texture.dispose();
   }
 }

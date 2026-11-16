@@ -106,19 +106,64 @@ bloom, reflections or normal maps. `EnvironmentConfig.lowSpecAmbient` (new, opti
 fill with a dim violet night ambient (0.3) for this map, and rain drops to about a quarter of the particles. Geometry,
 collision, props and visibility are identical in both modes.
 
-## Performance (dev Intel Iris Xe, 1600 x 900, uncapped, `node tools/neon-perf.mjs`, after the polish pass, one run)
+## Performance (dev Intel Iris Xe, 1600 x 900, uncapped, `node tools/neon-perf.mjs`, after the overhaul, one run)
 
-| preset | Neon Backstreets | Modern City |
-|---|---|---|
-| low | 65.0 fps (136 draws) | 76.9 (113) |
-| medium | 57.4 (140) | 64.4 (117) |
-| high | 47.7 (145) | 54.1 (122) |
-| Chromebook | 200.4 (134) | 163.2 (112) |
+| preset | Neon Backstreets | Modern City | ratio |
+|---|---|---|---|
+| low | 56.0 fps (143 draws) | 64.1 (113) | 0.87 |
+| medium | 46.9 (147) | 49.5 (117) | 0.95 |
+| high | 41.9 (152) | 44.9 (122) | 0.93 |
+| Chromebook | 141.7 (140) | 137.8 (112) | 1.03 |
 
-Before the polish pass the same tool gave 62.9 / 57.5 / 48.6 / 166 (124 to 133 draws) against 79.8 / 66.3 / 55.7 / 150. The
-iGPU heats up between runs (one Chromebook sample read 184 vs 249): only the same-run ratios mean anything. Rain costs
-nothing measurable. The remaining gap to Modern City on the standard presets is the additive overdraw (a few dozen large
-soft cards) and the two point lights. The terrain GLB is 5.2 MB, the map has 484 collision boxes and 134 props.
+After the prop clean-up the draw calls are 139 / 143 / 148 / 136. Two re-runs after the clean-up were made while other programs used the
+GPU (Modern City read 32-47 fps on Low instead of 64) and are not comparable; in them Chromebook mode read 0.71-0.75 of Modern City, so that
+ratio needs a clean re-measure. The iGPU was warm in the table's run (both maps read lower than on 2026-11-14: 65.0 / 57.4 / 47.7 / 200 against 76.9 / 64.4 / 54.1 /
+163, ratios 0.85 / 0.89 / 0.88 / 1.23): only the same-run ratios mean anything. The overhaul added seven draw calls (five new
+materials) and 0.5 MB of terrain (5.7 MB); the new ground is ordinary opaque geometry, the marks are alpha-tested, the drips
+are 160 particles. Chromebook mode drops normal and ORM maps as on every map, keeps every sign, the plaza, the tiles and the
+marks, and has no drips or splashes.
+
+## Overhaul (2026-11-15): paving, plaza, zone light, wall hardware
+
+Third pass. References: five new screenshots in `references_images/` (a Tokyo-style arena map: tiled paving with dark joints,
+a worn painted arrow up an underpass, stencilled wall numbers, a bin-and-bag corner on hatched bays, a circular plaza with a
+warning ring, shoji-lit doors, a bike and a barrel against a roller shutter) plus web research on yokocho alleys (shop
+lanterns, noren, hand-painted signs, low eaves, shuttered stalls), environment-art breakdowns of neon alleys (leak and crack
+decals, puddles, cables, AC units, colour zones) and small-map level design (landmarks that are useful, loops). Nothing is
+copied: all art is painted in this repository.
+
+**Audit of the second version** (fresh screenshots against the references): the ground was a featureless dark surface with
+light streaks (no joints, no markings, no plaza); every zone shared the same violet-pink light, so places were hard to tell
+apart; walls had little at eye level; stairs and the court read as black silhouettes; the standard presets were darker than
+Chromebook mode.
+
+| Area | Change |
+|---|---|
+| Ground | Three painted texture sets with albedo, normal and ORM (`tools/neon_ground_art.py`): `neon_pave` (0.5 m concrete flags, the lanes, back alley and crossing arms), `neon_tile` (0.3 m warm tiles in running bond, Lantern Alley and the Market Court), `neon_walltile` (glazed 12.5 cm tiles). Each has low-roughness "standing water" hollows and wet joints, so the moon and the two point lights glint on it. Roads keep the scanned asphalt. |
+| Plaza | The crossing's centre is now a **circular plaza**: one 9 x 9 m image (`neon_plaza`, `neon_art.PLAZA`) with concentric radial paving, a pale kerb line, a worn yellow-and-black hazard ring, dark setts and a cast medallion; its outside is the same flag grid, so the seam with the tiling paving falls on a joint. Zone B sits inside the ring. A festoon of bulbs crosses above it from the ramen wall to the hostel block. |
+| Markings | A new alpha-tested atlas (`neon_marks`, 2048 x 2048): long road arrows, 止まれ / 徐行 kanji, a hatched keep-clear box, bay numbers 01-04, tyre marks, runoff stains at every downpipe, three litter clusters, a decorated cast cover (a lucky cat over waves, three of them), wall stencils (07, 12, 駐車禁止 NO PARKING, 搬入口 LOADING B1, 出口 EXIT), hazard / hydrant / block-number plates and strips of flyers. 60 placements in `neon_dressing.marks()`. |
+| Zone light | One colour family per zone, by re-assigning blades and boards and adding soft fills to the bake: **Vending Lane / Laundry Lane** teal and blue (bathhouse, electronics and ramen blades, the mart's own cyan board over its side door), **Lantern Alley** warm (yakitori and oden blades, a third lantern row, shoji screens), **Loading Alley** dim sodium amber with green exits (gyoza blade, bulkhead lamps), **Karaoke Lane** magenta (izakaya and motel moved here), **Plaza** neutral white under the festoon, **Tiled Underpass** cyan and blue. Five new vertical sign cells (the sign atlas is 2048 x 4096). |
+| Walls | Shoji screens (warm paper behind a timber lattice, two panel cells) on the ramen shop's alley wall and under the balcony; glazed tiles on both underpass walls; 26 pieces of wall hardware (`neon_dressing.fixtures()`: electricity meters with conduits, junction boxes with conduit runs, louvred vents, fire-hose cabinets, sheet-metal ducts); five more bulkhead lamps. |
+| Stairs | A light strip runs up the flank of every stair (both flanks of the balcony stair, the court stair, a wall strip in each stairwell), so every vertical route can be read from across the map; flower pots at the two exterior stair feet. |
+| Rain | Heavy drops fall from eight dripping edges (the balcony lip over the plaza, the kiosk roof, the court landing, the four awnings): a third small particle system in `Rain.ts` (`rain.drips`), off in Chromebook mode and with reduced motion. |
+| Props | **Clean-up** (close-up review of all 56 prop types): the phone booth, the capsule-machine bank, the bamboo pots and the white vending machine are deleted from the catalogue (their lit panels blew out to white blocks or the model was crude); the wrapped pallet (a blank white block), the flat yellow skip, the pale grey bin and both newspaper boxes are gone from this map; three cones and two scooters fewer. In their place: a crate stack in the loading bay, a dumpster where the skip stood, flower pots by the ramen door. The vending machines keep their lit product window but the header is a brand band in the machine's accent colour with a slim light bar (`lamp_vend` emissive halved). New: a barrel by the shoji screen, a tyre stack in the Loading Alley, pots at the two exterior stair feet. 124 props (was 133). |
+| Readability | `environmentIntensity` 1.15 -> 1.55, exposure 1.2, contrast 1.16: the court, the back alley and the plaza are readable in the standard presets; the neon and the dark sky keep the mood. |
+| Callouts | `tactical.landmarks`: Neon Street, Karaoke Lane, Vending Lane, Laundry Lane, Lantern Alley, Loading Alley, Plaza, Balcony Arcade, Market Court, Tiled Underpass, 24/7 Mart, Ramen, Laundromat. |
+
+The layout (routes, stairs, doorways, cover boxes that existed, spawns, zone squares) is unchanged: the second pass's audit and
+tests already cover it, and this pass re-ran them. Collider changes: a barrel and a tyre stack against walls, a crate stack
+for the wrapped pallet, a dumpster for the skip, and the phone booth, capsule bank, pale bin and two newspaper boxes removed.
+
+Rules this pass added:
+* Ground marks share the road paint's height (5 mm): never lay one over a painted line or another mark. Cast covers lie at 17 mm.
+* Wall marks are 16 mm proud (tags 8 mm, grime 12 mm). Wall hardware is visual only and at most 19 cm proud; duct flanges start
+  11 mm from the wall and the duct 20 mm (two boxes that share a back plane z-fight).
+* A blade sign must not cross a window's AC unit, and a vent's edge must not lie on a light shaft's plane (the geometry test
+  found both).
+* `shared texture set` materials may now live in the map's texture folder via `tex_dir` (`neon_pave`, `neon_tile`, `neon_plaza`,
+  `neon_walltile`); the plaza passes explicit UVs in metres from its north-west corner and `tile` = its size.
+* The baked pools only modulate albedo: brightness in the standard presets comes from `environmentIntensity`. Raise that, not
+  the bake, when a zone is unreadable.
 
 ## Polish and upgrade pass (2026-11-14)
 
@@ -168,9 +213,13 @@ Rules this pass added (the geometry z-fight test enforces them):
 ## Known limitations
 
 * The first version had no reference images (written brief only); the 2026-11-14 pass used the added references. Nothing is copied from them: all art, signs and textures are original.
-* The wet-ground reflections are static streaks, not view-dependent (no planar mirror: it would not fit the budget). The rain ignores
+* The wet-ground reflections are static streaks plus glossy hollows in the paving's roughness map, not a planar mirror (it would not fit the budget). The rain ignores
   small overhangs (it is kept out of roofed footprints and lands on decks); splashes are short sprays, not ring ripples.
 * The fire escapes, rooftop clutter and the arch sign have no collision: they are out of reach and bullets pass them.
+* Wall hardware (meters, junction boxes, vents, hose cabinets, ducts) has no collision either: it is at most 19 cm proud, a
+  player's shoulder can pass through it and a bullet's mark lands on the wall behind it.
+* The layout was not restructured in the overhaul; ideas not done: a third, lower connection between the balcony and the
+  terrace, capture-the-flag bases (the game has no such mode), view-dependent puddle reflections.
 * Standard presets run about 10–20 % below Modern City on the dev iGPU. Physical Chromebook hardware was not measured.
 * Two parked props (the car, the van) and the skip can be jumped onto (audit `climb` warnings, as on other maps). The
   market-stall canopies are reachable from the stall counters.

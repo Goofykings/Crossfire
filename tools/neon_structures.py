@@ -238,8 +238,8 @@ def se_block():
     els.append(wall([px1, z1 - T, x1, z1], [0, G1], [], inn='concrete_smooth_dark', out='concrete_smooth_dark', outside='s', **tile))
     els.append(box([px0, CEIL, z1 - T, px1, G1, z1], 'concrete_smooth_dark', 'lintel'))
     # passage side walls; the stairwell door opens from the passage's east wall near the back alley
-    els.append(wall([px0 - T, z0 + T, px0, z1 - T], [0, CEIL], [], inn='concrete_panel', out='concrete_panel'))
-    els.append(wall([px1, z0 + T, px1 + T, z1 - T], [0, CEIL], [door(13.3, 14.6, top=2.4)], inn='concrete_panel', out='concrete_panel', frame='steel_dark'))
+    els.append(wall([px0 - T, z0 + T, px0, z1 - T], [0, CEIL], [], inn='neon_walltile', out='neon_walltile'))
+    els.append(wall([px1, z0 + T, px1 + T, z1 - T], [0, CEIL], [door(13.3, 14.6, top=2.4)], inn='neon_walltile', out='neon_walltile', frame='steel_dark'))
     # wall between the east front unit (closed utility room) and the stairwell
     els.append(wall([px1 + T, SE_SPLIT, x1 - T, SE_SPLIT + T], [0, CEIL], [], inn='concrete_panel'))
     # floors: the underpass is street level; the west unit is closed and only its glass front is ever seen

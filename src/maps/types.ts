@@ -120,6 +120,8 @@ export interface RainSpec {
   raised: readonly Rect[];
   /** Puddles [x, z, rx, rz]: rain splashes concentrate on them. */
   puddles?: readonly (readonly number[])[];
+  /** Dripping edges [x0, z0, x1, z1, y]: heavy drops fall from them (balcony, kiosk roof, awnings). */
+  drips?: readonly (readonly number[])[];
 }
 
 /** One steam vent (src/rendering/Steam.ts; written by tools/neon_dressing.py): position, tint, puffs per second, rise speed, size. */

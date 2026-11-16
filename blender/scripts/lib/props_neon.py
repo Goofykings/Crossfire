@@ -207,56 +207,10 @@ def vend_neon(body, accent):
     m.box(.3, .7, f - .012, .34, .78, -D - .004, 'steel_dark')
     m.box(-.38, .18, f, .1, .5, -D, 'plastic_black')
     m.box(-.34, .22, f - .01, .06, .46, -D - .004, 'steel_dark')
-    m.box(-W + .02, 1.8, f - .01, W - .02, 1.93, -D, 'lamp_vend')
+    m.box(-W + .02, 1.8, f - .01, W - .02, 1.93, -D, accent)
+    m.box(-W + .06, 1.845, f - .016, W - .06, 1.885, -D - .01, 'aluminium')
+    m.box(-W + .04, 1.782, f - .012, W - .04, 1.8, -D, 'lamp_vend')
     m.box(-W, .52, f - .002, W, .58, -D, accent)
-    return m
-
-
-def phone_booth():
-    """Street phone booth (1.0 x 2.45 x 1.0 m, door toward -z): red steel frame, glass panes, a lit ad panel and a
-    lit ceiling. The solid collision box is the booth's footprint; the lit interior is what reads from far away."""
-    m = MeshData()
-    W = .5
-    m.box(-W, 0, -W, W, .12, W, 'steel_dark')
-    for x in (-W, W - .07):
-        for z in (-W, W - .07):
-            m.box(x, .12, z, x + .07, 2.3, z + .07, 'steel_red')
-    m.box(-W, 2.3, -W, W, 2.45, W, 'steel_red')
-    m.box(-W + .07, 2.28, -W + .07, W - .07, 2.3, W - .07, 'lamp_led')
-    # glass on three sides (door side open), rails
-    for y0, y1 in ((.12, 2.28),):
-        m.box(-W + .035, y0, -W + .03, -W + .045, y1, W - .03, 'glass_window')
-        m.box(W - .045, y0, -W + .03, W - .035, y1, W - .03, 'glass_window')
-    m.box(-W + .07, .12, W - .06, W - .07, 2.28, W - .05, 'lamp_led')
-    m.box(-W + .07, 1.0, W - .09, W - .07, 1.12, W - .06, 'steel_dark')
-    m.box(-.12, 1.12, W - .16, .12, 1.4, W - .09, 'plastic_black')
-    m.box(-W - .02, 1.2, -W, -W, 1.3, W, 'steel_red')
-    m.box(W, 1.2, -W, W + .02, 1.3, W, 'steel_red')
-    return m
-
-
-def gacha_bank():
-    """Four capsule-toy machines side by side (1.7 x 1.45 x 0.5 m), front toward -z: coloured bodies, glass globes full
-    of capsules, coin slots."""
-    m = MeshData()
-    bodies = ('steel_red', 'steel_blue', 'steel_yellow', 'steel_green')
-    caps = ('plastic_orange', 'plastic_white', 'plastic_blue', 'plastic_green', 'carpaint_red')
-    k = 0
-    for i, body in enumerate(bodies):
-        x = -.64 + i * .43
-        m.box(x - .2, 0, -.22, x + .2, .62, .22, body)
-        m.box(x - .15, .14, -.23, x + .15, .3, -.22, 'plastic_black')
-        m.box(x - .05, .4, -.235, x + .05, .52, -.22, 'aluminium')
-        m.box(x - .12, .62, -.14, x + .12, .7, .14, 'steel_dark')
-        m.sphere((x, .93, 0), .21, 'glass_window', rings=6, segments=10)
-        for _ in range(9):
-            a = k * 2.399
-            r = .1 * ((k * 37) % 7) / 7 + .02
-            m.sphere((x + math.cos(a) * r, .8 + ((k * 53) % 9) * .027, math.sin(a) * r * .8), .045, caps[k % len(caps)], rings=3, segments=5)
-            k += 1
-        m.box(x - .05, 1.14, -.05, x + .05, 1.2, .05, 'steel_dark')
-        m.box(x - .2, 1.2, -.22, x + .2, 1.45, .22, 'lamp_led', skip=('ny',))
-    m.box(-.86, .6, .22, .86, .62, .24, 'steel_dark')
     return m
 
 
@@ -284,28 +238,7 @@ def sandwich_board():
     return m
 
 
-def bamboo_pot():
-    """A tall potted bamboo (0.5 x 1.7 x 0.5 m): dark pot, cane stalks and leaf clumps."""
-    m = MeshData()
-    m.cylinder((0, 0, 0), .24, .5, 'plastic_black', segments=10, radius_top=.27)
-    m.cylinder((0, .5, 0), .23, .02, 'soil', segments=10)
-    for i in range(7):
-        a = i * 2.4
-        r = .08 + .05 * (i % 3)
-        bx, bz = math.cos(a) * r, math.sin(a) * r
-        h = 1.25 + .08 * ((i * 5) % 5)
-        tx, tz = bx + math.cos(a) * .12, bz + math.sin(a) * .12
-        m.tube((bx, .5, bz), (tx, .5 + h, tz), .014, 'plastic_green', segments=4)
-        for j in range(3):
-            t = .55 + j * .2
-            m.sphere((bx + (tx - bx) * t + math.cos(a) * .13, .5 + h * t, bz + (tz - bz) * t + math.sin(a) * .13), .14, 'plastic_green',
-                     rings=3, segments=6, squash=.35)
-    return m
-
-
 NEON_BUILDERS = {'store_shelf': store_shelf, 'drink_fridge': drink_fridge, 'washer_row': washer_row, 'dryer_stack': dryer_stack,
                  'scooter': scooter, 'bicycle': bicycle, 'food_cart': food_cart,
                  'vend_red': lambda: vend_neon('steel_red', 'steel_blue'), 'vend_blue': lambda: vend_neon('steel_blue', 'steel_red'),
-                 'vend_yellow': lambda: vend_neon('steel_yellow', 'steel_blue'), 'vend_white': lambda: vend_neon('steel_white', 'steel_red'),
-                 'phone_booth': phone_booth,
-                 'gacha_bank': gacha_bank, 'sandwich_board': sandwich_board, 'bamboo_pot': bamboo_pot}
+                 'vend_yellow': lambda: vend_neon('steel_yellow', 'steel_blue'), 'sandwich_board': sandwich_board}

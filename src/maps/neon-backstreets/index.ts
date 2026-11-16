@@ -11,9 +11,9 @@ import layout from './layout.json';
 export const NEON_BACKSTREETS: MapDefinition = {
   id: 'neon-backstreets',
   name: 'Neon Backstreets',
-  description: 'A rain-soaked city block at night: tight alleys, neon shopfronts, a ramen balcony and a roof terrace.',
+  description: 'A rain-soaked city block at night: lantern alleys, neon shopfronts, a ringed plaza under a ramen balcony and a roof terrace.',
   briefing:
-    'Free for all: shotguns and SMGs own the shops and alleys, rifles the crossing and Neon Street. Two balconies face off over the crossing. Headshots deal 1.5x damage.',
+    'Free for all: shotguns and SMGs own the shops and alleys, rifles the plaza and Neon Street. Two balconies face off over the plaza; lit strips mark every stair. Headshots deal 1.5x damage.',
   thumbnail: 'assets/maps/neon-backstreets/thumb.jpg',
   assetPath: 'assets/models/neon-backstreets/',
   layout: layout as unknown as MapLayout,
@@ -29,28 +29,31 @@ export const NEON_BACKSTREETS: MapDefinition = {
     sunColor: [0.62, 0.7, 1.0],
     // enough moon and sky fill that players stay readable in the darkest lane corners
     sunIntensity: 0.75,
-    environmentIntensity: 1.15,
+    environmentIntensity: 1.55,
     fogColor: [0.1, 0.085, 0.2],
     fogDensity: 0.0115,
-    exposure: 1.15,
-    contrast: 1.2,
+    exposure: 1.2,
+    contrast: 1.16,
     // Chromebook mode: a dim violet night fill instead of the daytime hemisphere (the neon is self-lit and baked)
     lowSpecAmbient: { intensity: 0.3, sky: [0.5, 0.48, 0.85], ground: [0.16, 0.12, 0.2] },
   },
   collision: { killY: -20 },
   tactical: {
+    // callouts (2026-11-15 overhaul): every zone is named after what a player sees there
     landmarks: {
       neon_street: 'Neon Street',
-      east_lane: 'East Lane',
-      west_lane: 'West Lane',
-      noodle_alley: 'Noodle Alley',
-      back_alley: 'Back Alley',
-      crossing: 'Crossing',
+      east_lane: 'Karaoke Lane',
+      west_lane: 'Vending Lane',
+      west_lane_south: 'Laundry Lane',
+      noodle_alley: 'Lantern Alley',
+      back_alley: 'Loading Alley',
+      crossing: 'Plaza',
+      under_balcony: 'Balcony Arcade',
       market_court: 'Market Court',
       mart_floor: '24/7 Mart',
       ramen_floor: 'Ramen',
       laundry_floor: 'Laundromat',
-      underpass: 'Underpass',
+      underpass: 'Tiled Underpass',
     },
   },
 };

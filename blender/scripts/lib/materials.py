@@ -377,13 +377,20 @@ MATERIALS.update({
     "neon_wet": {"albedo": NEON_DIR + "glow_wet.png", "tile": 1.0, "tint": [1.0, 1.0, 1.0], "additive": True, "atlas": True},
     # vending machine products: self-lit, the hue lives in vertex colours (props_neon.vend_neon), so one material serves every can
     "can_lit": {"tint": [0.9, 0.9, 0.9], "roughness": 1.0, "metallic": 0.0, "unlit": True},
-    "lamp_vend": {"tint": [0.5, 0.52, 0.58], "roughness": 0.4, "metallic": 0.0, "emissive": [0.85, 0.9, 1.0]},
+    "lamp_vend": {"tint": [0.5, 0.52, 0.58], "roughness": 0.4, "metallic": 0.0, "emissive": [0.42, 0.45, 0.52]},
     "neon_beam": {"albedo": NEON_DIR + "beam.png", "tile": 1.0, "tint": [1.0, 1.0, 1.0], "additive": True, "atlas": True},
     "neon_graffiti": {"albedo": NEON_DIR + "neon_graffiti.png", "tile": 1.0, "roughness": 0.8, "alpha_cutoff": 0.4, "decal": True,
                       "atlas": True},
     # wet streets: the scanned asphalt and concrete, darker and glossy enough to pick up the coloured sky glow
     "neon_asphalt": {"tex": "asphalt", "tile": 4.5, "tint": [0.6, 0.6, 0.66], "roughness": 0.42, "normal": 0.8},
     "neon_concrete": {"tex": "concrete_dark", "tile": 3.0, "tint": [0.78, 0.78, 0.84], "roughness": 0.5, "normal": 0.8},
+    # overhaul (2026-11-15): painted paving sets with wet hollows (tools/neon_ground_art.py), the crossing plaza (one 9 m image),
+    # glazed wall tiles for the underpass, and the atlas of road markings / stencils / plates / litter
+    "neon_pave": {"tex": "pave", "tex_dir": NEON_DIR, "tile": 2.0, "tint": [0.96, 0.96, 1.0], "roughness": 1.0, "metallic": 0.0, "normal": 1.0},
+    "neon_tile": {"tex": "tile", "tex_dir": NEON_DIR, "tile": 1.2, "tint": [1.0, 0.95, 0.9], "roughness": 1.0, "metallic": 0.0, "normal": 0.9},
+    "neon_plaza": {"tex": "plaza", "tex_dir": NEON_DIR, "tile": 9.0, "tint": [1.0, 1.0, 1.0], "roughness": 1.0, "metallic": 0.0, "normal": 1.0},
+    "neon_walltile": {"tex": "walltile", "tex_dir": NEON_DIR, "tile": 1.0, "tint": [0.74, 0.9, 0.94], "roughness": 1.0, "metallic": 0.0, "normal": 0.7},
+    "neon_marks": {"albedo": NEON_DIR + "neon_marks.png", "tile": 1.0, "roughness": 0.8, "alpha_cutoff": 0.5, "decal": True, "atlas": True},
     "neon_puddle": {"tint": [0.025, 0.028, 0.036], "roughness": 0.03, "metallic": 0.0, "decal": True},
     "roof_tiles_flat": {"tex": "slabs", "tile": 1.4, "tint": [0.6, 0.58, 0.57]},
 })

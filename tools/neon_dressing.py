@@ -20,6 +20,8 @@ GREEN = [0.25, 1.0, 0.55]
 ORANGE = [1.0, 0.5, 0.18]
 WARM = [1.0, 0.78, 0.5]
 WHITE = [0.9, 0.95, 1.0]
+AMBER = [1.0, 0.62, 0.22]      # sodium service lamps (back alley)
+TEAL = [0.2, 0.8, 0.9]
 
 
 def S(sid, art, c, n, w, h, glow, depth=0.1, wash=True, halo=1.0, pool=True):
@@ -94,9 +96,14 @@ def signs():
         # upper-room karaoke screen (inside, lit) and rooftop billboard over the mart (faces the crossing)
         S('lounge_screen', 'screen', (0.3, 5.0, -8.0), (1, 0), 1.6, .9, PURPLE, .05, wash=False, halo=.8, pool=False),
         # polish pass (2026-11-14): an izakaya over the mart's side door, an udon bar on the west row, a motel over the back alley
-        S('izakaya', 'izakaya', (-15.0, 3.15, -5.7), (-1, 0), 2.6, .65, PINK, .1),
+        S('mart_west', 'mart', (-15.0, 3.15, -5.7), (-1, 0), 2.6, .65, CYAN, .1),
+        S('izakaya', 'izakaya', (12.5, 3.2, 9.6), (1, 0), 2.6, .65, PINK, .1),
         S('udon', 'udon', (-20.0, 3.3, -9.2), (1, 0), 1.8, .9, ORANGE, .08),
-        S('motel', 'motel', (-9.5, 5.3, 15.0), (0, 1), 2.4, 1.2, PINK, .08),
+        S('motel', 'motel', (20.0, 3.35, 10.9), (-1, 0), 2.4, 1.2, PINK, .08),
+        # overhaul (2026-11-15): shoji screens on the ramen shop's alley wall and under the balcony (the cosy, warm fronts)
+        S('shoji_alley', 'shoji', (0.0, 1.62, -6.75), (-1, 0), 2.4, 1.2, WARM, .05, halo=.9),
+        S('shoji_alley_n', 'shoji_tall', (0.0, 1.62, -11.45), (-1, 0), 1.2, 1.2, WARM, .05, halo=.8),
+        S('shoji_balcony', 'shoji_tall', (10.0, 1.6, -4.5), (0, 1), 1.0, 1.25, WARM, .05, halo=.8, pool=False),
     ]
 
 
@@ -108,10 +115,10 @@ def blades():
         B('karaoke_blade', 'karaoke_v', (20.0, 7.2, -13.0), (-1, 0), 1.0, 4.0, PURPLE),
         B('hostel_blade', 'hostel_v', (12.5, 6.8, 12.0), (1, 0), .9, 3.6, CYAN),
         B('laundry_blade', 'yoru', (-14.0, 4.6, 5.4), (-1, 0), .9, .9, PURPLE),
-        B('back_blade', 'karaoke_v', (-2.8, 6.0, 20.0), (0, -1), .9, 3.6, PINK),
+        B('back_blade', 'gyoza_v', (-2.8, 6.0, 20.0), (0, -1), .9, 3.6, YELLOW),
         # polish pass: yokocho-style vertical signs stacked up the alley walls (colour contrast: pink/cyan/yellow/green/orange)
-        B('izakaya_blade', 'izakaya_v', (-15.0, 5.6, -11.6), (-1, 0), .9, 3.6, PINK),
-        B('ramen2_blade', 'ramen2_v', (-5.5, 5.9, -10.4), (1, 0), .9, 3.6, CYAN),
+        B('izakaya_blade', 'ramen2_v', (-15.0, 5.6, -11.6), (-1, 0), .9, 3.6, CYAN),
+        B('ramen2_blade', 'yakitori_v', (-5.5, 5.9, -10.4), (1, 0), .9, 3.6, ORANGE),
         B('sake_blade', 'sake_v', (0.0, 4.9, -5.9), (-1, 0), .8, 3.0, YELLOW),
         B('mahjong_blade', 'mahjong_v', (20.0, 5.8, 5.6), (-1, 0), .9, 3.6, RED),
         B('club_blade', 'club_v', (20.0, 6.6, -1.6), (-1, 0), .9, 3.6, PURPLE),
@@ -119,7 +126,11 @@ def blades():
         B('udon_blade', 'udon_v', (-8.0, 5.4, 20.0), (0, -1), .8, 3.0, ORANGE),
         B('cafe_blade', 'cafe_v', (3.4, 5.8, -20.0), (0, 1), .9, 3.0, CYAN),
         B('pachinko_blade', 'pachinko_v', (-17.6, 6.2, -20.0), (0, 1), .8, 3.0, YELLOW),
-        B('motel_blade', 'motel_v', (-14.0, 6.0, 10.6), (-1, 0), .9, 3.6, PINK),
+        B('motel_blade', 'sento_v', (-14.0, 6.0, 10.6), (-1, 0), .9, 3.6, CYAN),
+        B('izakaya2_blade', 'izakaya_v', (12.5, 5.8, 7.2), (1, 0), .9, 3.6, PINK),
+        B('motel2_blade', 'motel_v', (20.0, 6.4, 13.4), (-1, 0), .9, 3.6, PINK),
+        B('oden_blade', 'oden_v', (0.0, 5.7, -9.1), (-1, 0), .8, 3.0, RED),
+        B('denki_blade', 'denki_v', (-20.0, 5.9, -0.7), (1, 0), .9, 3.6, BLUE),
     ]
 
 
@@ -157,16 +168,22 @@ def tubes():
         {'pts': [[12.62, 3.8, 4.6], [12.62, 11.8, 4.6]], 'col': PURPLE, 'n': [1, 0]},
         {'pts': [[-5.38, 3.8, -3.6], [-5.38, 10.0, -3.6]], 'col': CYAN, 'n': [1, 0]},
         # polish pass: laundromat west door, pharmacy door, mart side door
-        {'pts': [[-14.04, .2, 9.55], [-14.04, 2.55, 9.55], [-14.04, 2.55, 11.25], [-14.04, .2, 11.25]], 'col': ORANGE, 'n': [-1, 0]},
+        {'pts': [[-14.04, .2, 9.55], [-14.04, 2.55, 9.55], [-14.04, 2.55, 11.25], [-14.04, .2, 11.25]], 'col': BLUE, 'n': [-1, 0]},
         {'pts': [[7.55, .2, -19.97], [7.55, 2.65, -19.97], [9.45, 2.65, -19.97], [9.45, .2, -19.97]], 'col': GREEN, 'n': [0, 1]},
-        {'pts': [[-5.46, .2, -8.2], [-5.46, 2.7, -8.2], [-5.46, 2.7, -6.0], [-5.46, .2, -6.0]], 'col': PINK, 'n': [1, 0]},
+        {'pts': [[-5.46, .2, -8.2], [-5.46, 2.7, -8.2], [-5.46, 2.7, -6.0], [-5.46, .2, -6.0]], 'col': ORANGE, 'n': [1, 0]},
         # interiors: strip lights along the walls (mart: pink west wall and cyan back wall; laundromat: blue and cyan; underpass: both sides)
         {'pts': [[-14.66, 2.95, -12.0], [-14.66, 2.95, -4.2]], 'col': PINK, 'n': [1, 0]},
         {'pts': [[-14.4, 2.95, -3.84], [-6.2, 2.95, -3.84]], 'col': CYAN, 'n': [0, -1]},
         {'pts': [[-13.66, 2.95, 5.2], [-13.66, 2.95, 14.2]], 'col': BLUE, 'n': [1, 0]},
         {'pts': [[-13.4, 2.95, 14.66], [-5.6, 2.95, 14.66]], 'col': CYAN, 'n': [0, -1]},
         {'pts': [[6.54, 3.0, 5.2], [6.54, 3.0, 14.4]], 'col': CYAN, 'n': [1, 0]},
-        {'pts': [[9.46, 3.0, 5.2], [9.46, 3.0, 14.4]], 'col': PINK, 'n': [-1, 0]},
+        {'pts': [[9.46, 3.0, 5.2], [9.46, 3.0, 14.4]], 'col': BLUE, 'n': [-1, 0]},
+        # overhaul: a warm light strip up the flank of each stair (balcony stair both flanks, court stair, the two stairwells)
+        {'pts': [[10.565, .13, 1.75], [10.565, 3.31, -2.55]], 'col': ORANGE, 'n': [-1, 0]},
+        {'pts': [[12.035, .13, 1.75], [12.035, 3.31, -2.55]], 'col': ORANGE, 'n': [1, 0]},
+        {'pts': [[1.57, .13, 12.95], [1.57, 3.31, 8.65]], 'col': YELLOW, 'n': [-1, 0]},
+        {'pts': [[12.17, .95, 12.8], [12.17, 4.4, 9.5]], 'col': CYAN, 'n': [-1, 0]},
+        {'pts': [[12.17, 1.15, -10.3], [12.17, 4.45, -6.3]], 'col': ORANGE, 'n': [-1, 0]},
     ]
 
 
@@ -184,6 +201,9 @@ def lanterns():
         {'a': [0.7, 3.0, -5.3], 'b': [7.0, 3.0, -5.3], 'n': 6, 'col': ORANGE, 'sag': .25, 'kind': 'lantern'},
         {'a': [13.7, 5.2, -9.0], 'b': [18.6, 5.2, -9.4], 'n': 5, 'col': PINK, 'sag': .35, 'kind': 'lantern'},
         {'a': [-19.9, 4.8, 5.0], 'b': [-14.1, 4.8, 5.6], 'n': 7, 'col': CYAN, 'sag': .4, 'kind': 'bulb'},
+        # overhaul: festoon bulbs across the plaza between the balcony and the terrace, a second lantern row in the food alley
+        {'a': [3.6, 6.8, -4.5], 'b': [3.6, 6.3, 8.5], 'n': 13, 'col': WHITE, 'sag': .8, 'kind': 'bulb'},
+        {'a': [-5.5, 4.0, -8.6], 'b': [0.0, 4.0, -8.5], 'n': 5, 'col': ORANGE, 'sag': .28, 'kind': 'lantern'},
     ]
 
 
@@ -219,7 +239,7 @@ def graffiti():
         {'c': [20.255, 1.6, 14.2], 'n': [-1, 0], 'w': 3.4, 'h': 1.7, 'cell': 6},
         {'c': [-13.2, 1.65, 20.0], 'n': [0, -1], 'w': 3.2, 'h': 1.6, 'cell': 7},
         {'c': [9.5, 1.75, 20.0], 'n': [0, -1], 'w': 3.0, 'h': 1.5, 'cell': 0},
-        {'c': [0.0, 1.35, -5.5], 'n': [-1, 0], 'w': 1.5, 'h': .75, 'cell': 5},
+        {'c': [12.5, 1.5, 13.4], 'n': [1, 0], 'w': 1.5, 'h': .75, 'cell': 5},
         {'c': [-0.8, 1.2, 1.6], 'n': [0, 1], 'w': .9, 'h': .45, 'cell': 1},
     ]
 
@@ -268,18 +288,18 @@ def bake():
         {'pos': [-19.0, 3.0, -4.6], 'col': PURPLE, 'r': 5.0, 'i': .6},
         {'pos': [-19.0, 2.9, 2.5], 'col': CYAN, 'r': 5.0, 'i': .6},
         {'pos': [4.8, 2.4, 19.4], 'col': RED, 'r': 4.5, 'i': .6},
-        {'pos': [-16.4, 3.0, 19.2], 'col': BLUE, 'r': 6.0, 'i': .8},
-        {'pos': [-9.0, 3.4, 19.4], 'col': PURPLE, 'r': 6.0, 'i': .7},
-        {'pos': [16.0, 3.4, 19.2], 'col': CYAN, 'r': 6.5, 'i': .8},
+        {'pos': [-16.4, 3.0, 19.2], 'col': BLUE, 'r': 6.0, 'i': .5},
+        {'pos': [-9.0, 3.4, 19.4], 'col': PURPLE, 'r': 6.0, 'i': .4},
+        {'pos': [16.0, 3.4, 19.2], 'col': CYAN, 'r': 6.5, 'i': .5},
         {'pos': [-9.5, 3.2, 15.8], 'col': BLUE, 'r': 6.0, 'i': .7},
-        {'pos': [-2.8, 5.0, 19.0], 'col': PINK, 'r': 6.0, 'i': .7},
+        {'pos': [-2.8, 5.0, 19.0], 'col': YELLOW, 'r': 6.0, 'i': .6},
         {'pos': [11.5, 6.0, -8.5], 'col': ORANGE, 'r': 5.0, 'i': .6},
         {'pos': [6.5, 7.0, 7.6], 'col': CYAN, 'r': 6.0, 'i': .7},
         {'pos': [10.6, 5.0, -19.0], 'col': ORANGE, 'r': 7.0, 'i': .5},
         {'pos': [19.0, 5.0, -2.6], 'col': ORANGE, 'r': 7.0, 'i': .5},
         # polish pass: the new vertical signs light their lanes
-        {'pos': [-16.5, 3.6, -10.6], 'col': PINK, 'r': 6.0, 'i': .8},
-        {'pos': [-4.3, 3.8, -10.0], 'col': CYAN, 'r': 5.5, 'i': .8},
+        {'pos': [-16.5, 3.6, -10.6], 'col': CYAN, 'r': 6.0, 'i': .8},
+        {'pos': [-4.3, 3.8, -10.0], 'col': ORANGE, 'r': 5.5, 'i': .8},
         {'pos': [-1.0, 3.4, -5.9], 'col': YELLOW, 'r': 5.0, 'i': .6},
         {'pos': [18.6, 3.8, 5.0], 'col': RED, 'r': 6.0, 'i': .75},
         {'pos': [18.6, 4.2, -1.6], 'col': PURPLE, 'r': 6.0, 'i': .75},
@@ -287,8 +307,19 @@ def bake():
         {'pos': [-8.0, 3.4, 18.6], 'col': ORANGE, 'r': 5.5, 'i': .65},
         {'pos': [3.4, 3.8, -18.8], 'col': CYAN, 'r': 6.0, 'i': .7},
         {'pos': [-16.0, 3.8, -18.8], 'col': YELLOW, 'r': 6.0, 'i': .6},
-        {'pos': [-16.0, 4.0, 10.6], 'col': PINK, 'r': 5.5, 'i': .7},
-        {'pos': [-9.5, 4.4, 17.0], 'col': PINK, 'r': 6.0, 'i': .65},
+        {'pos': [-16.0, 4.0, 10.6], 'col': CYAN, 'r': 5.5, 'i': .7},
+        {'pos': [18.8, 3.3, 10.9], 'col': PINK, 'r': 6.0, 'i': .7},
+        # overhaul (2026-11-15): one light character per zone. Soft, wide fills in the zone's colour, on top of the sign pools:
+        # cool teal west lane, warm amber food alley and market court, sodium back alley, magenta east lane, a neutral plaza lamp
+        {'pos': [-17.5, 3.2, -8.0], 'col': TEAL, 'r': 9.5, 'i': .5}, {'pos': [-17.2, 3.2, 9.6], 'col': [.25, .6, 1.0], 'r': 9.5, 'i': .5},
+        {'pos': [-2.75, 3.0, -8.0], 'col': [1.0, .52, .22], 'r': 7.5, 'i': .6},
+        {'pos': [-13.0, 3.0, 17.5], 'col': AMBER, 'r': 9.5, 'i': 1.3}, {'pos': [9.5, 3.0, 17.5], 'col': AMBER, 'r': 9.5, 'i': 1.3},
+        {'pos': [1.0, 3.0, 17.6], 'col': AMBER, 'r': 8.5, 'i': 1.1}, {'pos': [-1.0, 3.2, 9.8], 'col': WARM, 'r': 9.5, 'i': 1.6}, {'pos': [-1.0, 3.2, 13.2], 'col': WARM, 'r': 7.0, 'i': 1.0},
+        {'pos': [16.1, 3.4, -4.5], 'col': [1.0, .22, .62], 'r': 9.0, 'i': .45}, {'pos': [16.1, 3.4, 9.0], 'col': [1.0, .25, .45], 'r': 8.5, 'i': .4},
+        {'pos': [2.8, 3.5, 0.4], 'col': [.86, .92, 1.0], 'r': 9.5, 'i': 1.7}, {'pos': [12.9, 3.2, 9.6], 'col': PINK, 'r': 5.0, 'i': .6},
+        # the stair strips and the shoji screens
+        {'pos': [10.2, 1.8, -0.2], 'col': ORANGE, 'r': 3.6, 'i': .55}, {'pos': [1.2, 1.8, 11.0], 'col': YELLOW, 'r': 3.6, 'i': .5},
+        {'pos': [-0.9, 1.6, -6.75], 'col': WARM, 'r': 4.2, 'i': .7}, {'pos': [10.0, 1.6, -3.7], 'col': WARM, 'r': 3.4, 'i': .5},
         # interiors
         {'pos': [-10.25, 3.0, -8.0], 'col': WHITE, 'r': 8.0, 'i': 1.0, 'room': [-14.7, -12.2, -5.8, -3.8]},
         {'pos': [5.0, 2.9, -8.5], 'col': WARM, 'r': 8.0, 'i': .9, 'room': [0.3, -12.2, 12.2, -4.8]},
@@ -329,6 +360,7 @@ def lamps():
             # (x, y, z, nx, nz) caged bulkhead lamps
             [-16.4, 2.65, 20.0, 0, -1], [-10.2, 2.75, 20.0, 0, -1], [4.8, 2.75, 20.0, 0, -1], [13.4, 2.85, 20.0, 0, -1],
             [-14.0, 2.75, 10.4, -1, 0], [-15.0, 2.75, -5.7, -1, 0], [12.5, 3.0, -5.45, 1, 0], [9.5, 2.75, 13.95, -1, 0],
+            [-13.0, 2.9, 15.0, 0, 1], [9.9, 2.9, 15.0, 0, 1], [1.0, 2.9, 20.0, 0, -1], [3.0, 2.8, 6.4, -1, 0], [-20.0, 2.8, -11.4, 1, 0],
         ],
     }
 
@@ -398,7 +430,10 @@ def rain():
     decks = [[[0.3, -4.5, 12.2, -2.6], 3.55], [[3.0, 4.5, 12.5, 8.5], 3.55], [[1.6, 7.0, 3.0, 8.6], 3.55]]
     raised = [[-20.0, -20.0, 20.0, -18.5], [-20.0, -14.0, 12.5, -12.5], [12.5, -14.0, 13.7, 15.0], [18.6, -18.5, 20.0, 15.0],
               [-34.0, -20.0, -20.0, -18.5], [-34.0, -14.0, -20.45, -12.5]]
-    return {'roofs': roofs, 'decks': decks, 'raised': raised, 'puddles': [[x, z, rx, rz] for x, z, rx, rz, _ in puddles()]}
+    # dripping edges [x0, z0, x1, z1, y]: the balcony's lip over the plaza, the kiosk roof, the court landing, the four awnings
+    drips = [[0.5, -2.56, 10.4, -2.56, 3.5], [-3.6, 1.88, -0.6, 1.88, 2.62], [-3.6, -0.48, -0.6, -0.48, 2.62], [1.58, 7.1, 1.58, 8.5, 3.3],
+             [-14.83, 9.4, -14.83, 11.4, 2.8], [7.4, -19.27, 9.6, -19.27, 2.8], [4.0, 19.27, 5.6, 19.27, 2.8], [19.27, 17.0, 19.27, 19.0, 2.8]]
+    return {'roofs': roofs, 'decks': decks, 'raised': raised, 'puddles': [[x, z, rx, rz] for x, z, rx, rz, _ in puddles()], 'drips': drips}
 
 
 def grime():
@@ -442,6 +477,77 @@ def rooftops():
     return [[-14.5, -12.0, -6.0, -4.0, 10.6], [.6, -12.0, 11.8, -5.2, 13.6], [-13.4, 5.2, -5.6, 14.4, 9.6], [3.6, 9.2, 12.0, 14.4, 12.4]]
 
 
+def marks():
+    """Painted road markings, bay numbers, stencils, plates, litter and decorated cast covers (blender/scripts/lib/neon.py
+    `mark`). Ground entries: art, centre (x, z), size, compass heading of the top of the art; wall entries carry a normal.
+    Keep ground entries off the road paint and off each other (they share one height)."""
+    def g(a, x, z, w, h, rot=0, **kw):
+        return {'art': a, 'c': [x, z], 'w': w, 'h': h, 'rot': rot, **kw}
+
+    def w(a, x, y, z, n, ww, hh):
+        return {'art': a, 'c': [x, y, z], 'n': list(n), 'w': ww, 'h': hh}
+    return [
+        # Neon Street is one-way eastbound: arrows, the stop kanji before the line at the corner, tyre marks
+        g('arrow', -15.6, -17.4, .9, 3.0, 90), g('arrow', 3.6, -15.1, .9, 3.0, 90), g('tomare', 10.9, -17.4, 1.3, 3.0, 90),
+        g('tyres', -8.0, -15.0, 5.0, 1.3, 0),
+        # east lane: slow, an arrow toward the street, tyre marks
+        g('jokou', 14.9, 10.6, 1.2, 2.4, 0), g('arrow', 17.4, -9.0, .8, 2.6, 0), g('tyres', 17.4, 11.6, 5.0, 1.3, 90),
+        # back alley: the loading bay is hatched and numbered, bays along the south wall, keep-clear at the underpass mouth
+        g('hatch', 0.3, 17.85, 2.5, 2.5, 0), g('bay1', -5.0, 18.9, 1.0, 1.0, 180), g('bay2', 6.2, 18.7, 1.0, 1.0, 180),
+        g('bay3', 11.6, 18.3, 1.0, 1.0, 180), g('bay4', 15.0, 17.2, 1.0, 1.0, 180), g('keep_clear', 8.0, 15.9, 2.6, .34, 0),
+        # lanes: arrows toward the crossing, one up the underpass like the old service routes
+        g('arrow', -17.4, -9.4, .7, 2.2, 180), g('arrow', -17.2, 9.4, .7, 2.2, 0), g('arrow', 8.0, 11.6, .8, 2.4, 0),
+        # runoff stains at the feet of the downpipes (the top of the art lies at the wall)
+        g('stain', -14.85, -2.65, .7, 1.4, 0), g('stain', 0.08, -3.65, .6, 1.3, 0), g('stain', -14.75, 14.92, .7, 1.4, 90),
+        g('stain', 7.3, 19.15, .7, 1.4, 180), g('stain', -7.0, 19.15, .6, 1.3, 180), g('stain', 13.35, 14.85, .7, 1.4, 270),
+        # litter where the wind leaves it: corners, bin rows, the food alley and the market court
+        g('litter_a', -18.7, 12.9, 1.7, 1.7, 30), g('litter_a', -4.0, 16.3, 1.6, 1.6, 200), g('litter_a', 16.6, 17.0, 1.8, 1.8, 110),
+        g('litter_b', -19.1, -10.2, 1.5, 1.5, 0), g('litter_b', -12.6, 3.3, 1.5, 1.5, 70), g('litter_b', 19.3, 9.6, 1.3, 1.3, 20),
+        g('litter_c', -3.7, 11.0, 2.0, 2.0, 40), g('litter_c', -4.7, -4.9, 1.6, 1.6, 150), g('litter_c', 11.6, 3.6, 1.5, 1.5, 300),
+        g('litter_b', 9.1, 16.3, 1.4, 1.4, 250), g('litter_a', -1.2, -11.6, 1.4, 1.4, 80),
+        # decorated cast covers (a lucky cat over waves) in the crossing, the west lane and the back alley
+        g('manhole', -2.0, 2.6, .84, .84, 0, lift=.012), g('manhole', -17.0, 6.0, .84, .84, 90, lift=.012), g('manhole', 2.0, 17.6, .84, .84, 180, lift=.012),
+        # walls: stencilled block numbers, loading and no-parking notices, the way out of the underpass, plates and flyers
+        w('wall12', -11.6, 1.95, 15.0, (0, 1), 1.3, 1.3), w('wall07', 3.0, 2.15, 7.55, (-1, 0), 1.2, 1.2),
+        w('loading', -1.2, 2.2, 20.0, (0, -1), 2.4, .6), w('no_parking', 18.3, 1.25, 20.0, (0, -1), 2.2, .55),
+        w('no_parking', -20.0, 1.3, 16.4, (1, 0), 2.2, .55), w('exit_way', 9.5, 1.55, 8.0, (-1, 0), 2.4, .3), w('exit_way', 6.5, 1.55, 11.6, (1, 0), 2.4, .3),
+        w('plate_volt', -15.0, 2.0, -11.42, (-1, 0), .3, .3), w('plate_volt', 12.5, 2.0, 6.78, (1, 0), .3, .3), w('plate_volt', -5.0, 2.38, 5.3, (1, 0), .3, .3),
+        w('plate_fire', 6.5, 1.95, 6.2, (1, 0), .34, .34), w('plate_fire', -5.55, 1.85, 15.0, (0, 1), .34, .34),
+        w('plate_block', -15.0, 2.45, -4.0, (-1, 0), .64, .16), w('plate_block', 0.0, 2.45, -12.1, (-1, 0), .64, .16),
+        w('plate_block', 12.5, 2.45, 14.5, (1, 0), .64, .16), w('plate_block', -14.0, 2.45, 5.0, (-1, 0), .64, .16),
+        w('flyers', 12.5, 1.45, 9.6, (1, 0), 2.2, .37), w('flyers', 3.0, 1.35, 14.2, (-1, 0), 1.6, .27),
+    ]
+
+
+def fixtures():
+    """Eye-level wall hardware (neon.py `fixture`, visual only): meters, junction boxes with conduit runs, vents, fire-hose
+    cabinets and sheet-metal ducts. c = point on the wall plane, n = wall normal."""
+    def f(kind, x, y, z, n, **kw):
+        return {'kind': kind, 'c': [x, y, z], 'n': list(n), **kw}
+    return [
+        # west lane: the mart's meters and a junction with a conduit run; a kitchen duct on the west row; dryer vents
+        f('meter', -15.0, 1.42, -11.95, (-1, 0), count=2, top=3.4), f('junction', -15.0, 2.2, -9.3, (-1, 0), run=-1.9, drop=-.2),
+        f('duct', -20.0, 4.3, -7.0, (1, 0), len=5.0, down=1.0), f('vent', -14.0, 2.1, 8.6, (-1, 0)), f('vent', -14.0, 2.1, 7.4, (-1, 0)),
+        f('junction', -20.0, 1.7, 10.4, (1, 0), run=2.4), f('meter', -20.0, 1.42, 3.3, (1, 0), count=2, top=3.2),
+        # food alley: meters by the ramen wall's south end, a vent over the hatch, a duct from the kitchen
+        f('meter', 0.0, 1.42, -5.15, (-1, 0), count=2, top=3.4), f('vent', 0.0, 3.02, -9.4, (-1, 0), w=.9, h=.34),
+        f('duct', -5.5, 3.35, -8.8, (1, 0), len=3.2),
+        # crossing and market court
+        f('meter', -5.0, 1.42, 5.3, (1, 0), count=3, top=3.3),
+        f('vent', -8.2, 2.9, -3.5, (0, 1), w=.9, h=.4),
+        # underpass: fire-hose cabinet, vents and a conduit along the tiled wall
+        f('reel', 6.5, 1.25, 6.2, (1, 0)), f('vent', 9.5, 2.45, 6.6, (-1, 0)), f('vent', 6.5, 2.45, 13.2, (1, 0)),
+        f('junction', 9.5, 2.0, 10.6, (-1, 0), run=2.2, drop=.0),
+        # east lane: the hostel block's meters, a junction on the ramen shop's east wall
+        f('meter', 12.5, 1.57, 6.0, (1, 0), count=3, top=3.4), f('junction', 12.5, 2.05, -9.8, (1, 0), run=-2.0),
+        f('vent', 12.5, 2.3, 12.6, (1, 0)),
+        # back alley: service hardware on every wall (the dim, working lane), kitchen ducts on the south row
+        f('meter', -8.4, 1.42, 15.0, (0, 1), count=2, top=3.0), f('reel', -5.55, 1.2, 15.0, (0, 1)),
+        f('duct', -14.6, 4.15, 20.0, (0, -1), len=4.6, down=1.2), f('duct', 6.6, 3.5, 20.0, (0, -1), len=3.4), f('vent', -8.47, 2.3, 20.0, (0, -1)),
+        f('junction', 15.4, 1.8, 20.0, (0, -1), run=-1.6), f('vent', 11.0, 2.95, 20.0, (0, -1), w=.9, h=.4),
+    ]
+
+
 def steam():
     """Steam emitters for src/rendering/Steam.ts (position, tint, particles per second, rise speed)."""
     return [
@@ -460,6 +566,6 @@ def dressing():
             'lanterns': lanterns(), 'cables': cables(), 'graffiti': graffiti(), 'pipes': pipes(), 'puddles': puddles(),
             'bake': bake(), 'lamps': lamps(), 'rooms': rooms(), 'rain': rain(), 'vista': vista(), 'vista_signs': vista_signs(),
             'grime': grime(), 'cracks': cracks(), 'noren': noren(), 'fire_escapes': fire_escapes(), 'steam': steam(),
-            'spans': spans(), 'rooftops': rooftops(),
+            'spans': spans(), 'rooftops': rooftops(), 'marks': marks(), 'fixtures': fixtures(),
             'displays': {'n_arcade': 'disp_arcade', 'n_hotel': 'disp_lobby', 'n_pharmacy': 'disp_pharmacy', 'n_corner': 'disp_bar',
                          'e_karaoke': 'disp_karaoke', 'e_bar': 'disp_bar'}}

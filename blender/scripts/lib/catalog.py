@@ -79,7 +79,6 @@ PROPS = {
     "vend_red": {"size": [1.0, 1.95, 0.85], "collider": [1.0, 1.95, 0.85]},
     "vend_blue": {"size": [1.0, 1.95, 0.85], "collider": [1.0, 1.95, 0.85]},
     "vend_yellow": {"size": [1.0, 1.95, 0.85], "collider": [1.0, 1.95, 0.85]},
-    "vend_white": {"size": [1.0, 1.95, 0.85], "collider": [1.0, 1.95, 0.85]},
     "wet_floor_sign": {"size": [0.4, 0.67, 0.45], "collider": None},
     "wine_rack": {"size": [2.0, 1.9, 0.5], "collider": [2.0, 1.9, 0.5]},
     "cask": {"size": [1.5, 1.25, 1.25], "collider": [1.5, 1.25, 1.25]},
@@ -207,10 +206,7 @@ PROPS = {
     "scooter": {"size": [0.66, 1.18, 1.76], "collider": [0.5, 0.95, 1.6]},
     "bicycle": {"size": [0.56, 1.02, 1.72], "collider": None},
     "food_cart": {"size": [1.9, 2.45, 1.05], "collider": [1.9, 1.05, 1.0]},
-    "phone_booth": {"size": [1.04, 2.45, 1.04], "collider": [1.0, 2.45, 1.0]},
-    "gacha_bank": {"size": [1.72, 1.45, 0.5], "collider": [1.7, 1.2, 0.5]},
     "sandwich_board": {"size": [0.55, 0.9, 0.5], "collider": None},
-    "bamboo_pot": {"size": [0.7, 2.1, 0.7], "collider": [0.6, 2.0, 0.6]},
 }
 
 # Modular kit pieces exported for future maps (not instanced by the European Town layout itself).

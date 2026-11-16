@@ -1,7 +1,7 @@
 {
  "generator": "blender/scripts/generate_all.py",
  "blender": "5.2.3 LTS",
- "generated": "2026-11-14 17:24:53",
+ "generated": "2026-11-15 12:48:06",
  "assets": [
   {
    "path": "assets/characters/player-albedo.png",
@@ -36,7 +36,7 @@
   {
    "path": "assets/materials.json",
    "kind": "materials",
-   "bytes": 68370,
+   "bytes": 70050,
    "description": "Material table (names, texture sets, tiling, tint, PBR factors)",
    "script": "blender/scripts/lib/materials.py"
   },
@@ -436,10 +436,10 @@
   {
    "path": "assets/models/neon-backstreets/terrain.glb",
    "kind": "map-terrain",
-   "bytes": 5217176,
+   "bytes": 5669196,
    "description": "Night-time city block: wet streets, mart, ramen shop, laundromat, hostel block, neon signs and glow cards",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 88518
+   "triangles": 94188
   },
   {
    "path": "assets/models/shared/buildings/archway_v1.glb",
@@ -856,14 +856,6 @@
    "description": "ac_condenser (1 x 0.8 x 0.44 m)",
    "script": "blender/scripts/generate_all.py",
    "triangles": 126
-  },
-  {
-   "path": "assets/models/shared/props/bamboo_pot.glb",
-   "kind": "prop",
-   "bytes": 69296,
-   "description": "bamboo_pot (0.7 x 2.1 x 0.7 m)",
-   "script": "blender/scripts/generate_all.py",
-   "triangles": 660
   },
   {
    "path": "assets/models/shared/props/barrel.glb",
@@ -1298,14 +1290,6 @@
    "triangles": 48
   },
   {
-   "path": "assets/models/shared/props/gacha_bank.glb",
-   "kind": "prop",
-   "bytes": 151524,
-   "description": "gacha_bank (1.72 x 1.45 x 0.5 m)",
-   "script": "blender/scripts/generate_all.py",
-   "triangles": 1412
-  },
-  {
    "path": "assets/models/shared/props/gas_cage.glb",
    "kind": "prop",
    "bytes": 42532,
@@ -1506,14 +1490,6 @@
    "triangles": 216
   },
   {
-   "path": "assets/models/shared/props/phone_booth.glb",
-   "kind": "prop",
-   "bytes": 19624,
-   "description": "phone_booth (1.04 x 2.45 x 1.04 m)",
-   "script": "blender/scripts/generate_all.py",
-   "triangles": 168
-  },
-  {
    "path": "assets/models/shared/props/pipe_bundle.glb",
    "kind": "prop",
    "bytes": 37516,
@@ -1540,7 +1516,7 @@
   {
    "path": "assets/models/shared/props/props.json",
    "kind": "prop-catalog",
-   "bytes": 22381,
+   "bytes": 21737,
    "description": "Prop sizes and collision boxes used by the runtime",
    "script": "blender/scripts/lib/catalog.py"
   },
@@ -1835,34 +1811,26 @@
   {
    "path": "assets/models/shared/props/vend_blue.glb",
    "kind": "prop",
-   "bytes": 58768,
+   "bytes": 60772,
    "description": "vend_blue (1 x 1.95 x 0.85 m)",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 600
+   "triangles": 624
   },
   {
    "path": "assets/models/shared/props/vend_red.glb",
    "kind": "prop",
-   "bytes": 58768,
+   "bytes": 60772,
    "description": "vend_red (1 x 1.95 x 0.85 m)",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 600
-  },
-  {
-   "path": "assets/models/shared/props/vend_white.glb",
-   "kind": "prop",
-   "bytes": 58772,
-   "description": "vend_white (1 x 1.95 x 0.85 m)",
-   "script": "blender/scripts/generate_all.py",
-   "triangles": 600
+   "triangles": 624
   },
   {
    "path": "assets/models/shared/props/vend_yellow.glb",
    "kind": "prop",
-   "bytes": 58776,
+   "bytes": 60780,
    "description": "vend_yellow (1 x 1.95 x 0.85 m)",
    "script": "blender/scripts/generate_all.py",
-   "triangles": 600
+   "triangles": 624
   },
   {
    "path": "assets/models/shared/props/vending_machine.glb",
@@ -2105,14 +2073,14 @@
   {
    "path": "blender/source/neon-backstreets.blend",
    "kind": "blend",
-   "bytes": 2457502,
+   "bytes": 2543791,
    "description": "Editable source: buildings, terrain, collision, markers, prop preview",
    "script": "blender/scripts/generate_all.py"
   },
   {
    "path": "blender/source/props.blend",
    "kind": "blend",
-   "bytes": 2470116,
+   "bytes": 2412751,
    "description": "Editable source: all street props",
    "script": "blender/scripts/generate_all.py"
   },

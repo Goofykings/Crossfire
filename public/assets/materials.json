@@ -3103,9 +3103,9 @@
    "roughness": 0.4,
    "metallic": 0.0,
    "emissive": [
-    0.85,
-    0.9,
-    1.0
+    0.42,
+    0.45,
+    0.52
    ]
   },
   "neon_beam": {
@@ -3157,6 +3157,75 @@
    "orm": "assets/textures/shared/concrete_dark_orm.jpg",
    "roughness": 0.5,
    "normal_strength": 0.8
+  },
+  "neon_pave": {
+   "tile": 2.0,
+   "tint": [
+    0.96,
+    0.96,
+    1.0
+   ],
+   "albedo": "assets/textures/neon-backstreets/pave_albedo.jpg",
+   "normal": "assets/textures/neon-backstreets/pave_normal.jpg",
+   "orm": "assets/textures/neon-backstreets/pave_orm.jpg",
+   "roughness": 1.0,
+   "metallic": 0.0,
+   "normal_strength": 1.0
+  },
+  "neon_tile": {
+   "tile": 1.2,
+   "tint": [
+    1.0,
+    0.95,
+    0.9
+   ],
+   "albedo": "assets/textures/neon-backstreets/tile_albedo.jpg",
+   "normal": "assets/textures/neon-backstreets/tile_normal.jpg",
+   "orm": "assets/textures/neon-backstreets/tile_orm.jpg",
+   "roughness": 1.0,
+   "metallic": 0.0,
+   "normal_strength": 0.9
+  },
+  "neon_plaza": {
+   "tile": 9.0,
+   "tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "albedo": "assets/textures/neon-backstreets/plaza_albedo.jpg",
+   "normal": "assets/textures/neon-backstreets/plaza_normal.jpg",
+   "orm": "assets/textures/neon-backstreets/plaza_orm.jpg",
+   "roughness": 1.0,
+   "metallic": 0.0,
+   "normal_strength": 1.0
+  },
+  "neon_walltile": {
+   "tile": 1.0,
+   "tint": [
+    0.74,
+    0.9,
+    0.94
+   ],
+   "albedo": "assets/textures/neon-backstreets/walltile_albedo.jpg",
+   "normal": "assets/textures/neon-backstreets/walltile_normal.jpg",
+   "orm": "assets/textures/neon-backstreets/walltile_orm.jpg",
+   "roughness": 1.0,
+   "metallic": 0.0,
+   "normal_strength": 0.7
+  },
+  "neon_marks": {
+   "tile": 1.0,
+   "tint": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "albedo": "assets/textures/neon-backstreets/neon_marks.png",
+   "roughness": 0.8,
+   "alpha_cutoff": 0.5,
+   "decal": true,
+   "atlas": true
   },
   "neon_puddle": {
    "tile": 1.0,

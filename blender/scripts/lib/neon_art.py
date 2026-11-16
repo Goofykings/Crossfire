@@ -6,7 +6,7 @@ Rects are pixel (x, y, w, h) with y measured from the top of the image. `uv()` c
 """
 from __future__ import annotations
 
-SIGNS_SIZE = (2048, 3328)
+SIGNS_SIZE = (2048, 4096)
 SIGNS = {
     # horizontal boards (4:1 unless noted)
     'mart': (0, 0, 1024, 256), 'ramen': (1024, 0, 1024, 256),
@@ -25,6 +25,9 @@ SIGNS = {
     'cafe_v': (1536, 2048, 192, 768), 'pachinko_v': (1728, 2048, 192, 768),
     'izakaya': (0, 2816, 1024, 256), 'udon': (1024, 2816, 512, 256), 'motel': (1536, 2816, 512, 256),
     'arch': (0, 3072, 1024, 256),
+    # overhaul (2026-11-15): warm food-alley blades and a bathhouse blade, a shop lantern board
+    'yakitori_v': (0, 3328, 192, 768), 'sento_v': (192, 3328, 192, 768), 'gyoza_v': (384, 3328, 192, 768), 'denki_v': (576, 3328, 192, 768),
+    'oden_v': (768, 3328, 192, 768),
 }
 
 PANELS_SIZE = (2048, 1280)
@@ -35,11 +38,32 @@ PANELS = {
     'disp_karaoke': (0, 800, 512, 224), 'disp_tattoo': (512, 800, 512, 224), 'disp_pharmacy': (1024, 800, 512, 224), 'disp_noodle': (1536, 800, 512, 224),
     # polish pass: noodle-shop door curtains, a hand-written specials board, a vending-machine front and a bus-stop ad
     'noren': (0, 1024, 512, 256), 'specials': (512, 1024, 256, 256),
+    # overhaul: warm paper screens behind a timber lattice (shoji), two widths
+    'shoji': (768, 1024, 512, 256), 'shoji_tall': (1280, 1024, 256, 256),
 }
 
 WINDOWS_SIZE = (512, 512)      # 4 x 4 cells of lit and dim windows
 GRAFFITI_SIZE = (1024, 1536)   # 2 x 6 cells of 512 x 256 (alpha): tags, then rain streaks, rust, cracks, stickers
 GRAFFITI_CELLS = 12
+
+
+# Painted road markings, wall stencils, plates and litter (alpha-tested decals; tools/neon_ground_art.py paints them)
+MARKS_SIZE = (2048, 2048)
+MARKS = {
+    'arrow': (0, 0, 256, 512), 'arrow_turn': (256, 0, 256, 512), 'tomare': (512, 0, 256, 512), 'jokou': (768, 0, 256, 512),
+    'hatch': (1024, 0, 512, 512), 'bay1': (1536, 0, 256, 256), 'bay2': (1792, 0, 256, 256), 'bay3': (1536, 256, 256, 256), 'bay4': (1792, 256, 256, 256),
+    'litter_a': (0, 512, 512, 512), 'litter_b': (512, 512, 512, 512), 'litter_c': (1024, 512, 512, 512), 'manhole': (1536, 512, 512, 512),
+    'wall07': (0, 1024, 512, 512), 'wall12': (512, 1024, 512, 512), 'no_parking': (1024, 1024, 1024, 256), 'loading': (1024, 1280, 1024, 256),
+    'exit_way': (0, 1536, 1024, 128), 'keep_clear': (0, 1664, 1024, 128), 'tyres': (0, 1792, 1024, 256),
+    'stain': (1024, 1536, 256, 512), 'plate_volt': (1280, 1536, 256, 256), 'plate_fire': (1536, 1536, 256, 256), 'plate_block': (1280, 1792, 512, 128),
+    'flyers': (1024 + 256, 1920, 768, 128),
+}
+# The crossing's circular plaza: one 9 x 9 m image laid over the ground cells of `origin` .. origin + size (world x, z)
+PLAZA = {'origin': (-2.0, -4.0), 'size': 9.0, 'centre': (2.8, 0.4), 'radius': 3.5}
+
+
+def marks_uv(name):
+    return _uv(MARKS[name], MARKS_SIZE, 2)
 
 
 def _uv(rect, size, inset=1.5):
