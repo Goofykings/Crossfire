@@ -1820,3 +1820,4 @@ body[data-home-page='leaderboard'] #ui{background:#10192366}
 .result-upcoming small { color: #a8ceff; letter-spacing: .2em; }
 .result-upcoming strong { font-size: 1.1em; letter-spacing: .08em; }
 .result-upcoming span { opacity: .85; }
+.network-warning{position:absolute;top:max(76px,calc(env(safe-area-inset-top) + 48px));left:50%;transform:translateX(-50%);padding:6px 10px;border-radius:6px;background:#111b29b8;color:#f0ca88;font:12px var(--font);pointer-events:none}.network-warning[hidden]{display:none}

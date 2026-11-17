@@ -47,6 +47,15 @@ async function connect(documentFixture?: object, diagnostics=false) {
   return { socket, p, client };
 }
 const frames = (s: SocketFixture) => s.sent.filter((m) => m.type === 'input').flatMap((m) => m.frames!);
+it('quiet healthy traffic does not warn, but genuinely stale outstanding input does',async()=>{
+ const {client,socket,p}=await connect();
+ for(let i=0;i<3;i++){vi.advanceTimersByTime(2000);socket.receive({v:PROTOCOL_VERSION,type:'pong',at:Date.now(),serverTime:Date.now()});expect(client.connectionWarning).toBeNull();}
+ client.fixedInput(controller,{...NO_INTENT,z:1});expect(client.connectionWarning).toBeNull();
+ vi.advanceTimersByTime(1600);expect(client.connectionWarning).toBe('Connection delayed');
+ p.ack=frames(socket).at(-1)!.seq;socket.receive({v:PROTOCOL_VERSION,type:'snapshot',snapshot:snapshot(p)});expect(client.connectionWarning).toBeNull();
+ vi.advanceTimersByTime(4600);expect(client.connectionWarning).toBe('Waiting for server');expect(client.state).toBe('connected');
+ client.disconnect();expect(client.connectionWarning).toBeNull();
+});
 it('downloadable telemetry never includes profile/session credentials, usernames or raw payloads',async()=>{
  const {client,socket,p}=await connect(undefined,true);const name='Private Test Username';
  p.name=name;socket.receive({v:PROTOCOL_VERSION,type:'snapshot',snapshot:snapshot(p)});

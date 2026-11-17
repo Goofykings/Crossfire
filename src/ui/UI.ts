@@ -129,6 +129,7 @@ export class UI {
   private scopeZoom!:HTMLElement;
   private spectatorScope!: HTMLElement;
   private fpsBox!: HTMLElement;
+  private networkWarning!:HTMLElement;
   /** The FPS readout element (read by the debug API). */
   get fpsElement(): HTMLElement {
     return this.fpsBox;
@@ -509,6 +510,7 @@ export class UI {
     tr.appendChild(this.fpsBox);
     tr.appendChild(this.statsBox);
     s.appendChild(tr);
+    this.networkWarning=el('div','network-warning');this.networkWarning.hidden=true;this.networkWarning.setAttribute('role','status');s.appendChild(this.networkWarning);
     const bl = el('div', 'hud-bl');
     const health = el('div', 'health');
     health.appendChild(el('div', 'cross'));
@@ -1204,6 +1206,9 @@ export class UI {
 
   setStats(text: string): void {
     if(this.statsBox.textContent!==text)this.statsBox.textContent = text;
+  }
+  setNetworkWarning(text:string|null):void {
+    if(this.networkWarning.textContent!==(text??'')){this.networkWarning.textContent=text??'';this.networkWarning.hidden=!text;}
   }
 
   setLockHint(visible: boolean): void {

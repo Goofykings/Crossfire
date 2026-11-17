@@ -26,7 +26,7 @@ class FixtureSocket {
 }
 afterEach(()=>{vi.useRealTimers();vi.unstubAllGlobals();});
 
-async function run(fps:number|'variable',rtt:number,stall:number,legacy=false){
+async function run(fps:number|'variable',rtt:number,stall:number,legacy=false,jitter=11){
   vi.useFakeTimers();vi.setSystemTime(1000000);vi.stubGlobal('window',globalThis);vi.stubGlobal('WebSocket',FixtureSocket);
   const world=WORLDS['industrial-complex'].world;
   const make=()=>{const p=new PlayerController(world);p.weaponClearance='rifle';p.teleport({x:7,y:0,z:-5},90);return p;};
@@ -47,7 +47,7 @@ async function run(fps:number|'variable',rtt:number,stall:number,legacy=false){
   let maxPending=0,maxWork=0,peakCorrection=0,reconciliations=0,heldTicks=0;
   const corrections:unknown[]=[];
   const trace:unknown[]=[];
-  const gaps=[-7,4,11,-3];
+  const gaps=[-7,4,11,-3].map(n=>n*jitter/11);
   try{
     for(let time=0;time<4500;time++){
       vi.advanceTimersByTime(1);
@@ -114,9 +114,16 @@ async function run(fps:number|'variable',rtt:number,stall:number,legacy=false){
     if(!legacy&&!stood&&fps===60){mkdirSync('test-results',{recursive:true});writeFileSync('test-results/network-matrix-failure.json',JSON.stringify(trace,null,2));}
     if(!legacy)expect(stood,JSON.stringify({fps,rtt,stall,legacy,end:authority.position})).toBe(true);
     const diagnostics=client.diagnosticReport().telemetry;
-    return {fps,rtt,stall,legacy,landed:stood,maxWork,maxPending,peakCorrection,reconciliations,corrections,finalDistance:distance,
+    return {fps,rtt,jitter,stall,legacy,landed:stood,maxWork,maxPending,peakCorrection,reconciliations,corrections,finalDistance:distance,
       appRtt:diagnostics.enabled?diagnostics.metrics.rttMs:null,rttJitter:diagnostics.enabled?diagnostics.metrics.rttJitterMs:null};
   }finally{client.disconnect();vi.useRealTimers();vi.unstubAllGlobals();}
+}
+const poorReports:Awaited<ReturnType<typeof run>>[]=[];
+for(const fps of [60,30,20] as const)for(const [rtt,jitter]of [[20,5],[60,15],[120,30],[200,60],[350,100]]){
+ it(`requested network matrix: ${fps} FPS, ${rtt} ms RTT, ${jitter} ms jitter, 300 ms stall`,async()=>{
+  poorReports.push(await run(fps,rtt,300,false,jitter));
+  if(poorReports.length===15){mkdirSync('test-results',{recursive:true});writeFileSync('test-results/poor-network-movement.json',JSON.stringify(poorReports,null,2));}
+ },30000);
 }
 
 const reports:Awaited<ReturnType<typeof run>>[]=[];

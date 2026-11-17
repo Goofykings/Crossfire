@@ -16,6 +16,16 @@ it('numeric diagnostics are opt-in and every metric history is bounded', () => {
   expect(report.metrics.rttJitterMs.median).toBe(1);expect(report.counters.inputs).toBe(6000);
   expect(report.metrics.rttMs.recent).toHaveLength(128);
 });
+it('wire telemetry measures UTF-8 application bytes, expires its rate window and never retains payloads',()=>{
+ let now=1000;const clock=vi.spyOn(performance,'now').mockImplementation(()=>now);
+ try{
+  const off=new NetworkDiagnostics();expect(off.wire('incoming','secret')).toBe(0);
+  const d=new NetworkDiagnostics(true);expect(d.wire('incoming','abc')).toBe(3);expect(d.wire('incoming','é')).toBe(2);expect(d.wire('outgoing','💎')).toBe(4);
+  now=2000;const r=d.report();if(!r.enabled)throw Error('Expected diagnostics');
+  expect(r.rates.incomingBytesPerSecond).toBe(5);expect(r.rates.outgoingBytesPerSecond).toBe(4);expect(r.counters.incomingBytes).toBe(5);
+  expect(JSON.stringify(r)).not.toContain('abc');now=2600;const next=d.report();if(next.enabled){expect(next.rates.incomingBytesPerSecond).toBe(0);expect(next.counters.outgoingBytes).toBe(4);}
+ }finally{clock.mockRestore();}
+});
 
 it('correction traces are opt-in, bounded, copied and omit exact confirmations',()=>{
  const sample={atMs:1,metres:.2,ack:1,replayed:6,snapshotAgeMs:40,groundedBefore:false,groundedAfter:true};

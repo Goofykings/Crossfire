@@ -10,7 +10,9 @@ export function extrapolatedPosition(m:ControllerState,milliseconds:number,world
  if(dt===0)return {...p};
  let x=p.x+v.x*dt,z=p.z+v.z*dt,y=p.y;
  if(world){const moved=world.moveCylinder(p.x,p.z,v.x*dt,v.z*dt,MOVEMENT.radius,
-  p.y+(m.grounded?MOVEMENT.stepHeight:.00001),p.y+playerHeight(m));x=moved.x;z=moved.z;}
+  // Unlike the controller, dead reckoning does not perform an actual step-up.
+  // Ignoring a short riser here moves the body inside it at the old foot height.
+  p.y+.00001,p.y+playerHeight(m));x=moved.x;z=moved.z;}
  if(!m.grounded){
   y=p.y+v.y*dt-MOVEMENT.gravity*dt*dt*.5;
   if(world){

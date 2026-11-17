@@ -420,9 +420,8 @@ export class RemotePlayers {
         a.correction=error.length()<1.5?{x:error.x,y:error.y,z:error.z}:undefined;
       }
       if(a.correction){const decay=Math.exp(-Math.max(0,dt)*24);a.correction.x*=decay;a.correction.y*=decay;a.correction.z*=decay;
-        const grounded=(predicted?n:k<.5?m:n).grounded;
         const offset=this.collisionWorld?.moveCylinder(position.x,position.z,a.correction.x,a.correction.z,MOVEMENT.radius,
-          position.y+(grounded?MOVEMENT.stepHeight:.00001),position.y+a.height);
+          position.y+.00001,position.y+a.height);
         position.x=offset?.x??position.x+a.correction.x;position.z=offset?.z??position.z+a.correction.z;
         // Vertical corrections stay on the actual interpolated floor/ceiling band.
       }

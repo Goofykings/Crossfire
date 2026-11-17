@@ -36,6 +36,23 @@ it('remote airborne extrapolation uses the foot collision band and cannot step u
  expect(extrapolated.x).toBeLessThanOrEqual(.360001);
  expect(extrapolated.y).toBeLessThanOrEqual(m.position.y);
 });
+it('a grounded remote cannot extrapolate inside a step that it has not authoritatively climbed',()=>{
+ const world=new CollisionWorld(),p=new PlayerController(world),m=p.capture();
+ m.grounded=true;m.velocity={x:6,y:0,z:0};
+ world.add({c:[.8,.15,0],h:[.2,.15,2]});
+ const predicted=extrapolatedPosition(m,100,world);
+ expect(predicted.x).toBeLessThanOrEqual(.260001);expect(predicted.y).toBe(0);
+ expect(world.overlapsCylinder(predicted.x,predicted.z,.34,.00001,1.8)).toBe(false);
+});
+it('quality uses measured traffic, degrades with hysteresis and recovers conservatively',()=>{
+ const t=new NetworkTiming();t.reset(10000,10000);expect(t.quality).toBe('unknown');
+ t.probe(10000,10010,10020);expect(t.quality).toBe('excellent');
+ for(let i=1;i<=20;i++){const local=10020+i*200;t.probe(local-350,local-175,local);t.snapshot(local-175,local);}
+ expect(t.quality).toBe('poor');
+ const start=15000;t.probe(start-20,start-10,start);expect(t.quality).toBe('poor');
+ for(let local=start+50;local<=start+24000;local+=50){if(local%200===0)t.probe(local-20,local-10,local);t.snapshot(local-10,local);}
+ expect(t.quality).toBe('excellent');expect(t.delay).toBeLessThan(75);
+});
 it('historical hits test the displayed body, clamp time claims and never mix lives or maps',()=>{
  const p=new PlayerController(new CollisionWorld()),history=new MotionHistory();p.teleport({x:0,y:0,z:-5});
  const old=p.capture();history.record(1000,1,1,old);p.position.x=1.2;history.record(1100,1,1,p.capture());

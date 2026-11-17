@@ -16,21 +16,24 @@ export class NetworkDiagnosticsOverlay {
     if (!this.text || now-this.updated<500) return;
     this.updated=now;
     const data=this.report() as {network?:{state?:string;pending?:number;inFlight?:number;bufferedBytes?:number;ackAgeMs?:number;
-      appliedSnapshotAgeMs?:number|null;corrections?:{significant:number;max:number};
-      telemetry?:{rates?:{snapshots:number;inputs:number};metrics?:Record<string,{min:number;median:number;p95:number;max:number}>}};
+      appliedSnapshotAgeMs?:number|null;queuedPresentationSnapshots?:number;staleSnapshots?:number;opens?:number;timing?:{quality?:string;interpolationMs?:number};corrections?:{significant:number;max:number};
+      telemetry?:{rates?:{snapshots:number;inputs:number;incomingBytesPerSecond?:number;outgoingBytesPerSecond?:number};metrics?:Record<string,{min:number;median:number;p95:number;max:number}>}};
       frames?:{p95?:number;longFrames?:number}};
     const n=data.network,t=n?.telemetry,m=t?.metrics;
     const fmt=(v:number|undefined|null)=>typeof v==='number'?v.toFixed(1):'n/a';
     const rtt=m?.rttMs;
     this.text.textContent=[`NETWORK · ${n?.state??'no online session'}`,
+      `Quality: ${n?.timing?.quality??'unknown'} · remote buffer ${fmt(n?.timing?.interpolationMs)} ms`,
       `App RTT min/median/P95/max: ${rtt?[rtt.min,rtt.median,rtt.p95,rtt.max].map(fmt).join('/'):'n/a'} ms`,
       `RTT jitter: ${fmt(m?.rttJitterMs?.median)} ms`,
       `Server handler/tick: ${fmt(m?.serverHandlerMs?.median)}/${fmt(m?.serverTickMs?.p95)} ms`,
       `Client handler/dispatch age P95: ${fmt(m?.handlerMs?.p95)}/${fmt(m?.dispatchAgeMs?.p95)} ms`,
       `Snapshots/inputs: ${fmt(t?.rates?.snapshots)}/${fmt(t?.rates?.inputs)} per s`,
       `Snapshot bytes P95: ${fmt(m?.snapshotBytes?.p95)}`,
+      `Application bytes/s in/out: ${fmt(t?.rates?.incomingBytesPerSecond)}/${fmt(t?.rates?.outgoingBytesPerSecond)}`,
       `Applied snapshot/ack age: ${fmt(n?.appliedSnapshotAgeMs)}/${fmt(n?.ackAgeMs)} ms`,
       `Pending/in flight: ${n?.pending??0}/${n?.inFlight??0} · outbound: ${n?.bufferedBytes??0} B`,
+      `Queued presentation snapshots: ${n?.queuedPresentationSnapshots??0} · reconnects: ${Math.max(0,(n?.opens??1)-1)}`,
       `Position corrections >1 cm: ${n?.corrections?.significant??0} · max ${fmt((n?.corrections?.max??0)*100)} cm`,
       `Camera correction P95: ${fmt(m?.cameraCorrectionRad?.p95)} rad`,
       `Frame P95: ${fmt(data.frames?.p95)} ms · stalls: ${data.frames?.longFrames??0}`,

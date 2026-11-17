@@ -1653,6 +1653,7 @@ export class Game {
   }
 
   private updateHudMeta(): void {
+    this.ui.setNetworkWarning(!this.localPractice&&(this.state==='playing'||this.state==='spectating')&&this.network instanceof MultiplayerClient?this.network.connectionWarning:null);
     const s = effectiveSettings(this.settings.value);
     if (s.showFps) {
       const fps = Math.max(1, this.fps.value);
@@ -1671,7 +1672,7 @@ export class Game {
   // --- automation hooks (used by tools/browser-test.mjs) ---------------------------------------
   private networkReport() {
     return {format:'crossfire-network-v1',at:Date.now(),
-      network:this.network instanceof MultiplayerClient?this.network.diagnosticReport():null,
+      network:this.network instanceof MultiplayerClient?{...this.network.diagnosticReport(),queuedPresentationSnapshots:this.pendingSnapshot?1:0}:null,
       frames:this.performanceDiagnostics.inspect(),
       graphics:{chromebookMode:this.settings.value.chromebookMode,quality:this.settings.value.graphicsQuality},
       notes:{rtt:'Application RTT includes server and browser scheduling; it is not a pure network measurement.',

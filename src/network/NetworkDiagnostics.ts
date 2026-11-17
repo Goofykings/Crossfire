@@ -8,18 +8,27 @@ export class NetworkDiagnostics {
   private readonly samples = new Map<NetworkMetric, number[]>();
   private readonly counters: Record<string, number> = {};
   private readonly started = performance.now();
-  private readonly rateEvents = {snapshots:[] as {at:number;count:number}[],inputs:[] as {at:number;count:number}[],inputPackets:[] as {at:number;count:number}[]};
+  private readonly rateEvents = {snapshots:[] as {at:number;count:number}[],inputs:[] as {at:number;count:number}[],inputPackets:[] as {at:number;count:number}[],incoming:[] as {at:number;count:number}[],outgoing:[] as {at:number;count:number}[]};
+  private readonly encoder=new TextEncoder();
   private previousRtt: number | null = null;
   private previousSnapshot: number | null = null;
   private readonly correctionTrace:CorrectionTrace[]=[];
   constructor(readonly enabled = false) {}
   count(name: 'messages' | 'snapshots' | 'inputs' | 'inputPackets' | 'appliedSnapshots' | 'duplicateReconciliations'
-    | 'staleReconciliations' | 'fastReconciliations' | 'coalescedSnapshots' | 'frameBudgetHits', amount = 1): void {
+    | 'staleReconciliations' | 'fastReconciliations' | 'coalescedSnapshots' | 'frameBudgetHits' | 'retries' | 'staleSnapshots', amount = 1): void {
     if (!this.enabled) return;
     this.counters[name] = (this.counters[name] ?? 0) + amount;
     if(name==='snapshots'||name==='inputs'||name==='inputPackets'){
       const events=this.rateEvents[name];events.push({at:performance.now(),count:amount});if(events.length>256)events.shift();
     }
+  }
+  /** Actual application UTF-8 bytes; excludes WebSocket/TLS/TCP framing. */
+  wire(direction:'incoming'|'outgoing',raw:string,now=performance.now()):number {
+    if(!this.enabled)return 0;
+    const bytes=this.encoder.encode(raw).byteLength;
+    this.counters[direction+'Bytes']=(this.counters[direction+'Bytes']??0)+bytes;
+    const ring=this.rateEvents[direction];ring.push({at:now,count:bytes});if(ring.length>512)ring.shift();
+    return bytes;
   }
   record(name: NetworkMetric, value: number): void {
     if (!this.enabled || !Number.isFinite(value) || value < 0) return;
@@ -49,7 +58,7 @@ export class NetworkDiagnostics {
     const cutoff=performance.now()-1000;
     const rate=(name:keyof typeof this.rateEvents)=>this.rateEvents[name].reduce((sum,e)=>sum+(e.at>=cutoff?e.count:0),0)/Math.min(1,seconds);
     return { enabled: true as const, capacityPerMetric: 128, seconds, counters: { ...this.counters },recentCorrections:this.correctionTrace.map(s=>({...s})),
-      rates: { windowMs:1000,snapshots:rate('snapshots'),inputs:rate('inputs'),inputPackets:rate('inputPackets') },
+      rates: { windowMs:1000,snapshots:rate('snapshots'),inputs:rate('inputs'),inputPackets:rate('inputPackets'),incomingBytesPerSecond:rate('incoming'),outgoingBytesPerSecond:rate('outgoing') },
       metrics: Object.fromEntries([...this.samples].map(([key, values]) => {
         const sorted = [...values].sort((a, b) => a - b);
         const at = (fraction: number) => sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * fraction))] ?? 0;

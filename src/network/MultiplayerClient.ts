@@ -40,6 +40,15 @@ export class MultiplayerClient {
   private readonly pingTimes = new Map<number, number>();
   private renderedAt=0;
   get latency():number{return this.timing.rtt;}
+  /** Quiet rooms need not send 20 snapshots/s; traffic and outstanding ACKs do. */
+  get connectionWarning():string|null {
+    if(this.state!=='connected')return null;
+    const now=Date.now();
+    if(now-Math.max(this.lastMessage,this.resumedAt)>4500)return 'Waiting for server';
+    const oldest=this.pending[0],at=oldest?this.inputTimes.get(oldest.seq):undefined;
+    if(at!==undefined&&now+this.clockOffset-at>1500)return 'Connection delayed';
+    return null;
+  }
   presentationTime():number {return this.renderedAt=this.timing.time(Date.now());}
   onRoomExit:(message:string)=>void=()=>{};
   onCareer: (profile: CareerView) => void = () => {};
@@ -111,6 +120,7 @@ export class MultiplayerClient {
   private fatal = false;
   private lastYaw = NaN;
   private lastPitch = NaN;
+  private lastLookSampleAt=-Infinity;
   private lastSlide = false;
   private lastAim = false;
   private lastLean = 0;
@@ -160,7 +170,7 @@ export class MultiplayerClient {
       bufferedBytes:this.socket?.bufferedAmount??0,ackAgeMs:Math.max(0,now-this.lastAckAt),
       receivedSnapshotAgeMs:this.latest?Math.max(0,now+this.clockOffset-this.latest.serverTime):null,
       appliedSnapshotAgeMs:this.appliedServerTime===null?null:Math.max(0,now+this.clockOffset-this.appliedServerTime),
-      timing:this.timing.inspect(),corrections:{...this.corrections},telemetry:this.diagnostics.report(),
+      timing:this.timing.inspect(),warning:this.connectionWarning,staleSnapshots:this.staleSnapshots,corrections:{...this.corrections},telemetry:this.diagnostics.report(),
       events:this.events.map(e=>({at:e.at,event:e.event,...(typeof e.detail.code==='number'?{code:e.detail.code}:{}),
         ...(e.event==='state'?{from:e.detail.from,to:e.detail.to}:{})})) };
   }
@@ -223,6 +233,7 @@ export class MultiplayerClient {
       if (this.socket !== socket || typeof event.data !== 'string') return;
       const started=performance.now();
       this.diagnostics.count('messages');
+      const receivedBytes=this.diagnostics.wire('incoming',event.data,started);
       if(typeof event.timeStamp==='number'&&event.timeStamp>0&&started>=event.timeStamp&&started-event.timeStamp<60000)
         this.diagnostics.record('dispatchAgeMs',started-event.timeStamp);
       try {
@@ -237,7 +248,7 @@ export class MultiplayerClient {
         socket.close(4002, 'protocol_error'); return;
       }
       this.lastMessage = Date.now();
-      if('snapshot' in m)this.diagnostics.snapshot(this.diagnostics.enabled?new TextEncoder().encode(event.data).byteLength:0,started);
+      if('snapshot' in m)this.diagnostics.snapshot(receivedBytes,started);
       if(m.type==='room_exit'){this.stopped=true;this.stopTimers();this.cancelSpawn(m.message);this.setState('closed');this.onRoomExit(m.message);return;}
       if (m.type === 'error') {
         this.trace('server_error', { code: m.code, fatal: m.fatal });
@@ -279,7 +290,7 @@ export class MultiplayerClient {
         // Both regular and spawn snapshots must respect round/life/ack monotonicity.
         if(previous&&(m.snapshot.roundId<previous.roundId||m.snapshot.roundId===previous.roundId&&(
           m.snapshot.serverTime<previous.serverTime||!!own&&!!old&&(own.life<old.life||own.life===old.life&&(
-            own.ack<old.ack||!old.alive&&!!old.death&&own.alive))))){this.staleSnapshots++;
+            own.ack<old.ack||!old.alive&&!!old.death&&own.alive))))){this.staleSnapshots++;this.diagnostics.count('staleSnapshots');
           if(m.type==='spawned'&&m.snapshot.roundId===previous.roundId&&old?.alive)this.finishSpawn(m.requestId,previous);
           return;}
         this.timing.snapshot(m.snapshot.serverTime,Date.now());
@@ -382,6 +393,7 @@ export class MultiplayerClient {
       this.setState('reconnecting', 'Connection lost; reconnecting…');
       const delay = Math.min(3000, 300 * 2 ** (this.attempts - 1) * (.8 + Math.random() * .4));
       this.trace('retry_scheduled', { attempt: this.attempts, delay, reason: event.reason ?? '', code: event.code });
+      this.diagnostics.count('retries');
       this.retryTimer = window.setTimeout(() => this.open(), delay);
     };
   }
@@ -425,7 +437,7 @@ export class MultiplayerClient {
     if (this.visibilityListening) { document.removeEventListener('visibilitychange', this.onVisibility); this.visibilityListening = false; }
   }
   private send(message: ClientMessage): void {
-    if (this.socket?.readyState === WebSocket.OPEN) this.socket.send(encodeClientMessage(message));
+    if (this.socket?.readyState === WebSocket.OPEN) {const raw=encodeClientMessage(message);this.socket.send(raw);this.diagnostics.wire('outgoing',raw);}
   }
   private flushInput():void {
     if(this.state!=='connected'||!this.unsent.length||!this.latest||(this.socket?.bufferedAmount??0)>=8192)return;
@@ -467,8 +479,13 @@ export class MultiplayerClient {
     if (player.grounded && Math.hypot(player.velocity.x, player.velocity.y, player.velocity.z) < 0.001
       && player.crouch === 0 && !intent.crouch && !this.lastMove.crouch && !player.sliding && player.slideCooldown === 0 && !this.lastSlide && !intent.slide && !intent.jumpPressed && intent.x === 0 && intent.z === 0 && this.lastMove.x === 0 && this.lastMove.z === 0
       && !intent.aim && !this.lastAim && !intent.lean && !this.lastLean && player.lean === 0
-      && !combat.melee && !this.lastCombat.melee && !combat.grenadeCancel && !combat.grenade && !this.lastCombat.grenade && !combat.trigger && !combat.reload && !this.lastCombat.trigger && !this.lastCombat.reload
-      && yaw === this.lastYaw && player.pitch === this.lastPitch) return;
+      && !combat.melee && !this.lastCombat.melee && !combat.grenadeCancel && !combat.grenade && !this.lastCombat.grenade && !combat.trigger && !combat.reload && !this.lastCombat.trigger && !this.lastCombat.reload){
+      if(yaw===this.lastYaw&&player.pitch===this.lastPitch)return;
+      // Pure look changes on a settled body need only the existing snapshot
+      // cadence. Moving/ADS/combat and every action edge bypass this branch.
+      // Local camera input is applied independently and is never rate limited.
+      if(Number.isFinite(this.lastYaw)&&performance.now()-this.lastLookSampleAt<1000/NETWORK_HZ)return;
+    }
     // Analog magnitude/steering changes stay in the existing 20 Hz batches.
     // Keep immediate starts/stops and the discrete direction edges used by keys.
     const directionChanged=intent.x!==this.lastMove.x||intent.z!==this.lastMove.z;
@@ -480,6 +497,7 @@ export class MultiplayerClient {
       ||combat.melee&&!this.lastCombat.melee||combat.grenade&&!this.lastCombat.grenade||combat.grenadeCancel;
     this.lastYaw = yaw;
     this.lastPitch = player.pitch;
+    this.lastLookSampleAt=performance.now();
     // An idle Shift release must reach the server before another press can be an edge.
     this.lastSlide = intent.slide;
     this.lastAim = intent.aim;
