@@ -31,6 +31,7 @@ export class Controller {
     },{signal:this.abort.signal});
   }
   private setMethod(controller:boolean){if(this.method===controller)return;this.method=controller;this.active=controller;this.onMethod(controller);}
+  deactivate(){this.release();this.setMethod(false);}
   release(){this.input.clearController();this.lookX=this.lookY=0;this.armed=false;this.crouchSlide=null;this.fireHeld=false;}
   private raw(p:Gamepad,index:number){const b=p.buttons[index];return b?(index===6||index===7?b.value:Math.max(b.value,b.pressed?1:0)):0;}
   poll(dt:number,gameplay:boolean,pads:readonly(Gamepad|null)[]=availableGamepads(),focused=!document.hidden&&document.hasFocus()):void{

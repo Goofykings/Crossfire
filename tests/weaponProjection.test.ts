@@ -42,7 +42,47 @@ it('preserves all five real weapon rigs and isolates close weapon depth from wor
         for(let i=0;i<60;i++)view.update(1/60,w,{speed:0,grounded:true,sliding:false,crouch:0,sprinting:false,lean});
         const sight=scene.transformNodes.find(n=>n.name==='sight'&&n.isEnabled())!;
         sight.computeWorldMatrix(true);const at=sight.getAbsolutePosition();
-        expect(at.x).toBeCloseTo(0,5);expect(at.y).toBeCloseTo(0,5);
+        if(stats.id!=='shotgun'){
+          expect(at.x).toBeCloseTo(0,5);expect(at.y).toBeCloseTo(0,5);
+        }else{
+          // The exported shotgun sight is intentionally above the barrels;
+          // the viewmodel now aims over the receiver rather than along it.
+          const muzzle=scene.transformNodes.find(n=>n.name==='muzzle'&&n.isEnabled())!;
+          const aim=sight.position.clone();aim.y=muzzle.position.y+.040;
+          const world=Vector3.TransformCoordinates(aim,sight.parent!.getWorldMatrix());
+          expect(world.x).toBeCloseTo(0,5);expect(world.y).toBeCloseTo(0,5);
+        }
+      }
+      if(stats.id==='shotgun'){
+        view.update(1,w,{speed:0,grounded:true,sliding:false,crouch:0,sprinting:false,lean:0});
+        const muzzle=scene.transformNodes.find(n=>n.name==='muzzle'&&n.isEnabled())!;
+        const matrix=muzzle.parent!.computeWorldMatrix(true);
+        const bore=Vector3.TransformNormal(new Vector3(0,0,-1),matrix).normalize();
+        expect(bore.x).toBeCloseTo(0,5);expect(bore.y).toBeCloseTo(0,5);expect(bore.z).toBeCloseTo(-1,5);
+        const top=muzzle.position.clone();top.y+=.0085;
+        const worldTop=Vector3.TransformCoordinates(top,matrix);
+        expect(worldTop.x).toBeCloseTo(0,5);
+        expect(worldTop.y).toBeCloseTo(-.0315,5);
+        expect(worldTop.z).toBeCloseTo(-.808,5);
+        // Receiver clears the eye line, while the two level barrel tops sit
+        // just below center. World FOV never changes their screen alignment.
+        for(const aspect of [4/3,16/9,21/9]){
+          vi.spyOn(engine,'getAspectRatio').mockReturnValue(aspect);
+          let projected:Vector3|undefined;
+          for(const degrees of [70,90,110]){
+            camera.fov=degrees*Math.PI/180;
+            const info={renderingGroupId:1} as Parameters<typeof scene.onBeforeRenderingGroupObservable.notifyObservers>[0];
+            scene.activeCamera=camera;
+            scene.onBeforeRenderingGroupObservable.notifyObservers(info);
+            const point=Vector3.TransformCoordinates(worldTop,scene.getProjectionMatrix());
+            expect(Math.abs(point.x)).toBeLessThan(.00001);
+            expect(Math.abs(point.y)).toBeLessThan(.10);
+            if(projected)expect(Vector3.Distance(point,projected)).toBeLessThan(.00001);
+            projected=point;
+            scene.onAfterRenderingGroupObservable.notifyObservers(info);
+          }
+        }
+        vi.restoreAllMocks();
       }
       w.ads=0;
       let fixed: number[] | undefined;

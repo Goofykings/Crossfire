@@ -43,6 +43,8 @@ interface RigConfig {
   hipRot: V3;
   /** Distance from the eye to the sight point when aiming. */
   eye: number;
+  /** Unscoped barrel-top aim reference, measured above the muzzle's bore axis. */
+  adsBoreClearance?: number;
   casing: CasingType;
   flash: number;
   /** View-model kick per shot. */
@@ -76,6 +78,9 @@ export const RIG_CONFIGS: Record<WeaponId, RigConfig> = {
     hip: [0.22, -0.13, -0.54],
     hipRot: [0.03, 0.09, -0.06],
     eye: 0.15,
+    // Clear the receiver and stock to expose both barrel tops. The old exported
+    // sight is 85 mm above the bore and puts the parallel barrels far below aim.
+    adsBoreClearance: 0.040,
     casing: 'casing_shell',
     flash: 1.5,
     kick: 2.6,
@@ -256,6 +261,10 @@ export class WeaponView {
     const anchors = new Map<string, Vector3>();
     for (const t of c.transformNodes) {
       if (['muzzle', 'sight', 'eject', 'grip_r', 'grip_l', 'mag_grip', 'port', 'bolt_grip'].includes(t.name)) anchors.set(t.name, t.position.clone());
+    }
+    if (cfg.adsBoreClearance !== undefined && anchors.has('sight') && anchors.has('muzzle')) {
+      // First-person-only reference: leave the exported rig and other views intact.
+      anchors.get('sight')!.y = anchors.get('muzzle')!.y + cfg.adsBoreClearance;
     }
     const muzzle = node('muzzle')!;
     const eject = node('eject')!;

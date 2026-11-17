@@ -2,6 +2,7 @@ import '@babylonjs/loaders/glTF';
 import './styles.css';
 import './ui/motion.css';
 import './ui/menu.css';
+import './touch.css';
 import { Game, type GameOptions } from './game/Game';
 
 function parseOptions(): GameOptions {

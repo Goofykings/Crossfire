@@ -36,10 +36,19 @@ export type Action =
 export class Input {
   private readonly down = new Set<Action>();
   private readonly controllerDown = new Set<Action>();
+  private readonly touchDown = new Set<Action>();
+  private readonly touchEdges = new Set<Action>();
+  touchX = 0;
+  touchZ = 0;
+  setTouch(a: Action, held: boolean): void {
+    if(held){if(!this.touchDown.has(a)&&!this.down.has(a)&&!this.controllerDown.has(a)){this.pressedEdges.add(a);this.touchEdges.add(a);}this.touchDown.add(a);}
+    else this.touchDown.delete(a);
+  }
+  clearTouch(): void {for(const a of this.touchEdges)if(!this.down.has(a)&&!this.controllerDown.has(a))this.pressedEdges.delete(a);this.touchEdges.clear();this.touchDown.clear();this.touchX=this.touchZ=0;}
   controllerX = 0;
   controllerZ = 0;
   setController(a: Action, held: boolean): void {
-    if (held) { if (!this.controllerDown.has(a) && !this.down.has(a)) this.pressedEdges.add(a); this.controllerDown.add(a); }
+    if (held) { if (!this.controllerDown.has(a) && !this.down.has(a) && !this.touchDown.has(a)) this.pressedEdges.add(a); this.controllerDown.add(a); }
     else this.controllerDown.delete(a);
   }
   clearController(): void { this.controllerDown.clear(); this.controllerX = this.controllerZ = 0; }
@@ -51,6 +60,8 @@ export class Input {
   private locked = false;
   /** When false (menus open) game actions are ignored. */
   enabled = false;
+  /** Active touch/gamepad input intentionally runs without mouse pointer lock. */
+  pointerFree = false;
   /** Return true to consume gameplay wheel input (e.g. scoped zoom). */
   onWheel:(direction:number)=>boolean=()=>false;
   onClear: () => void = () => {};
@@ -78,7 +89,7 @@ export class Input {
       if (this.enabled || action === 'toggleFps') {
         // keep the browser from scrolling / triggering shortcuts while playing
         if (this.enabled) e.preventDefault();
-        if (!e.repeat && !this.down.has(action) && !this.controllerDown.has(action)) this.pressedEdges.add(action);
+        if (!e.repeat && !this.down.has(action) && !this.controllerDown.has(action) && !this.touchDown.has(action)) this.pressedEdges.add(action);
         this.heldControls.add(e.code);
         this.down.add(action);
       }
@@ -88,11 +99,12 @@ export class Input {
     });
     on(window, 'blur', () => this.clearState());
     on(canvas, 'mousedown', (e) => {
+      if((e as MouseEvent & {sourceCapabilities?:{firesTouchEvents:boolean}}).sourceCapabilities?.firesTouchEvents)return;
       const code = `Mouse${e.button}`;
       const action = this.actionFor(code);
       if (!action || !this.enabled) return;
       e.preventDefault();
-      if (!this.down.has(action) && !this.controllerDown.has(action)) this.pressedEdges.add(action);
+      if (!this.down.has(action) && !this.controllerDown.has(action) && !this.touchDown.has(action)) this.pressedEdges.add(action);
       this.heldControls.add(code);
       this.down.add(action);
     });
@@ -120,7 +132,7 @@ export class Input {
     });
     on(document, 'pointerlockchange', () => {
       this.locked = document.pointerLockElement === this.canvas;
-      if (!this.locked) this.clearState();
+      if (!this.locked && !this.pointerFree) this.clearState();
       for (const l of this.lockListeners) l(this.locked);
     });
   }
@@ -160,7 +172,7 @@ export class Input {
   }
 
   isDown(a: Action): boolean {
-    return this.enabled && (this.down.has(a) || this.controllerDown.has(a));
+    return this.enabled && (this.down.has(a) || this.controllerDown.has(a) || this.touchDown.has(a));
   }
 
   /** True once per physical press; cleared by `endFrame`. */
@@ -185,7 +197,7 @@ export class Input {
   /** Inject a held action (automation/tests). */
   simulate(a: Action, held: boolean): void {
     if (held) {
-      if (!this.down.has(a) && !this.controllerDown.has(a)) this.pressedEdges.add(a);
+      if (!this.down.has(a) && !this.controllerDown.has(a) && !this.touchDown.has(a)) this.pressedEdges.add(a);
       this.down.add(a);
     } else {
       this.down.delete(a);
@@ -199,12 +211,14 @@ export class Input {
 
   endFrame(): void {
     this.pressedEdges.clear();
+    this.touchEdges.clear();
   }
 
   clearState(): void {
     this.onClear();
     this.down.clear();
     this.clearController();
+    this.clearTouch();
     this.heldControls.clear();
     this.pressedEdges.clear();
     this.mouseDX = this.mouseDY = 0;

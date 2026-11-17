@@ -1,6 +1,7 @@
 /** Player settings persisted in localStorage. */
 import { defaultBindings, sanitizeBindings, type KeyBindings } from './keybindings';
 import { defaultControllerSettings, sanitizeController, type ControllerSettings } from './controller';
+import { defaultTouchSettings, sanitizeTouch, type TouchSettings } from './touch';
 
 export type GraphicsQuality = 'low' | 'medium' | 'high' | 'ultra';
 export type ShadowQuality = 'off' | 'low' | 'medium' | 'high';
@@ -26,6 +27,7 @@ export interface Settings {
   adaptiveResolution: boolean;
   keyBindings: KeyBindings;
   controller: ControllerSettings;
+  touch: TouchSettings;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -44,6 +46,7 @@ export const DEFAULT_SETTINGS: Settings = {
   adaptiveResolution: true,
   keyBindings: defaultBindings(),
   controller: defaultControllerSettings(),
+  touch: defaultTouchSettings(),
 };
 
 export const SETTING_LIMITS = {
@@ -86,6 +89,7 @@ export function sanitizeSettings(raw: unknown): Settings {
   if (typeof r.showFps === 'boolean') s.showFps = r.showFps;
   s.keyBindings = sanitizeBindings(r.keyBindings);
   s.controller = sanitizeController(r.controller);
+  s.touch = sanitizeTouch(r.touch);
   if (r.graphicsQuality === 'low' || r.graphicsQuality === 'medium' || r.graphicsQuality === 'high' || r.graphicsQuality === 'ultra') {
     s.graphicsQuality = r.graphicsQuality;
   }
@@ -152,7 +156,7 @@ export class SettingsStore {
 }
 
 export function sameSetting(key: keyof Settings, a: Settings[keyof Settings], b: Settings[keyof Settings]): boolean {
-  return key === 'keyBindings' || key === 'controller' ? JSON.stringify(a) === JSON.stringify(b) : a === b;
+  return key === 'keyBindings' || key === 'controller' || key === 'touch' ? JSON.stringify(a) === JSON.stringify(b) : a === b;
 }
 
 /** Overrides are derived: disabling Chromebook mode restores the saved preferences exactly. */
