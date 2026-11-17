@@ -4,9 +4,9 @@ Touch is an input adapter to the existing `Input`, player simulation, weapon act
 
 ## Controls
 
-- Bottom left: analog movement joystick. Drag the empty right gameplay area to look. These use independent pointer IDs.
-- Bottom right: hold Fire; tap Aim to toggle ADS; tap Jump. Semi-automatic guns require a new press for another shot.
-- Top right: Pause and More. More contains Reload, Next weapon, held Crouch, held Slide, held/released Grenade, dagger toggle, held left/right Lean, held Scores, Chat and scope zoom.
+- Bottom left: enlarged analog movement joystick with bounded elastic stretch and a smooth return on release. Presentation never changes the capped movement input; releasing stops movement immediately. Reduced-motion preferences disable animation. Drag the empty right gameplay area to look. These use independent pointer IDs.
+- Bottom right: enlarged Fire; held Slide immediately beside it; Aim and Jump above. Tap Aim to toggle ADS. Semi-automatic guns require a new press for another shot.
+- Top right: Pause and More. More contains Reload, Next weapon, held Crouch, held/released Grenade, dagger toggle, held left/right Lean, held Scores, Chat and scope zoom. Secondary buttons have 48px targets.
 - Online loadouts still follow server rules. Next weapon does not grant weapons the current match does not allow. Chat still requires a connected multiplayer match.
 
 Settings → Touch offers Automatic/Enabled/Disabled, look sensitivity, ADS multiplier, joystick size/deadzone and button size/opacity. Apply uses the normal settings draft and localStorage persistence; Back discards changes. Changes do not require a restart. Saved graphics, audio, keyboard and controller settings are preserved. Graphics are not forcibly changed on mobile; lower graphics or Chromebook mode remain optional.

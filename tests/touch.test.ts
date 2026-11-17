@@ -1,5 +1,5 @@
 import {afterEach,beforeEach,expect,it,vi} from 'vitest';
-import {automaticTouch,defaultTouchSettings,physicalKey,sanitizeTouch,syntheticTouchMouse,touchStick} from '../src/config/touch';
+import {automaticTouch,defaultTouchSettings,physicalKey,sanitizeTouch,syntheticTouchMouse,touchStick,touchStickVisual} from '../src/config/touch';
 import {Input} from '../src/core/Input';
 import {TouchInput} from '../src/core/TouchInput';
 import {Weapon,WEAPONS} from '../src/weapons/Weapon';
@@ -31,6 +31,21 @@ it('provides radial analog joystick input with deadzone, diagonal cap and immedi
  touch.startMove(1);expect(touch.startMove(2)).toBe(false);touch.moveTo(1,50,-50,50);
  expect(Math.hypot(input.touchX,input.touchZ)).toBeCloseTo(1);expect(input.touchX).toBe(input.touchZ);
  touch.end(2);expect(input.touchZ).toBeGreaterThan(0);touch.end(1);expect(input.touchX).toBe(0);expect(input.touchZ).toBe(0);
+});
+it('stretches the joystick presentation smoothly outside its radius without changing capped movement',()=>{
+ expect(touchStickVisual(0,0,50)).toMatchObject({x:0,y:0,stretch:0});
+ expect(touchStickVisual(25,0,50)).toMatchObject({x:16.25,y:0,stretch:0});
+ const edge=touchStickVisual(50,0,50),near=touchStickVisual(50.01,0,50),far=touchStickVisual(5000,0,50);
+ expect(near.x-edge.x).toBeLessThan(.01);expect(far.x).toBeGreaterThan(edge.x);expect(far.x).toBeLessThanOrEqual(40);
+ const axes=touchStick(5000,0,50,.12);expect(axes[0]).toBe(1);expect(axes[1]).toBeCloseTo(0);
+ const diagonal=touchStickVisual(-500,500,50);expect(diagonal.x).toBeCloseTo(-diagonal.y);expect(Math.hypot(diagonal.x,diagonal.y)).toBeLessThanOrEqual(40);
+ expect(touchStickVisual(NaN,0,50).x).toBe(0);expect(touchStickVisual(5,5,0).x).toBe(0);
+});
+it('the primary Slide action shares held input and releases independently of movement and fire',()=>{
+ touch.startMove(1);touch.moveTo(1,0,-100,50);touch.press(2,'slide');touch.press(3,'fire');
+ expect(input.isDown('slide')).toBe(true);expect(input.wasPressed('slide')).toBe(true);
+ touch.end(2);expect(input.isDown('slide')).toBe(false);expect(input.isDown('fire')).toBe(true);expect(input.touchZ).toBe(1);
+ touch.clear();expect(input.isDown('slide')).toBe(false);expect(input.touchZ).toBe(0);
 });
 it('independently tracks movement, camera, held fire and jump pointers',()=>{
  touch.startMove(1);touch.moveTo(1,0,-50,50);touch.startLook(2,10,10);expect(touch.startLook(3,0,0)).toBe(false);

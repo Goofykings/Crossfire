@@ -51,7 +51,8 @@ try{
  const dispatch=async(type)=>client.send('Input.dispatchTouchEvent',{type,touchPoints:[...points].map(([id,p])=>({id,...p,radiusX:3,radiusY:3,force:1}))});
  const down=async(id,x,y)=>{points.set(id,{x,y});await dispatch('touchStart');};
  const move=async(id,x,y)=>{points.set(id,{x,y});await dispatch('touchMove');};
- const up=async id=>{points.delete(id);await dispatch('touchEnd');};
+ // Current CDP ends the supplied contacts, not the remaining contacts.
+ const up=async id=>{const p=points.get(id);points.delete(id);await client.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:p?[{id,...p,radiusX:3,radiusY:3,force:1}]:[]});};
  const center=async selector=>{const r=await bounds(selector);return [r.x+r.w/2,r.y+r.h/2];};
  const press=async(selector,id=9)=>{await down(id,...await center(selector));await up(id);};
  const frames=()=>page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
@@ -62,6 +63,23 @@ try{
  assert.ok((await cf('inputMethods')).z>.5);assert.notDeepEqual((await cf('leanView')).forward,forward);assert.notDeepEqual(await cf('player'),start);
  await up(3);await up(2);await up(1);await frames();assert.equal((await cf('inputMethods')).z,0);assert.equal((await cf('inputMethods')).fire,false);
  report.checks.push('Three simultaneous native touches: analog movement, camera drag, automatic fire; immediate release; no pointer lock');
+ await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'no-preference'}]);
+ assert.equal(await page.$eval('.touch-slide',e=>e.parentElement.classList.contains('touch-controls')),true,'Slide is outside More');
+ const radius=(await bounds('.touch-joystick')).w/2;
+ await down(1,...stick);await move(1,stick[0],stick[1]-radius*3);
+ await page.waitForFunction(r=>new DOMMatrixReadOnly(getComputedStyle(document.querySelector('.touch-thumb')).transform).m42 < -r*.7,{},radius);
+ assert.equal((await cf('inputMethods')).z,1,'visual overshoot cannot increase movement input');
+ assert.ok(await page.$eval('.touch-thumb',e=>parseFloat(getComputedStyle(e).transitionDuration)>0),'drag is animated');
+ await shot('joystick-stretch');await up(1);assert.equal((await cf('inputMethods')).z,0,'movement stops before cosmetic return');
+ await page.waitForFunction(()=>{const m=new DOMMatrixReadOnly(getComputedStyle(document.querySelector('.touch-thumb')).transform);return Math.abs(m.m41)+Math.abs(m.m42)<.01;});
+ await shot('joystick-release');
+ await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
+ assert.equal(await page.$eval('.touch-thumb',e=>parseFloat(getComputedStyle(e).transitionDuration)),0,'reduced motion disables animation');
+ await cf('teleport',-3,0,2,0,0);await down(1,...stick);await move(1,stick[0],stick[1]-radius*2);
+ await page.waitForFunction(()=>{const p=window.__crossfire.motion();return p.grounded&&Math.hypot(p.velocity.x,p.velocity.z)>3;});
+ await down(7,...await center('.touch-slide'));await page.waitForFunction(()=>window.__crossfire.motion().slideRemaining>0);
+ await up(7);await page.waitForFunction(()=>!window.__crossfire.motion().slideHeld);await up(1);
+ report.checks.push('Bounded elastic joystick stretch + smooth return; immediate input release; reduced motion; primary Slide triggers actual shared movement');
  await press('.touch-aim');await page.waitForFunction(()=>window.__crossfire.weapon().ads>.9);assert.equal((await cf('inputMethods')).ads,true);
  await press('.touch-aim');await page.waitForFunction(()=>window.__crossfire.weapon().ads<.1);report.checks.push('ADS single-tap toggle and recovery');
  await cf('selectWeapon',4);await page.waitForFunction(()=>{const w=window.__crossfire.weapon();return w.id==='semi-sniper'&&w.action==='idle';});
@@ -93,10 +111,11 @@ try{
  const savedTouch=(await cf('settings')).touch;
  await cf('setSetting',{touch:{...savedTouch,buttonSize:84,joystickSize:160,opacity:.35}});
  if(await page.$eval('.touch-extras',e=>e.hidden))await press('.touch-more');
- for(const [width,height]of [[390,844],[844,390]]){
-  await page.setViewport({width,height,isMobile:true,hasTouch:true});await fit('.touch-joystick');await fit('.touch-fire');await fit('.touch-aim');await fit('.touch-jump');
+ for(const [width,height]of [[320,568],[568,320],[390,844],[844,390],[1024,768],[1366,768]]){
+  await page.setViewport({width,height,isMobile:true,hasTouch:true});await fit('.touch-joystick');await fit('.touch-fire');await fit('.touch-aim');await fit('.touch-jump');await fit('.touch-slide');
   await shot(`${width}-maximum-controls`);
-  assert.ok(await page.evaluate(()=>{const boxes=[...document.querySelectorAll('.touch-extras .touch-button')].map(b=>b.getBoundingClientRect());return boxes.length===12&&boxes.every(r=>r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight);}),'all expanded actions fit');
+  assert.ok(await page.evaluate(()=>{const boxes=[...document.querySelectorAll('.touch-extras .touch-button')].map(b=>b.getBoundingClientRect());return boxes.length===11&&boxes.every(r=>r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight);}),'all expanded actions fit');
+  assert.ok(await page.evaluate(()=>{const boxes=[...document.querySelectorAll('.touch-joystick,.touch-controls>.touch-button,.touch-extras:not([hidden])')].map(b=>b.getBoundingClientRect());return boxes.every((a,i)=>boxes.slice(i+1).every(b=>a.right<=b.left||b.right<=a.left||a.bottom<=b.top||b.bottom<=a.top));}),'primary controls and expanded panel do not overlap');
  }
  await cf('setSetting',{touch:savedTouch});report.checks.push('Live maximum button/joystick sizes fit portrait/landscape without a restart');
  if(process.argv.includes('--extended')){

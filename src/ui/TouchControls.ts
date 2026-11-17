@@ -1,4 +1,4 @@
-import {automaticTouch,physicalKey,syntheticTouchMouse,type TouchSettings} from '../config/touch';
+import {automaticTouch,physicalKey,syntheticTouchMouse,touchStickVisual,type TouchSettings} from '../config/touch';
 import {isTextInput} from '../config/keybindings';
 import type {Action,Input} from '../core/Input';
 import {TouchInput} from '../core/TouchInput';
@@ -7,6 +7,7 @@ const paths:Record<string,string>={
  fire:'M4 9h15v5h-7l-2 6H6l2-7H4z M16 9V6h3v3',
  aim:'M12 3v4m0 10v4M3 12h4m10 0h4 M17 12a5 5 0 1 1-10 0 5 5 0 0 1 10 0',
  jump:'M12 4a1.5 1.5 0 1 0 0 .1 M7 10l5-3 5 3M12 7v7m0 0-5 6m5-6 5 6',
+ slide:'M9 5a1.5 1.5 0 1 0 0 .1 M6 10l4-2 4 5 5 2M10 8l-1 6-5 3m5-3 6 4M3 21h18',
 };
 const labels:Record<string,string>={reload:'Reload',nextWeapon:'Weapon',crouch:'Crouch',slide:'Slide',grenade:'Grenade',melee:'Daggers',leanLeft:'Lean L',leanRight:'Lean R',leaderboard:'Scores',chat:'Chat',zoomIn:'Zoom +',zoomOut:'Zoom −'};
 /** One persistent Pointer Events overlay. Menus retain ordinary scrolling/tap behavior. */
@@ -16,6 +17,7 @@ export class TouchControls {
  private abort=new AbortController();private pointers=new Map<number,HTMLElement>();
  private owned=new Set<number>();private blockClick=false;
  private knob=document.createElement('span');private joystick=document.createElement('div');
+ private ring=document.createElement('span');
  private aim:HTMLButtonElement;private extras=document.createElement('div');
  private context=false;private weapon='';private life=-1;private melee=false;private style='';
  private coarse=matchMedia('(pointer: coarse)');
@@ -23,13 +25,13 @@ export class TouchControls {
   this.state=new TouchInput(input,settings);this.element.className='touch-controls';this.element.hidden=true;
   this.element.setAttribute('aria-label','Touch gameplay controls');
   this.element.addEventListener('contextmenu',e=>e.preventDefault());
-  this.joystick.className='touch-joystick';this.joystick.dataset.touch='move';this.joystick.setAttribute('aria-label','Movement joystick');this.knob.className='touch-thumb';this.joystick.append(this.knob);this.element.append(this.joystick);
-  const fire=this.button('fire','Fire','fire'),jump=this.button('jump','Jump','jump');
+  this.joystick.className='touch-joystick';this.joystick.dataset.touch='move';this.joystick.setAttribute('aria-label','Movement joystick');this.knob.className='touch-thumb';this.ring.className='touch-stick-ring';this.ring.setAttribute('aria-hidden','true');this.joystick.append(this.ring,this.knob);this.element.append(this.joystick);
+  const fire=this.button('fire','Fire','fire'),jump=this.button('jump','Jump','jump'),slide=this.button('slide','Hold slide','slide');
   this.aim=this.button('aim','Aim down sights','aim');this.aim.setAttribute('aria-pressed','false');
   const pause=this.button('pause','Pause','Ⅱ'),more=this.button('more','More controls','•••');more.setAttribute('aria-expanded','false');
   this.extras.className='touch-extras';this.extras.hidden=true;
-  for(const [a,label,icon]of [['reload','Reload','↻'],['nextWeapon','Next weapon','⇄'],['crouch','Hold crouch','↓'],['slide','Hold slide','⇢'],['grenade','Hold and release grenade','◉'],['melee','Toggle daggers','⚔'],['leanLeft','Lean left','↶'],['leanRight','Lean right','↷'],['leaderboard','Hold scoreboard','≡'],['chat','Chat','…'],['zoomIn','Increase scope zoom','＋'],['zoomOut','Decrease scope zoom','−']])this.extras.append(this.button(a,label,icon));
-  this.element.append(fire,this.aim,jump,pause,more,this.extras);root.append(this.element);
+  for(const [a,label,icon]of [['reload','Reload','↻'],['nextWeapon','Next weapon','⇄'],['crouch','Hold crouch','↓'],['grenade','Hold and release grenade','◉'],['melee','Toggle daggers','⚔'],['leanLeft','Lean left','↶'],['leanRight','Lean right','↷'],['leaderboard','Hold scoreboard','≡'],['chat','Chat','…'],['zoomIn','Increase scope zoom','＋'],['zoomOut','Decrease scope zoom','−']])this.extras.append(this.button(a,label,icon));
+  this.element.append(fire,slide,this.aim,jump,pause,more,this.extras);root.append(this.element);
   const signal=this.abort.signal;
   const pointerDown=(e:PointerEvent)=>{
    this.blockClick=false;
@@ -100,14 +102,16 @@ export class TouchControls {
  }
  private visibility(){const hidden=!(this.active&&this.canPlay());if(this.element.hidden!==hidden)this.element.hidden=hidden;}
  private move(e:PointerEvent){const r=this.joystick.getBoundingClientRect(),radius=r.width/2,dx=e.clientX-r.left-radius,dy=e.clientY-r.top-radius;
-  this.state.moveTo(e.pointerId,dx,dy,radius);const d=Math.hypot(dx,dy),k=d>radius?radius/d:1;
-  this.knob.style.transform=`translate(${dx*k}px,${dy*k}px)`;}
+  this.state.moveTo(e.pointerId,dx,dy,radius);const v=touchStickVisual(dx,dy,radius);
+  this.knob.style.transform=`translate(${v.x}px,${v.y}px)`;
+  this.ring.style.transform=`rotate(${v.angle}rad) scale(${1+v.stretch*.14},${1-v.stretch*.04})`;}
  private end(id:number){const target=this.pointers.get(id);if(!target)return;this.pointers.delete(id);this.state.end(id);
   if(![...this.pointers.values()].includes(target))target.classList.remove('pressed');
-  if(target===this.joystick)this.knob.style.transform='';
+  if(target===this.joystick)this.resetStick();
  }
+ private resetStick(){this.knob.style.transform='';this.ring.style.transform='';}
  private syncAim(){this.aim.setAttribute('aria-pressed',String(this.state.ads));}
  clear(){this.state.clear();for(const [id,target]of this.pointers){target.classList.remove('pressed');try{if(target.hasPointerCapture(id))target.releasePointerCapture(id);}catch{}}
-  this.pointers.clear();this.knob.style.transform='';this.syncAim();}
+  this.pointers.clear();this.joystick.classList.remove('pressed');this.resetStick();this.syncAim();}
  dispose(){this.clear();this.owned.clear();this.abort.abort();this.element.remove();document.body.classList.remove('touch-active');}
 }

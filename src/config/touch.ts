@@ -24,6 +24,15 @@ export function touchStick(dx:number,dy:number,radius:number,deadzone:number):[n
   const amount=(Math.min(1,d/radius)-deadzone)/(1-deadzone);
   return [dx/d*amount,-dy/d*amount];
 }
+/** Cosmetic rubber band only; gameplay axes remain clamped by touchStick. */
+export function touchStickVisual(dx:number,dy:number,radius:number){
+  const d=Math.hypot(dx,dy);
+  if(!Number.isFinite(d)||radius<=0||d===0)return {x:0,y:0,stretch:0,angle:0};
+  const stretch=1-Math.exp(-Math.max(0,d-radius)/radius);
+  // Leave room for the thumb itself and the viewport's safe edge margin.
+  const reach=Math.min(d,radius)*.65+radius*.15*stretch;
+  return {x:dx/d*reach,y:dy/d*reach,stretch,angle:Math.atan2(dy,dx)};
+}
 export function physicalKey(e:Pick<KeyboardEvent,'code'|'altKey'|'ctrlKey'|'metaKey'>):boolean{
   return !e.altKey&&!e.ctrlKey&&!e.metaKey&&!/^(Shift|Alt|Control|Meta|CapsLock|NumLock|ScrollLock)/.test(e.code);
 }
