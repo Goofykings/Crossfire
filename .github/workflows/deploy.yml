@@ -36,9 +36,9 @@ jobs:
         run: npm run build
         env:
           BASE_PATH: ./
-          VITE_MULTIPLAYER_PROVIDER: custom
-          VITE_MULTIPLAYER_URL: "wss://purpose-candidate-louisiana-sur.trycloudflare.com/ws"
-          VITE_CUSTOM_MULTIPLAYER_URL: "wss://purpose-candidate-louisiana-sur.trycloudflare.com/ws"
+          VITE_MULTIPLAYER_PROVIDER: custom         
+          VITE_MULTIPLAYER_URL: "wss://strand-require-vsnet-occurs.trycloudflare.com/ws"
+          VITE_CUSTOM_MULTIPLAYER_URL: "wss://strand-require-vsnet-occurs.trycloudflare.com/ws"
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
